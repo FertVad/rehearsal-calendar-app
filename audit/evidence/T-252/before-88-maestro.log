@@ -1,0 +1,356 @@
+07:36:27.826 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+07:36:27.856 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+07:36:27.858 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:36:33.117 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:36:33.121 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../scripts/notify.js RUNNING
+07:36:34.093 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../scripts/notify.js COMPLETED
+07:36:34.096 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/sign-in.yaml RUNNING
+07:36:34.224 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+07:36:34.292 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+07:36:34.295 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:36:34.330 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:36:34.332 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Launch app "${APP_ID}" with clear state and clear keychain RUNNING
+07:36:34.401 [ INFO] maestro.Maestro.clearKeychain$lambda$10: Clearing keychain
+07:36:36.194 [ INFO] maestro.Maestro.clearAppState$lambda$8: Clearing app state com.rehearsal.app
+07:36:52.141 [ INFO] maestro.Maestro.launchApp$lambda$5: Launching app com.rehearsal.app
+07:36:52.143 [ INFO] maestro.Maestro.launchApp$lambda$5: Stopping com.rehearsal.app app during launch
+07:36:53.758 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Launch app "${APP_ID}" with clear state and clear keychain COMPLETED
+07:36:53.761 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run sign-in-form.yaml RUNNING
+07:36:53.844 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+07:36:53.916 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+07:36:53.917 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:36:53.945 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:36:53.946 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run sign-in-fill.yaml RUNNING
+07:36:53.969 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+07:36:54.581 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+07:36:54.582 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:36:54.636 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:36:54.639 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: login-submit is visible RUNNING
+07:37:01.780 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: login-submit is visible COMPLETED
+07:37:01.795 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries = 0} RUNNING
+07:37:01.860 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries = 0} COMPLETED
+07:37:01.864 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Retry 3 times RUNNING
+07:37:01.872 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: login-email RUNNING
+07:37:02.168 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, title=, value=, text=, hintText=your@email.com, resource-id=login-email, bounds=[21,268][372,310], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=21, y=268, width=351, height=42))
+07:37:02.564 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+07:37:02.584 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 289) using hierarchy based logic for wait
+07:37:02.601 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:02.602 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:05.513 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+07:37:05.515 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: login-email COMPLETED
+07:37:05.520 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Wait for animation to end within 3000 ms RUNNING
+07:37:05.711 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 3000
+07:37:05.720 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:05.721 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:05.937 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:05.939 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:08.286 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Wait for animation to end within 3000 ms COMPLETED
+07:37:08.289 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries += 1} RUNNING
+07:37:08.384 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries += 1} COMPLETED
+07:37:08.386 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${output.signInTries > 1} is true RUNNING
+07:37:08.435 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:08.436 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${output.signInTries > 1} is true SKIPPED
+07:37:08.437 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Input text ${EMAIL} RUNNING
+07:37:08.475 [ INFO] maestro.Maestro.inputText: Inputting text: duncan@e2e.test
+07:37:11.310 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Input text ${EMAIL} COMPLETED
+07:37:11.314 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${EMAIL}", id: login-email is visible RUNNING
+07:37:29.803 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+07:37:29.870 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:30.669 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${EMAIL}", id: login-email is visible FAILED
+07:37:30.797 [ERROR] maestro.orchestra.Orchestra.retryCommand: Attempt 1 failed for retry command
+maestro.MaestroException$AssertionFailure: Assertion is false: "duncan@e2e.test", id: login-email is visible
+	at maestro.orchestra.Orchestra.assertConditionCommand(Orchestra.kt:527)
+	at maestro.orchestra.Orchestra.access$assertConditionCommand(Orchestra.kt:133)
+	at maestro.orchestra.Orchestra$assertConditionCommand$1.invokeSuspend(Orchestra.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:94)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:70)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source)
+	at maestro.cli.command.TestCommand.runShardSuite$lambda$10(TestCommand.kt:502)
+	at maestro.cli.session.MaestroSessionManager.newSession(MaestroSessionManager.kt:133)
+	at maestro.cli.session.MaestroSessionManager.newSession$default(MaestroSessionManager.kt:64)
+	at maestro.cli.command.TestCommand.runShardSuite(TestCommand.kt:477)
+	at maestro.cli.command.TestCommand.access$runShardSuite(TestCommand.kt:81)
+	at maestro.cli.command.TestCommand$handleSessions$1$results$1$1.invokeSuspend(TestCommand.kt:438)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+07:37:30.885 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: login-email RUNNING
+07:37:31.064 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, title=, value=, text=, hintText=your@email.com, resource-id=login-email, bounds=[21,268][372,310], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=21, y=268, width=351, height=42))
+07:37:31.327 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+07:37:31.331 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 289) using hierarchy based logic for wait
+07:37:31.335 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:31.335 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:32.261 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+07:37:32.264 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: login-email COMPLETED
+07:37:32.264 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Wait for animation to end within 3000 ms RUNNING
+07:37:32.277 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 3000
+07:37:32.277 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:32.277 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:32.641 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:32.642 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:34.712 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Wait for animation to end within 3000 ms COMPLETED
+07:37:34.740 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries += 1} RUNNING
+07:37:35.244 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries += 1} COMPLETED
+07:37:35.252 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${output.signInTries > 1} is true RUNNING
+07:37:35.345 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Erase text RUNNING
+07:37:35.585 [ INFO] maestro.Maestro.eraseText$lambda$52: Erasing 50 characters
+07:37:39.903 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Erase text COMPLETED
+07:37:39.910 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${output.signInTries > 1} is true COMPLETED
+07:37:39.911 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Input text ${EMAIL} RUNNING
+07:37:39.995 [ INFO] maestro.Maestro.inputText: Inputting text: duncan@e2e.test
+07:37:41.988 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Input text ${EMAIL} COMPLETED
+07:37:41.990 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${EMAIL}", id: login-email is visible RUNNING
+07:37:42.428 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${EMAIL}", id: login-email is visible COMPLETED
+07:37:42.429 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Retry 3 times COMPLETED
+07:37:42.430 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries = 0} RUNNING
+07:37:42.471 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries = 0} COMPLETED
+07:37:42.472 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Retry 3 times RUNNING
+07:37:42.472 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: login-password RUNNING
+07:37:42.646 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, title=, value=, text=, hintText=Password, resource-id=login-password, bounds=[21,290][372,332], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=21, y=290, width=351, height=42))
+07:37:42.854 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+07:37:42.880 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 311) using hierarchy based logic for wait
+07:37:42.883 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:42.886 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:43.762 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+07:37:43.765 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: login-password COMPLETED
+07:37:43.766 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Wait for animation to end within 3000 ms RUNNING
+07:37:43.768 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 3000
+07:37:43.768 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:43.768 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:43.961 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:43.961 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:45.207 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Wait for animation to end within 3000 ms COMPLETED
+07:37:45.212 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries += 1} RUNNING
+07:37:45.288 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries += 1} COMPLETED
+07:37:45.289 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${output.signInTries > 1} is true RUNNING
+07:37:45.321 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:45.322 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${output.signInTries > 1} is true SKIPPED
+07:37:45.322 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Input text ${PASSWORD} RUNNING
+07:37:45.346 [ INFO] maestro.Maestro.inputText: Inputting text: e2e-local-only
+07:37:46.969 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Input text ${PASSWORD} COMPLETED
+07:37:46.970 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${'•'.repeat(PASSWORD.length)}", id: login-password is visible RUNNING
+07:37:47.291 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${'•'.repeat(PASSWORD.length)}", id: login-password is visible COMPLETED
+07:37:47.292 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Retry 3 times COMPLETED
+07:37:47.292 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run sign-in-fill.yaml COMPLETED
+07:37:47.293 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run sign-in-submit.yaml RUNNING
+07:37:47.308 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:37:47.321 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:37:47.321 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run tap-and-see.yaml RUNNING
+07:37:47.341 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+07:37:47.342 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+07:37:47.342 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:37:47.361 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:37:47.362 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true RUNNING
+07:37:47.405 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: ${TAP_ID} RUNNING
+07:37:47.614 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Sign In, title=, value=, text=, hintText=, resource-id=login-submit, bounds=[20,385][373,435], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=20, y=385, width=353, height=50))
+07:37:47.820 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+07:37:47.830 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 410) using hierarchy based logic for wait
+07:37:47.832 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:47.832 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:49.515 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+07:37:49.517 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: ${TAP_ID} COMPLETED
+07:37:49.517 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true COMPLETED
+07:37:49.518 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true RUNNING
+07:37:49.550 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:49.551 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true SKIPPED
+07:37:49.551 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID === 'undefined'} is true RUNNING
+07:37:49.583 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:49.583 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID === 'undefined'} is true SKIPPED
+07:37:49.583 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = false} RUNNING
+07:37:49.615 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = false} COMPLETED
+07:37:49.616 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+07:37:49.641 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:49.642 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true SKIPPED
+07:37:49.643 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined'} is true RUNNING
+07:37:49.795 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:49.952 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined'} is true SKIPPED
+07:37:49.953 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined'} is true RUNNING
+07:37:49.973 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that (Optional) id: ${GONE_ID} is not visible RUNNING
+07:37:51.995 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that (Optional) id: ${GONE_ID} is not visible COMPLETED
+07:37:51.996 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when id: ${GONE_ID} is not visible RUNNING
+07:37:52.812 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = true} RUNNING
+07:37:52.834 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = true} COMPLETED
+07:37:52.834 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when id: ${GONE_ID} is not visible COMPLETED
+07:37:52.835 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined'} is true COMPLETED
+07:37:52.835 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true RUNNING
+07:37:52.853 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:52.853 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true SKIPPED
+07:37:52.854 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true RUNNING
+07:37:52.875 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:52.875 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true SKIPPED
+07:37:52.876 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${!output.tapSeen} is true RUNNING
+07:37:52.892 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:52.893 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${!output.tapSeen} is true SKIPPED
+07:37:52.894 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+07:37:52.915 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:52.916 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true SKIPPED
+07:37:52.916 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true RUNNING
+07:37:52.937 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:52.937 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true SKIPPED
+07:37:52.938 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true RUNNING
+07:37:52.966 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:52.967 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true SKIPPED
+07:37:52.967 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true RUNNING
+07:37:52.994 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:52.995 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true SKIPPED
+07:37:52.996 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true RUNNING
+07:37:53.029 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:53.030 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true SKIPPED
+07:37:53.031 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run tap-and-see.yaml COMPLETED
+07:37:53.031 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run sign-in-submit.yaml COMPLETED
+07:37:53.031 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run sign-in-form.yaml COMPLETED
+07:37:53.032 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/sign-in.yaml COMPLETED
+07:37:53.032 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/tap-and-see.yaml RUNNING
+07:37:53.072 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+07:37:53.073 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+07:37:53.074 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:37:53.109 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:37:53.110 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true RUNNING
+07:37:53.168 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:53.169 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true SKIPPED
+07:37:53.169 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true RUNNING
+07:37:53.208 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:53.210 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true SKIPPED
+07:37:53.210 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID === 'undefined'} is true RUNNING
+07:37:53.231 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "${TAP}" RUNNING
+07:37:53.623 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Notifications, title=, value=, text=, hintText=, resource-id=, bounds=[327,79][373,125], enabled=true, focused=false, selected=false, checked=false}, children=[TreeNode(attributes={accessibilityText=, title=, value=, text=, hintText=, resource-id=unread-badge, bounds=[350,86][366,102], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false)], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=327, y=79, width=46, height=46))
+07:37:53.848 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+07:37:53.856 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (350, 102) using hierarchy based logic for wait
+07:37:53.858 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:53.858 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:55.161 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+07:37:55.161 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "${TAP}" COMPLETED
+07:37:55.162 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID === 'undefined'} is true COMPLETED
+07:37:55.162 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = false} RUNNING
+07:37:55.206 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = false} COMPLETED
+07:37:55.207 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+07:37:55.239 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that (Optional) "${SEE}" is visible RUNNING
+07:37:55.473 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that (Optional) "${SEE}" is visible COMPLETED
+07:37:55.473 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when "${SEE}" is visible RUNNING
+07:37:55.666 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = true} RUNNING
+07:37:55.684 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = true} COMPLETED
+07:37:55.684 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when "${SEE}" is visible COMPLETED
+07:37:55.684 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true COMPLETED
+07:37:55.684 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined'} is true RUNNING
+07:37:55.702 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:55.704 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined'} is true SKIPPED
+07:37:55.704 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined'} is true RUNNING
+07:37:55.720 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:55.720 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined'} is true SKIPPED
+07:37:55.720 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true RUNNING
+07:37:55.739 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:55.740 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true SKIPPED
+07:37:55.740 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true RUNNING
+07:37:55.759 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:55.760 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true SKIPPED
+07:37:55.760 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${!output.tapSeen} is true RUNNING
+07:37:55.789 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:55.790 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${!output.tapSeen} is true SKIPPED
+07:37:55.791 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+07:37:55.805 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${SEE}" is visible RUNNING
+07:37:56.045 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${SEE}" is visible COMPLETED
+07:37:56.046 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true COMPLETED
+07:37:56.046 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true RUNNING
+07:37:56.061 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:56.061 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true SKIPPED
+07:37:56.062 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true RUNNING
+07:37:56.073 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:56.073 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true SKIPPED
+07:37:56.073 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true RUNNING
+07:37:56.090 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:56.091 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true SKIPPED
+07:37:56.091 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true RUNNING
+07:37:56.109 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:56.109 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true SKIPPED
+07:37:56.110 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/tap-and-see.yaml COMPLETED
+07:37:56.113 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Take screenshot 88-new-admin-in-inbox RUNNING
+07:37:56.145 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+07:37:56.147 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:56.273 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Take screenshot 88-new-admin-in-inbox COMPLETED
+07:37:56.273 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/tap-and-see.yaml RUNNING
+07:37:56.293 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+07:37:56.294 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+07:37:56.294 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+07:37:56.320 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+07:37:56.320 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true RUNNING
+07:37:56.340 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:56.341 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true SKIPPED
+07:37:56.341 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true RUNNING
+07:37:56.362 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:37:56.362 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true SKIPPED
+07:37:56.363 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID === 'undefined'} is true RUNNING
+07:37:56.382 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "${TAP}" RUNNING
+07:37:56.591 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, New administrator, Banquo Thane is now an administrator of Forres Castle, 1 min ago, title=, value=, text=, hintText=, resource-id=, bounds=[16,111][377,204], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=16, y=111, width=361, height=93))
+07:37:56.778 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+07:37:56.782 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 157) using hierarchy based logic for wait
+07:37:56.786 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:37:56.786 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:37:57.819 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+07:37:57.820 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "${TAP}" COMPLETED
+07:37:57.821 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID === 'undefined'} is true COMPLETED
+07:37:57.821 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = false} RUNNING
+07:37:58.024 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = false} COMPLETED
+07:37:58.038 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+07:37:58.058 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that (Optional) "${SEE}" is visible RUNNING
+07:38:13.390 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandWarned: Assertion is false: ".*Ariel Spirit.*" is visible
+07:38:13.568 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+07:38:13.570 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:38:13.734 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that (Optional) "${SEE}" is visible WARNED
+07:38:13.735 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when "${SEE}" is visible RUNNING
+07:38:14.117 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:38:14.119 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when "${SEE}" is visible SKIPPED
+07:38:14.119 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true COMPLETED
+07:38:14.119 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined'} is true RUNNING
+07:38:14.134 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:38:14.134 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined'} is true SKIPPED
+07:38:14.134 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined'} is true RUNNING
+07:38:14.150 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:38:14.150 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined'} is true SKIPPED
+07:38:14.151 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true RUNNING
+07:38:14.164 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:38:14.164 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true SKIPPED
+07:38:14.165 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true RUNNING
+07:38:14.256 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:38:14.257 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true SKIPPED
+07:38:14.257 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${!output.tapSeen} is true RUNNING
+07:38:14.289 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../scripts/tap-again.js RUNNING
+07:38:14.510 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../scripts/tap-again.js COMPLETED
+07:38:14.511 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true RUNNING
+07:38:14.536 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:38:14.537 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true SKIPPED
+07:38:14.537 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true RUNNING
+07:38:14.568 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+07:38:14.568 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true SKIPPED
+07:38:14.569 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID === 'undefined'} is true RUNNING
+07:38:14.593 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "${TAP}" RUNNING
+07:38:14.822 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, New administrator, Banquo Thane is now an administrator of Forres Castle, 1 min ago, title=, value=, text=, hintText=, resource-id=, bounds=[16,111][377,204], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=16, y=111, width=361, height=93))
+07:38:15.007 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+07:38:15.012 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 157) using hierarchy based logic for wait
+07:38:15.016 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+07:38:15.016 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:38:15.945 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+07:38:15.946 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "${TAP}" COMPLETED
+07:38:15.947 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID === 'undefined'} is true COMPLETED
+07:38:15.947 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${!output.tapSeen} is true COMPLETED
+07:38:15.947 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+07:38:15.988 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${SEE}" is visible RUNNING
+07:38:31.497 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+07:38:31.500 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:38:31.648 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${SEE}" is visible FAILED
+07:38:31.651 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+07:38:31.655 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:38:31.754 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true FAILED
+07:38:31.755 [ERROR] maestro.orchestra.Orchestra.executeCommands: [Command execution] CommandFailed: Assertion is false: ".*Ariel Spirit.*" is visible
+07:38:31.756 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+07:38:31.757 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+07:38:31.851 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/tap-and-see.yaml FAILED

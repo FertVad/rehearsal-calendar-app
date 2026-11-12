@@ -1,0 +1,34 @@
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend --silent -- everyServerNotification backToTabs
+# the new tests on auto/main 6e87de6, before the fix
+
+FAIL frontend src/features/notifications/__tests__/everyServerNotification.test.tsx
+  ● a tapped push of every type the server sends opens something › admin_appointed
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+  ● every type the server sends has an icon of its own on its card › none is the bell an unknown type gets, and "New member" and "New administrator" are told apart
+    Expected: not ["admin_appointed", "notifications-outline"]
+    > 121 |       expect([type, icons[type]]).not.toEqual([type, 'notifications-outline']);
+
+  ● a card says all of it (T-252) › neither its title nor its text is cut to a number of lines
+    expect(received).toBeUndefined()
+    Received: 2
+    > 144 |     expect(view.getByText(title).props.numberOfLines).toBeUndefined();
+
+FAIL frontend src/navigation/__tests__/backToTabs.test.tsx
+  ● admin_appointed: "New administrator" (T-252) opens its project on the members › from a tapped push, over a modal
+      Array [
+        "MainTabs",
+    +   "CreateProject",
+      ]
+    > 201 |     expect(stack()).toEqual(['MainTabs']);
+
+  ● admin_appointed: "New administrator" (T-252) opens its project on the members › from the inbox
+          "params": Object {
+            "projectId": "3",
+    -       "section": "members",
+          },
+    > 209 |     expect(top().params).toEqual(membersOpened('3'));
+
+Test Suites: 2 failed, 2 total
+Tests:       5 failed, 24 passed, 29 total
