@@ -1,0 +1,24 @@
+T-250 — flow 86, a move said as where to, on the old server and the new.
+
+Fix commit 89e7da0. Its three server files put back as they were
+(git restore --source=8110068 -- server/i18n/pushNotifications.js
+server/services/notifications/pushNotificationService.js
+server/services/notifications/reminderText.js), flow 86 as in 89e7da0:
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[Failed] Rehearsal notices read right in Spanish, German and Russian (1m 32s) (No visible element found: ".*Ensayo actualizado.*Fuenteovejuna: Escena del balcón, pasa (a mañana|al .*) a las 18:00.*")
+1/1 Flow Failed
+
+The old server said "Fuenteovejuna: Escena del balcón, mañana a las 18:00 — fecha/hora".
+
+Back on HEAD (git restore --source=HEAD -- the same three files), 4c380ba:
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[Passed] Rehearsal notices read right in Spanish, German and Russian (2m 36s)
+1/1 Flow Passed in 2m 37s
+
+Flow 84 on HEAD 4c380ba:
+
+$ npm run e2e -- e2e/flows/84-sync-screen-in-four-languages.yaml
+[Passed] The sync screen's bar and last sync in four languages (3m 4s)
+1/1 Flow Passed in 3m 5s

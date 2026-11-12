@@ -1,0 +1,33 @@
+T-250 — the server's notices, red on the old code.
+
+Fix commit 89e7da0. The three files it changed put back as they were
+(git restore --source=89e7da0~1 -- server/i18n/pushNotifications.js
+server/services/notifications/pushNotificationService.js
+server/services/notifications/reminderText.js), the new test kept:
+
+$ cd rehearsal-calendar-native/server
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText --silent
+
+  ● Each reader is told when, on their own clock and in their own language › a changed rehearsal, with what changed
+    Expected: "Hamlet: Full dress — теперь завтра в 22:00"
+    Received: "Hamlet: Full dress, завтра в 22:00 — дата/время"
+  ● No word agrees with a title, a member or a reader the server cannot know (T-251) › a role given reads right in Russian, and agrees with no reader in Spanish and German
+    Expected: "You are now an administrator of Hamlet"
+    Received: "You are now an administrator in Hamlet"
+  ● A changed rehearsal says what changed, as a native speaker says it (T-250) › moved: where to, today
+  ● A changed rehearsal says what changed, as a native speaker says it (T-250) › moved to a date: "al", not "a el"; "auf Di.", not "auf am"
+    Expected: "Лебединое озеро: Кордебалет, pasa al mar, 6 oct a las 21:00"
+    Received: "Лебединое озеро: Кордебалет, el mar, 6 oct a las 21:00 — fecha/hora"
+  ● A changed rehearsal says what changed, as a native speaker says it (T-250) › moved and to a new place
+  ● A changed rehearsal says what changed, as a native speaker says it (T-250) › a new place only: which
+  ● A changed rehearsal says what changed, as a native speaker says it (T-250) › the place taken away
+  ● A changed rehearsal says what changed, as a native speaker says it (T-250) › renamed: the new name, and that it is one
+Tests:       8 failed, 21 passed, 29 total
+
+Back on 89e7da0 (git restore --source=HEAD -- the same three files):
+
+Tests:       29 passed, 29 total
+
+Not this task: __tests__/startup/runtimeStartup.test.js fails 8 of 11 in this
+sandbox on the old code and the new alike (it spawns the server and listens);
+the rest of the server suite passes.
