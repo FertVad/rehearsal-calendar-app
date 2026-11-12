@@ -90,9 +90,9 @@ tags:
     id: header-cancel
 - runFlow:
     when:
-      visible: "Nicht sichern"
+      visible: "Nicht speichern"
     commands:
-      - tapOn: "Nicht sichern"
+      - tapOn: "Nicht speichern"
 - extendedWaitUntil:
     notVisible:
       id: header-cancel

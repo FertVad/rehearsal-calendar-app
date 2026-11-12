@@ -40,11 +40,11 @@ describe('"just now" inside the sync screen\'s sentence', () => {
 
 describe('minutes, hours and days inside the sentence, as each language writes them', () => {
   it.each([
-    ['ru', 'Синхронизировано 5 мин назад', 'Синхронизировано 3ч назад', 'Синхронизировано 2д назад'],
+    ['ru', 'Синхронизировано 5 мин назад', 'Синхронизировано 3 ч назад', 'Синхронизировано 2 дн. назад'],
     ['en', 'Synced 5 min ago', 'Synced 3h ago', 'Synced 2d ago'],
     ['es', 'Sincronizado hace 5 min', 'Sincronizado hace 3 h', 'Sincronizado hace 2 d'],
     // Nouns keep their capital in German, abbreviated too.
-    ['de', 'Synchronisiert vor 5 Min', 'Synchronisiert vor 3 Std', 'Synchronisiert vor 2 T'],
+    ['de', 'Synchronisiert vor 5 Min.', 'Synchronisiert vor 3 Std.', 'Synchronisiert vor 2 Tg.'],
   ] as const)('%s', (language, minutes, hours, days) => {
     expect(synced(language, ago(5 * MINUTE))).toBe(minutes);
     expect(synced(language, ago(3 * 60 * MINUTE))).toBe(hours);
@@ -57,7 +57,7 @@ describe('on its own, over the availability\'s month, it begins with a capital',
     ['ru', 'Только что', '5 мин назад'],
     ['en', 'Just now', '5 min ago'],
     ['es', 'Ahora mismo', 'Hace 5 min'],
-    ['de', 'Gerade eben', 'Vor 5 Min'],
+    ['de', 'Gerade eben', 'Vor 5 Min.'],
   ] as const)('%s', (language, now, minutes) => {
     expect(alone(language, ago(10 * 1000))).toBe(now);
     expect(alone(language, ago(5 * MINUTE))).toBe(minutes);

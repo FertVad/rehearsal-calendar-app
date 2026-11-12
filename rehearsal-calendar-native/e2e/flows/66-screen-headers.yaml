@@ -58,7 +58,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Estate Ball.*"
-      SEE: ".*Share the link.*"
+      SEE: ".*Share Link.*"
       WAIT_MS: "15000"
 - waitForAnimationToEnd
 - takeScreenshot: 66-stack

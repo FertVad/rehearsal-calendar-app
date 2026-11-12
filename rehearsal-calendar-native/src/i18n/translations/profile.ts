@@ -99,13 +99,16 @@ export const ru = {
     logout: 'Выйти из аккаунта',
     deleteAccount: 'Удалить аккаунт',
     deleteAccountConfirm: 'Удалить аккаунт?',
-    deleteAccountWarning: 'Это действие необратимо. Все ваши данные будут удалены навсегда — вместе с проектами, которыми вы владеете, и всеми их репетициями. Остальные участники потеряют их тоже.',
+    deleteAccountWarning: 'Это действие необратимо. Все ваши данные будут удалены навсегда — вместе с проектами, которыми вы владеете, и всеми их репетициями. Остальные участники тоже их потеряют.',
     deleteAccountProjectsWarning: (count: number) =>
-      count === 1
-        ? 'Будет удален 1 проект, где вы единственный администратор.'
-        : `Будут удалены ${count} проект(а/ов), где вы единственный администратор.`,
+      // 1, 21 проект; 2–4, 22 проекта; 5–20, 11–14 проектов — "проект(а/ов)" was no Russian.
+      count % 10 === 1 && count % 100 !== 11
+        ? `Будет удалён ${count} проект, где вы единственный администратор.`
+        : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)
+          ? `Будут удалены ${count} проекта, где вы единственный администратор.`
+          : `Будут удалены ${count} проектов, где вы единственный администратор.`,
     deleteAccountFinalWarning: 'Вы уверены, что хотите удалить свой аккаунт?',
-    deleteAccountSuccess: 'Аккаунт успешно удален',
+    deleteAccountSuccess: 'Аккаунт удалён',
     deleteAccountError: 'Не удалось удалить аккаунт',
     cancel: 'Отмена',
     confirmDelete: 'Да, удалить',
@@ -117,7 +120,7 @@ export const ru = {
     lastNamePlaceholder: 'Введите фамилию',
     emailPlaceholder: 'Введите email',
     firstNameRequired: 'Имя обязательно',
-    profileUpdated: 'Профиль обновлен',
+    profileUpdated: 'Профиль обновлён',
     updateError: 'Ошибка обновления профиля',
     avatarHint: 'Аватар генерируется автоматически на основе вашего email',
     errorTitle: 'Ошибка',
@@ -157,8 +160,8 @@ export const en = {
     settings: 'Settings',
     notifications: 'Notifications',
     language: 'Language',
-    timezone: 'Timezone',
-    timezoneModalTitle: 'Select Timezone',
+    timezone: 'Time Zone',
+    timezoneModalTitle: 'Select Time Zone',
     timezoneNotSelected: 'Not selected',
     timezoneSearch: 'City or time zone',
     timezoneNotFound: 'Nothing found',
@@ -174,19 +177,20 @@ export const en = {
     reportBugSend: 'Send',
     reportBugSent: 'Thanks! Report sent',
     reportBugFailed: 'Could not send the report',
-    logout: 'Log out',
+    // "Sign Out", as the app says "Sign In".
+    logout: 'Sign Out',
     deleteAccount: 'Delete Account',
     deleteAccountConfirm: 'Delete Account?',
-    deleteAccountWarning: 'This action is irreversible. All your data will be permanently deleted — along with the projects you own and all their rehearsals. Everyone else in them loses them too.',
+    deleteAccountWarning: 'This action is irreversible. All your data will be permanently deleted — along with the projects you own and all their rehearsals. Everyone else in them will lose them too.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
         ? '1 project where you are the only admin will be deleted.'
         : `${count} projects where you are the only admin will be deleted.`,
     deleteAccountFinalWarning: 'Are you sure you want to delete your account?',
-    deleteAccountSuccess: 'Account successfully deleted',
+    deleteAccountSuccess: 'Account deleted',
     deleteAccountError: 'Failed to delete account',
     cancel: 'Cancel',
-    confirmDelete: 'Yes, delete',
+    confirmDelete: 'Yes, Delete',
     editProfile: 'Edit Profile',
     firstName: 'First Name',
     lastName: 'Last Name',
@@ -200,7 +204,7 @@ export const en = {
     avatarHint: 'Avatar is automatically generated based on your email',
     errorTitle: 'Error',
     notificationError: 'Failed to update notification settings',
-    pushDeniedTitle: 'Notifications are not allowed',
+    pushDeniedTitle: 'Notifications Not Allowed',
     pushDeniedMessage: 'Allow notifications for Rehearsly in your phone settings.',
     pushUnsupported: 'This device cannot receive push notifications.',
     pushFailed: 'Could not turn on notifications on this device. Check your connection and try again.',
@@ -208,22 +212,22 @@ export const en = {
     pushNotRegisteredHere: 'This phone is not set up for notifications yet. Tap to try again.',
     openSettings: 'Open Settings',
     languageError: 'Failed to change language',
-    timezoneError: 'Failed to update timezone',
+    timezoneError: 'Failed to update time zone',
     weekStartError: 'Failed to update week start day',
-    changeEmail: 'Change address',
-    changeEmailTitle: 'Change address',
+    changeEmail: 'Change Address',
+    changeEmailTitle: 'Change Address',
     changeEmailSubtitle: (email: string) => `We will send a code to ${email} and one to the new address. The address changes once you enter both.`,
     newEmail: 'New address',
     currentPassword: 'Current password',
-    sendCodes: 'Send codes',
+    sendCodes: 'Send Codes',
     codesSent: 'The codes are on their way. Earlier ones no longer work.',
     currentAddressCode: (email: string) => `Code from the email to ${email}`,
     newAddressCode: (email: string) => `Code from the email to ${email}`,
     deliveryFailedTo: (email: string) => `The email to ${email} could not be sent. Ask for the codes again.`,
     deliveryUnknownTo: (email: string) => `The email to ${email} may take a while. If it has not arrived in a couple of minutes, ask for the codes again.`,
-    resendCodes: 'Send the codes again',
-    confirmChange: 'Confirm change',
-    emailChangedTitle: 'Address changed',
+    resendCodes: 'Send Codes Again',
+    confirmChange: 'Confirm Change',
+    emailChangedTitle: 'Address Changed',
     emailChanged: (email: string) => `You now sign in with ${email}. A notice went to the previous address.`,
     emailTakenByOther: 'Another account already uses this address.',
   },
@@ -255,11 +259,11 @@ export const es = {
     logout: 'Cerrar sesión',
     deleteAccount: 'Eliminar cuenta',
     deleteAccountConfirm: '¿Eliminar cuenta?',
-    deleteAccountWarning: 'Esta acción es irreversible. Todos tus datos se eliminarán permanentemente, junto con los proyectos que posees y todos sus ensayos. Los demás integrantes también los pierden.',
+    deleteAccountWarning: 'Esta acción es irreversible. Todos tus datos se eliminarán permanentemente, junto con los proyectos que son tuyos y todos sus ensayos. Los demás miembros también los perderán.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
-        ? 'Se eliminará 1 proyecto en el que eres el único administrador.'
-        : `Se eliminarán ${count} proyectos en los que eres el único administrador.`,
+        ? 'Se eliminará 1 proyecto que solo administras tú.'
+        : `Se eliminarán ${count} proyectos que solo administras tú.`,
     deleteAccountFinalWarning: '¿Seguro que quieres eliminar tu cuenta?',
     deleteAccountSuccess: 'Cuenta eliminada correctamente',
     deleteAccountError: 'No se pudo eliminar la cuenta',
@@ -321,7 +325,7 @@ export const de = {
     weekStart: 'Wochenbeginn',
     weekStartMonday: 'Montag',
     weekStartSunday: 'Sonntag',
-    about: 'Über',
+    about: 'Über die App',
     version: 'Version',
     help: 'Hilfe',
     privacyPolicy: 'Datenschutzerklärung',
@@ -333,13 +337,13 @@ export const de = {
     logout: 'Abmelden',
     deleteAccount: 'Konto löschen',
     deleteAccountConfirm: 'Konto löschen?',
-    deleteAccountWarning: 'Diese Aktion ist unumkehrbar. Alle deine Daten werden dauerhaft gelöscht — samt den Projekten, die dir gehören, und all ihren Proben. Alle anderen darin verlieren sie ebenfalls.',
+    deleteAccountWarning: 'Diese Aktion ist unumkehrbar. Alle deine Daten werden dauerhaft gelöscht – samt den Projekten, die dir gehören, und all ihren Proben. Alle anderen darin verlieren sie ebenfalls.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
-        ? '1 Projekt, in dem du der einzige Administrator bist, wird gelöscht.'
-        : `${count} Projekte, in denen du der einzige Administrator bist, werden gelöscht.`,
+        ? '1 Projekt, das nur du verwaltest, wird gelöscht.'
+        : `${count} Projekte, die nur du verwaltest, werden gelöscht.`,
     deleteAccountFinalWarning: 'Möchtest du dein Konto wirklich löschen?',
-    deleteAccountSuccess: 'Konto erfolgreich gelöscht',
+    deleteAccountSuccess: 'Konto gelöscht',
     deleteAccountError: 'Konto konnte nicht gelöscht werden',
     cancel: 'Abbrechen',
     confirmDelete: 'Ja, löschen',

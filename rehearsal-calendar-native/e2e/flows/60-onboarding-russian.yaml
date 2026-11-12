@@ -58,7 +58,7 @@ tags:
 - extendedWaitUntil:
     visible: "Требуется разрешение"
     timeout: 10000
-- assertVisible: "Для использования этой функции необходим доступ к календарю"
+- assertVisible: "Для этого нужен доступ к календарю"
 - assertNotVisible: "Calendar access is required.*"
 - takeScreenshot: 60-onboarding-calendar-refused-ru
 - tapOn: "OK"

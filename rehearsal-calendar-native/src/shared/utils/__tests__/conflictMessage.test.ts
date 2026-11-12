@@ -31,7 +31,7 @@ it('has no Cyrillic in any language but Russian', () => {
       expect(formatConflictMessage(info, t)).not.toMatch(/[А-Яа-яЁё]/);
     }
   }
-  expect(formatConflictMessage(conflict(member('1', 'Ольга')), translations.ru)).toBe('Ольга занят(а) в это время');
+  expect(formatConflictMessage(conflict(member('1', 'Ольга')), translations.ru)).toBe('В это время не может: Ольга');
 });
 
 it('says nothing when nobody is busy', () => {

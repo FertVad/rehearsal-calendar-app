@@ -296,7 +296,7 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     const [title, message, buttons] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
     expect(title).toBe('Error');
     expect(message).toBe(translations.en.rehearsals.deleteNotifiedUnknown);
-    expect(buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Try again']);
+    expect(buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Try Again']);
     expect(buttons.some((b: any) => b.style === 'destructive')).toBe(false);
 
     await act(async () => { buttons[1].onPress(); });

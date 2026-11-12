@@ -86,7 +86,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: profile-timezone
-      SEE: "Select Timezone"
+      SEE: "Select Time Zone"
       WAIT_MS: "10000"
 - tapOn:
     id: timezone-search
@@ -120,6 +120,6 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Honolulu \\(UTC-10\\)"
-      GONE: "Select Timezone"
+      GONE: "Select Time Zone"
       WAIT_MS: "10000"
 - assertVisible: ".*Honolulu \\(UTC-10\\).*"

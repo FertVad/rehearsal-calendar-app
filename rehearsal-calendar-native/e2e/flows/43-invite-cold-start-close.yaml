@@ -74,7 +74,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: profile-logout
-      GONE: "Log out"
+      GONE: "Sign Out"
       WAIT_MS: "10000"
 - runFlow:
     file: ../subflows/sign-in-form.yaml

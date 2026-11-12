@@ -36,7 +36,7 @@ export const ru: { notifications: NotificationsTranslations } = {
     justNow: 'только что',
     minutesAgo: (minutes: number) => `${minutes} мин назад`,
     hoursAgo: (hours: number) => `${hours} ч назад`,
-    daysAgo: (days: number) => (days === 1 ? 'вчера' : `${days} дн назад`),
+    daysAgo: (days: number) => (days === 1 ? 'вчера' : `${days} дн. назад`),
   },
 };
 
@@ -48,7 +48,7 @@ export const en: { notifications: NotificationsTranslations } = {
     markAllRead: 'Mark all read',
     delete: 'Delete',
     clearAll: 'Clear all',
-    clearAllConfirm: 'Clear notifications?',
+    clearAllConfirm: 'Clear Notifications?',
     clearAllConfirmBody: 'The list will be empty. This cannot be undone.',
     deleteError: 'Could not delete',
     markReadError: 'Could not mark as read',
@@ -65,7 +65,7 @@ export const es: { notifications: NotificationsTranslations } = {
   notifications: {
     title: 'Notificaciones',
     empty: 'Todavía nada',
-    emptyHint: 'Aquí verán los recordatorios de ensayos y todo lo que pase en sus proyectos.',
+    emptyHint: 'Aquí verás los recordatorios de ensayos y todo lo que pase en tus proyectos.',
     markAllRead: 'Marcar todas',
     delete: 'Eliminar',
     clearAll: 'Vaciar',
@@ -97,8 +97,8 @@ export const de: { notifications: NotificationsTranslations } = {
     showOlder: 'Ältere anzeigen',
     loadError: 'Mitteilungen konnten nicht geladen werden',
     justNow: 'gerade eben',
-    minutesAgo: (minutes: number) => `vor ${minutes} Min`,
-    hoursAgo: (hours: number) => `vor ${hours} Std`,
-    daysAgo: (days: number) => (days === 1 ? 'gestern' : `vor ${days} T`),
+    minutesAgo: (minutes: number) => `vor ${minutes} Min.`,
+    hoursAgo: (hours: number) => `vor ${hours} Std.`,
+    daysAgo: (days: number) => (days === 1 ? 'gestern' : `vor ${days} Tg.`),
   },
 };

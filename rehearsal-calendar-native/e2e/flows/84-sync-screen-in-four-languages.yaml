@@ -18,6 +18,12 @@
 # without regard to case, so the line is copied and compared in JavaScript.
 # Maestro reads a label whole even where the screen cuts it, so the title is
 # checked by its text and seen whole in the shots.
+#
+# And the words read as a native speaker's (T-250): the alert after a sync is
+# «Синхронизировано», "Sincronización completada", "Synchronisiert", not
+# «Успешно синхронизировано», "Sincronizado correctamente", "Erfolgreich
+# synchronisiert"; the line at the top agrees with no reader's gender, and a
+# person in German is "beschäftigt", not "belegt" like a room.
 appId: ${APP_ID}
 name: The sync screen's bar and last sync in four languages
 tags:
@@ -46,7 +52,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Hamlet — Demo Theatre.*"
-      SEE: ".*Share the link.*"
+      SEE: ".*Share Link.*"
       WAIT_MS: "15000"
 - waitForAnimationToEnd
 - takeScreenshot: 84-project-long-title
@@ -160,7 +166,7 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Успешно синхронизировано"
+    visible: "Синхронизировано"
     timeout: 30000
 - tapOn: "OK"
 - waitForAnimationToEnd
@@ -212,7 +218,7 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Sincronizado correctamente"
+    visible: "Sincronización completada"
     timeout: 30000
 - tapOn: "OK"
 - waitForAnimationToEnd
@@ -226,6 +232,7 @@ tags:
 - assertVisible:
     id: header-back
     text: ".*Perfil"
+- assertVisible: ".*solo llegan las horas que tienes ocupadas.*"
 
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -264,7 +271,7 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Erfolgreich synchronisiert"
+    visible: "Synchronisiert"
     timeout: 30000
 - tapOn: "OK"
 - waitForAnimationToEnd
@@ -278,3 +285,4 @@ tags:
 - assertVisible:
     id: header-back
     text: ".*Profil"
+- assertVisible: ".*in denen du beschäftigt bist.*"
