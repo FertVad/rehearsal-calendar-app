@@ -1,0 +1,21 @@
+fix(inbox,push): a card says all of it, "New administrator" opens the members, every type has its icon (T-252)
+
+- The inbox card cut title and text at the second line (numberOfLines=2):
+  "... programado para mañana a las 1..." hid the time and place, and a tap
+  opens the rehearsal, not the text. Now the card shows it whole.
+- notifyAdminAppointed sends the project's id (members.js passes it), so the
+  inbox row has related_type/related_id; a tapped push and a tapped card open
+  the project on its members, as member_joined does (T-023). Old rows without
+  the id open nothing, as T-023 decided.
+- iconFor: member_joined gets the person with a plus, admin_appointed a key;
+  project_invite (no longer sent, may still be in old inboxes) keeps a branch,
+  now an envelope.
+- everyServerNotification.test.tsx reads every type: '...' the server's sender
+  puts in a notification and fails when a tapped push of it opens nothing or
+  its card gets the unknown type's bell.
+- e2e: flow 88 ("New administrator" opens the members), notify.js and the
+  mailbox send admin_appointed; flow 86 gets the longest notice (Spanish,
+  added, on a date, a long place; seeded) and looks for a drawn "..." on
+  every shot.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
