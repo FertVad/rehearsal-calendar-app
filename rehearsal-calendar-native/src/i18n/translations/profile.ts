@@ -102,11 +102,13 @@ export const ru = {
     deleteAccountWarning: 'Это действие необратимо. Все ваши данные будут удалены навсегда — вместе с проектами, которыми вы владеете, и всеми их репетициями. Остальные участники тоже их потеряют.',
     deleteAccountProjectsWarning: (count: number) =>
       // 1, 21 проект; 2–4, 22 проекта; 5–20, 11–14 проектов — "проект(а/ов)" was no Russian.
+      // Shown under "Аккаунт удалён", so done, not to come: "Будет удалён" promised
+      // a deletion that had already happened (T-250).
       count % 10 === 1 && count % 100 !== 11
-        ? `Будет удалён ${count} проект, где вы единственный администратор.`
+        ? `Также удалён ${count} проект, где вы были единственным администратором.`
         : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)
-          ? `Будут удалены ${count} проекта, где вы единственный администратор.`
-          : `Будут удалены ${count} проектов, где вы единственный администратор.`,
+          ? `Также удалены ${count} проекта, где вы были единственным администратором.`
+          : `Также удалено ${count} проектов, где вы были единственным администратором.`,
     deleteAccountFinalWarning: 'Вы уверены, что хотите удалить свой аккаунт?',
     deleteAccountSuccess: 'Аккаунт удалён',
     deleteAccountError: 'Не удалось удалить аккаунт',
@@ -184,8 +186,8 @@ export const en = {
     deleteAccountWarning: 'This action is irreversible. All your data will be permanently deleted — along with the projects you own and all their rehearsals. Everyone else in them will lose them too.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
-        ? '1 project where you are the only admin will be deleted.'
-        : `${count} projects where you are the only admin will be deleted.`,
+        ? '1 project where you were the only admin was deleted too.'
+        : `${count} projects where you were the only admin were deleted too.`,
     deleteAccountFinalWarning: 'Are you sure you want to delete your account?',
     deleteAccountSuccess: 'Account deleted',
     deleteAccountError: 'Failed to delete account',
@@ -262,8 +264,8 @@ export const es = {
     deleteAccountWarning: 'Esta acción es irreversible. Todos tus datos se eliminarán permanentemente, junto con los proyectos que son tuyos y todos sus ensayos. Los demás miembros también los perderán.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
-        ? 'Se eliminará 1 proyecto que solo administras tú.'
-        : `Se eliminarán ${count} proyectos que solo administras tú.`,
+        ? 'También se ha eliminado 1 proyecto que solo administrabas tú.'
+        : `También se han eliminado ${count} proyectos que solo administrabas tú.`,
     deleteAccountFinalWarning: '¿Seguro que quieres eliminar tu cuenta?',
     deleteAccountSuccess: 'Cuenta eliminada correctamente',
     deleteAccountError: 'No se pudo eliminar la cuenta',
@@ -340,8 +342,8 @@ export const de = {
     deleteAccountWarning: 'Diese Aktion ist unumkehrbar. Alle deine Daten werden dauerhaft gelöscht – samt den Projekten, die dir gehören, und all ihren Proben. Alle anderen darin verlieren sie ebenfalls.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
-        ? '1 Projekt, das nur du verwaltest, wird gelöscht.'
-        : `${count} Projekte, die nur du verwaltest, werden gelöscht.`,
+        ? '1 Projekt, das nur du verwaltet hast, wurde ebenfalls gelöscht.'
+        : `${count} Projekte, die nur du verwaltet hast, wurden ebenfalls gelöscht.`,
     deleteAccountFinalWarning: 'Möchtest du dein Konto wirklich löschen?',
     deleteAccountSuccess: 'Konto gelöscht',
     deleteAccountError: 'Konto konnte nicht gelöscht werden',

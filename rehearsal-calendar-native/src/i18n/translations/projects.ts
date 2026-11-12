@@ -109,11 +109,13 @@ export const ru = {
     removeMember: 'Удалить из проекта',
     cancel: 'Отмена',
     removeMemberConfirm: 'Удалить участника?',
-    removeMemberMessage: (memberName: string) => `Вы уверены, что хотите удалить ${memberName} из проекта?`,
+    // The name comes as it is stored, in the nominative, so it is the subject
+    // here: "удалить Анна Смирнова", "у Анна Смирнова" were no Russian (T-250).
+    removeMemberMessage: (memberName: string) => `${memberName} больше не будет участником проекта.`,
     makeAdminConfirm: 'Назначить администратором?',
-    makeAdminMessage: (memberName: string) => `Вы уверены, что хотите назначить ${memberName} администратором проекта?`,
+    makeAdminMessage: (memberName: string) => `${memberName} станет администратором проекта.`,
     removeAdminConfirm: 'Снять права администратора?',
-    removeAdminMessage: (memberName: string) => `Вы уверены, что хотите снять права администратора у ${memberName}?`,
+    removeAdminMessage: (memberName: string) => `${memberName} больше не будет администратором проекта.`,
     memberRemoved: 'Участник удалён из проекта',
     roleUpdated: 'Роль участника обновлена',
     memberActionError: 'Не удалось выполнить действие',

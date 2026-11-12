@@ -63,7 +63,7 @@ tags:
     height: 50
     tolerance: 6
 - assertVisible:
-    text: "Clear all"
+    text: "Clear All"
     width: 50
     height: 50
     tolerance: 6

@@ -220,7 +220,7 @@ tags:
 - tapOn:
     id: availability-save
 - extendedWaitUntil:
-    visible: "Cannot save"
+    visible: "Cannot Save"
     timeout: 10000
 - assertVisible: "Error \\(${MARK_DAY_LABEL}\\):[\\s\\S]*Slots must not overlap[\\s\\S]*"
 - takeScreenshot: 10-availability-overlap

@@ -156,7 +156,7 @@ export const en = {
     deleteDataConfirm: 'Delete Entries?',
     deleteDataMessage: 'Your availability entries for this past day will be deleted.',
     pastDateWarning: 'This day has passed. You can delete its entries but not edit them.',
-    cannotSave: 'Cannot save',
+    cannotSave: 'Cannot Save',
     invalidSlot: 'Please fix the time slots and try again.',
     slotsOverlap: 'Slots must not overlap',
     slotSameStartEnd: 'End time cannot be the same as the start time',
