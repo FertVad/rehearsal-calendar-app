@@ -16,6 +16,9 @@
 // "Administrator" for every woman reading them (T-251).
 const ruRehearsal = (title) => (title ? `Репетиция «${title}»` : 'Репетиция');
 const esRehearsal = (title) => (title ? `Ensayo «${title}»` : 'Ensayo');
+// "a las 19:00", "hasta las 22:00" — but one o'clock is singular: "a la 1:00",
+// "hasta la 1:30" (T-250).
+const esLas = (time) => (/^1\D/.test(time) ? `la ${time}` : `las ${time}`);
 
 const translations = {
   ru: {
@@ -37,16 +40,18 @@ const translations = {
     },
     rehearsalUpdated: {
       title: 'Изменена репетиция',
-      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+      body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
         const name = rehearsalTitle || 'Репетиция';
+        const end = until ? ` до ${until}` : '';
         if (changed.datetime) {
           const place = changed.location ? `, ${location ? `место: ${location}` : 'место не указано'}` : '';
-          return `${projectName}: ${name} — теперь ${movedTo}${place}`;
+          return `${projectName}: ${name} — теперь ${movedTo}${end}${place}`;
         }
-        if (changed.location) {
-          return `${projectName}: ${name}, ${when} — ${location ? `новое место: ${location}` : 'место больше не указано'}`;
-        }
-        return `${projectName}: ${name}, ${when} — новое название`;
+        const what = [
+          until && `теперь до ${until}`,
+          changed.location && (location ? `новое место: ${location}` : 'место больше не указано'),
+        ].filter(Boolean);
+        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : 'новое название'}`;
       },
     },
     rehearsalDeleted: {
@@ -131,16 +136,18 @@ const translations = {
     },
     rehearsalUpdated: {
       title: 'Rehearsal updated',
-      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+      body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
         const name = rehearsalTitle || 'Rehearsal';
+        const end = until ? ` until ${until}` : '';
         if (changed.datetime) {
           const place = changed.location ? (location ? ` at ${location}` : ', no location') : '';
-          return `${projectName}: ${name} — now ${movedTo}${place}`;
+          return `${projectName}: ${name} — now ${movedTo}${end}${place}`;
         }
-        if (changed.location) {
-          return `${projectName}: ${name}, ${when} — ${location ? `new location: ${location}` : 'no location now'}`;
-        }
-        return `${projectName}: ${name}, ${when} — renamed`;
+        const what = [
+          until && `now until ${until}`,
+          changed.location && (location ? `new location: ${location}` : 'no location now'),
+        ].filter(Boolean);
+        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : 'renamed'}`;
       },
     },
     rehearsalDeleted: {
@@ -222,16 +229,18 @@ const translations = {
     rehearsalUpdated: {
       title: 'Ensayo actualizado',
       // "pasa a hoy", "pasa al mar, 6 oct": movedTo carries its own "a".
-      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+      body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
         const name = rehearsalTitle || 'Ensayo';
+        const end = until ? ` hasta ${esLas(until)}` : '';
         if (changed.datetime) {
           const place = changed.location ? (location ? ` en ${location}` : ', sin lugar asignado') : '';
-          return `${projectName}: ${name}, pasa ${movedTo}${place}`;
+          return `${projectName}: ${name}, pasa ${movedTo}${end}${place}`;
         }
-        if (changed.location) {
-          return `${projectName}: ${name}, ${when} — ${location ? `nuevo lugar: ${location}` : 'ya sin lugar asignado'}`;
-        }
-        return `${projectName}: ${name}, ${when} — nuevo nombre`;
+        const what = [
+          until && `ahora hasta ${esLas(until)}`,
+          changed.location && (location ? `nuevo lugar: ${location}` : 'ya sin lugar asignado'),
+        ].filter(Boolean);
+        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : 'nuevo nombre'}`;
       },
     },
     rehearsalDeleted: {
@@ -284,16 +293,16 @@ const translations = {
         `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
     },
     when: {
-      today: (time) => `hoy a las ${time}`,
-      tomorrow: (time) => `mañana a las ${time}`,
-      on: (date, time) => `el ${date} a las ${time}`,
+      today: (time) => `hoy a ${esLas(time)}`,
+      tomorrow: (time) => `mañana a ${esLas(time)}`,
+      on: (date, time) => `el ${date} a ${esLas(time)}`,
     },
     // Where a rehearsal was moved to: "pasa a mañana a las 19:00", "pasa al
     // mar, 6 oct a las 19:00" — "a el" contracts.
     movedTo: {
-      today: (time) => `a hoy a las ${time}`,
-      tomorrow: (time) => `a mañana a las ${time}`,
-      on: (date, time) => `al ${date} a las ${time}`,
+      today: (time) => `a hoy a ${esLas(time)}`,
+      tomorrow: (time) => `a mañana a ${esLas(time)}`,
+      on: (date, time) => `al ${date} a ${esLas(time)}`,
     },
   },
   de: {
@@ -317,16 +326,18 @@ const translations = {
     rehearsalUpdated: {
       title: 'Probe geändert',
       // "verlegt auf heute, 19:00": movedTo carries its own "auf".
-      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+      body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
         const name = rehearsalTitle || 'Probe';
+        const end = until ? ` bis ${until}` : '';
         if (changed.datetime) {
           const place = changed.location ? (location ? `, Ort: ${location}` : ', ohne Ort') : '';
-          return `${projectName}: ${name} – verlegt ${movedTo}${place}`;
+          return `${projectName}: ${name} – verlegt ${movedTo}${end}${place}`;
         }
-        if (changed.location) {
-          return `${projectName}: ${name}, ${when} – ${location ? `neuer Ort: ${location}` : 'kein Ort mehr'}`;
-        }
-        return `${projectName}: ${name}, ${when} – neuer Titel`;
+        const what = [
+          until && `jetzt bis ${until}`,
+          changed.location && (location ? `neuer Ort: ${location}` : 'kein Ort mehr'),
+        ].filter(Boolean);
+        return `${projectName}: ${name}, ${when} – ${what.length ? what.join(', ') : 'neuer Titel'}`;
       },
     },
     rehearsalDeleted: {

@@ -426,6 +426,52 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
       'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — renamed',
     ]);
   });
+
+  // 19:00–21:00 made 19:00–22:30 did not move: "теперь сегодня в 19:00",
+  // "verlegt auf heute, 19:00" said it had, and the new end was lost.
+  it('made longer, the start where it was: until when, not moved', async () => {
+    const longer = { ...swan, endsAt: '2026-10-06T20:30:00.000Z' };
+    await notifyRehearsalUpdated(longer, 'Лебединое озеро', all(), ['end'], { now: today });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora hasta las 22:30',
+      'Лебединое озеро: Кордебалет, heute um 21:00 – jetzt bis 22:30',
+      'Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 23:30',
+      'Лебединое озеро: Кордебалет, today at 8:00 PM — now until 9:30 PM',
+    ]);
+  });
+
+  it('made longer and to a new place', async () => {
+    const longer = { ...swan, endsAt: '2026-10-06T20:30:00.000Z' };
+    await notifyRehearsalUpdated(longer, 'Лебединое озеро', all(), ['end', 'location'], { now: today });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora hasta las 22:30, nuevo lugar: Зал 2',
+      'Лебединое озеро: Кордебалет, heute um 21:00 – jetzt bis 22:30, neuer Ort: Зал 2',
+      'Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 23:30, новое место: Зал 2',
+      'Лебединое озеро: Кордебалет, today at 8:00 PM — now until 9:30 PM, new location: Зал 2',
+    ]);
+  });
+
+  // The start moved and the end stayed: the new start, and the end it keeps.
+  it('the start moved and the length changed: from when and until when', async () => {
+    const earlier = { ...swan, startsAt: '2026-10-06T18:00:00.000Z', endsAt: '2026-10-06T20:30:00.000Z' };
+    await notifyRehearsalUpdated(earlier, 'Лебединое озеро', all(), ['datetime', 'end'], { now: today });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, pasa a hoy a las 20:00 hasta las 22:30',
+      'Лебединое озеро: Кордебалет – verlegt auf heute, 20:00 bis 22:30',
+      'Лебединое озеро: Кордебалет — теперь сегодня в 21:00 до 23:30',
+      'Лебединое озеро: Кордебалет — now today at 7:00 PM until 9:30 PM',
+    ]);
+  });
+
+  it('one o\'clock in Spanish is singular: "a la 1:00", "hasta la 1:30"', async () => {
+    const late = { ...swan, startsAt: '2026-10-06T23:00:00.000Z', endsAt: '2026-10-06T23:30:00.000Z' };
+    await notifyRehearsalUpdated(late, 'Лебединое озеро', all(), ['end'], { now: today });
+
+    expect(bodies()[0]).toBe('Лебединое озеро: Кордебалет, mañana a la 1:00 — ahora hasta la 1:30');
+  });
 });
 
 describe('No words for a notice nobody sends (T-251)', () => {

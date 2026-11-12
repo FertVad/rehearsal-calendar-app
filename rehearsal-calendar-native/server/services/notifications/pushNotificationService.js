@@ -10,7 +10,7 @@ import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
 import { recordNotifications, getUnreadCounts } from './notificationStore.js';
 import { t } from '../../i18n/pushNotifications.js';
-import { reminderWhen } from './reminderText.js';
+import { clockTime, reminderWhen } from './reminderText.js';
 
 const EXPO_CHUNK = 100;
 export const EXPO_TIMEOUT_MS = 10_000;
@@ -469,13 +469,17 @@ export async function notifyRehearsalCreated(rehearsal, projectName, members, op
  * and what changed, in words (T-250): moved — to when; a new place — which;
  * renamed. "Кордебалет, сегодня в 19:00 — дата/время" made the reader work
  * out that the time was the new one; now it reads "Кордебалет — теперь
- * сегодня в 19:00", as the landing page shows it.
- * @param {string[]} changeKeys - what changed: 'datetime', 'location', 'title'
+ * сегодня в 19:00", as the landing page shows it. A longer or shorter
+ * rehearsal is not a moved one: 19:00–21:00 made 19:00–22:00 reads
+ * "Кордебалет, сегодня в 19:00 — теперь до 22:00", not "теперь сегодня в 19:00".
+ * @param {string[]} changeKeys - what changed: 'datetime' (the start moved),
+ *   'end' (it ends at another time than the move alone would put it), 'location', 'title'
  */
 export async function notifyRehearsalUpdated(rehearsal, projectName, members, changeKeys, options) {
   const userIds = members.map(m => m.user_id);
   const changed = Object.fromEntries((changeKeys || []).map((key) => [key, true]));
-  return sendAboutRehearsal(rehearsal, userIds, (locale, when, wordedAs) => {
+  const endsAt = rehearsal.ends_at ?? rehearsal.endsAt;
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when, wordedAs, timeOf) => {
     const tr = t(locale, 'rehearsalUpdated');
     return {
       title: tr.title,
@@ -484,6 +488,7 @@ export async function notifyRehearsalUpdated(rehearsal, projectName, members, ch
         rehearsalTitle: rehearsal.title,
         when,
         movedTo: wordedAs('movedTo'),
+        until: changed.end && endsAt ? timeOf(endsAt) : null,
         changed,
         location: rehearsal.location,
       }),
@@ -633,8 +638,9 @@ export async function notifyProjectDeleted(projectName, memberIds) {
  * as the reader's own clock shows it (reminderText.js), so two people in one
  * language but different zones read different times. The reminders, a new or
  * changed rehearsal and a response all say when this way (T-023).
- * `compose(locale, when, wordedAs)` gives the title and body — `wordedAs` words
- * the start another way (reminderWhen's `wording`); `options.now` is the moment
+ * `compose(locale, when, wordedAs, timeOf)` gives the title and body — `wordedAs`
+ * words the start another way (reminderWhen's `wording`), `timeOf` gives any
+ * instant's time on the reader's clock (the end); `options.now` is the moment
  * it is sent at; the rest passes to sendPushNotification.
  */
 async function sendAboutRehearsal(rehearsal, userIds, compose, data, { now = new Date(), ...options } = {}) {
@@ -661,7 +667,8 @@ async function sendAboutRehearsal(rehearsal, userIds, compose, data, { now = new
   for (const { locale, timeZone, ids } of groups.values()) {
     const when = reminderWhen(locale, startsAt, now, timeZone);
     const wordedAs = (wording) => reminderWhen(locale, startsAt, now, timeZone, wording);
-    merge(outcome, await sendPushNotification(ids, { ...compose(locale, when, wordedAs), data }, options));
+    const timeOf = (instant) => clockTime(locale, instant, timeZone);
+    merge(outcome, await sendPushNotification(ids, { ...compose(locale, when, wordedAs, timeOf), data }, options));
   }
   return outcome;
 }

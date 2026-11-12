@@ -38,6 +38,17 @@ const dateIn = (instant, timeZone) =>
 const nextDate = (date) => new Date(Date.parse(`${date}T00:00:00.000Z`) + DAY_MS).toISOString().slice(0, 10);
 
 /**
+ * The time alone, on the reader's clock: "22:00", "10:00 PM", "22:00 UTC" —
+ * the end of a rehearsal whose start stayed put, "теперь до 22:00" (T-250).
+ */
+export function clockTime(locale, instant, timeZone) {
+  const zone = zoneOf(timeZone);
+  const tag = LOCALE_TAGS[locale] || LOCALE_TAGS.en;
+  const time = new Intl.DateTimeFormat(tag, { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(new Date(instant));
+  return zone === 'UTC' ? `${time} UTC` : time;
+}
+
+/**
  * "сегодня в 22:00", "tomorrow at 10:00 AM", "am Mo., 6. Okt. um 19:00".
  *
  * @param {string} locale - 'ru' | 'en' | 'es' | 'de'; anything else reads as 'en'
@@ -54,8 +65,7 @@ export function reminderWhen(locale, startsAt, now, timeZone, wording = 'when') 
   const start = new Date(startsAt);
   const words = t(locale, wording);
 
-  let time = new Intl.DateTimeFormat(tag, { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(start);
-  if (zone === 'UTC') time += ' UTC';
+  const time = clockTime(locale, start, timeZone);
 
   const day = dateIn(start, zone);
   const today = dateIn(now, zone);

@@ -193,11 +193,17 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
       // What actually changed, not what the request happened to carry. The app
       // sends the whole form on save, so listing every field that arrived meant
       // every edit announced "date/time, location, title" whatever was touched.
+      //
+      // The start and the length apart: a rehearsal made an hour longer did
+      // not move, and "moved to today at 19:00" lost the new end (T-250).
+      // 'datetime' — the start moved; 'end' — it ends other than the move
+      // alone would put it, i.e. it got longer or shorter.
       const changeKeys = [];
-      const moved =
-        new Date(rehearsal.starts_at).getTime() !== new Date(updatedRehearsal.startsAt).getTime() ||
-        new Date(rehearsal.ends_at).getTime() !== new Date(updatedRehearsal.endsAt).getTime();
-      if (moved) changeKeys.push('datetime');
+      const ms = (value) => new Date(value).getTime();
+      const startShift = ms(updatedRehearsal.startsAt) - ms(rehearsal.starts_at);
+      const endShift = ms(updatedRehearsal.endsAt) - ms(rehearsal.ends_at);
+      if (startShift !== 0) changeKeys.push('datetime');
+      if (endShift !== startShift) changeKeys.push('end');
       if ((rehearsal.location || '') !== (updatedRehearsal.location || '')) changeKeys.push('location');
       if ((rehearsal.title || '') !== (updatedRehearsal.title || '')) changeKeys.push('title');
 
