@@ -1,0 +1,29 @@
+T-251, on c024f21.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText.integration.test.js
+    ✓ a "seen" names the rehearsal and when it is
+    ✓ a cancelled rehearsal agrees with "rehearsal", not with its title
+    ✓ a cancelled rehearsal with no title
+    ✓ a woman and a man who join read the same
+    ✓ a woman and a man who have seen a rehearsal read the same, in the app's word
+    ✓ a role given reads right in Russian, and agrees with no reader in Spanish and German
+    ✓ someone removed from a project, in Spanish, is no participle
+    ✓ "invited you to the project" is gone in every language
+    (and the 15 tests before them)
+Tests:       23 passed, 23 total
+
+Whole server suite: Test Suites: 1 failed, 76 passed, 77 total; Tests: 8
+failed, 1094 passed. The 8 are runtimeStartup.test.js (fixture
+"import-failed"), which writes a synthetic .env this sandbox refuses — the
+same failure noted on the base code in T-203 and T-233.
+
+e2e (npm run e2e -- <flow>):
+[Passed] Rehearsal notices read right in Spanish, German and Russian (2m 16s)
+[Passed] Inbox says when (1m 5s)
+[Passed] Seen told once (2m 41s)
+[Passed] Inbox, new member opens the members (43s)
+[Passed] Role given by push (38s)
+taps taken again: 0
+
+lint: 0 errors (595 warnings); check:dead (knip): clean; check:secrets: pass;
+type-check: clean.
