@@ -1,0 +1,38 @@
+T-254, Jest red before the fix.
+
+The tests of 74d7d57 (WeeklyCalendar.test.tsx) on the code before it:
+  git restore --source=8110068 -- src/features/calendar/components/WeeklyCalendar.tsx \
+    src/shared/components/DayCalendar.tsx src/i18n/translations/calendar.ts
+  npx jest --selectProjects frontend --testPathPatterns WeeklyCalendar
+  git restore --source=HEAD -- (the same three)
+
+  ✓ (the 22 tests from before T-254, all green)
+  The month opened out of the strip
+    ✕ has no strip under it, and names its month once (4928 ms)
+    ✕ turns by the header's arrows and by a swipe over it, the header naming the grid's month (812 ms)
+    ✕ goes no further than the strip's days, a year either side of today (857 ms)
+    ✕ shows its arrows only while open, 44 pt, as the grid's arrows were coloured (536 ms)
+    ✕ stays open on "Today", on today's month with today selected, and folds back to the strip on today (1593 ms)
+    ✕ folds back into the strip on a day picked in it, and hands the day on where the strip stops (294 ms)
+    ✕ folds back as it was when closed without a day (342 ms)
+  ● The month opened out of the strip › has no strip under it, and names its month once
+    Expected length: 0
+    Received length: 1
+    Received array:  [{"_fiber": [FiberNode]}]
+  ● The month opened out of the strip › turns by the header's arrows and by a swipe over it, the header naming the grid's month
+    Unable to find an element with accessibility label: Next month
+  ● The month opened out of the strip › goes no further than the strip's days, a year either side of today
+    Unable to find an element with testID: calendar-month-previous
+  ● The month opened out of the strip › shows its arrows only while open, 44 pt, as the grid's arrows were coloured
+    Unable to find an element with testID: calendar-month-previous
+  ● The month opened out of the strip › stays open on "Today", on today's month with today selected, and folds back to the strip on today
+    Unable to find an element with accessibility label: Next month
+  ● The month opened out of the strip › folds back into the strip on a day picked in it, and hands the day on where the strip stops
+    Unable to find an element with accessibility label: Next month
+  ● The month opened out of the strip › folds back as it was when closed without a day
+    Unable to find an element with accessibility label: Next month
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 22 passed, 29 total
+
+On 74d7d57: Tests: 29 passed, 29 total. The whole frontend project:
+Test Suites: 145 passed, 145 total; Tests: 1416 passed, 1416 total.
