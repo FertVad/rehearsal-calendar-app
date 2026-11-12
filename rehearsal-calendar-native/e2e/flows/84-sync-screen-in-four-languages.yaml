@@ -23,7 +23,11 @@
 # «Синхронизировано», "Sincronización completada", "Synchronisiert", not
 # «Успешно синхронизировано», "Sincronizado correctamente", "Erfolgreich
 # synchronisiert"; the line at the top agrees with no reader's gender, and a
-# person in German is "beschäftigt", not "belegt" like a room.
+# person in German is "beschäftigt", not "belegt" like a room; the project's
+# button is "Share Link", not "Share the link". The flow waits for each alert
+# whatever it says, checks these words where they show and goes on, and fails
+# at the end naming every one that was wrong: a run on the old words names
+# them all, not the first alone.
 appId: ${APP_ID}
 name: The sync screen's bar and last sync in four languages
 tags:
@@ -32,6 +36,7 @@ tags:
   - navigation
   - language
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -52,10 +57,15 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Hamlet — Demo Theatre.*"
-      SEE: ".*Share Link.*"
+      SEE: ".*Share (the )?Link.*"
       WAIT_MS: "15000"
 - waitForAnimationToEnd
 - takeScreenshot: 84-project-long-title
+- runFlow:
+    when:
+      notVisible: ".*Share Link"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Share Link | '}"
 - assertVisible:
     id: header-title
     text: "Hamlet — Demo Theatre"
@@ -166,8 +176,13 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Синхронизировано"
+    visible: "(Успешно )?синхронизировано"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Синхронизировано"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the alert after a sync | '}"
 - tapOn: "OK"
 - waitForAnimationToEnd
 - takeScreenshot: 84-sync-ru
@@ -218,8 +233,13 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Sincronización completada"
+    visible: "(Sincronización completada|Sincronizado correctamente)"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Sincronización completada"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the alert after a sync | '}"
 - tapOn: "OK"
 - waitForAnimationToEnd
 - takeScreenshot: 84-sync-es
@@ -232,7 +252,11 @@ tags:
 - assertVisible:
     id: header-back
     text: ".*Perfil"
-- assertVisible: ".*solo llegan las horas que tienes ocupadas.*"
+- runFlow:
+    when:
+      notVisible: ".*solo llegan las horas que tienes ocupadas.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the hours you are busy | '}"
 
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -271,8 +295,13 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Synchronisiert"
+    visible: "(Erfolgreich )?synchronisiert"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Synchronisiert"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the alert after a sync | '}"
 - tapOn: "OK"
 - waitForAnimationToEnd
 - takeScreenshot: 84-sync-de
@@ -285,4 +314,18 @@ tags:
 - assertVisible:
     id: header-back
     text: ".*Profil"
-- assertVisible: ".*in denen du beschäftigt bist.*"
+- runFlow:
+    when:
+      notVisible: ".*in denen du beschäftigt bist.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the hours you are busy | '}"
+
+- evalScript: "${console.log('84 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000
