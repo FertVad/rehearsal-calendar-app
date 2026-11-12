@@ -213,6 +213,54 @@ test('without ps, a dead holder\'s job ends before the next run takes the lock',
   assert.deepEqual(JSON.parse(out), { left: false }, 'the next run took the lock while the dead holder\'s job was running');
 });
 
+/** takeLock in a process without ps; what it ended with: "taken" or the error. */
+async function takeWithoutPs(file) {
+  const next = spawn(process.execPath, ['--input-type=module', '-e', `
+    import { takeLock } from ${JSON.stringify(LOCK_URL)};
+    try {
+      const lock = await takeLock(${JSON.stringify(file)}, { timeoutMs: 1500, pollMs: 100 });
+      lock.release();
+      console.log('taken');
+    } catch (error) { console.log(error.message); }
+  `], { env: NO_PS, stdio: ['ignore', 'pipe', 'inherit'] });
+  let out = '';
+  next.stdout.on('data', (chunk) => { out += chunk; });
+  await new Promise((resolve) => next.on('exit', resolve));
+  return out.trim();
+}
+
+// 12.11.2026: a check in the developer's sandbox found a live stand's lock
+// unidentifiable, called its holder dead and took it; two runs shared the
+// simulator and port 3001, and the stand's server died of EADDRINUSE.
+test('without ps, a live run is waited for, not taken over', async () => {
+  const file = path.join(dir, 'live-nops.lock');
+  const run = await takeLock(file);
+  assert.match(await takeWithoutPs(file), /Gave up waiting/, 'a run without ps took a live run\'s lock');
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).pid, process.pid);
+  run.release();
+});
+
+test('without ps, a holder that may not be signalled is alive', async () => {
+  // pid 1 runs as root: kill(1, 0) is EPERM, the process there but not ours to signal.
+  const file = path.join(dir, 'eperm-nops.lock');
+  const holder = { pid: 1, since: 'Mon Jan  1 00:00:00 2001', groups: [] };
+  fs.writeFileSync(file, JSON.stringify(holder));
+  assert.match(await takeWithoutPs(file), /Gave up waiting/, 'a holder that could not be signalled was called dead');
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), holder);
+  fs.rmSync(file);
+});
+
+test('a run whose lock another run holds now neither writes over it nor removes it', async () => {
+  const file = path.join(dir, 'lost.lock');
+  const run = await takeLock(file);
+  const other = { pid: process.ppid, since: startedAt(process.ppid), groups: [] };
+  fs.writeFileSync(file, JSON.stringify(other));
+  assert.throws(() => run.record('server', group()), /no longer this run's/);
+  run.release();
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), other, 'the other run\'s lock was written over or removed');
+  fs.rmSync(file);
+});
+
 const APP = path.join(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 
 test('npm run ios and android build under the lock', () => {

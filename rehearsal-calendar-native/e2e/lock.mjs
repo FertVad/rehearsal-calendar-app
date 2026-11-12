@@ -19,7 +19,9 @@ import fs from 'node:fs';
 export const LOCK = '/tmp/rehearsly-e2e.lock';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+// EPERM: the process is there, only not ours to signal — another user's, or one
+// a sandbox keeps us from signalling. groupAlive reads it the same way.
+const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; } };
 // A lock just created is empty until its run writes it.
 const FRESH_MS = 5000;
 
@@ -45,7 +47,19 @@ function holderOf(file) {
   return Date.now() - fs.statSync(file).mtimeMs > FRESH_MS ? { pid: 0, since: null, groups: [] } : null;
 }
 
-const running = ({ pid, since }) => Boolean(pid) && (since ? startedAt(pid) === since : alive(pid));
+/**
+ * Whether the run a lock names is still going. Its start time tells it from a
+ * process that got its pid later — where ps can run. Where it cannot (the
+ * developer's sandbox) a live process is taken for the holder: a dead one whose
+ * pid was reused is waited for until the timeout, which is slow but safe. Taking
+ * it for dead was not: on 12.11.2026 a check in the sandbox took a live stand's
+ * lock, and the two ran on one simulator and one port 3001.
+ */
+function running({ pid, since }) {
+  if (!pid) return false;
+  const now = since ? startedAt(pid) : '';
+  return now ? now === since : alive(pid);
+}
 
 /** Whether a process group still has a member. */
 const groupAlive = (pgid) => { try { process.kill(-pgid, 0); return true; } catch (error) { return error.code === 'EPERM'; } };
@@ -131,11 +145,21 @@ export async function takeLock(file, { timeoutMs = 60 * 60 * 1000, pollMs = 1000
     if (Date.now() >= deadline) throw new Error('Gave up waiting for the other e2e run');
     await sleep(pollMs);
   }
+  // Whether the file still names this run. Another run that took it is not
+  // written over or removed: the stand that lost its lock on 12.11.2026 wrote
+  // its own groups over the new holder's, then removed the lock under that run.
+  const ours = () => {
+    try {
+      const now = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return Number(now?.pid) === held.pid && (now.since ?? '') === held.since;
+    } catch { return false; }
+  };
   return {
     record(name, pid) {
+      if (!ours()) throw new Error(`the e2e lock ${file} is no longer this run's: another run holds it, so this one stops rather than run beside it`);
       held.groups.push({ name, pgid: pid, since: startedAt(pid) });
       writeAtomic(file, held);
     },
-    release() { fs.rmSync(file, { force: true }); },
+    release() { if (ours()) fs.rmSync(file, { force: true }); },
   };
 }

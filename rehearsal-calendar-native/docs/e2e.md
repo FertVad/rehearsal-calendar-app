@@ -140,6 +140,16 @@ the system closes it when the run dies, SIGKILL included. That does not need
 lock could not identify a dead run's groups, and a run cut off by a tool's
 time limit left both on their ports (T-203, 2026-10-11).
 
+Without `ps` a live holder cannot be told by its start time either, so there
+a holder whose pid is alive — `kill(pid, 0)` answers, or refuses with EPERM —
+is waited for, not taken over. On 2026-11-12 a check in the sandbox called a
+live stand's holder dead while the stand was still building the app, took the
+lock, and started its server on 3001 first; the stand's server then died of
+EADDRINUSE. A dead holder whose pid another process got meanwhile is waited
+for up to the hour, which is slow but never two runs. And a run whose lock
+another run holds neither writes its groups over that run's nor removes the
+lock on its way out: `record` stops it instead (`e2e/__tests__/lock.test.mjs`).
+
 ## Heavy jobs beside a run
 
 The lock serializes e2e runs, and a heavy job on the same Mac is not one
