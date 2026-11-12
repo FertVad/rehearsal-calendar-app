@@ -264,7 +264,7 @@ export const es = {
     deleteProjectConfirm: '¿Eliminar proyecto?',
     deleteProjectMessage: (projectName: string) => `¿Seguro que quieres eliminar el proyecto «${projectName}»?`,
     deleteProjectWarning: 'Todos los ensayos, miembros y datos del proyecto se eliminarán de forma permanente.',
-    projectDeleted: 'Proyecto eliminado correctamente',
+    projectDeleted: 'Proyecto eliminado',
     deleteProjectError: 'No se pudo eliminar el proyecto',
     inviteNotFound: 'Invitación no encontrada',
     inviteExpired: 'La invitación ha caducado',

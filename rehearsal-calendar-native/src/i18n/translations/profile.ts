@@ -267,7 +267,7 @@ export const es = {
         ? 'También se ha eliminado 1 proyecto que solo administrabas tú.'
         : `También se han eliminado ${count} proyectos que solo administrabas tú.`,
     deleteAccountFinalWarning: '¿Seguro que quieres eliminar tu cuenta?',
-    deleteAccountSuccess: 'Cuenta eliminada correctamente',
+    deleteAccountSuccess: 'Cuenta eliminada',
     deleteAccountError: 'No se pudo eliminar la cuenta',
     cancel: 'Cancelar',
     confirmDelete: 'Sí, eliminar',

@@ -251,6 +251,12 @@ export const PEOPLE = {
   laurencia: { email: 'laurencia@e2e.test', firstName: 'Laurencia', lastName: 'Fuenteovejuna', onboarded: true, locale: 'es' },
   gretchen: { email: 'gretchen@e2e.test', firstName: 'Gretchen', lastName: 'Faust', onboarded: true, locale: 'de' },
   katerina: { email: 'katerina@e2e.test', firstName: 'Katerina', lastName: 'Kabanova', onboarded: true, locale: 'ru' },
+  // Kabanikha runs two projects alone, Tikhon in the first and busy tomorrow
+  // 10:00-14:00. She plans over him in Spanish and Russian, opens his row, and
+  // deletes her account, the projects with it (89, T-250). Their names in
+  // Cyrillic, as a Russian company types them: the nominative a sentence gets.
+  kabanikha: { email: 'kabanikha@e2e.test', firstName: 'Марфа', lastName: 'Кабанова', onboarded: true, locale: 'es' },
+  tikhon: { email: 'tikhon@e2e.test', firstName: 'Тихон', lastName: 'Кабанов', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -624,6 +630,23 @@ export async function seed({ client, apiUrl, timezone }) {
         [own.id, member]);
     }
   }
+  // Kabanikha's two (89, T-250): «Гроза» with Tikhon, the newer; «Бесприданница»
+  // hers alone. Both go with her account. Inserted: the sign-ins are spent.
+  for (const [name, cast, age] of [['Бесприданница', [], '1 day'], ['Гроза', [ids.tikhon], '0 days']]) {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Островский', $2, NOW() - $3::interval, NOW() - $3::interval) RETURNING id`, [name, timezone, age]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids.kabanikha]);
+    for (const member of cast) {
+      await client.query(
+        `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+         VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+        [own.id, member]);
+    }
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -957,6 +980,11 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual'),
             ($4, $5::timestamptz, $6::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.benedick, localInstant(1, 9), localInstant(1, 13), ids.claudio, localInstant(1, 14), localInstant(1, 17)]);
+  // Tikhon's tomorrow (89): the rehearsal Kabanikha plans at 10:00 meets it.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.tikhon, localInstant(1, 10), localInstant(1, 14)]);
   // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
   // save of that day writes it.
   for (const key of ['yelena', 'mariya', 'astrov']) {

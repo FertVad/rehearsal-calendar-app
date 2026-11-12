@@ -1,0 +1,274 @@
+# Names and numbers in a sentence, as a native speaker writes it (T-250).
+# Words the app builds around what it does not choose: a person's name, as
+# the account has it, and a count.
+# - The rehearsal form's warning guessed a gender: «Тихон Кабанов занят(а) в
+#   это время», "Тихон Кабанов está ocupado/a a esa hora". Now «В это время не
+#   может: Тихон Кабанов», "Тихон Кабанов no puede a esa hora".
+# - A member's dialogs put the name in an oblique case the app cannot make:
+#   «Вы уверены, что хотите удалить Тихон Кабанов из проекта?», «…назначить
+#   Тихон Кабанов администратором…». Now the name is the subject: «Тихон
+#   Кабанов больше не будет участником проекта.», «Тихон Кабанов станет
+#   администратором проекта.»
+# - Under «Аккаунт удалён» the projects deleted with it were still to come,
+#   and the count is Russian's second form: «Будут удалены 2 проекта, где вы
+#   единственный администратор.» Now «Также удалены 2 проекта, где вы были
+#   единственным администратором.»
+#
+# Kabanikha's account speaks Spanish. She plans a rehearsal tomorrow at 10:00
+# over Tikhon's busy hours, switches to Russian, opens his row in «Гроза»
+# twice and cancels, plans the same again, and deletes her account: «Гроза»
+# and «Бесприданница», which only she runs, go with it. Nothing else is saved.
+# Each text is checked where it shows and the flow goes on, so a run on the
+# old words names every one of them; it fails at the end if any was wrong.
+appId: ${APP_ID}
+name: Names and counts read right
+tags:
+  - language
+  - planner
+  - rehearsals
+  - projects
+  - participants
+  - profile
+---
+- evalScript: ${output.wrong = ''}
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KABANIKHA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# Spanish: the planner's slot tomorrow at 10:00, Tikhon busy in it.
+- tapOn: "Planner, tab.*"
+- extendedWaitUntil:
+    visible:
+      id: planner-project
+    timeout: 15000
+- tapOn:
+    id: planner-project
+- tapOn: "Гроза"
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-add-${TOMORROW_DAY}-10:00
+      SEE: "Añadir ensayo"
+      WAIT_MS: "10000"
+# His busy hours are in once the form names him busy.
+- extendedWaitUntil:
+    visible:
+      id: participants-conflict
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-submit
+      SEE: ".*Conflicto de horario"
+      WAIT_MS: "10000"
+- takeScreenshot: 89-conflict-es
+- runFlow:
+    when:
+      notVisible: "Тихон Кабанов no puede a esa hora[\\s\\S]*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the conflict | '}"
+- tapOn:
+    text: "Cancelar"
+    below: "Crear de todos modos"
+- extendedWaitUntil:
+    notVisible: ".*Conflicto de horario"
+    timeout: 10000
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "No guardar"
+    commands:
+      - tapOn: "No guardar"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000
+
+# Russian, chosen in the profile.
+- tapOn:
+    id: tab-profile
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Русский"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-ru
+      SEE: "Профиль, tab.*"
+      WAIT_MS: "10000"
+
+# Tikhon's row in «Гроза»: removing him, and making him an admin, both cancelled.
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Гроза.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Гроза.*"
+- extendedWaitUntil:
+    visible: ".*Поделиться ссылкой"
+    timeout: 15000
+- scrollUntilVisible:
+    element: ".*Тихон Кабанов.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Тихон Кабанов.*"
+      SEE: "Управление участником"
+      WAIT_MS: "10000"
+- tapOn: ".*Удалить из проекта"
+- extendedWaitUntil:
+    visible: "Удалить участника\\?"
+    timeout: 10000
+- takeScreenshot: 89-remove-member-ru
+- runFlow:
+    when:
+      notVisible: "Тихон Кабанов больше не будет участником проекта\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: removing a member | '}"
+- tapOn: "Отмена"
+- extendedWaitUntil:
+    notVisible: "Удалить участника\\?"
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Тихон Кабанов.*"
+      SEE: "Управление участником"
+      WAIT_MS: "10000"
+- tapOn: ".*Сделать администратором"
+- extendedWaitUntil:
+    visible: "Назначить администратором\\?"
+    timeout: 10000
+- takeScreenshot: 89-make-admin-ru
+- runFlow:
+    when:
+      notVisible: "Тихон Кабанов станет администратором проекта\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: making an admin | '}"
+- tapOn: "Отмена"
+- extendedWaitUntil:
+    notVisible: "Назначить администратором\\?"
+    timeout: 10000
+
+# Russian: the same slot.
+- tapOn: "Planner, tab.*"
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-add-${TOMORROW_DAY}-10:00
+      SEE: "Добавить репетицию"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: participants-conflict
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-submit
+      SEE: ".*Конфликт расписания"
+      WAIT_MS: "10000"
+- takeScreenshot: 89-conflict-ru
+- runFlow:
+    when:
+      notVisible: "В это время не может: Тихон Кабанов[\\s\\S]*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the conflict | '}"
+- tapOn:
+    text: "Отмена"
+    below: "Создать всё равно"
+- extendedWaitUntil:
+    notVisible: ".*Конфликт расписания"
+    timeout: 10000
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Не сохранять"
+    commands:
+      - tapOn: "Не сохранять"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000
+
+# Her account, and her two projects with it.
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-delete-account
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-delete-account
+      SEE: "Удалить аккаунт\\?"
+      WAIT_MS: "10000"
+- tapOn: ".*Да, удалить"
+# The alert, whatever its title says; the title is checked below with the rest.
+- extendedWaitUntil:
+    visible: "Аккаунт.* удал[её]н"
+    timeout: 15000
+- takeScreenshot: 89-account-deleted-ru
+- runFlow:
+    when:
+      notVisible: "Аккаунт удалён"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the account deleted | '}"
+- runFlow:
+    when:
+      notVisible: "Также удалены 2 проекта, где вы были единственным администратором\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the projects deleted with the account | '}"
+- tapOn: "OK"
+
+- evalScript: "${console.log('89 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000
