@@ -459,6 +459,8 @@ An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
 "`TITLE` `COUNT`" (flow 33). With `TYPE` it sends one as the server's own code
 sends it: `member_joined` with `PROJECT` and `MEMBER` (flow 61),
+`admin_appointed` with the same — "New administrator", told to those who run
+the project, the role left as it is (flow 88),
 `rehearsal_updated` with `REHEARSAL` (a title) and `CHANGE`, `member_response`
 with `REHEARSAL` and `MEMBER` (flow 62), `rehearsal_created` and
 `added_to_rehearsal` with `REHEARSAL` — a new rehearsal and one the reader was

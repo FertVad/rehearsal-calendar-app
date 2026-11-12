@@ -369,7 +369,7 @@ router.put('/:projectId/members/:userId/role', requireAuth, asyncHandler(async (
     );
 
     try {
-      const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [projectId]);
+      const project = await db.get('SELECT id, name FROM native_projects WHERE id = $1', [projectId]);
 
       // The person themselves, in the second person.
       await notifyRoleChanged(project.name, parseInt(userId), role);
@@ -391,7 +391,8 @@ router.put('/:projectId/members/:userId/role', requireAuth, asyncHandler(async (
             [parseInt(userId)]
           );
           const memberName = fullName(member);
-          await notifyAdminAppointed(project.name, memberName, others.map((o) => o.user_id));
+          // With the project's id, so a tap opens it on its members (T-252).
+          await notifyAdminAppointed(project.name, memberName, others.map((o) => o.user_id), project.id);
         }
       }
     } catch (notifErr) {

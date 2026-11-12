@@ -83,6 +83,11 @@
  *                                                  "New member" about that
  *                                                  project, sent as the join
  *                                                  sends it (flow 61)
+ *   GET /notify?to=<address>&type=admin_appointed&project=<name>&member=<who>
+ *                                                  "New administrator" about
+ *                                                  that project, as a role
+ *                                                  given tells the others who
+ *                                                  run it (flow 88)
  *   GET /notify?to=<address>&type=rehearsal_updated&rehearsal=<title>&change=<key>
  *   GET /notify?to=<address>&type=member_response&rehearsal=<title>&member=<who>
  *                                                  that rehearsal changed, or
@@ -151,7 +156,7 @@ import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
 import {
-  notifyAddedToRehearsal, notifyMemberJoined, notifyMemberRemoved, notifyMemberResponse, notifyRehearsalCreated,
+  notifyAddedToRehearsal, notifyAdminAppointed, notifyMemberJoined, notifyMemberRemoved, notifyMemberResponse, notifyRehearsalCreated,
   notifyRehearsalDeleted, notifyRehearsalUpdated, notifyRoleChanged,
 } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
@@ -425,7 +430,7 @@ http.createServer((request, response) => {
     return answer(200, { holding: holds.length });
   }
   const told = url.searchParams.get('type');
-  if (request.method === 'GET' && url.pathname === '/notify' && ['member_joined', 'role_changed', 'member_removed'].includes(told)) {
+  if (request.method === 'GET' && url.pathname === '/notify' && ['member_joined', 'admin_appointed', 'role_changed', 'member_removed'].includes(told)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const projectName = url.searchParams.get('project') || '';
     const member = url.searchParams.get('member') || 'Somebody';
@@ -434,10 +439,12 @@ http.createServer((request, response) => {
       if (!user) return answer(404, { error: `no account ${to}` });
       const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
       if (!project) return answer(404, { error: `no project ${projectName}` });
-      // As the join, a role given and a removal tell them (inviteRedemption.js,
+      // As the join, a role given (to them, or to another, told to those who
+      // run the project) and a removal tell them (inviteRedemption.js,
       // routes/native/members.js), the server's own words and data. Only the
       // notice: the role and the membership stay as they are.
       if (told === 'member_joined') await notifyMemberJoined(project.name, member, [user.id], project.id);
+      else if (told === 'admin_appointed') await notifyAdminAppointed(project.name, member, [user.id], project.id);
       else if (told === 'role_changed') await notifyRoleChanged(project.name, user.id, url.searchParams.get('role') || 'admin');
       else await notifyMemberRemoved(project.name, user.id);
       console.log(`[e2e] told ${to} of ${told} in ${project.name}`);

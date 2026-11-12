@@ -831,6 +831,21 @@ export async function seed({ client, apiUrl, timezone }) {
       [made.id, ids[key]]);
   }
 
+  // And Laurencia's longest notice (86, T-252): "added", on a date, not
+  // tomorrow, with a long place — the card cut it at its second line.
+  {
+    const { rows: [own] } = await client.query(
+      `SELECT id FROM native_projects WHERE name = 'Fuenteovejuna'`);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, 'Escena del comendador', $2::timestamptz, $3::timestamptz, 'Corral de comedias de Almagro', $4, NOW(), NOW()) RETURNING id`,
+      [own.id, localInstant(5, 18), localInstant(5, 20), ids.laurencia]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids.laurencia]);
+  }
+
   // What the flow reads after moving the profile to Tokyo: the same instant on
   // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
   // the en_US simulator, on the 12-hour clock, shows it: "9:00 AM". A pattern

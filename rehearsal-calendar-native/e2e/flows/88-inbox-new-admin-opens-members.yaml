@@ -1,0 +1,43 @@
+# "New administrator" in the inbox opens its project, scrolled to the members
+# (T-252), as "New member" does (flow 61). It carried only the project's name:
+# a tap on the card only marked it read, and a tapped push went nowhere.
+# Sent as a role given tells the others who run the project, by the server's
+# own notifyAdminAppointed; only the notice — nobody's role changes.
+appId: ${APP_ID}
+name: Inbox, new administrator opens the members
+tags:
+  - notifications
+  - projects
+---
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${DUNCAN_EMAIL}
+      TYPE: admin_appointed
+      PROJECT: Forres Castle
+      MEMBER: Banquo Thane
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DUNCAN_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notifications"
+      SEE: ".*Banquo Thane is now an administrator of Forres Castle.*"
+      WAIT_MS: "15000"
+- takeScreenshot: 88-new-admin-in-inbox
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Banquo Thane is now an administrator of Forres Castle.*"
+      SEE: ".*Ariel Spirit.*"
+      WAIT_MS: "15000"
+# The castle's, on its members (Ariel is in it): what is above them has gone
+# up out of sight, its description with it.
+- extendedWaitUntil:
+    notVisible: "The great hall"
+    timeout: 10000
+- assertVisible: "Members"
+- takeScreenshot: 88-new-admin-on-members

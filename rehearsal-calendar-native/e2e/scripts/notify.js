@@ -3,6 +3,9 @@
 // open — what a busy week of changes would leave (server-with-mailbox.mjs).
 // With TYPE "member_joined": one "New member" about the project named
 // ${PROJECT}, ${MEMBER} having joined it, sent as the join sends it (flow 61).
+// With TYPE "admin_appointed": one "New administrator" about ${PROJECT},
+// ${MEMBER} made its admin, sent as a role given tells the others who run it,
+// and only the notice: the role stays (flow 88).
 // With TYPE "role_changed" or "member_removed": the notice of ${ROLE} given
 // ("admin" if none) or of being removed from ${PROJECT}, and only the notice
 // (flow 86).
@@ -14,8 +17,8 @@
 // a save and a delete send it (flow 86).
 // Run by Maestro (runScript), which provides http.
 const type = typeof TYPE !== 'undefined' ? TYPE : '';
-const query = type === 'member_joined'
-  ? '&type=member_joined&project=' + encodeURIComponent(PROJECT) + '&member=' + encodeURIComponent(MEMBER)
+const query = type === 'member_joined' || type === 'admin_appointed'
+  ? '&type=' + type + '&project=' + encodeURIComponent(PROJECT) + '&member=' + encodeURIComponent(MEMBER)
   : type === 'role_changed' || type === 'member_removed'
     ? '&type=' + type + '&project=' + encodeURIComponent(PROJECT)
       + (type === 'role_changed' ? '&role=' + encodeURIComponent(typeof ROLE !== 'undefined' ? ROLE : 'admin') : '')

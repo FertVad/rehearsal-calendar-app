@@ -39,12 +39,21 @@ import {
 } from '../inboxPages';
 import type { AppNavigation } from '../../../navigation';
 
-/** Matches the notification type to the icon the rest of the app uses for it. */
+/**
+ * Matches the notification type to the icon the rest of the app uses for it.
+ *
+ * Every type the server sends is named (everyServerNotification.test.tsx):
+ * "New member" and "New administrator" fell through to the bell, both alike,
+ * while the person with a plus stood for "project_invite" (T-252). That one is
+ * no longer sent (b973361), but the inbox is older and may still hold it.
+ */
 function iconFor(type: string): keyof typeof Ionicons.glyphMap {
   if (type.startsWith('rehearsal_reminder')) return 'alarm-outline';
   if (type.startsWith('rehearsal')) return 'calendar-outline';
   if (type === 'member_response') return 'eye-outline';
-  if (type === 'project_invite') return 'person-add-outline';
+  if (type === 'member_joined') return 'person-add-outline';
+  if (type === 'admin_appointed') return 'key-outline';
+  if (type === 'project_invite') return 'mail-outline';
   if (type === 'role_changed') return 'shield-checkmark-outline';
   if (type === 'member_removed' || type === 'project_deleted') return 'close-circle-outline';
   return 'notifications-outline';
@@ -326,12 +335,15 @@ export default function NotificationsScreen() {
         />
       </View>
 
+      {/* Whole, however many lines it takes. Cut at the second, "… programado
+          para mañana a las 1…" hid the time and place it was sent for, and
+          nowhere else shows the text: a tap opens what it is about (T-252). */}
       <View style={styles.body}>
-        <Text style={[styles.cardTitle, item.read && styles.cardTitleRead]} numberOfLines={2}>
+        <Text style={[styles.cardTitle, item.read && styles.cardTitleRead]}>
           {item.title}
         </Text>
         {item.body ? (
-          <Text style={styles.cardBody} numberOfLines={2}>
+          <Text style={styles.cardBody}>
             {item.body}
           </Text>
         ) : null}

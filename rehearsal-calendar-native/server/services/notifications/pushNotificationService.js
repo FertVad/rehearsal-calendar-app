@@ -561,13 +561,17 @@ export async function notifyMemberJoined(projectName, memberName, recipientIds, 
  *
  * Administrators may appoint administrators here, so this is not something the
  * owner can assume they did themselves.
+ *
+ * The project's id goes with it, as with "New member": a tap opens the project
+ * on its members. With the name alone neither the push nor the inbox card
+ * opened anything (T-252).
  */
-export async function notifyAdminAppointed(projectName, memberName, recipientIds) {
+export async function notifyAdminAppointed(projectName, memberName, recipientIds, projectId) {
   await sendLocalizedNotification(
     recipientIds,
     'adminAppointed',
     { memberName, projectName },
-    { type: 'admin_appointed', projectName }
+    { type: 'admin_appointed', projectName, projectId }
   );
 }
 

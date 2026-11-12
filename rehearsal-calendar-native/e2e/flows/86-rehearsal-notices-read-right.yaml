@@ -20,6 +20,13 @@
 # администратором" had no verb. Each is sent by the server's own function
 # before the two above, so they are below them in the inbox, and only the
 # notice is sent: the rehearsal, the role and the membership stay as they are.
+#
+# And every card says all of it (T-252): the inbox cut title and text at the
+# second line, "… programado para mañana a las 1…", "en Fuenteo…", and a tap
+# opens the rehearsal, not the text. Maestro reads a label whole however much
+# of it is drawn, so the "…" is looked for on each shot (no-ellipsis.js), over
+# the cards' text, right of their icons. The longest the server sends comes
+# last, on top: Spanish, "added", on a date and with a long place.
 appId: ${APP_ID}
 name: Rehearsal notices read right in Spanish, German and Russian
 tags:
@@ -72,6 +79,14 @@ tags:
       EMAIL: ${LAURENCIA_EMAIL}
       TYPE: added_to_rehearsal
       REHEARSAL: Escena del balcón
+# The longest (T-252): in five days, so on its date, and a long place.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Escena del comendador
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -83,10 +98,20 @@ tags:
       SEE: "(Marcar todas|Todavía nada)"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00 en Patio.*"
+    visible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del comendador» programado para el .* a las 18:00 en Corral de comedias de Almagro.*"
     timeout: 15000
+- assertVisible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00 en Patio.*"
 - assertVisible: ".*Nuevo ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00.*"
 - takeScreenshot: 86-spanish
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-spanish
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
 - scrollUntilVisible:
     element: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto Fuenteovejuna.*"
     direction: DOWN
@@ -100,6 +125,15 @@ tags:
     element: ".*Ensayo visto.*Jacinta Labradora ha visto «Escena del balcón» \\((mañana|el .*) a las 18:00\\) en Fuenteovejuna.*"
     direction: DOWN
 - takeScreenshot: 86-spanish-cancelled-role-removed-seen
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-spanish-cancelled-role-removed-seen
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
 # German (T-251): seen, not "reagiert"; a role given, a verb rather than
 # "Administrator".
 - runScript:
@@ -148,6 +182,15 @@ tags:
     timeout: 15000
 - assertVisible: ".*Neue Probe.*Faust: Fechtszene (morgen|am .*) um 18:00 angesetzt.*"
 - takeScreenshot: 86-german
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-german
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
 - scrollUntilVisible:
     element: ".*Rolle geändert.*Du verwaltest jetzt Faust.*"
     direction: DOWN
@@ -155,6 +198,15 @@ tags:
     element: ".*Probe gesehen.*Marthe Schwerdtlein hat „Fechtszene“ \\((morgen|am .*) um 18:00\\) in Faust gesehen.*"
     direction: DOWN
 - takeScreenshot: 86-german-role-seen
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-german-role-seen
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
 # Russian (T-251): cancelled, a woman who joins, a woman who has seen it, a
 # role given.
 - runScript:
@@ -218,6 +270,15 @@ tags:
     timeout: 15000
 - assertVisible: ".*Новая репетиция.*Гроза: Репетиция «Прогон» назначена (завтра|.*) в 18:00.*"
 - takeScreenshot: 86-russian
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-russian
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
 - scrollUntilVisible:
     element: ".*Изменение роли.*Теперь вы администратор проекта Гроза.*"
     direction: DOWN
@@ -231,3 +292,12 @@ tags:
     element: ".*Отменена репетиция.*Гроза: Репетиция «Прогон» отменена.*"
     direction: DOWN
 - takeScreenshot: 86-russian-cancelled-joined-seen-role
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-russian-cancelled-joined-seen-role
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
