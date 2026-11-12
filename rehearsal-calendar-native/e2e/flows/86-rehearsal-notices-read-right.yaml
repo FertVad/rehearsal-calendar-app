@@ -14,7 +14,8 @@
 # And nothing agrees with what the server cannot know (T-251): a cancelled
 # rehearsal agrees with "rehearsal", not with its title ("Прогон отменена",
 # "Escena del balcón cancelado"); a woman who joins or marks a rehearsal seen
-# is no "присоединился", "откликнулся"; a woman reading of her own new role or
+# is no "присоединился", "откликнулся", and a "seen" reads seen in every
+# language ("в курсе", "ha visto", "gesehen"), not "responded"; a woman reading of her own new role or
 # removal is no "administrador", "eliminado", "Administrator"; and "Вы теперь
 # администратором" had no verb. Each is sent by the server's own function
 # before the two above, so they are below them in the inbox, and only the
@@ -25,7 +26,15 @@ tags:
   - notifications
   - language
 ---
-# Spanish (T-251): cancelled, a role given, removed.
+# Spanish (T-251): seen, cancelled, a role given, removed.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: member_response
+      REHEARSAL: Escena del balcón
+      MEMBER: Jacinta Labradora
 - runScript:
     file: ../scripts/notify.js
     env:
@@ -87,8 +96,20 @@ tags:
 - scrollUntilVisible:
     element: ".*Ensayo cancelado.*Fuenteovejuna: Ensayo «Escena del balcón» cancelado.*"
     direction: DOWN
-- takeScreenshot: 86-spanish-cancelled-role-removed
-# German (T-251): a role given, a verb rather than "Administrator".
+- scrollUntilVisible:
+    element: ".*Ensayo visto.*Jacinta Labradora ha visto «Escena del balcón» \\((mañana|el .*) a las 18:00\\) en Fuenteovejuna.*"
+    direction: DOWN
+- takeScreenshot: 86-spanish-cancelled-role-removed-seen
+# German (T-251): seen, not "reagiert"; a role given, a verb rather than
+# "Administrator".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: member_response
+      REHEARSAL: Fechtszene
+      MEMBER: Marthe Schwerdtlein
 - runScript:
     file: ../scripts/notify.js
     env:
@@ -130,7 +151,10 @@ tags:
 - scrollUntilVisible:
     element: ".*Rolle geändert.*Du verwaltest jetzt Faust.*"
     direction: DOWN
-- takeScreenshot: 86-german-role
+- scrollUntilVisible:
+    element: ".*Probe gesehen.*Marthe Schwerdtlein hat „Fechtszene“ \\((morgen|am .*) um 18:00\\) in Faust gesehen.*"
+    direction: DOWN
+- takeScreenshot: 86-german-role-seen
 # Russian (T-251): cancelled, a woman who joins, a woman who has seen it, a
 # role given.
 - runScript:
