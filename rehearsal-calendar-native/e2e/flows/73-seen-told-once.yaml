@@ -1,7 +1,8 @@
 # An admin hears of a person's "seen" once per rehearsal, and again only after
 # it moved (T-034; Apple, notifications.md: "Avoid sending multiple
 # notifications for the same thing"). Malvolio marks "Letter scene" seen,
-# unmarks it and marks it again: Olivia's inbox has one "responded" about it.
+# unmarks it and marks it again: Olivia's inbox has one "has seen" about it
+# (worded "responded to" before T-251, from the yes/no answers).
 # Olivia moves it from 12:00 to 15:00 from another device, he unmarks and marks
 # it once more: a second one, saying the new time. Every mark used to be
 # announced: two at 12:00 after the first look, three in all.
@@ -67,10 +68,10 @@ tags:
       SEE: "Mark all read"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*Malvolio Steward responded to “Letter scene” \\(.* at 12:00.PM\\) in Illyria House.*"
+    visible: ".*Malvolio Steward has seen “Letter scene” \\(.* at 12:00.PM\\) in Illyria House.*"
     timeout: 15000
 - assertNotVisible:
-    text: ".*Malvolio Steward responded to “Letter scene”.*"
+    text: ".*Malvolio Steward has seen “Letter scene”.*"
     index: 1
 - takeScreenshot: 73-told-once
 # Moved three hours on, as from her other device.
@@ -130,10 +131,10 @@ tags:
       SEE: "Mark all read"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*Malvolio Steward responded to “Letter scene” \\(.* at 3:00.PM\\) in Illyria House.*"
+    visible: ".*Malvolio Steward has seen “Letter scene” \\(.* at 3:00.PM\\) in Illyria House.*"
     timeout: 15000
-- assertVisible: ".*Malvolio Steward responded to “Letter scene” \\(.* at 12:00.PM\\) in Illyria House.*"
+- assertVisible: ".*Malvolio Steward has seen “Letter scene” \\(.* at 12:00.PM\\) in Illyria House.*"
 - assertNotVisible:
-    text: ".*Malvolio Steward responded to “Letter scene”.*"
+    text: ".*Malvolio Steward has seen “Letter scene”.*"
     index: 2
 - takeScreenshot: 73-told-again-after-the-move

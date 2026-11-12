@@ -39,6 +39,9 @@ const {
   notifyMemberJoined,
   notifyAddedToRehearsal,
   notifyRemovedFromRehearsal,
+  notifyRehearsalDeleted,
+  notifyRoleChanged,
+  notifyMemberRemoved,
 } = await import('../../services/notifications/pushNotificationService.js');
 
 // Intl separates "3:00" from "PM" with a narrow no-break space.
@@ -98,13 +101,13 @@ describe('Each reader is told when, on their own clock and in their own language
     expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress, tomorrow at 3:00 PM — date/time');
   });
 
-  it('a response names the rehearsal and when it is', async () => {
-    // The response route hands over the row itself: starts_at.
+  it('a "seen" names the rehearsal and when it is', async () => {
+    // The seen route hands over the row itself: starts_at.
     const row = { id: rehearsal.id, project_id: data.projectId, title: 'Full dress', starts_at: '2026-10-06T19:00:00.000Z' };
     await notifyMemberResponse(row, 'Hamlet', 'Ophelia Bright', [natasha, john], { now });
 
-    expect(inboxOf(natasha)[0].body).toBe('Ophelia Bright откликнулся на «Full dress» (завтра в 22:00) в проекте Hamlet');
-    expect(inboxOf(john)[0].body).toBe('Ophelia Bright responded to “Full dress” (tomorrow at 3:00 PM) in Hamlet');
+    expect(inboxOf(natasha)[0].body).toBe('Ophelia Bright в курсе: «Full dress» (завтра в 22:00), Hamlet');
+    expect(inboxOf(john)[0].body).toBe('Ophelia Bright has seen “Full dress” (tomorrow at 3:00 PM) in Hamlet');
   });
 
   it('further out, the date', async () => {
@@ -247,6 +250,94 @@ describe('Any title reads correctly, whatever its gender (T-248)', () => {
 
     expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo programado para mañana a las 21:00');
     expect(inboxOf(olga)[0].body).toBe('Hamlet: Репетиция назначена завтра в 22:00');
+  });
+});
+
+/**
+ * Nothing agrees with what the server cannot know (T-251).
+ *
+ * The title's gender: "Прогон отменена", "Escena del balcón cancelado". The
+ * person's: "Мальвина присоединился", "откликнулся" — wrong for every woman.
+ * The reader's: "Has sido eliminado", "Ahora eres administrador", "Du bist
+ * jetzt Administrator". And "Вы теперь администратором проекта" had no verb
+ * for its instrumental.
+ */
+describe('No word agrees with a title, a member or a reader the server cannot know (T-251)', () => {
+  let carmen;
+  let klaus;
+  let olga;
+  beforeAll(() => {
+    carmen = addReader('carmen3', 'es', 'Europe/Madrid');
+    klaus = addReader('klaus3', 'de', 'Europe/Berlin');
+    olga = addReader('olga3', 'ru', 'Asia/Jerusalem');
+  });
+
+  it('a cancelled rehearsal agrees with "rehearsal", not with its title', async () => {
+    await notifyRehearsalDeleted({ ...rehearsal, title: 'Прогон' }, 'Гамлет', [{ user_id: olga }]);
+    await notifyRehearsalDeleted({ ...rehearsal, title: 'Escena del balcón' }, 'Hamlet', [{ user_id: carmen }]);
+    await notifyRehearsalDeleted({ ...rehearsal, title: 'Fechtszene' }, 'Hamlet', [{ user_id: klaus }]);
+
+    expect(inboxOf(olga)[0]).toMatchObject({ title: 'Отменена репетиция', body: 'Гамлет: Репетиция «Прогон» отменена' });
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ensayo cancelado', body: 'Hamlet: Ensayo «Escena del balcón» cancelado' });
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Fechtszene abgesagt');
+  });
+
+  it('a cancelled rehearsal with no title', async () => {
+    await notifyRehearsalDeleted({ ...rehearsal, title: '' }, 'Гамлет', [{ user_id: olga }, { user_id: carmen }]);
+
+    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция отменена');
+    expect(inboxOf(carmen)[0].body).toBe('Гамлет: Ensayo cancelado');
+  });
+
+  it('a woman and a man who join read the same', async () => {
+    await notifyMemberJoined('Гамлет', 'Офелия Полониева', [olga], data.projectId);
+    expect(inboxOf(olga)[0].body).toBe('Офелия Полониева теперь в проекте Гамлет');
+
+    await notifyMemberJoined('Гамлет', 'Гамлет Датский', [olga], data.projectId);
+    expect(inboxOf(olga)[0].body).toBe('Гамлет Датский теперь в проекте Гамлет');
+  });
+
+  it('a woman and a man who have seen a rehearsal read the same, in the app\'s word', async () => {
+    const row = { id: rehearsal.id, project_id: data.projectId, title: 'Сцена с письмом', starts_at: '2026-10-06T09:00:00.000Z' };
+    await notifyMemberResponse(row, 'Иллирия', 'Виола Себастьянова', [olga, carmen, klaus], { now });
+    expect(inboxOf(olga)[0]).toMatchObject({ title: 'Репетиция просмотрена', body: 'Виола Себастьянова в курсе: «Сцена с письмом» (завтра в 12:00), Иллирия' });
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ensayo visto', body: 'Виола Себастьянова ha visto «Сцена с письмом» (mañana a las 11:00) en Иллирия' });
+    expect(inboxOf(klaus)[0]).toMatchObject({ title: 'Probe gesehen', body: 'Виола Себастьянова hat „Сцена с письмом“ (morgen um 11:00) in Иллирия gesehen' });
+
+    await notifyMemberResponse(row, 'Иллирия', 'Мальволио Стюард', [olga, john], { now });
+    expect(inboxOf(olga)[0].body).toBe('Мальволио Стюард в курсе: «Сцена с письмом» (завтра в 12:00), Иллирия');
+    expect(inboxOf(john)[0]).toMatchObject({ title: 'Rehearsal seen', body: 'Мальволио Стюард has seen “Сцена с письмом” (tomorrow at 5:00 AM) in Иллирия' });
+  });
+
+  it('a role given reads right in Russian, and agrees with no reader in Spanish and German', async () => {
+    for (const reader of [olga, carmen, klaus, john]) {
+      await notifyRoleChanged('Hamlet', reader, 'admin');
+    }
+    expect(inboxOf(olga)[0].body).toBe('Теперь вы администратор проекта Hamlet');
+    expect(inboxOf(carmen)[0].body).toBe('Ahora administras Hamlet');
+    expect(inboxOf(klaus)[0].body).toBe('Du verwaltest jetzt Hamlet');
+    expect(inboxOf(john)[0].body).toBe('You are now an administrator in Hamlet');
+
+    for (const reader of [olga, carmen, klaus, john]) {
+      await notifyRoleChanged('Hamlet', reader, 'member');
+    }
+    expect(inboxOf(olga)[0].body).toBe('Теперь вы участник проекта Hamlet');
+    expect(inboxOf(carmen)[0].body).toBe('Ahora eres miembro de Hamlet');
+    expect(inboxOf(klaus)[0].body).toBe('Du bist jetzt Mitglied in Hamlet');
+    expect(inboxOf(john)[0].body).toBe('You are now a member in Hamlet');
+  });
+
+  it('someone removed from a project, in Spanish, is no participle', async () => {
+    await notifyMemberRemoved('Hamlet', carmen);
+
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ya no estás en el proyecto', body: 'Ya no formas parte del proyecto Hamlet' });
+  });
+});
+
+describe('No words for a notice nobody sends (T-251)', () => {
+  it('"invited you to the project" is gone in every language', async () => {
+    const { t } = await import('../../i18n/pushNotifications.js');
+    for (const locale of ['ru', 'en', 'es', 'de']) expect(t(locale, 'projectInvite')).toBeUndefined();
   });
 });
 

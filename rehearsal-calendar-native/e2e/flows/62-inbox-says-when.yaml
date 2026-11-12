@@ -1,9 +1,11 @@
-# A changed rehearsal and a response say in the inbox which one and when it is
+# A changed rehearsal and a "seen" say in the inbox which one and when it is
 # (T-023): "Forres Castle: Banquet — location" and "responded to a rehearsal in
 # Forres Castle" made the reader open each to find out. Sent as an edit and a
-# "yes" send them, by the server's own notifyRehearsalUpdated and
-# notifyMemberResponse. The Banquet is two days on at 19:00 on his clock (the
-# seed); by the time this runs that may be tomorrow.
+# mark "seen" send them, by the server's own notifyRehearsalUpdated and
+# notifyMemberResponse — which says "has seen", the app's word for the mark,
+# not "responded to", left from the yes/no answers (T-251). The Banquet is two
+# days on at 19:00 on his clock (the seed); by the time this runs that may be
+# tomorrow.
 #
 # And the inbox's "Mark all read" and "Clear all" are drawn 24 pt, not 22, in
 # the same 44-point targets (flow 49 measures those). Maestro sees only the
@@ -41,7 +43,7 @@ tags:
       SEE: "Mark all read"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*Malcolm Prince responded to “Banquet” \\((tomorrow|on .*) at 7:00.PM\\) in Forres Castle.*"
+    visible: ".*Rehearsal seen.*Malcolm Prince has seen “Banquet” \\((tomorrow|on .*) at 7:00.PM\\) in Forres Castle.*"
     timeout: 15000
 - assertVisible: ".*Forres Castle: Banquet, (tomorrow|on .*) at 7:00.PM — location.*"
 - takeScreenshot: 62-inbox-says-when

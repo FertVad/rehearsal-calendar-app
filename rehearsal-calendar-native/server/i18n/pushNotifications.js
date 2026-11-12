@@ -10,6 +10,10 @@
 // agrees with it: in Russian and Spanish it agrees with the word "rehearsal",
 // which the title follows in quotes — "Репетиция «Прогон» назначена",
 // "Ensayo «Escena del balcón» programado" (T-248).
+//
+// Nor does anything agree with a person: the server knows no one's gender.
+// "присоединился", "откликнулся" were wrong for every woman, "eliminado" and
+// "Administrator" for every woman reading them (T-251).
 const ruRehearsal = (title) => (title ? `Репетиция «${title}»` : 'Репетиция');
 const esRehearsal = (title) => (title ? `Ensayo «${title}»` : 'Ensayo');
 
@@ -39,22 +43,20 @@ const translations = {
     rehearsalDeleted: {
       title: 'Отменена репетиция',
       body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Репетиция'} отменена`,
+        `${projectName}: ${ruRehearsal(rehearsalTitle)} отменена`,
     },
+    // Sent to the admins when someone marks a rehearsal seen, in the app's own
+    // words for it ("Отметить просмотренным", "Просмотрели"); the yes/no answers
+    // it was worded for are gone (T-251).
     memberResponse: {
-      title: 'Новый отклик',
+      title: 'Репетиция просмотрена',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} откликнулся на «${rehearsalTitle || 'Репетиция'}» (${when}) в проекте ${projectName}`,
-    },
-    projectInvite: {
-      title: 'Приглашение в проект',
-      body: ({ inviterName, projectName }) =>
-        `${inviterName} пригласил вас в проект ${projectName}`,
+        `${responderName} в курсе: «${rehearsalTitle || 'Репетиция'}» (${when}), ${projectName}`,
     },
     memberJoined: {
       title: 'Новый участник',
       body: ({ memberName, projectName }) =>
-        `${memberName} присоединился к проекту ${projectName}`,
+        `${memberName} теперь в проекте ${projectName}`,
     },
     adminAppointed: {
       title: 'Новый администратор',
@@ -63,10 +65,10 @@ const translations = {
     },
     roleChanged: {
       title: 'Изменение роли',
-      body: ({ roleText, projectName }) =>
-        `Вы теперь ${roleText} проекта ${projectName}`,
-      adminRole: 'администратором',
-      memberRole: 'участником',
+      // A noun in the nominative after "теперь вы": "Вы теперь
+      // администратором" had an instrumental with no verb to govern it (T-251).
+      body: ({ admin, projectName }) =>
+        `Теперь вы ${admin ? 'администратор' : 'участник'} проекта ${projectName}`,
     },
     memberRemoved: {
       title: 'Удаление из проекта',
@@ -129,14 +131,9 @@ const translations = {
         `${projectName}: ${rehearsalTitle || 'Rehearsal'} cancelled`,
     },
     memberResponse: {
-      title: 'New response',
+      title: 'Rehearsal seen',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} responded to “${rehearsalTitle || 'Rehearsal'}” (${when}) in ${projectName}`,
-    },
-    projectInvite: {
-      title: 'Project invitation',
-      body: ({ inviterName, projectName }) =>
-        `${inviterName} invited you to the project ${projectName}`,
+        `${responderName} has seen “${rehearsalTitle || 'Rehearsal'}” (${when}) in ${projectName}`,
     },
     memberJoined: {
       title: 'New member',
@@ -150,10 +147,8 @@ const translations = {
     },
     roleChanged: {
       title: 'Role changed',
-      body: ({ roleText, projectName }) =>
-        `You are now ${roleText} in ${projectName}`,
-      adminRole: 'an administrator',
-      memberRole: 'a member',
+      body: ({ admin, projectName }) =>
+        `You are now ${admin ? 'an administrator' : 'a member'} in ${projectName}`,
     },
     memberRemoved: {
       title: 'Removed from project',
@@ -214,17 +209,12 @@ const translations = {
     rehearsalDeleted: {
       title: 'Ensayo cancelado',
       body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Ensayo'} cancelado`,
+        `${projectName}: ${esRehearsal(rehearsalTitle)} cancelado`,
     },
     memberResponse: {
-      title: 'Nueva respuesta',
+      title: 'Ensayo visto',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} ha respondido a «${rehearsalTitle || 'Ensayo'}» (${when}) en ${projectName}`,
-    },
-    projectInvite: {
-      title: 'Invitación al proyecto',
-      body: ({ inviterName, projectName }) =>
-        `${inviterName} te invitó al proyecto ${projectName}`,
+        `${responderName} ha visto «${rehearsalTitle || 'Ensayo'}» (${when}) en ${projectName}`,
     },
     memberJoined: {
       title: 'Nuevo integrante',
@@ -238,15 +228,16 @@ const translations = {
     },
     roleChanged: {
       title: 'Cambio de rol',
-      body: ({ roleText, projectName }) =>
-        `Ahora eres ${roleText} en ${projectName}`,
-      adminRole: 'administrador',
-      memberRole: 'miembro',
+      // A verb, as adminAppointed says it: "administrador" agreed with a man
+      // reading it, and "miembro" with anyone (T-251).
+      body: ({ admin, projectName }) =>
+        (admin ? `Ahora administras ${projectName}` : `Ahora eres miembro de ${projectName}`),
     },
     memberRemoved: {
-      title: 'Eliminado del proyecto',
+      // No participle: "eliminado" agreed with a man reading it (T-251).
+      title: 'Ya no estás en el proyecto',
       body: ({ projectName }) =>
-        `Has sido eliminado del proyecto ${projectName}`,
+        `Ya no formas parte del proyecto ${projectName}`,
     },
     projectDeleted: {
       title: 'Proyecto eliminado',
@@ -305,14 +296,9 @@ const translations = {
         `${projectName}: ${rehearsalTitle || 'Probe'} abgesagt`,
     },
     memberResponse: {
-      title: 'Neue Antwort',
+      title: 'Probe gesehen',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} hat auf „${rehearsalTitle || 'Probe'}“ (${when}) in ${projectName} reagiert`,
-    },
-    projectInvite: {
-      title: 'Projekteinladung',
-      body: ({ inviterName, projectName }) =>
-        `${inviterName} hat dich zum Projekt ${projectName} eingeladen`,
+        `${responderName} hat „${rehearsalTitle || 'Probe'}“ (${when}) in ${projectName} gesehen`,
     },
     memberJoined: {
       title: 'Neues Mitglied',
@@ -326,10 +312,9 @@ const translations = {
     },
     roleChanged: {
       title: 'Rolle geändert',
-      body: ({ roleText, projectName }) =>
-        `Du bist jetzt ${roleText} in ${projectName}`,
-      adminRole: 'Administrator',
-      memberRole: 'Mitglied',
+      // A verb, as adminAppointed says it: "Administrator" is a man's (T-251).
+      body: ({ admin, projectName }) =>
+        (admin ? `Du verwaltest jetzt ${projectName}` : `Du bist jetzt Mitglied in ${projectName}`),
     },
     memberRemoved: {
       title: 'Aus dem Projekt entfernt',

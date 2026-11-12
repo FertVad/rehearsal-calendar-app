@@ -90,9 +90,16 @@
  *                                                  and a "yes" send it (flow 62)
  *   GET /notify?to=<address>&type=rehearsal_created&rehearsal=<title>
  *   GET /notify?to=<address>&type=added_to_rehearsal&rehearsal=<title>
- *                                                  a new rehearsal, or one
- *                                                  they were put on, in their
+ *   GET /notify?to=<address>&type=rehearsal_deleted&rehearsal=<title>
+ *                                                  a new rehearsal, one they
+ *                                                  were put on, or one
+ *                                                  cancelled, in their
  *                                                  language (flow 86)
+ *   GET /notify?to=<address>&type=role_changed&project=<name>&role=<r>
+ *   GET /notify?to=<address>&type=member_removed&project=<name>
+ *                                                  the notice of a role given
+ *                                                  or of being removed, and
+ *                                                  nothing more (flow 86)
  *
  * It measures an icon on a screenshot a flow took, which Maestro cannot: a
  * button that is only an icon is one element, the size of its target (ink.mjs):
@@ -144,7 +151,8 @@ import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
 import {
-  notifyAddedToRehearsal, notifyMemberJoined, notifyMemberResponse, notifyRehearsalCreated, notifyRehearsalUpdated,
+  notifyAddedToRehearsal, notifyMemberJoined, notifyMemberRemoved, notifyMemberResponse, notifyRehearsalCreated,
+  notifyRehearsalDeleted, notifyRehearsalUpdated, notifyRoleChanged,
 } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
 import { ellipses, inkBox } from './ink.mjs';
@@ -416,7 +424,8 @@ http.createServer((request, response) => {
     holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, dead, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
-  if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {
+  const told = url.searchParams.get('type');
+  if (request.method === 'GET' && url.pathname === '/notify' && ['member_joined', 'role_changed', 'member_removed'].includes(told)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const projectName = url.searchParams.get('project') || '';
     const member = url.searchParams.get('member') || 'Somebody';
@@ -425,16 +434,20 @@ http.createServer((request, response) => {
       if (!user) return answer(404, { error: `no account ${to}` });
       const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
       if (!project) return answer(404, { error: `no project ${projectName}` });
-      // As the join tells them (inviteRedemption.js), the server's own words and data.
-      await notifyMemberJoined(project.name, member, [user.id], project.id);
-      console.log(`[e2e] told ${to} that ${member} joined ${project.name}`);
+      // As the join, a role given and a removal tell them (inviteRedemption.js,
+      // routes/native/members.js), the server's own words and data. Only the
+      // notice: the role and the membership stay as they are.
+      if (told === 'member_joined') await notifyMemberJoined(project.name, member, [user.id], project.id);
+      else if (told === 'role_changed') await notifyRoleChanged(project.name, user.id, url.searchParams.get('role') || 'admin');
+      else await notifyMemberRemoved(project.name, user.id);
+      console.log(`[e2e] told ${to} of ${told} in ${project.name}`);
       return answer(200, { recorded: 1 });
     })().catch((error) => answer(500, { error: String(error) }));
     return;
   }
   const about = url.searchParams.get('type');
   if (request.method === 'GET' && url.pathname === '/notify'
-    && ['rehearsal_updated', 'member_response', 'rehearsal_created', 'added_to_rehearsal'].includes(about)) {
+    && ['rehearsal_updated', 'member_response', 'rehearsal_created', 'added_to_rehearsal', 'rehearsal_deleted'].includes(about)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const title = url.searchParams.get('rehearsal') || '';
     (async () => {
@@ -452,6 +465,9 @@ http.createServer((request, response) => {
         await notifyRehearsalCreated(rehearsal, project.name, [{ user_id: user.id }]);
       } else if (about === 'added_to_rehearsal') {
         await notifyAddedToRehearsal(rehearsal, project.name, [{ user_id: user.id }]);
+      } else if (about === 'rehearsal_deleted') {
+        // Only the notice: the rehearsal stays.
+        await notifyRehearsalDeleted(rehearsal, project.name, [{ user_id: user.id }]);
       } else {
         await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
       }

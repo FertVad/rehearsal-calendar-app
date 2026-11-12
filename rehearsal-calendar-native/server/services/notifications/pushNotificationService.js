@@ -538,9 +538,6 @@ export async function notifyMemberResponse(rehearsal, projectName, responderName
 }
 
 /**
- * Notify user when invited to a project
- */
-/**
  * Tell the people responsible for a project that somebody has joined it.
  *
  * This used to tell the person who had just joined, who had tapped Join a
@@ -581,11 +578,10 @@ export async function notifyRoleChanged(projectName, userId, newRole) {
   const locales = await getUserLocales([userId]);
   const locale = locales.get(userId) || 'en';
   const tr = t(locale, 'roleChanged');
-  const roleText = newRole === 'admin' ? tr.adminRole : tr.memberRole;
 
   await sendPushNotification([userId], {
     title: tr.title,
-    body: tr.body({ roleText, projectName }),
+    body: tr.body({ admin: newRole === 'admin', projectName }),
     data: { type: 'role_changed', projectName, newRole },
   });
 }

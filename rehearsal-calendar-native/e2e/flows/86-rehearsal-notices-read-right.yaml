@@ -10,12 +10,44 @@
 # by the server's own notifyRehearsalCreated and notifyAddedToRehearsal, in
 # her account's language (the seed: Laurencia es, Gretchen de, Katerina ru),
 # and reads both in her inbox. By the time this runs "tomorrow" may be a date.
+#
+# And nothing agrees with what the server cannot know (T-251): a cancelled
+# rehearsal agrees with "rehearsal", not with its title ("Прогон отменена",
+# "Escena del balcón cancelado"); a woman who joins or marks a rehearsal seen
+# is no "присоединился", "откликнулся"; a woman reading of her own new role or
+# removal is no "administrador", "eliminado", "Administrator"; and "Вы теперь
+# администратором" had no verb. Each is sent by the server's own function
+# before the two above, so they are below them in the inbox, and only the
+# notice is sent: the rehearsal, the role and the membership stay as they are.
 appId: ${APP_ID}
 name: Rehearsal notices read right in Spanish, German and Russian
 tags:
   - notifications
   - language
 ---
+# Spanish (T-251): cancelled, a role given, removed.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: rehearsal_deleted
+      REHEARSAL: Escena del balcón
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: role_changed
+      PROJECT: Fuenteovejuna
+      ROLE: admin
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: member_removed
+      PROJECT: Fuenteovejuna
 # Spanish: "programado para", and the participle agreeing with "Ensayo".
 - runScript:
     file: ../scripts/notify.js
@@ -46,6 +78,25 @@ tags:
     timeout: 15000
 - assertVisible: ".*Nuevo ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00.*"
 - takeScreenshot: 86-spanish
+- scrollUntilVisible:
+    element: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto Fuenteovejuna.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Cambio de rol.*Ahora administras Fuenteovejuna.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Ensayo cancelado.*Fuenteovejuna: Ensayo «Escena del balcón» cancelado.*"
+    direction: DOWN
+- takeScreenshot: 86-spanish-cancelled-role-removed
+# German (T-251): a role given, a verb rather than "Administrator".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: role_changed
+      PROJECT: Faust
+      ROLE: admin
 # German: the participle last, the place after it.
 - runScript:
     file: ../scripts/notify.js
@@ -76,6 +127,43 @@ tags:
     timeout: 15000
 - assertVisible: ".*Neue Probe.*Faust: Fechtszene (morgen|am .*) um 18:00 angesetzt.*"
 - takeScreenshot: 86-german
+- scrollUntilVisible:
+    element: ".*Rolle geändert.*Du verwaltest jetzt Faust.*"
+    direction: DOWN
+- takeScreenshot: 86-german-role
+# Russian (T-251): cancelled, a woman who joins, a woman who has seen it, a
+# role given.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_deleted
+      REHEARSAL: Прогон
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: member_joined
+      PROJECT: Гроза
+      MEMBER: Марфа Кабанова
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: member_response
+      REHEARSAL: Прогон
+      MEMBER: Марфа Кабанова
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: role_changed
+      PROJECT: Гроза
+      ROLE: admin
 # Russian: the participle agreeing with "Репетиция", whatever the title.
 - runScript:
     file: ../scripts/notify.js
@@ -106,3 +194,16 @@ tags:
     timeout: 15000
 - assertVisible: ".*Новая репетиция.*Гроза: Репетиция «Прогон» назначена (завтра|.*) в 18:00.*"
 - takeScreenshot: 86-russian
+- scrollUntilVisible:
+    element: ".*Изменение роли.*Теперь вы администратор проекта Гроза.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Репетиция просмотрена.*Марфа Кабанова в курсе: «Прогон» \\((завтра|.*) в 18:00\\), Гроза.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Новый участник.*Марфа Кабанова теперь в проекте Гроза.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Отменена репетиция.*Гроза: Репетиция «Прогон» отменена.*"
+    direction: DOWN
+- takeScreenshot: 86-russian-cancelled-joined-seen-role
