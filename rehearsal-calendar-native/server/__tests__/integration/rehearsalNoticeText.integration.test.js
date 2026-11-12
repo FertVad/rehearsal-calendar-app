@@ -97,8 +97,8 @@ describe('Each reader is told when, on their own clock and in their own language
   it('a changed rehearsal, with what changed', async () => {
     await notifyRehearsalUpdated(rehearsal, 'Hamlet', readers(), ['datetime'], { now });
 
-    expect(inboxOf(natasha)[0].body).toBe('Hamlet: Full dress, завтра в 22:00 — дата/время');
-    expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress, tomorrow at 3:00 PM — date/time');
+    expect(inboxOf(natasha)[0].body).toBe('Hamlet: Full dress — теперь завтра в 22:00');
+    expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress — now tomorrow at 3:00 PM');
   });
 
   it('a "seen" names the rehearsal and when it is', async () => {
@@ -316,7 +316,7 @@ describe('No word agrees with a title, a member or a reader the server cannot kn
     expect(inboxOf(olga)[0].body).toBe('Теперь вы администратор проекта Hamlet');
     expect(inboxOf(carmen)[0].body).toBe('Ahora administras Hamlet');
     expect(inboxOf(klaus)[0].body).toBe('Du verwaltest jetzt Hamlet');
-    expect(inboxOf(john)[0].body).toBe('You are now an administrator in Hamlet');
+    expect(inboxOf(john)[0].body).toBe('You are now an administrator of Hamlet');
 
     for (const reader of [olga, carmen, klaus, john]) {
       await notifyRoleChanged('Hamlet', reader, 'member');
@@ -324,13 +324,107 @@ describe('No word agrees with a title, a member or a reader the server cannot kn
     expect(inboxOf(olga)[0].body).toBe('Теперь вы участник проекта Hamlet');
     expect(inboxOf(carmen)[0].body).toBe('Ahora eres miembro de Hamlet');
     expect(inboxOf(klaus)[0].body).toBe('Du bist jetzt Mitglied in Hamlet');
-    expect(inboxOf(john)[0].body).toBe('You are now a member in Hamlet');
+    expect(inboxOf(john)[0].body).toBe('You are now a member of Hamlet');
   });
 
   it('someone removed from a project, in Spanish, is no participle', async () => {
     await notifyMemberRemoved('Hamlet', carmen);
 
     expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ya no estás en el proyecto', body: 'Ya no formas parte del proyecto Hamlet' });
+  });
+});
+
+/**
+ * A change says what changed, in a sentence (T-250).
+ *
+ * "Лебединое озеро: Кордебалет, сегодня в 19:00 — дата/время" left the reader
+ * to work out that the time was the new one and what "дата/время" meant. The
+ * landing page, read by native speakers, shows it as "Кордебалет — теперь
+ * сегодня в 19:00", "Corps de ballet — now today at 7:00 PM", "Cuerpo de baile,
+ * pasa a hoy a las 19:00", "Corps de ballet – verlegt auf heute, 19:00".
+ */
+describe('A changed rehearsal says what changed, as a native speaker says it (T-250)', () => {
+  let carmen;
+  let klaus;
+  let olga;
+  let nick;
+  const all = () => [carmen, klaus, olga, nick].map((user_id) => ({ user_id }));
+  const bodies = () => [carmen, klaus, olga, nick].map((reader) => inboxOf(reader)[0].body);
+  const today = new Date('2026-10-06T06:00:00Z');
+
+  beforeAll(() => {
+    carmen = addReader('carmen4', 'es', 'Europe/Madrid');
+    klaus = addReader('klaus4', 'de', 'Europe/Berlin');
+    olga = addReader('olga4', 'ru', 'Europe/Moscow');
+    nick = addReader('nick4', 'en', 'Europe/London');
+  });
+
+  let swan;
+  beforeAll(() => { swan = { ...rehearsal, title: 'Кордебалет', location: 'Зал 2' }; });
+
+  it('moved: where to, today', async () => {
+    await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['datetime'], { now: today });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, pasa a hoy a las 21:00',
+      'Лебединое озеро: Кордебалет – verlegt auf heute, 21:00',
+      'Лебединое озеро: Кордебалет — теперь сегодня в 22:00',
+      'Лебединое озеро: Кордебалет — now today at 8:00 PM',
+    ]);
+  });
+
+  it('moved to a date: "al", not "a el"; "auf Di.", not "auf am"', async () => {
+    await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['datetime'], { now: new Date('2026-10-01T06:00:00Z') });
+
+    const [es, de, ru, en] = bodies();
+    expect(es).toBe('Лебединое озеро: Кордебалет, pasa al mar, 6 oct a las 21:00');
+    expect(de).toBe('Лебединое озеро: Кордебалет – verlegt auf Di., 6. Okt., 21:00');
+    expect(ru).toMatch(/^Лебединое озеро: Кордебалет — теперь вт, 6 окт\.? в 22:00$/);
+    expect(en).toBe('Лебединое озеро: Кордебалет — now on Tue, Oct 6 at 8:00 PM');
+  });
+
+  it('moved and to a new place', async () => {
+    await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['datetime', 'location'], { now });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, pasa a mañana a las 21:00 en Зал 2',
+      'Лебединое озеро: Кордебалет – verlegt auf morgen, 21:00, Ort: Зал 2',
+      'Лебединое озеро: Кордебалет — теперь завтра в 22:00, место: Зал 2',
+      'Лебединое озеро: Кордебалет — now tomorrow at 8:00 PM at Зал 2',
+    ]);
+  });
+
+  it('a new place only: which', async () => {
+    await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['location'], { now });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, mañana a las 21:00 — nuevo lugar: Зал 2',
+      'Лебединое озеро: Кордебалет, morgen um 21:00 – neuer Ort: Зал 2',
+      'Лебединое озеро: Кордебалет, завтра в 22:00 — новое место: Зал 2',
+      'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — new location: Зал 2',
+    ]);
+  });
+
+  it('the place taken away', async () => {
+    await notifyRehearsalUpdated({ ...swan, location: '' }, 'Лебединое озеро', all(), ['location'], { now });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, mañana a las 21:00 — ya sin lugar asignado',
+      'Лебединое озеро: Кордебалет, morgen um 21:00 – kein Ort mehr',
+      'Лебединое озеро: Кордебалет, завтра в 22:00 — место больше не указано',
+      'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — no location now',
+    ]);
+  });
+
+  it('renamed: the new name, and that it is one', async () => {
+    await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['title'], { now });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, mañana a las 21:00 — nuevo nombre',
+      'Лебединое озеро: Кордебалет, morgen um 21:00 – neuer Titel',
+      'Лебединое озеро: Кордебалет, завтра в 22:00 — новое название',
+      'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — renamed',
+    ]);
   });
 });
 

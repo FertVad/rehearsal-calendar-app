@@ -44,12 +44,15 @@ const nextDate = (date) => new Date(Date.parse(`${date}T00:00:00.000Z`) + DAY_MS
  * @param {Date|string} startsAt - the rehearsal's start, as stored
  * @param {Date} now - when the reminder is sent
  * @param {string} timeZone - the reader's IANA zone
+ * @param {'when'|'movedTo'} wording - "at" a time, or where a rehearsal was
+ *   moved to: Spanish says "pasa al mar, 6 oct", German "verlegt auf Di.,
+ *   6. Okt., 19:00" — not "a el", not "auf am" (T-250)
  */
-export function reminderWhen(locale, startsAt, now, timeZone) {
+export function reminderWhen(locale, startsAt, now, timeZone, wording = 'when') {
   const zone = zoneOf(timeZone);
   const tag = LOCALE_TAGS[locale] || LOCALE_TAGS.en;
   const start = new Date(startsAt);
-  const words = t(locale, 'when');
+  const words = t(locale, wording);
 
   let time = new Intl.DateTimeFormat(tag, { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(start);
   if (zone === 'UTC') time += ' UTC';

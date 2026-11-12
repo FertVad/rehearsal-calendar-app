@@ -27,12 +27,26 @@
 # of it is drawn, so the "…" is looked for on each shot (no-ellipsis.js), over
 # the cards' text, right of their icons. The longest the server sends comes
 # last, on top: Spanish, "added", on a date and with a long place.
+#
+# And a move says where to (T-250), as the landing page says it: "Escena del
+# balcón, pasa a mañana a las 18:00", "Fechtszene – verlegt auf morgen,
+# 18:00", "Прогон — теперь завтра в 18:00" — not "…, mañana a las 18:00 —
+# fecha/hora". Sent first, so it is the lowest card.
 appId: ${APP_ID}
 name: Rehearsal notices read right in Spanish, German and Russian
 tags:
   - notifications
   - language
 ---
+# Spanish (T-250): moved, said as where to.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Escena del balcón
+      CHANGE: datetime
 # Spanish (T-251): seen, cancelled, a role given, removed.
 - runScript:
     file: ../scripts/notify.js
@@ -124,6 +138,9 @@ tags:
 - scrollUntilVisible:
     element: ".*Ensayo visto.*Jacinta Labradora ha visto «Escena del balcón» \\((mañana|el .*) a las 18:00\\) en Fuenteovejuna.*"
     direction: DOWN
+- scrollUntilVisible:
+    element: ".*Ensayo actualizado.*Fuenteovejuna: Escena del balcón, pasa (a mañana|al .*) a las 18:00.*"
+    direction: DOWN
 - takeScreenshot: 86-spanish-cancelled-role-removed-seen
 - runScript:
     file: ../scripts/no-ellipsis.js
@@ -134,6 +151,15 @@ tags:
       RIGHT: "0.9"
       TOP: "0.12"
       BOTTOM: "1"
+# German (T-250): moved, "verlegt auf".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Fechtszene
+      CHANGE: datetime
 # German (T-251): seen, not "reagiert"; a role given, a verb rather than
 # "Administrator".
 - runScript:
@@ -197,6 +223,9 @@ tags:
 - scrollUntilVisible:
     element: ".*Probe gesehen.*Marthe Schwerdtlein hat „Fechtszene“ \\((morgen|am .*) um 18:00\\) in Faust gesehen.*"
     direction: DOWN
+- scrollUntilVisible:
+    element: ".*Probe geändert.*Faust: Fechtszene – verlegt auf (morgen|[A-Z][a-z]\\.,.*), 18:00.*"
+    direction: DOWN
 - takeScreenshot: 86-german-role-seen
 - runScript:
     file: ../scripts/no-ellipsis.js
@@ -207,6 +236,15 @@ tags:
       RIGHT: "0.9"
       TOP: "0.12"
       BOTTOM: "1"
+# Russian (T-250): moved, "теперь".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Прогон
+      CHANGE: datetime
 # Russian (T-251): cancelled, a woman who joins, a woman who has seen it, a
 # role given.
 - runScript:
@@ -290,6 +328,9 @@ tags:
     direction: DOWN
 - scrollUntilVisible:
     element: ".*Отменена репетиция.*Гроза: Репетиция «Прогон» отменена.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Изменена репетиция.*Гроза: Прогон — теперь (завтра|[а-я]{2}, .*) в 18:00.*"
     direction: DOWN
 - takeScreenshot: 86-russian-cancelled-joined-seen-role
 - runScript:

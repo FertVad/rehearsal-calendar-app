@@ -5,7 +5,8 @@
 # notifyMemberResponse — which says "has seen", the app's word for the mark,
 # not "responded to", left from the yes/no answers (T-251). The Banquet is two
 # days on at 19:00 on his clock (the seed); by the time this runs that may be
-# tomorrow.
+# tomorrow. The change says what it is, in words (T-250): "— new location:
+# The great hall", not "— location".
 #
 # And the inbox's "Mark all read" and "Clear all" are drawn 24 pt, not 22, in
 # the same 44-point targets (flow 49 measures those). Maestro sees only the
@@ -45,7 +46,7 @@ tags:
 - extendedWaitUntil:
     visible: ".*Rehearsal seen.*Malcolm Prince has seen “Banquet” \\((tomorrow|on .*) at 7:00.PM\\) in Forres Castle.*"
     timeout: 15000
-- assertVisible: ".*Forres Castle: Banquet, (tomorrow|on .*) at 7:00.PM — location.*"
+- assertVisible: ".*Forres Castle: Banquet, (tomorrow|on .*) at 7:00.PM — new location: The great hall.*"
 - takeScreenshot: 62-inbox-says-when
 # The two icons, in the header's right-hand part, above the first card.
 - runScript:

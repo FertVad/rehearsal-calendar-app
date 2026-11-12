@@ -37,8 +37,17 @@ const translations = {
     },
     rehearsalUpdated: {
       title: 'Изменена репетиция',
-      body: ({ projectName, rehearsalTitle, when, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Репетиция'}, ${when} — ${changes}`,
+      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+        const name = rehearsalTitle || 'Репетиция';
+        if (changed.datetime) {
+          const place = changed.location ? `, ${location ? `место: ${location}` : 'место не указано'}` : '';
+          return `${projectName}: ${name} — теперь ${movedTo}${place}`;
+        }
+        if (changed.location) {
+          return `${projectName}: ${name}, ${when} — ${location ? `новое место: ${location}` : 'место больше не указано'}`;
+        }
+        return `${projectName}: ${name}, ${when} — новое название`;
+      },
     },
     rehearsalDeleted: {
       title: 'Отменена репетиция',
@@ -73,12 +82,12 @@ const translations = {
     memberRemoved: {
       title: 'Удаление из проекта',
       body: ({ projectName }) =>
-        `Вы были удалены из проекта ${projectName}`,
+        `Вас удалили из проекта ${projectName}`,
     },
     projectDeleted: {
       title: 'Проект удалён',
       body: ({ projectName }) =>
-        `Проект ${projectName} был удалён`,
+        `Проект ${projectName} удалён`,
     },
     // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
@@ -96,11 +105,11 @@ const translations = {
       tomorrow: (time) => `завтра в ${time}`,
       on: (date, time) => `${date} в ${time}`,
     },
-    changes: {
-      datetime: 'дата/время',
-      location: 'место',
-      title: 'название',
-      default: 'детали',
+    // Where a rehearsal was moved to: "теперь завтра в 19:00".
+    movedTo: {
+      today: (time) => `сегодня в ${time}`,
+      tomorrow: (time) => `завтра в ${time}`,
+      on: (date, time) => `${date} в ${time}`,
     },
   },
   en: {
@@ -122,8 +131,17 @@ const translations = {
     },
     rehearsalUpdated: {
       title: 'Rehearsal updated',
-      body: ({ projectName, rehearsalTitle, when, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Rehearsal'}, ${when} — ${changes}`,
+      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+        const name = rehearsalTitle || 'Rehearsal';
+        if (changed.datetime) {
+          const place = changed.location ? (location ? ` at ${location}` : ', no location') : '';
+          return `${projectName}: ${name} — now ${movedTo}${place}`;
+        }
+        if (changed.location) {
+          return `${projectName}: ${name}, ${when} — ${location ? `new location: ${location}` : 'no location now'}`;
+        }
+        return `${projectName}: ${name}, ${when} — renamed`;
+      },
     },
     rehearsalDeleted: {
       title: 'Rehearsal cancelled',
@@ -148,7 +166,7 @@ const translations = {
     roleChanged: {
       title: 'Role changed',
       body: ({ admin, projectName }) =>
-        `You are now ${admin ? 'an administrator' : 'a member'} in ${projectName}`,
+        `You are now ${admin ? 'an administrator' : 'a member'} of ${projectName}`,
     },
     memberRemoved: {
       title: 'Removed from project',
@@ -176,11 +194,11 @@ const translations = {
       tomorrow: (time) => `tomorrow at ${time}`,
       on: (date, time) => `on ${date} at ${time}`,
     },
-    changes: {
-      datetime: 'date/time',
-      location: 'location',
-      title: 'title',
-      default: 'details',
+    // Where a rehearsal was moved to: "now tomorrow at 7:00 PM".
+    movedTo: {
+      today: (time) => `today at ${time}`,
+      tomorrow: (time) => `tomorrow at ${time}`,
+      on: (date, time) => `on ${date} at ${time}`,
     },
   },
   es: {
@@ -203,8 +221,18 @@ const translations = {
     },
     rehearsalUpdated: {
       title: 'Ensayo actualizado',
-      body: ({ projectName, rehearsalTitle, when, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Ensayo'}, ${when} — ${changes}`,
+      // "pasa a hoy", "pasa al mar, 6 oct": movedTo carries its own "a".
+      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+        const name = rehearsalTitle || 'Ensayo';
+        if (changed.datetime) {
+          const place = changed.location ? (location ? ` en ${location}` : ', sin lugar asignado') : '';
+          return `${projectName}: ${name}, pasa ${movedTo}${place}`;
+        }
+        if (changed.location) {
+          return `${projectName}: ${name}, ${when} — ${location ? `nuevo lugar: ${location}` : 'ya sin lugar asignado'}`;
+        }
+        return `${projectName}: ${name}, ${when} — nuevo nombre`;
+      },
     },
     rehearsalDeleted: {
       title: 'Ensayo cancelado',
@@ -217,7 +245,7 @@ const translations = {
         `${responderName} ha visto «${rehearsalTitle || 'Ensayo'}» (${when}) en ${projectName}`,
     },
     memberJoined: {
-      title: 'Nuevo integrante',
+      title: 'Nuevo miembro',
       body: ({ memberName, projectName }) =>
         `${memberName} se unió a ${projectName}`,
     },
@@ -260,11 +288,12 @@ const translations = {
       tomorrow: (time) => `mañana a las ${time}`,
       on: (date, time) => `el ${date} a las ${time}`,
     },
-    changes: {
-      datetime: 'fecha/hora',
-      location: 'lugar',
-      title: 'título',
-      default: 'detalles',
+    // Where a rehearsal was moved to: "pasa a mañana a las 19:00", "pasa al
+    // mar, 6 oct a las 19:00" — "a el" contracts.
+    movedTo: {
+      today: (time) => `a hoy a las ${time}`,
+      tomorrow: (time) => `a mañana a las ${time}`,
+      on: (date, time) => `al ${date} a las ${time}`,
     },
   },
   de: {
@@ -278,7 +307,7 @@ const translations = {
     removedFromRehearsal: {
       title: 'Du wurdest von einer Probe genommen',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'}, ${when} — du bist nicht mehr dabei`,
+        `${projectName}: ${rehearsalTitle || 'Probe'}, ${when} – du bist nicht mehr dabei`,
     },
     newRehearsal: {
       title: 'Neue Probe',
@@ -287,8 +316,18 @@ const translations = {
     },
     rehearsalUpdated: {
       title: 'Probe geändert',
-      body: ({ projectName, rehearsalTitle, when, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'}, ${when} — ${changes}`,
+      // "verlegt auf heute, 19:00": movedTo carries its own "auf".
+      body: ({ projectName, rehearsalTitle, when, movedTo, changed, location }) => {
+        const name = rehearsalTitle || 'Probe';
+        if (changed.datetime) {
+          const place = changed.location ? (location ? `, Ort: ${location}` : ', ohne Ort') : '';
+          return `${projectName}: ${name} – verlegt ${movedTo}${place}`;
+        }
+        if (changed.location) {
+          return `${projectName}: ${name}, ${when} – ${location ? `neuer Ort: ${location}` : 'kein Ort mehr'}`;
+        }
+        return `${projectName}: ${name}, ${when} – neuer Titel`;
+      },
     },
     rehearsalDeleted: {
       title: 'Probe abgesagt',
@@ -342,11 +381,12 @@ const translations = {
       tomorrow: (time) => `morgen um ${time}`,
       on: (date, time) => `am ${date} um ${time}`,
     },
-    changes: {
-      datetime: 'Datum/Zeit',
-      location: 'Ort',
-      title: 'Titel',
-      default: 'Details',
+    // Where a rehearsal was moved to: "verlegt auf morgen, 19:00", "verlegt
+    // auf Di., 6. Okt., 19:00" — "auf am" is no German.
+    movedTo: {
+      today: (time) => `auf heute, ${time}`,
+      tomorrow: (time) => `auf morgen, ${time}`,
+      on: (date, time) => `auf ${date}, ${time}`,
     },
   },
 };
