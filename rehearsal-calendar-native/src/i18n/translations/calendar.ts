@@ -6,6 +6,9 @@ export interface CalendarTranslations {
   noUpcoming: string;
   tomorrow: string;
   todayButton: string;
+  /** The arrows beside the open month's name, for VoiceOver: they are only icons (T-254). */
+  previousMonth: string;
+  nextMonth: string;
   smartPlannerSubtitle: string;
   rehearsal: string;
 }
@@ -103,6 +106,8 @@ needProject: 'Репетиции появятся, когда вы окажет�
     noUpcoming: 'Репетиций пока не назначено',
     tomorrow: 'Завтра',
     todayButton: 'Сегодня',
+    previousMonth: 'Предыдущий месяц',
+    nextMonth: 'Следующий месяц',
     smartPlannerSubtitle: 'Найти оптимальное время для репетиции',
     rehearsal: 'Репетиция',
   },
@@ -183,6 +188,8 @@ needProject: 'Rehearsals show up once you are in a project',
     noUpcoming: 'Nothing scheduled yet',
     tomorrow: 'Tomorrow',
     todayButton: 'Today',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
     smartPlannerSubtitle: 'Find the best time for rehearsal',
     rehearsal: 'Rehearsal',
   },
@@ -263,6 +270,8 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     noUpcoming: 'Nada programado todavía',
     tomorrow: 'Mañana',
     todayButton: 'Hoy',
+    previousMonth: 'Mes anterior',
+    nextMonth: 'Mes siguiente',
     smartPlannerSubtitle: 'Encuentra el mejor horario para ensayar',
     rehearsal: 'Ensayo',
   },
@@ -343,6 +352,8 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     noUpcoming: 'Noch nichts angesetzt',
     tomorrow: 'Morgen',
     todayButton: 'Heute',
+    previousMonth: 'Vorheriger Monat',
+    nextMonth: 'Nächster Monat',
     smartPlannerSubtitle: 'Finde die beste Probezeit',
     rehearsal: 'Probe',
   },

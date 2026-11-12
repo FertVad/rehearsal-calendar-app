@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent, GestureResponderEvent } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
+import { calendarTheme } from '../../../shared/components/profileCalendar';
 import { Rehearsal } from '../../../shared/types';
 import { addDays, parseDateString } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
@@ -56,6 +58,14 @@ const FRAME_INSET = 2;
 const RANGE_DAYS = 366;
 /** How long a let-go waits for a momentum to begin before it is a stop. */
 const RELEASE_STOP_MS = 100;
+/** How far a finger goes sideways over the month to turn it, in points. */
+const SWIPE_MIN = 40;
+
+/** 'YYYY-MM' `step` months after `month`. */
+function monthAfter(month: string, step: number): string {
+  const total = Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1 + step;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
+}
 
 export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
   const { t, language } = useI18n();
@@ -136,9 +146,12 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
 
   // The selected day goes to the middle, wherever it was chosen: a tap, the
   // month, "Today". When the days themselves move — today has — it is put
-  // there at once.
+  // there at once. While the month is open there is no strip to move: it
+  // comes back at the day selected then (below).
   const shownFirst = useRef(firstDay);
+  const stripShown = useRef(true);
   useEffect(() => {
+    if (!stripShown.current) return;
     const moved = shownFirst.current !== firstDay;
     shownFirst.current = firstDay;
     if (moved || target.current !== selectedIndex) scrollTo(selectedIndex, !moved);
@@ -223,25 +236,109 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
     }, RELEASE_STOP_MS);
   }, [cancelReleasedStop, settle]);
 
+  /**
+   * The month is the strip opened out, not a second panel under it (T-254,
+   * owner 12.11): open, the grid stands where the strip was and the card's
+   * header names the grid's month and turns it, by its arrows or a swipe over
+   * the grid. The grid has no title of its own — it repeated the header's —
+   * and the strip is gone, since under the grid it read as one more week whose
+   * columns were not the grid's.
+   */
+  const [monthOpen, setMonthOpen] = useState(false);
+  const [gridMonth, setGridMonth] = useState(selectedDate.slice(0, 7));
+  const firstMonth = firstDay.slice(0, 7);
+  const lastMonth = lastDay.slice(0, 7);
+  // Where a day picked in the grid is, for the strip to bring it in on its return.
+  const pickedInMonth = useRef<number | null>(null);
+
   const monthYear = useMemo(
-    () => formatDate(days[middleIndex]?.date ?? today, 'monthYear', language),
-    [days, middleIndex, today, language],
+    () => formatDate(
+      monthOpen ? `${gridMonth}-01` : days[middleIndex]?.date ?? today,
+      'monthYear',
+      language,
+    ),
+    [monthOpen, gridMonth, days, middleIndex, today, language],
   );
 
-  const [monthOpen, setMonthOpen] = useState(false);
-  // The day comes under the frame with the strip's ticks, as from a tap.
+  // Opens on the month the header named: the day under the frame's.
+  const toggleMonth = useCallback(() => {
+    if (monthOpen) {
+      setMonthOpen(false);
+      return;
+    }
+    cancelReleasedStop();
+    setGridMonth((days[centre.current]?.date ?? today).slice(0, 7));
+    setMonthOpen(true);
+  }, [monthOpen, cancelReleasedStop, days, today]);
+
+  // Never past the strip's days, a year on either side of today.
+  const turnMonth = useCallback((step: number) => {
+    setGridMonth(month => {
+      const next = monthAfter(month, step);
+      return next < firstMonth || next > lastMonth ? month : next;
+    });
+  }, [firstMonth, lastMonth]);
+
+  // A finger going sideways over the grid: to the left the next month, to
+  // the right the one before. Not a pull down: that refreshes the screen.
+  const swipeFrom = useRef<{ x: number; y: number } | null>(null);
+  const handleGridTouchStart = useCallback((event: GestureResponderEvent) => {
+    const { pageX, pageY, touches } = event.nativeEvent;
+    swipeFrom.current = touches && touches.length > 1 ? null : { x: pageX, y: pageY };
+  }, []);
+  const handleGridTouchEnd = useCallback((event: GestureResponderEvent) => {
+    const from = swipeFrom.current;
+    swipeFrom.current = null;
+    if (!from) return;
+    const dx = event.nativeEvent.pageX - from.x;
+    const dy = event.nativeEvent.pageY - from.y;
+    if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < 2 * Math.abs(dy)) return;
+    turnMonth(dx < 0 ? 1 : -1);
+  }, [turnMonth]);
+  const handleGridTouchCancel = useCallback(() => {
+    swipeFrom.current = null;
+  }, []);
+
+  // The grid folds back into the strip, and the day comes under the frame
+  // with the strip's ticks, as from a tap.
   const handlePickInMonth = useCallback((date: string) => {
+    pickedInMonth.current = indexOf.get(date) ?? null;
     setMonthOpen(false);
-    const index = indexOf.get(date);
-    if (index !== undefined) bringIn(index, false);
-  }, [indexOf, bringIn]);
+  }, [indexOf]);
 
   // Today's day, not only its place: this scrolled the strip back and left the
   // day picked before selected, so the list under it went on showing that day
-  // (DD03).
+  // (DD03). With the month open it stays open, on today's month, today
+  // selected and followed as the strip's "Today" does.
   const handleGoToToday = useCallback(() => {
+    if (monthOpen) {
+      setGridMonth(today.slice(0, 7));
+      pendingToday.current = false;
+      onShowToday();
+      return;
+    }
     bringIn(indexOf.get(today)!, true);
-  }, [bringIn, indexOf, today]);
+  }, [monthOpen, onShowToday, bringIn, indexOf, today]);
+
+  // The strip back, mounted at the day selected: the day under the frame is
+  // that one, with nothing on its way. A day picked in the grid is brought
+  // in from there.
+  useEffect(() => {
+    if (monthOpen) {
+      stripShown.current = false;
+      return;
+    }
+    if (stripShown.current) return;
+    stripShown.current = true;
+    travelling.current = false;
+    pendingToday.current = false;
+    shownFirst.current = firstDay;
+    target.current = selectedIndex;
+    moveCentre(selectedIndex, false);
+    const picked = pickedInMonth.current;
+    pickedInMonth.current = null;
+    if (picked !== null) bringIn(picked, false);
+  }, [monthOpen, firstDay, selectedIndex, moveCentre, bringIn]);
 
   const renderDay = useCallback(({ item, index }: { item: DayItem; index: number }) => {
     // The day under the frame; the frame itself is drawn behind the strip.
@@ -322,13 +419,21 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setMonthOpen(open => !open)}
+          onPress={toggleMonth}
           style={styles.monthTarget}
           testID="calendar-month"
           accessibilityRole="button"
           accessibilityState={{ expanded: monthOpen }}
         >
-          <Text style={styles.monthYear}>{monthYear}</Text>
+          {/* Whole, never cut: on a narrow phone it is drawn smaller first. */}
+          <Text
+            style={styles.monthYear}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
+            {monthYear}
+          </Text>
           <Ionicons
             name={monthOpen ? 'chevron-up' : 'chevron-down'}
             size={16}
@@ -336,61 +441,96 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
           />
         </TouchableOpacity>
 
-        <View style={styles.placeholder} />
+        {monthOpen ? (
+          <View style={styles.arrows}>
+            <IconButton
+              testID="calendar-month-previous"
+              icon="chevron-back"
+              size={20}
+              accessibilityLabel={t.calendar.previousMonth}
+              disabled={gridMonth <= firstMonth}
+              accessibilityState={{ disabled: gridMonth <= firstMonth }}
+              color={gridMonth <= firstMonth ? Colors.text.tertiary : calendarTheme.arrowColor}
+              onPress={() => turnMonth(-1)}
+            />
+            <IconButton
+              testID="calendar-month-next"
+              icon="chevron-forward"
+              size={20}
+              accessibilityLabel={t.calendar.nextMonth}
+              disabled={gridMonth >= lastMonth}
+              accessibilityState={{ disabled: gridMonth >= lastMonth }}
+              color={gridMonth >= lastMonth ? Colors.text.tertiary : calendarTheme.arrowColor}
+              onPress={() => turnMonth(1)}
+            />
+          </View>
+        ) : (
+          <View style={styles.placeholder} />
+        )}
       </View>
 
-      {monthOpen && (
-        <DayCalendar
-          testID="calendar-month-grid"
-          value={selectedDate}
-          onChange={handlePickInMonth}
-          pastOpen
-          dotted={rehearsalDays}
-          minDate={firstDay}
-          maxDate={lastDay}
-        />
-      )}
-
-      {/* The days, the selected one in the middle, under a frame that stays
-          there: drawn behind the strip, so the day's digits stand on it. */}
-      <View style={styles.strip}>
+      {monthOpen ? (
         <View
-          testID="calendar-strip-frame"
-          pointerEvents="none"
-          style={[styles.frame, { left: edge + FRAME_INSET, width: DAY_WIDTH - 2 * FRAME_INSET }]}
-        />
-        <FlatList
-          ref={listRef}
-          testID="calendar-strip"
-          style={styles.strip}
-          data={days}
-          renderItem={renderDay}
-          keyExtractor={(item) => item.date}
-          extraData={renderDay}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: edge }}
-          snapToInterval={DAY_WIDTH}
-          decelerationRate="fast"
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          onScrollBeginDrag={handleDragBegin}
-          onScrollEndDrag={handleDragEnd}
-          onMomentumScrollBegin={cancelReleasedStop}
-          onMomentumScrollEnd={handleMomentumEnd}
-          onLayout={handleListLayout}
-          // An offset is the day's place less the edge: the day at `index` is in
-          // the middle at index * DAY_WIDTH.
-          getItemLayout={(_, index) => ({
-            length: DAY_WIDTH,
-            offset: DAY_WIDTH * index,
-            index,
-          })}
-          initialScrollIndex={selectedIndex}
-          initialNumToRender={15}
-          windowSize={11}
-        />
-      </View>
+          testID="calendar-month-pages"
+          onTouchStart={handleGridTouchStart}
+          onTouchEnd={handleGridTouchEnd}
+          onTouchCancel={handleGridTouchCancel}
+        >
+          <DayCalendar
+            testID="calendar-month-grid"
+            value={selectedDate}
+            onChange={handlePickInMonth}
+            month={gridMonth}
+            onMonthChange={setGridMonth}
+            pastOpen
+            dotted={rehearsalDays}
+            minDate={firstDay}
+            maxDate={lastDay}
+          />
+        </View>
+      ) : (
+        /* The days, the selected one in the middle, under a frame that stays
+            there: drawn behind the strip, so the day's digits stand on it. */
+        <View style={styles.strip}>
+          <View
+            testID="calendar-strip-frame"
+            pointerEvents="none"
+            style={[styles.frame, { left: edge + FRAME_INSET, width: DAY_WIDTH - 2 * FRAME_INSET }]}
+          />
+          <FlatList
+            ref={listRef}
+            testID="calendar-strip"
+            style={styles.strip}
+            data={days}
+            renderItem={renderDay}
+            keyExtractor={(item) => item.date}
+            extraData={renderDay}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: edge }}
+            snapToInterval={DAY_WIDTH}
+            decelerationRate="fast"
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={handleDragBegin}
+            onScrollEndDrag={handleDragEnd}
+            onMomentumScrollBegin={cancelReleasedStop}
+            onMomentumScrollEnd={handleMomentumEnd}
+            onLayout={handleListLayout}
+            // An offset is the day's place less the edge: the day at `index` is
+            // in the middle at index * DAY_WIDTH.
+            getItemLayout={(_, index) => ({
+              length: DAY_WIDTH,
+              offset: DAY_WIDTH * index,
+              index,
+            })}
+            // Mounted again when the month folds back, at the day selected.
+            initialScrollIndex={selectedIndex}
+            initialNumToRender={15}
+            windowSize={11}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -413,11 +553,18 @@ const styles = StyleSheet.create({
   monthTarget: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
     gap: Spacing.xs,
     minHeight: TouchTarget,
     paddingHorizontal: Spacing.sm,
   },
+  // The open month's arrows, where the header kept an empty place to centre
+  // the name.
+  arrows: {
+    flexDirection: 'row',
+  },
   monthYear: {
+    flexShrink: 1,
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,

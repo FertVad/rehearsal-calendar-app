@@ -1,0 +1,110 @@
+# The open month's name in the calendar's header, whole, beside "Hoy" and the
+# arrows (T-254). With the month open the card's header names the grid's
+# month - its own "‹ Septiembre de 2026 ›" is gone - and the arrows stand in
+# the place the header kept empty to centre the name. September is the
+# longest name: "Septiembre de 2026" in Spanish, "September 2026" in German.
+# Maestro reads a label whole however much of it is drawn, so the cut is
+# looked for on the shot: no "…" (e2e/scripts/no-ellipsis.js). Bernarda Alba
+# speaks Spanish, Anna Fierling German (56); each only looks.
+appId: ${APP_ID}
+name: The open month's name fits beside its arrows
+tags:
+  - calendar
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BERNARDA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-strip
+    timeout: 30000
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    visible:
+      id: calendar-month-grid.day_${TODAY_DAY}
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 90-month-open-es
+# One name, the card's, and no strip under the grid.
+- assertNotVisible:
+    id: calendar-month-grid.header
+    text: ".*20[0-9][0-9].*"
+- assertNotVisible:
+    id: calendar-strip
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: calendar-month
+        text: "Septiembre.*"
+    commands:
+      - tapOn:
+          id: calendar-month-previous
+      - waitForAnimationToEnd:
+          timeout: 2000
+- assertVisible:
+    id: calendar-month
+    text: "Septiembre de 20[0-9][0-9].*"
+- assertVisible:
+    id: calendar-today
+- assertVisible:
+    id: calendar-month-next
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 90-september-es
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 90-september-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.6"
+
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${COURAGE_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-strip
+    timeout: 30000
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    visible:
+      id: calendar-month-grid.day_${TODAY_DAY}
+    timeout: 10000
+- assertNotVisible:
+    id: calendar-strip
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: calendar-month
+        text: "September.*"
+    commands:
+      - tapOn:
+          id: calendar-month-previous
+      - waitForAnimationToEnd:
+          timeout: 2000
+- assertVisible:
+    id: calendar-month
+    text: "September 20[0-9][0-9].*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 90-september-de
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 90-september-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.6"

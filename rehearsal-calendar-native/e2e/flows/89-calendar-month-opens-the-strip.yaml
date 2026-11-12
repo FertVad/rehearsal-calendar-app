@@ -1,0 +1,206 @@
+# The calendar's month is the strip opened out (T-254, owner 12.11.2026). It
+# was a second panel: under the card's "November 2026 ⌃" the month had its own
+# "‹ November 2026 ›", and the strip stayed under the grid, read as a seventh
+# week whose columns were not the grid's ("Sun 8" under "M").
+#
+# Marina, whose account speaks Russian, opens the month: the strip is gone and
+# only the card's header names the month - the grid's own header keeps its
+# weekdays and no title. The header's arrows, 44 pt, turn it to next month,
+# a swipe over the grid back; "Сегодня" keeps it open on this month with today
+# picked; a day of the grid folds it back into the strip with that day under
+# the frame. Then September, the longest of the Russian months, stands whole
+# beside "Сегодня" and the arrows - no "…" drawn (e2e/scripts/no-ellipsis.js)
+# - and nothing on it is blue. She only looks; nothing is saved.
+appId: ${APP_ID}
+name: The month opens out of the strip, its name once
+tags:
+  - calendar
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MARINA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-strip
+    timeout: 30000
+# This month and the next: the name Intl gives each in Russian, and a day in
+# the middle of each, which only that month's grid shows.
+- evalScript: ${output.y = Number(TODAY_DAY.slice(0, 4))}
+- evalScript: ${output.m = Number(TODAY_DAY.slice(5, 7))}
+- evalScript: "${output.names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']}"
+- evalScript: ${output.thisName = output.names[output.m - 1] + ' ' + output.y + '.*'}
+- evalScript: "${output.nextName = output.names[output.m % 12] + ' ' + (output.m == 12 ? output.y + 1 : output.y) + '.*'}"
+- evalScript: ${output.thisMid = TODAY_DAY.slice(0, 8) + '15'}
+- evalScript: "${output.nextMid = (output.m == 12 ? output.y + 1 : output.y) + '-' + (output.m % 12 + 1 < 10 ? '0' : '') + (output.m % 12 + 1) + '-15'}"
+
+# The month, from its name.
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    visible:
+      id: calendar-month-grid.day_${TODAY_DAY}
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 89-month-open-ru
+# No strip under the grid, and one name: the card's. The grid's header has
+# its weekdays only.
+- assertNotVisible:
+    id: calendar-strip
+- assertNotVisible:
+    id: calendar-month-grid.header
+    text: ".*20[0-9][0-9].*"
+- assertVisible:
+    id: calendar-month
+    text: ${output.thisName}
+- assertVisible:
+    id: calendar-month-previous
+    width: 50
+    height: 50
+    tolerance: 6
+- assertVisible:
+    id: calendar-month-next
+    width: 50
+    height: 50
+    tolerance: 6
+
+# The arrow: next month, named in the header.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-month-next
+      SEE: ${output.nextName}
+      WAIT_MS: "5000"
+- assertVisible:
+    id: calendar-month-grid.day_${output.nextMid}
+- assertNotVisible:
+    id: calendar-month-grid.day_${output.thisMid}
+- takeScreenshot: 89-next-month-ru
+# A swipe to the right: back to this month.
+- swipe:
+    from:
+      id: calendar-month-grid
+    direction: RIGHT
+- extendedWaitUntil:
+    visible:
+      id: calendar-month
+      text: ${output.thisName}
+    timeout: 5000
+- assertVisible:
+    id: calendar-month-grid.day_${output.thisMid}
+# And to the left: next month again.
+- swipe:
+    from:
+      id: calendar-month-grid
+    direction: LEFT
+- extendedWaitUntil:
+    visible:
+      id: calendar-month
+      text: ${output.nextName}
+    timeout: 5000
+
+# "Сегодня": the month stays open, on this month, today picked.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-today
+      SEE: ${output.thisName}
+      WAIT_MS: "5000"
+- assertVisible:
+    id: calendar-month-grid.day_${TODAY_DAY}
+    text: ".*period start.*"
+- assertNotVisible:
+    id: calendar-strip
+- takeScreenshot: 89-today-in-month-ru
+
+# A day of the grid: the strip again, the day under its frame.
+- tapOn:
+    id: calendar-month-grid.day_${FAR_DAY}
+- extendedWaitUntil:
+    visible:
+      id: calendar-strip
+    timeout: 10000
+- assertNotVisible:
+    id: calendar-month-grid.day_${TODAY_DAY}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: calendar-strip
+    point: "50%,50%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: calendar-day-${FAR_DAY}
+    selected: true
+- takeScreenshot: 89-day-in-strip-ru
+
+# September, the longest name, beside "Сегодня" and the arrows.
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    visible:
+      id: calendar-month-previous
+    timeout: 10000
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: calendar-month
+        text: "Сентябрь.*"
+    commands:
+      - tapOn:
+          id: calendar-month-previous
+      - waitForAnimationToEnd:
+          timeout: 2000
+- assertVisible:
+    id: calendar-month
+    text: "Сентябрь 20[0-9][0-9].*"
+- assertVisible:
+    id: calendar-today
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 89-september-ru
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 89-september-ru
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.6"
+# The arrows are the grid's purple, not the library's blue, nor the old blue.
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 89-september-ru
+      COLOUR: "#00bbf2"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 89-september-ru
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+# Closed by its name without a day: the strip as it was.
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    visible:
+      id: calendar-strip
+    timeout: 10000
+- assertVisible:
+    id: calendar-day-${FAR_DAY}
+    selected: true
