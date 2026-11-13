@@ -35,7 +35,8 @@ tags:
     centerElement: true
 - assertVisible: "(?s)(?=.*Night watch)(?=.*\\b2:00.AM).*"
 - takeScreenshot: 23-calendar-in-tel-aviv
-# The planner's week starts on today in Tel Aviv.
+# The planner's week starts on today in Tel Aviv - or tomorrow, once today's
+# working hours are gone (seed.mjs, WEEK_CHOSEN_LABEL); never the day before.
 - tapOn: "Planner, tab.*"
 - extendedWaitUntil:
     visible: "${WEEK_CHOSEN_LABEL}"

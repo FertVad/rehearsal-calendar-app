@@ -917,11 +917,15 @@ export async function seed({ client, apiUrl, timezone }) {
   const times = { watch_tokyo: tokyo(zoneInstant(CHOSEN_ZONE, 1, 2)) };
 
   // The planner's week in Tel Aviv, as its header names it in English, an
-  // interval of dates (T-017): "Oct 16 – Oct 22", "Oct 28 – Nov 3".
+  // interval of dates (T-017): "Oct 16 – Oct 22", "Oct 28 – Nov 3". A pattern:
+  // the header names the days in its list, and the working day ends at 23:00,
+  // so late in Tel Aviv's evening today has no slot left and the list begins
+  // with tomorrow — "Nov 14 – Nov 19" at 23:50 on Nov 13 (T-257's check). The
+  // week read as UTC midnights (DF01) began with yesterday, which neither fits.
   const plannerDay = (offset) => new Date(`${zoneDate(CHOSEN_ZONE, offset)}T00:00:00Z`)
     .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   const labels = {
-    week_chosen: `${plannerDay(0)} – ${plannerDay(6)}`,
+    week_chosen: `(?:${plannerDay(0)}|${plannerDay(1)}) – ${plannerDay(6)}`,
     // New York's offset today, as the timezone picker names it: "UTC-4" in
     // its summer, "UTC-5" in its winter (23). Node's Intl has the offset.
     new_york_offset: new Intl.DateTimeFormat('en', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' })
