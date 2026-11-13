@@ -28,7 +28,7 @@ import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
-import { getTimezonesWithDevice, getTimezoneLabel as getTzLabel } from '../../../shared/constants/timezones';
+import { getTimezonesWithDevice, getTimezoneLabel as getTzLabel, sameTimezone } from '../../../shared/constants/timezones';
 
 export default function CreateProjectScreen({ navigation }: CreateProjectScreenProps) {
   const { createProject } = useProjects();
@@ -172,32 +172,27 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => setTimezonePickerVisible(false)} />
             </View>
             <FlatList
-              data={getTimezonesWithDevice()}
+              data={getTimezonesWithDevice(language)}
               keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.timezoneItem,
-                    projectTimezone === item.value && styles.timezoneItemSelected,
-                  ]}
-                  onPress={() => {
-                    setProjectTimezone(item.value);
-                    setTimezonePickerVisible(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.timezoneLabel,
-                      projectTimezone === item.value && styles.timezoneLabelSelected,
-                    ]}
+              renderItem={({ item }) => {
+                const selected = sameTimezone(projectTimezone, item.value);
+                return (
+                  <TouchableOpacity
+                    style={[styles.timezoneItem, selected && styles.timezoneItemSelected]}
+                    onPress={() => {
+                      setProjectTimezone(item.value);
+                      setTimezonePickerVisible(false);
+                    }}
                   >
-                    {language === 'ru' ? item.labelRu : item.labelEn}
-                  </Text>
-                  {projectTimezone === item.value && (
-                    <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
-                  )}
-                </TouchableOpacity>
-              )}
+                    <Text style={[styles.timezoneLabel, selected && styles.timezoneLabelSelected]}>
+                      {item.label}
+                    </Text>
+                    {selected && (
+                      <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
               style={styles.timezoneList}
             />
           </View>
