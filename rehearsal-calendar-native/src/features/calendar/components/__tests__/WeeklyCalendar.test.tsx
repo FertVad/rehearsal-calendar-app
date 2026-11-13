@@ -19,7 +19,12 @@ jest.mock('../../../../hooks/useWeekStart', () => ({
   useWeekStart: () => 'monday',
 }));
 // The app's FlatList mock draws every item and holds no ref; this one also
-// takes the strip's scrolls, to see where they put it.
+// takes the strip's scrolls, to see where they put it. Like React Native's
+// VirtualizedList (0.81, _maybeScrollToInitialScrollIndex), it goes to its
+// `initialScrollIndex` itself, unanimated, the first time its content is laid
+// out - after the effects of its mount, and before its own
+// onContentSizeChange is called: a scroll asked for at the mount was
+// overridden by it (T-254, e2e 57 and 89).
 const mockScrolls = jest.fn();
 jest.mock('react-native', () => {
   const actual = jest.requireActual('react-native');
@@ -29,7 +34,16 @@ jest.mock('react-native', () => {
       scrollToOffset: (params: unknown) => mockScrolls(params),
       scrollToIndex: () => {},
     }));
-    return React.createElement(actual.FlatList, props);
+    const initialDone = React.useRef(false);
+    const onContentSizeChange = (width: number, height: number) => {
+      if (width > 0 && height > 0 && !initialDone.current && props.initialScrollIndex > 0) {
+        initialDone.current = true;
+        const { offset } = props.getItemLayout(props.data, props.initialScrollIndex);
+        mockScrolls({ offset, animated: false });
+      }
+      props.onContentSizeChange?.(width, height);
+    };
+    return React.createElement(actual.FlatList, { ...props, onContentSizeChange });
   });
   return { ...actual, FlatList };
 });
@@ -65,6 +79,17 @@ const stopOn = (screen: ReturnType<typeof render>, day: string) => {
   act(() => {
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: index * length, y: 0 } } });
   });
+};
+
+/**
+ * The strip's days laid out, as they are a moment after it is mounted: the
+ * list goes to its `initialScrollIndex` then (the mock above, as React
+ * Native's), and calls the strip's onContentSizeChange after.
+ */
+const layOut = (screen: ReturnType<typeof render>) => {
+  const list = screen.UNSAFE_getByType(FlatList);
+  const inner = list.children[0] as any;
+  act(() => inner.props.onContentSizeChange(list.props.data.length * 48, 72));
 };
 
 it('selects today when "Today" is pressed after another day was picked', () => {
@@ -520,6 +545,7 @@ describe('The month', () => {
     act(() => screen.UNSAFE_getByType(MonthGrid).props.onDayPress({ dateString: '2030-01-24' }));
 
     expect(screen.UNSAFE_queryByType(MonthGrid)).toBeNull();
+    layOut(screen);
     const strip = screen.UNSAFE_getByType(FlatList);
     const { length } = strip.props.getItemLayout(strip.props.data, 0);
     const pad = StyleSheet.flatten(strip.props.contentContainerStyle).paddingHorizontal;
@@ -671,8 +697,10 @@ describe('The month opened out of the strip', () => {
 
     expect(screen.UNSAFE_queryByType(MonthGrid)).toBeNull();
     const strip = screen.UNSAFE_getByType(FlatList);
-    // Back at the day selected, then taken to the one picked.
+    // Back at the day selected, then - once its days are laid out and the
+    // list has gone there itself - taken to the one picked.
     expect(strip.props.data[strip.props.initialScrollIndex].date).toBe('2030-01-10');
+    layOut(screen);
     const { length } = strip.props.getItemLayout(strip.props.data, 0);
     const index = strip.props.data.findIndex((d: { date: string }) => d.date === '2030-02-03');
     expect(mockScrolls).toHaveBeenLastCalledWith({ offset: index * length, animated: true });
@@ -691,7 +719,8 @@ describe('The month opened out of the strip', () => {
 
     const strip = screen.UNSAFE_getByType(FlatList);
     expect(strip.props.data[strip.props.initialScrollIndex].date).toBe('2030-01-10');
-    expect(mockScrolls).not.toHaveBeenCalled();
+    layOut(screen);
+    expect(mockScrolls).not.toHaveBeenCalledWith(expect.objectContaining({ animated: true }));
     expect(title(screen)).toHaveTextContent(/January 2030/);
     expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
   });

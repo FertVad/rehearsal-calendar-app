@@ -124,6 +124,8 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   // What a tap, "Today" or the month asked for, handed on to the list only
   // when the strip stops on its day: "Today" hands on today to follow.
   const pendingToday = useRef(false);
+  // A day picked in the month, waiting for the strip, back, to be laid out.
+  const bringOnLayout = useRef<number | null>(null);
 
   // The day under the frame moves to `index`: a tick for every day crossing
   // the middle, however many one event jumps over — a fast fling or a long
@@ -184,6 +186,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   const handleDragBegin = useCallback(() => {
     travelling.current = false;
     pendingToday.current = false;
+    bringOnLayout.current = null;
     cancelReleasedStop();
   }, [cancelReleasedStop]);
 
@@ -322,7 +325,10 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
 
   // The strip back, mounted at the day selected: the day under the frame is
   // that one, with nothing on its way. A day picked in the grid is brought
-  // in from there.
+  // in from there once its days are laid out: the list goes to its
+  // initialScrollIndex only then, unanimated, and a scroll asked for at the
+  // mount was undone by it - the strip stayed on the day selected before,
+  // the day picked never came under the frame nor to the list (e2e 57, 89).
   useEffect(() => {
     if (monthOpen) {
       stripShown.current = false;
@@ -335,10 +341,17 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
     shownFirst.current = firstDay;
     target.current = selectedIndex;
     moveCentre(selectedIndex, false);
-    const picked = pickedInMonth.current;
+    bringOnLayout.current = pickedInMonth.current;
     pickedInMonth.current = null;
-    if (picked !== null) bringIn(picked, false);
-  }, [monthOpen, firstDay, selectedIndex, moveCentre, bringIn]);
+  }, [monthOpen, firstDay, selectedIndex, moveCentre]);
+
+  // VirtualizedList calls this after its own scroll to initialScrollIndex.
+  const handleContentSizeChange = useCallback((width: number, height: number) => {
+    const picked = bringOnLayout.current;
+    if (picked === null || width <= 0 || height <= 0) return;
+    bringOnLayout.current = null;
+    bringIn(picked, false);
+  }, [bringIn]);
 
   const renderDay = useCallback(({ item, index }: { item: DayItem; index: number }) => {
     // The day under the frame; the frame itself is drawn behind the strip.
@@ -517,6 +530,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
             onMomentumScrollBegin={cancelReleasedStop}
             onMomentumScrollEnd={handleMomentumEnd}
             onLayout={handleListLayout}
+            onContentSizeChange={handleContentSizeChange}
             // An offset is the day's place less the edge: the day at `index` is
             // in the middle at index * DAY_WIDTH.
             getItemLayout={(_, index) => ({
