@@ -1,0 +1,69 @@
+T-256 — server tests on the old push and email texts (auto/main 3b16cd5), before the fix.
+Command (rehearsal-calendar-native/server):
+  NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText __tests__/services/reminderText __tests__/services/emailTransport --silent --verbose
+
+    ✓ en verify puts the code in the subject and the body
+    ... (the 16 "puts the code in the subject and the body" and the transport tests: green)
+    ✕ ru verify reads as a native speaker writes it
+    ✕ ru reset reads as a native speaker writes it
+    ✕ ru change reads as a native speaker writes it
+    ✕ ru confirm reads as a native speaker writes it
+    ✕ en verify reads as a native speaker writes it
+    ✕ en reset reads as a native speaker writes it
+    ✕ en change reads as a native speaker writes it
+    ✕ en confirm reads as a native speaker writes it
+    ✕ es verify reads as a native speaker writes it
+    ✕ es reset reads as a native speaker writes it
+    ✕ es change reads as a native speaker writes it
+    ✕ es confirm reads as a native speaker writes it
+    ✕ the notice of a changed address names it plainly (T-256)
+    ✓ en/ru/es/de tells the old address where the account went
+    ✓ (reminderText: today / tomorrow / UTC tests, unchanged: green)
+    ✕ a Spanish date is written out: "el martes 6 de octubre"
+    ✕ the same day: the time alone
+    ✕ past midnight: the next day
+    ✕ midnight itself
+    ✕ a reader in UTC is told so
+    ✕ a new rehearsal
+    ✕ a changed rehearsal, with what changed
+    ✕ a "seen" names the rehearsal and when it is
+    ✕ further out, the date
+    ✕ whoever is added is told which one, when and where, and a tap opens it
+    ✕ whoever is taken off is told so, and a tap does not try to open it
+    ✕ a new rehearsal tomorrow
+    ✕ a new rehearsal today
+    ✕ a new rehearsal further out, on its date
+    ✕ added to one, with and without a place
+    ✕ added to one on its date, with a place
+    ✕ added to one today
+    ✕ a feminine title in Spanish, a masculine one in Russian
+    ✕ added to one with a neuter title in Russian
+    ✕ with no title, the word "rehearsal" alone
+    ✕ a cancelled rehearsal agrees with "rehearsal", not with its title
+    ✕ a cancelled rehearsal with no title
+    ✕ a woman and a man who join read the same
+    ✕ a woman and a man who have seen a rehearsal read the same, in the app's word
+    ✕ a role given reads right in Russian, and agrees with no reader in Spanish and German
+    ✓ someone removed from a project, in Spanish, is no participle
+    ✕ moved: where to, today
+    ✕ moved to a date: "al", not "a el"; "auf Di.", not "auf am"
+    ✕ moved and to a new place
+    ✕ a new place only: which
+    ✕ the place taken away
+    ✕ renamed: the new name, and that it is one
+    ✕ made longer, the start where it was: until when, not moved
+    ✕ made longer and to a new place
+    ✕ the start moved and the length changed: from when and until when
+    ✕ one o'clock in Spanish is singular: "a la 1:00", "hasta la 1:30"
+    ✕ made longer past midnight: the next day, in the reader's zone
+    ✕ made longer to midnight: midnight, not "0:00 the next day"
+    ✕ moved, ending past midnight
+    ✕ the title erased: "without a title", not "renamed"
+    ✕ cancelled: when it was, as every other notice says it
+    ✕ the notices about a rehearsal
+    ✕ "seen" with no title: the rehearsal, not "Rehearsal" in quotes
+    ✕ the notices about a project: its name in quotes, the German case on "Projekt"
+    ✕ the reminders: English titles in Title Case, Spanish and German natural
+    ✓ "invited you to the project" is gone in every language
+    ✓ carries its project, so a tap can open it
+Tests:       57 failed, 51 passed, 108 total

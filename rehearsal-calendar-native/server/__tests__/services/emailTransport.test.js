@@ -84,6 +84,32 @@ describe('email messages', () => {
       .toBe('123456 is your Rehearsly code');
   });
 
+  // As native speakers read them (T-256).
+  it.each([
+    ['ru', 'verify', 'Введите код 042917 в приложении Rehearsly, чтобы подтвердить этот адрес. Код действует 15 минут.'],
+    ['ru', 'reset', 'Введите код 042917 в приложении Rehearsly, чтобы задать новый пароль.'],
+    ['ru', 'change', 'Введите код 042917 в приложении Rehearsly, чтобы входить с этим адресом.'],
+    ['ru', 'confirm', 'Введите код 042917 в приложении Rehearsly, чтобы подтвердить смену адреса для входа.'],
+    ['en', 'verify', 'Enter 042917 in Rehearsly to confirm this email address. The code expires in 15 minutes.\n\nIf you did not create a Rehearsly account, you can safely ignore this email. Nothing happens without the code.'],
+    ['en', 'reset', 'Enter 042917 in Rehearsly to set a new password. The code expires in 15 minutes.\n\nIf you did not ask to reset your password, you can safely ignore this email. Your password will stay the same.'],
+    ['en', 'change', 'Enter 042917 in Rehearsly to start signing in with this email address. The code expires in 15 minutes.\n\nIf you did not ask for this, you can safely ignore this email.'],
+    ['en', 'confirm', 'Enter 042917 in Rehearsly to confirm that you are changing the email address you sign in with. The code expires in 15 minutes.\n\nIf you are not changing it, you can safely ignore this email. Your email address will stay the same.'],
+    ['es', 'verify', 'Escribe 042917 en Rehearsly para confirmar esta dirección de correo.'],
+    ['es', 'reset', 'Escribe 042917 en Rehearsly para crear una contraseña nueva.'],
+    ['es', 'change', 'Escribe 042917 en Rehearsly para iniciar sesión con esta dirección a partir de ahora.'],
+    ['es', 'confirm', 'Escribe 042917 en Rehearsly para confirmar que cambias la dirección con la que inicias sesión.'],
+  ])('%s %s reads as a native speaker writes it', (locale, purpose, start) => {
+    expect(codeMessage({ to: 'a@example.com', code: '042917', purpose, locale }).text.startsWith(start)).toBe(true);
+  });
+
+  it('the notice of a changed address names it plainly (T-256)', () => {
+    const notice = (locale) => addressChangedMessage({ to: 'old@example.com', newAddress: 'new@example.com', locale });
+    expect(notice('en').subject).toBe('Your Rehearsly email address was changed');
+    expect(notice('en').text).toBe('Your Rehearsly account’s email address is now new@example.com. Use it to sign in from now on.\n\nIf you did not make this change, contact us at support@rehearsly.me.');
+    expect(notice('es').subject).toBe('Ha cambiado el correo de tu cuenta de Rehearsly');
+    expect(notice('de').subject).toBe('Die E-Mail-Adresse deines Rehearsly-Kontos wurde geändert');
+  });
+
   it.each(LOCALES)('%s tells the old address where the account went', (locale) => {
     const message = addressChangedMessage({ to: 'old@example.com', newAddress: 'new@example.com', locale });
     expect(message.to).toBe('old@example.com');

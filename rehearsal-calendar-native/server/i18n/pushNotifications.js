@@ -3,19 +3,34 @@
  * Supported locales: 'ru', 'en', 'es', 'de'. Falls back to 'en' on unknown locale.
  */
 
-// A new or changed rehearsal and a response say when it is, as the reminders
-// do: `when` is the rehearsal's start in the reader's zone (reminderText.js).
+// A new, changed or cancelled rehearsal and a response say when it is, as the
+// reminders do: `when` is the rehearsal's start in the reader's zone
+// (reminderText.js). A cancelled one said nothing of when, and of two
+// untitled rehearsals the reader could not tell which had gone (T-256).
 //
 // The title is whatever the director typed, of any gender, so no participle
 // agrees with it: in Russian and Spanish it agrees with the word "rehearsal",
 // which the title follows in quotes — "Репетиция «Прогон» назначена",
-// "Ensayo «Escena del balcón» programado" (T-248).
+// "Ensayo «Escena del balcón» programado" (T-248). German puts the word first
+// too, so the title does not run into the date: "Probe „Szene am Fenster“ am
+// Di., 6. Okt. um 19:00 angesetzt" (T-256).
 //
 // Nor does anything agree with a person: the server knows no one's gender.
 // "присоединился", "откликнулся" were wrong for every woman, "eliminado" and
 // "Administrator" for every woman reading them (T-251).
+//
+// A project's name follows the word "project" in quotes in Russian and
+// German, and the German case goes on "Projekt": "ist Der Kirschgarten
+// beigetreten" wanted a dative the name cannot take (T-256).
+//
+// `until` is the end, already worded for the reader: "22:00", "1:00
+// следующего дня", "полуночи" (reminderText.js, untilTime).
+//
+// English titles are in Title Case, as Apple's HIG asks of a notification's
+// title; the text is in sentence case (T-256).
 const ruRehearsal = (title) => (title ? `Репетиция «${title}»` : 'Репетиция');
 const esRehearsal = (title) => (title ? `Ensayo «${title}»` : 'Ensayo');
+const deRehearsal = (title) => (title ? `Probe „${title}“` : 'Probe');
 // "a las 19:00", "hasta las 22:00" — but one o'clock is singular: "a la 1:00",
 // "hasta la 1:30" (T-250).
 const esLas = (time) => (/^1\D/.test(time) ? `la ${time}` : `las ${time}`);
@@ -23,76 +38,85 @@ const esLas = (time) => (/^1\D/.test(time) ? `la ${time}` : `las ${time}`);
 const translations = {
   ru: {
     // Put on a rehearsal that already existed, and taken off one (T-233).
+    // One is called to a rehearsal and taken off it: "позвали на", "сняли с"
+    // (T-256).
     addedToRehearsal: {
-      title: 'Вас добавили в репетицию',
+      title: 'Вас позвали на репетицию',
       body: ({ projectName, rehearsalTitle, when, location }) =>
-        `${projectName}: ${ruRehearsal(rehearsalTitle)} назначена ${when}${location ? `, место: ${location}` : ''}`,
+        `${projectName}: ${ruRehearsal(rehearsalTitle)} назначена на ${when}${location ? `, место: ${location}` : ''}`,
     },
     removedFromRehearsal: {
-      title: 'Вас убрали из репетиции',
+      title: 'Вас сняли с репетиции',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Репетиция'}, ${when} — вас убрали из состава`,
+        `${projectName}: ${rehearsalTitle || 'Репетиция'}, ${when} — вас больше нет в составе`,
     },
     newRehearsal: {
       title: 'Новая репетиция',
+      // "назначена на завтра": without "на", "назначена сегодня" read as
+      // "was scheduled today" (T-256).
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${ruRehearsal(rehearsalTitle)} назначена ${when}`,
+        `${projectName}: ${ruRehearsal(rehearsalTitle)} назначена на ${when}`,
     },
     rehearsalUpdated: {
       title: 'Изменена репетиция',
-      body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
+      body: ({ projectName, rehearsalTitle, when, movedTo, movedFrom, until, changed, location }) => {
         const name = rehearsalTitle || 'Репетиция';
-        const end = until ? ` до ${until}` : '';
         if (changed.datetime) {
           const place = changed.location ? `, ${location ? `место: ${location}` : 'место не указано'}` : '';
-          return `${projectName}: ${name} — теперь ${movedTo}${end}${place}`;
+          // A span is "с … до …", not "в 19:00 до 22:00" (T-256).
+          return `${projectName}: ${name} — теперь ${until ? `${movedFrom} до ${until}` : movedTo}${place}`;
         }
         const what = [
           until && `теперь до ${until}`,
           changed.location && (location ? `новое место: ${location}` : 'место больше не указано'),
         ].filter(Boolean);
-        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : 'новое название'}`;
+        // Renamed to nothing is no new name (T-256).
+        const renamed = rehearsalTitle ? 'новое название' : 'теперь без названия';
+        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : renamed}`;
       },
     },
     rehearsalDeleted: {
       title: 'Отменена репетиция',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${ruRehearsal(rehearsalTitle)} отменена`,
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${ruRehearsal(rehearsalTitle)} на ${when} отменена`,
     },
     // Sent to the admins when someone marks a rehearsal seen, in the app's own
     // words for it ("Отметить просмотренным", "Просмотрели"); the yes/no answers
-    // it was worded for are gone (T-251).
+    // it was worded for are gone (T-251). In the order of the other notices,
+    // and the word "Репетиция" in no quotes, as if it were a title (T-256).
     memberResponse: {
       title: 'Репетиция просмотрена',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} в курсе: «${rehearsalTitle || 'Репетиция'}» (${when}), ${projectName}`,
+        `${projectName}: ${rehearsalTitle || 'Репетиция'}, ${when} — ${responderName} в курсе`,
     },
     memberJoined: {
       title: 'Новый участник',
       body: ({ memberName, projectName }) =>
-        `${memberName} теперь в проекте ${projectName}`,
+        `${memberName} теперь в проекте «${projectName}»`,
     },
     adminAppointed: {
       title: 'Новый администратор',
       body: ({ memberName, projectName }) =>
-        `${memberName} теперь администратор проекта ${projectName}`,
+        `${memberName} теперь администратор проекта «${projectName}»`,
     },
     roleChanged: {
       title: 'Изменение роли',
       // A noun in the nominative after "теперь вы": "Вы теперь
       // администратором" had an instrumental with no verb to govern it (T-251).
+      // Rights taken away say so: "теперь вы участник" read as "you were let
+      // into the project" (T-256).
       body: ({ admin, projectName }) =>
-        `Теперь вы ${admin ? 'администратор' : 'участник'} проекта ${projectName}`,
+        (admin ? `Теперь вы администратор проекта «${projectName}»` : `Вы больше не администратор проекта «${projectName}»`),
     },
     memberRemoved: {
       title: 'Удаление из проекта',
       body: ({ projectName }) =>
-        `Вас удалили из проекта ${projectName}`,
+        `Вас удалили из проекта «${projectName}»`,
     },
     projectDeleted: {
       title: 'Проект удалён',
       body: ({ projectName }) =>
-        `Проект ${projectName} удалён`,
+        `Проект «${projectName}» удалён`,
     },
     // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
@@ -116,83 +140,101 @@ const translations = {
       tomorrow: (time) => `завтра в ${time}`,
       on: (date, time) => `${date} в ${time}`,
     },
+    // …and with its end: "теперь завтра с 19:00 до 22:00" (T-256).
+    movedFrom: {
+      today: (time) => `сегодня с ${time}`,
+      tomorrow: (time) => `завтра с ${time}`,
+      on: (date, time) => `${date} с ${time}`,
+    },
+    // After "до" (T-256).
+    until: {
+      at: (time) => time,
+      nextDay: (time) => `${time} следующего дня`,
+      midnight: (utc) => (utc ? 'полуночи по UTC' : 'полуночи'),
+    },
   },
   en: {
     // Put on a rehearsal that already existed, and taken off one (T-233).
     addedToRehearsal: {
-      title: 'You were added to a rehearsal',
+      title: 'You Were Added to a Rehearsal',
       body: ({ projectName, rehearsalTitle, when, location }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'} scheduled ${when}${location ? ` at ${location}` : ''}`,
     },
     removedFromRehearsal: {
-      title: 'You were taken off a rehearsal',
+      title: 'You Were Taken Off a Rehearsal',
       body: ({ projectName, rehearsalTitle, when }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'}, ${when} — you are no longer on it`,
     },
     newRehearsal: {
-      title: 'New rehearsal',
+      title: 'New Rehearsal',
       body: ({ projectName, rehearsalTitle, when }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'} scheduled ${when}`,
     },
     rehearsalUpdated: {
-      title: 'Rehearsal updated',
+      title: 'Rehearsal Updated',
+      // "moved to tomorrow at 7:00 PM": "now today at 8:00 PM" put two words
+      // of time side by side (T-256).
       body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
         const name = rehearsalTitle || 'Rehearsal';
         const end = until ? ` until ${until}` : '';
         if (changed.datetime) {
-          const place = changed.location ? (location ? ` at ${location}` : ', no location') : '';
-          return `${projectName}: ${name} — now ${movedTo}${end}${place}`;
+          const place = changed.location ? (location ? ` at ${location}` : ', location removed') : '';
+          return `${projectName}: ${name} — moved to ${movedTo}${end}${place}`;
         }
         const what = [
           until && `now until ${until}`,
-          changed.location && (location ? `new location: ${location}` : 'no location now'),
+          changed.location && (location ? `new location: ${location}` : 'location removed'),
         ].filter(Boolean);
-        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : 'renamed'}`;
+        const renamed = rehearsalTitle ? 'renamed' : 'title removed';
+        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : renamed}`;
       },
     },
     rehearsalDeleted: {
-      title: 'Rehearsal cancelled',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Rehearsal'} cancelled`,
+      title: 'Rehearsal Canceled',
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Rehearsal'}, ${when} — canceled`,
     },
+    // A generic word in quotes read as a title: "has seen “Rehearsal”" (T-256).
     memberResponse: {
-      title: 'Rehearsal seen',
+      title: 'Rehearsal Seen',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} has seen “${rehearsalTitle || 'Rehearsal'}” (${when}) in ${projectName}`,
+        `${responderName} has seen ${rehearsalTitle ? `“${rehearsalTitle}”` : 'the rehearsal'} (${when}) in ${projectName}`,
     },
     memberJoined: {
-      title: 'New member',
+      title: 'New Member',
       body: ({ memberName, projectName }) =>
         `${memberName} joined ${projectName}`,
     },
     adminAppointed: {
-      title: 'New administrator',
+      title: 'New Administrator',
       body: ({ memberName, projectName }) =>
         `${memberName} is now an administrator of ${projectName}`,
     },
     roleChanged: {
-      title: 'Role changed',
+      title: 'Role Changed',
       body: ({ admin, projectName }) =>
         `You are now ${admin ? 'an administrator' : 'a member'} of ${projectName}`,
     },
     memberRemoved: {
-      title: 'Removed from project',
+      title: 'Removed from Project',
       body: ({ projectName }) =>
         `You were removed from the project ${projectName}`,
     },
     projectDeleted: {
-      title: 'Project deleted',
+      title: 'Project Deleted',
       body: ({ projectName }) =>
         `The project ${projectName} has been deleted`,
     },
-    // The time is the rehearsal's own, in the reader's zone (reminderText.js).
+    // The time is the rehearsal's own, in the reader's zone (reminderText.js),
+    // capitalised as a title: "Rehearsal Tomorrow at 7:00 PM". A dash, not a
+    // colon, after "Soon": Title Case would make "on" after a colon "On".
     rehearsal24h: {
       title: ({ when }) => `Rehearsal ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'}`,
     },
     rehearsal1h: {
-      title: ({ when }) => `Rehearsal soon: ${when}`,
+      title: ({ when }) => `Rehearsal Soon — ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'}`,
     },
@@ -201,25 +243,40 @@ const translations = {
       tomorrow: (time) => `tomorrow at ${time}`,
       on: (date, time) => `on ${date} at ${time}`,
     },
-    // Where a rehearsal was moved to: "now tomorrow at 7:00 PM".
+    // In a title (T-256).
+    titleWhen: {
+      today: (time) => `Today at ${time}`,
+      tomorrow: (time) => `Tomorrow at ${time}`,
+      on: (date, time) => `on ${date} at ${time}`,
+    },
+    // Where a rehearsal was moved to: "moved to tomorrow at 7:00 PM".
     movedTo: {
       today: (time) => `today at ${time}`,
       tomorrow: (time) => `tomorrow at ${time}`,
-      on: (date, time) => `on ${date} at ${time}`,
+      on: (date, time) => `${date} at ${time}`,
+    },
+    // After "until" (T-256). Midnight, not "12:00 AM", which reads as noon.
+    until: {
+      at: (time) => time,
+      nextDay: (time) => `${time} the next day`,
+      midnight: (utc) => (utc ? 'midnight UTC' : 'midnight'),
     },
   },
   es: {
     // Put on a rehearsal that already existed, and taken off one (T-233).
     addedToRehearsal: {
       title: 'Te han añadido a un ensayo',
+      // "programado para": set for that day, not set on it (T-248). The place
+      // after "Lugar:": "en Teatro Real" wants an article no word of the
+      // user's can be given (T-256).
       body: ({ projectName, rehearsalTitle, when, location }) =>
-        // "programado para": set for that day, not set on it (T-248).
-        `${projectName}: ${esRehearsal(rehearsalTitle)} programado para ${when}${location ? ` en ${location}` : ''}`,
+        `${projectName}: ${esRehearsal(rehearsalTitle)} programado para ${when}${location ? `. Lugar: ${location}` : ''}`,
     },
     removedFromRehearsal: {
       title: 'Te han quitado de un ensayo',
+      // "en él" agreed with a title as if it were masculine (T-256).
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Ensayo'}, ${when} — ya no estás en él`,
+        `${projectName}: ${rehearsalTitle || 'Ensayo'}, ${when} — ya no estás en este ensayo`,
     },
     newRehearsal: {
       title: 'Nuevo ensayo',
@@ -228,30 +285,33 @@ const translations = {
     },
     rehearsalUpdated: {
       title: 'Ensayo actualizado',
-      // "pasa a hoy", "pasa al mar, 6 oct": movedTo carries its own "a".
+      // "pasa a hoy", "pasa al martes 6 de octubre": movedTo carries its own
+      // "a". Only the end changed: "ahora termina a las 22:30" (T-256).
       body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
         const name = rehearsalTitle || 'Ensayo';
-        const end = until ? ` hasta ${esLas(until)}` : '';
+        const end = until ? `, hasta ${until}` : '';
         if (changed.datetime) {
-          const place = changed.location ? (location ? ` en ${location}` : ', sin lugar asignado') : '';
+          const place = changed.location ? (location ? `. Lugar: ${location}` : ', sin lugar asignado') : '';
           return `${projectName}: ${name}, pasa ${movedTo}${end}${place}`;
         }
         const what = [
-          until && `ahora hasta ${esLas(until)}`,
+          until && `ahora termina a ${until}`,
           changed.location && (location ? `nuevo lugar: ${location}` : 'ya sin lugar asignado'),
         ].filter(Boolean);
-        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : 'nuevo nombre'}`;
+        // "título", the form's own word (T-256).
+        const renamed = rehearsalTitle ? 'nuevo título' : 'ya sin título';
+        return `${projectName}: ${name}, ${when} — ${what.length ? what.join(', ') : renamed}`;
       },
     },
     rehearsalDeleted: {
       title: 'Ensayo cancelado',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${esRehearsal(rehearsalTitle)} cancelado`,
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: Cancelado el ensayo${rehearsalTitle ? ` «${rehearsalTitle}»` : ''} previsto para ${when}`,
     },
     memberResponse: {
       title: 'Ensayo visto',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} ha visto «${rehearsalTitle || 'Ensayo'}» (${when}) en ${projectName}`,
+        `${responderName} ha visto ${rehearsalTitle ? `«${rehearsalTitle}»` : 'el ensayo'} (${when}) en ${projectName}`,
     },
     memberJoined: {
       title: 'Nuevo miembro',
@@ -259,7 +319,8 @@ const translations = {
         `${memberName} se unió a ${projectName}`,
     },
     adminAppointed: {
-      title: 'Nueva administración',
+      // "Nueva administración" read as "a new government" (T-256).
+      title: 'Permisos de administrador',
       body: ({ memberName, projectName }) =>
         `${memberName} ahora administra ${projectName}`,
     },
@@ -288,7 +349,7 @@ const translations = {
         `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
     },
     rehearsal1h: {
-      title: ({ when }) => `Ensayo pronto: ${when}`,
+      title: ({ when }) => `Ensayo en breve: ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
     },
@@ -298,36 +359,44 @@ const translations = {
       on: (date, time) => `el ${date} a ${esLas(time)}`,
     },
     // Where a rehearsal was moved to: "pasa a mañana a las 19:00", "pasa al
-    // mar, 6 oct a las 19:00" — "a el" contracts.
+    // martes 6 de octubre a las 19:00" — "a el" contracts.
     movedTo: {
       today: (time) => `a hoy a ${esLas(time)}`,
       tomorrow: (time) => `a mañana a ${esLas(time)}`,
       on: (date, time) => `al ${date} a ${esLas(time)}`,
     },
+    // After "hasta", "termina a" (T-256).
+    until: {
+      at: (time) => esLas(time),
+      nextDay: (time) => `${esLas(time)} del día siguiente`,
+      midnight: (utc) => (utc ? 'la medianoche UTC' : 'la medianoche'),
+    },
   },
   de: {
     // Put on a rehearsal that already existed, and taken off one (T-233).
+    // One is "eingeteilt" for a rehearsal; "von einer Probe genommen" is no
+    // German (T-256).
     addedToRehearsal: {
-      title: 'Du wurdest zu einer Probe hinzugefügt',
+      title: 'Du wurdest für eine Probe eingeteilt',
       body: ({ projectName, rehearsalTitle, when, location }) =>
         // The participle goes last (T-248).
-        `${projectName}: ${rehearsalTitle || 'Probe'} ${when} angesetzt${location ? `, Ort: ${location}` : ''}`,
+        `${projectName}: ${deRehearsal(rehearsalTitle)} ${when} angesetzt${location ? `, Ort: ${location}` : ''}`,
     },
     removedFromRehearsal: {
-      title: 'Du wurdest von einer Probe genommen',
+      title: 'Du bist für eine Probe nicht mehr eingeteilt',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'}, ${when} – du bist nicht mehr dabei`,
+        `${projectName}: ${deRehearsal(rehearsalTitle)}, ${when} – du bist nicht mehr dabei`,
     },
     newRehearsal: {
       title: 'Neue Probe',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'} ${when} angesetzt`,
+        `${projectName}: ${deRehearsal(rehearsalTitle)} ${when} angesetzt`,
     },
     rehearsalUpdated: {
       title: 'Probe geändert',
       // "verlegt auf heute, 19:00": movedTo carries its own "auf".
       body: ({ projectName, rehearsalTitle, when, movedTo, until, changed, location }) => {
-        const name = rehearsalTitle || 'Probe';
+        const name = deRehearsal(rehearsalTitle);
         const end = until ? ` bis ${until}` : '';
         if (changed.datetime) {
           const place = changed.location ? (location ? `, Ort: ${location}` : ', ohne Ort') : '';
@@ -337,44 +406,48 @@ const translations = {
           until && `jetzt bis ${until}`,
           changed.location && (location ? `neuer Ort: ${location}` : 'kein Ort mehr'),
         ].filter(Boolean);
-        return `${projectName}: ${name}, ${when} – ${what.length ? what.join(', ') : 'neuer Titel'}`;
+        const renamed = rehearsalTitle ? 'neuer Titel' : 'Titel entfernt';
+        return `${projectName}: ${name}, ${when} – ${what.length ? what.join(', ') : renamed}`;
       },
     },
     rehearsalDeleted: {
       title: 'Probe abgesagt',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'} abgesagt`,
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${deRehearsal(rehearsalTitle)} ${when} abgesagt`,
     },
+    // "hat „Durchlauf“ gesehen" said she watched it, as an audience does; the
+    // app's word is "als gesehen markiert" (T-256).
     memberResponse: {
       title: 'Probe gesehen',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} hat „${rehearsalTitle || 'Probe'}“ (${when}) in ${projectName} gesehen`,
+        `${projectName}: ${responderName} hat ${rehearsalTitle ? `die Probe „${rehearsalTitle}“` : 'die Probe'} (${when}) als gesehen markiert`,
     },
     memberJoined: {
       title: 'Neues Mitglied',
       body: ({ memberName, projectName }) =>
-        `${memberName} ist ${projectName} beigetreten`,
+        `${memberName} ist dem Projekt „${projectName}“ beigetreten`,
     },
     adminAppointed: {
-      title: 'Neue Verwaltung',
+      // "Neue Verwaltung" read as the management of a building (T-256).
+      title: 'Adminrechte vergeben',
       body: ({ memberName, projectName }) =>
-        `${memberName} verwaltet jetzt ${projectName}`,
+        `${memberName} verwaltet jetzt das Projekt „${projectName}“`,
     },
     roleChanged: {
       title: 'Rolle geändert',
       // A verb, as adminAppointed says it: "Administrator" is a man's (T-251).
       body: ({ admin, projectName }) =>
-        (admin ? `Du verwaltest jetzt ${projectName}` : `Du bist jetzt Mitglied in ${projectName}`),
+        (admin ? `Du verwaltest jetzt das Projekt „${projectName}“` : `Du bist jetzt Mitglied im Projekt „${projectName}“`),
     },
     memberRemoved: {
       title: 'Aus dem Projekt entfernt',
       body: ({ projectName }) =>
-        `Du wurdest aus dem Projekt ${projectName} entfernt`,
+        `Du wurdest aus dem Projekt „${projectName}“ entfernt`,
     },
     projectDeleted: {
       title: 'Projekt gelöscht',
       body: ({ projectName }) =>
-        `Das Projekt ${projectName} wurde gelöscht`,
+        `Das Projekt „${projectName}“ wurde gelöscht`,
     },
     // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
@@ -383,7 +456,8 @@ const translations = {
         `${projectName}: ${rehearsalTitle || 'Probe'}`,
     },
     rehearsal1h: {
-      title: ({ when }) => `Probe gleich: ${when}`,
+      // "Probe gleich" was a fragment, and "gleich" is a minute, not an hour.
+      title: ({ when }) => `Probe beginnt bald: ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Probe'}`,
     },
@@ -398,6 +472,12 @@ const translations = {
       today: (time) => `auf heute, ${time}`,
       tomorrow: (time) => `auf morgen, ${time}`,
       on: (date, time) => `auf ${date}, ${time}`,
+    },
+    // After "bis" (T-256).
+    until: {
+      at: (time) => time,
+      nextDay: (time) => `${time} am Folgetag`,
+      midnight: (utc) => (utc ? 'Mitternacht UTC' : 'Mitternacht'),
     },
   },
 };

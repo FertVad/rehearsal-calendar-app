@@ -42,6 +42,10 @@ const {
   notifyRehearsalDeleted,
   notifyRoleChanged,
   notifyMemberRemoved,
+  notifyAdminAppointed,
+  notifyProjectDeleted,
+  notifyRehearsal24h,
+  notifyRehearsal1h,
 } = await import('../../services/notifications/pushNotificationService.js');
 
 // Intl separates "3:00" from "PM" with a narrow no-break space.
@@ -90,7 +94,7 @@ describe('Each reader is told when, on their own clock and in their own language
   it('a new rehearsal', async () => {
     await notifyRehearsalCreated(rehearsal, 'Hamlet', readers(), { now });
 
-    expect(inboxOf(natasha)[0].body).toBe('Hamlet: Репетиция «Full dress» назначена завтра в 22:00');
+    expect(inboxOf(natasha)[0].body).toBe('Hamlet: Репетиция «Full dress» назначена на завтра в 22:00');
     expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress scheduled tomorrow at 3:00 PM');
   });
 
@@ -98,7 +102,7 @@ describe('Each reader is told when, on their own clock and in their own language
     await notifyRehearsalUpdated(rehearsal, 'Hamlet', readers(), ['datetime'], { now });
 
     expect(inboxOf(natasha)[0].body).toBe('Hamlet: Full dress — теперь завтра в 22:00');
-    expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress — now tomorrow at 3:00 PM');
+    expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress — moved to tomorrow at 3:00 PM');
   });
 
   it('a "seen" names the rehearsal and when it is', async () => {
@@ -106,14 +110,14 @@ describe('Each reader is told when, on their own clock and in their own language
     const row = { id: rehearsal.id, project_id: data.projectId, title: 'Full dress', starts_at: '2026-10-06T19:00:00.000Z' };
     await notifyMemberResponse(row, 'Hamlet', 'Ophelia Bright', [natasha, john], { now });
 
-    expect(inboxOf(natasha)[0].body).toBe('Ophelia Bright в курсе: «Full dress» (завтра в 22:00), Hamlet');
+    expect(inboxOf(natasha)[0].body).toBe('Hamlet: Full dress, завтра в 22:00 — Ophelia Bright в курсе');
     expect(inboxOf(john)[0].body).toBe('Ophelia Bright has seen “Full dress” (tomorrow at 3:00 PM) in Hamlet');
   });
 
   it('further out, the date', async () => {
     await notifyRehearsalCreated(rehearsal, 'Hamlet', readers(), { now: new Date('2026-10-01T06:00:00Z') });
 
-    expect(inboxOf(natasha)[0].body).toMatch(/^Hamlet: Репетиция «Full dress» назначена вт, 6 окт\.? в 22:00$/);
+    expect(inboxOf(natasha)[0].body).toMatch(/^Hamlet: Репетиция «Full dress» назначена на вт, 6 окт\.? в 22:00$/);
     expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress scheduled on Tue, Oct 6 at 3:00 PM');
   });
 });
@@ -124,9 +128,9 @@ describe('Put on or taken off a rehearsal (T-233)', () => {
 
     const [ru] = inboxOf(natasha);
     const [en] = inboxOf(john);
-    expect(ru.title).toBe('Вас добавили в репетицию');
-    expect(ru.body).toBe('Hamlet: Репетиция «Full dress» назначена завтра в 22:00, место: Main stage');
-    expect(en.title).toBe('You were added to a rehearsal');
+    expect(ru.title).toBe('Вас позвали на репетицию');
+    expect(ru.body).toBe('Hamlet: Репетиция «Full dress» назначена на завтра в 22:00, место: Main stage');
+    expect(en.title).toBe('You Were Added to a Rehearsal');
     expect(en.body).toBe('Hamlet: Full dress scheduled tomorrow at 3:00 PM at Main stage');
     // As a new rehearsal: the inbox and a tapped push open it.
     expect(en.type).toBe('rehearsal_created');
@@ -139,8 +143,8 @@ describe('Put on or taken off a rehearsal (T-233)', () => {
 
     const [ru] = inboxOf(natasha);
     const [en] = inboxOf(john);
-    expect(ru.title).toBe('Вас убрали из репетиции');
-    expect(ru.body).toBe('Hamlet: Full dress, завтра в 22:00 — вас убрали из состава');
+    expect(ru.title).toBe('Вас сняли с репетиции');
+    expect(ru.body).toBe('Hamlet: Full dress, завтра в 22:00 — вас больше нет в составе');
     expect(en.body).toBe('Hamlet: Full dress, tomorrow at 3:00 PM — you are no longer on it');
     // No rehearsal to open — they can no longer see it; the app opens the calendar.
     expect(en.type).toBe('rehearsal_removed');
@@ -172,47 +176,47 @@ describe('Spanish and German say a rehearsal is set for a day, in their own word
     await notifyRehearsalCreated(rehearsal, 'Hamlet', latins(), { now });
 
     expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para mañana a las 21:00');
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress morgen um 21:00 angesetzt');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Full dress“ morgen um 21:00 angesetzt');
   });
 
   it('a new rehearsal today', async () => {
     await notifyRehearsalCreated(rehearsal, 'Hamlet', latins(), { now: new Date('2026-10-06T06:00:00Z') });
 
     expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para hoy a las 21:00');
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress heute um 21:00 angesetzt');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Full dress“ heute um 21:00 angesetzt');
   });
 
   it('a new rehearsal further out, on its date', async () => {
     await notifyRehearsalCreated(rehearsal, 'Hamlet', latins(), { now: new Date('2026-10-01T06:00:00Z') });
 
-    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para el mar, 6 oct a las 21:00');
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress am Di., 6. Okt. um 21:00 angesetzt');
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para el martes 6 de octubre a las 21:00');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Full dress“ am Di., 6. Okt. um 21:00 angesetzt');
   });
 
   it('added to one, with and without a place', async () => {
     await notifyAddedToRehearsal({ ...rehearsal, location: 'Main stage' }, 'Hamlet', latins(), { now });
 
-    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para mañana a las 21:00 en Main stage');
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress morgen um 21:00 angesetzt, Ort: Main stage');
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para mañana a las 21:00. Lugar: Main stage');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Full dress“ morgen um 21:00 angesetzt, Ort: Main stage');
 
     await notifyAddedToRehearsal(rehearsal, 'Hamlet', latins(), { now });
 
     expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para mañana a las 21:00');
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress morgen um 21:00 angesetzt');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Full dress“ morgen um 21:00 angesetzt');
   });
 
   it('added to one on its date, with a place', async () => {
     await notifyAddedToRehearsal({ ...rehearsal, location: 'Main stage' }, 'Hamlet', latins(), { now: new Date('2026-10-01T06:00:00Z') });
 
-    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para el mar, 6 oct a las 21:00 en Main stage');
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress am Di., 6. Okt. um 21:00 angesetzt, Ort: Main stage');
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para el martes 6 de octubre a las 21:00. Lugar: Main stage');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Full dress“ am Di., 6. Okt. um 21:00 angesetzt, Ort: Main stage');
   });
 
   it('added to one today', async () => {
     await notifyAddedToRehearsal(rehearsal, 'Hamlet', latins(), { now: new Date('2026-10-06T06:00:00Z') });
 
     expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para hoy a las 21:00');
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress heute um 21:00 angesetzt');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Full dress“ heute um 21:00 angesetzt');
   });
 });
 
@@ -236,20 +240,20 @@ describe('Any title reads correctly, whatever its gender (T-248)', () => {
     await notifyRehearsalCreated({ ...rehearsal, title: 'Прогон' }, 'Гамлет', [{ user_id: olga }], { now });
 
     expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Escena del balcón» programado para mañana a las 21:00');
-    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция «Прогон» назначена завтра в 22:00');
+    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция «Прогон» назначена на завтра в 22:00');
   });
 
   it('added to one with a neuter title in Russian', async () => {
     await notifyAddedToRehearsal({ ...rehearsal, title: 'Чтение', location: 'Зал 2' }, 'Гамлет', [{ user_id: olga }], { now });
 
-    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция «Чтение» назначена завтра в 22:00, место: Зал 2');
+    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция «Чтение» назначена на завтра в 22:00, место: Зал 2');
   });
 
   it('with no title, the word "rehearsal" alone', async () => {
     await notifyRehearsalCreated({ ...rehearsal, title: '' }, 'Hamlet', [{ user_id: carmen }, { user_id: olga }], { now });
 
     expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo programado para mañana a las 21:00');
-    expect(inboxOf(olga)[0].body).toBe('Hamlet: Репетиция назначена завтра в 22:00');
+    expect(inboxOf(olga)[0].body).toBe('Hamlet: Репетиция назначена на завтра в 22:00');
   });
 });
 
@@ -273,57 +277,57 @@ describe('No word agrees with a title, a member or a reader the server cannot kn
   });
 
   it('a cancelled rehearsal agrees with "rehearsal", not with its title', async () => {
-    await notifyRehearsalDeleted({ ...rehearsal, title: 'Прогон' }, 'Гамлет', [{ user_id: olga }]);
-    await notifyRehearsalDeleted({ ...rehearsal, title: 'Escena del balcón' }, 'Hamlet', [{ user_id: carmen }]);
-    await notifyRehearsalDeleted({ ...rehearsal, title: 'Fechtszene' }, 'Hamlet', [{ user_id: klaus }]);
+    await notifyRehearsalDeleted({ ...rehearsal, title: 'Прогон' }, 'Гамлет', [{ user_id: olga }], { now });
+    await notifyRehearsalDeleted({ ...rehearsal, title: 'Escena del balcón' }, 'Hamlet', [{ user_id: carmen }], { now });
+    await notifyRehearsalDeleted({ ...rehearsal, title: 'Fechtszene' }, 'Hamlet', [{ user_id: klaus }], { now });
 
-    expect(inboxOf(olga)[0]).toMatchObject({ title: 'Отменена репетиция', body: 'Гамлет: Репетиция «Прогон» отменена' });
-    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ensayo cancelado', body: 'Hamlet: Ensayo «Escena del balcón» cancelado' });
-    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Fechtszene abgesagt');
+    expect(inboxOf(olga)[0]).toMatchObject({ title: 'Отменена репетиция', body: 'Гамлет: Репетиция «Прогон» на завтра в 22:00 отменена' });
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ensayo cancelado', body: 'Hamlet: Cancelado el ensayo «Escena del balcón» previsto para mañana a las 21:00' });
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Fechtszene“ morgen um 21:00 abgesagt');
   });
 
   it('a cancelled rehearsal with no title', async () => {
-    await notifyRehearsalDeleted({ ...rehearsal, title: '' }, 'Гамлет', [{ user_id: olga }, { user_id: carmen }]);
+    await notifyRehearsalDeleted({ ...rehearsal, title: '' }, 'Гамлет', [{ user_id: olga }, { user_id: carmen }], { now });
 
-    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция отменена');
-    expect(inboxOf(carmen)[0].body).toBe('Гамлет: Ensayo cancelado');
+    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция на завтра в 22:00 отменена');
+    expect(inboxOf(carmen)[0].body).toBe('Гамлет: Cancelado el ensayo previsto para mañana a las 21:00');
   });
 
   it('a woman and a man who join read the same', async () => {
     await notifyMemberJoined('Гамлет', 'Офелия Полониева', [olga], data.projectId);
-    expect(inboxOf(olga)[0].body).toBe('Офелия Полониева теперь в проекте Гамлет');
+    expect(inboxOf(olga)[0].body).toBe('Офелия Полониева теперь в проекте «Гамлет»');
 
     await notifyMemberJoined('Гамлет', 'Гамлет Датский', [olga], data.projectId);
-    expect(inboxOf(olga)[0].body).toBe('Гамлет Датский теперь в проекте Гамлет');
+    expect(inboxOf(olga)[0].body).toBe('Гамлет Датский теперь в проекте «Гамлет»');
   });
 
   it('a woman and a man who have seen a rehearsal read the same, in the app\'s word', async () => {
     const row = { id: rehearsal.id, project_id: data.projectId, title: 'Сцена с письмом', starts_at: '2026-10-06T09:00:00.000Z' };
     await notifyMemberResponse(row, 'Иллирия', 'Виола Себастьянова', [olga, carmen, klaus], { now });
-    expect(inboxOf(olga)[0]).toMatchObject({ title: 'Репетиция просмотрена', body: 'Виола Себастьянова в курсе: «Сцена с письмом» (завтра в 12:00), Иллирия' });
+    expect(inboxOf(olga)[0]).toMatchObject({ title: 'Репетиция просмотрена', body: 'Иллирия: Сцена с письмом, завтра в 12:00 — Виола Себастьянова в курсе' });
     expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ensayo visto', body: 'Виола Себастьянова ha visto «Сцена с письмом» (mañana a las 11:00) en Иллирия' });
-    expect(inboxOf(klaus)[0]).toMatchObject({ title: 'Probe gesehen', body: 'Виола Себастьянова hat „Сцена с письмом“ (morgen um 11:00) in Иллирия gesehen' });
+    expect(inboxOf(klaus)[0]).toMatchObject({ title: 'Probe gesehen', body: 'Иллирия: Виола Себастьянова hat die Probe „Сцена с письмом“ (morgen um 11:00) als gesehen markiert' });
 
     await notifyMemberResponse(row, 'Иллирия', 'Мальволио Стюард', [olga, john], { now });
-    expect(inboxOf(olga)[0].body).toBe('Мальволио Стюард в курсе: «Сцена с письмом» (завтра в 12:00), Иллирия');
-    expect(inboxOf(john)[0]).toMatchObject({ title: 'Rehearsal seen', body: 'Мальволио Стюард has seen “Сцена с письмом” (tomorrow at 5:00 AM) in Иллирия' });
+    expect(inboxOf(olga)[0].body).toBe('Иллирия: Сцена с письмом, завтра в 12:00 — Мальволио Стюард в курсе');
+    expect(inboxOf(john)[0]).toMatchObject({ title: 'Rehearsal Seen', body: 'Мальволио Стюард has seen “Сцена с письмом” (tomorrow at 5:00 AM) in Иллирия' });
   });
 
   it('a role given reads right in Russian, and agrees with no reader in Spanish and German', async () => {
     for (const reader of [olga, carmen, klaus, john]) {
       await notifyRoleChanged('Hamlet', reader, 'admin');
     }
-    expect(inboxOf(olga)[0].body).toBe('Теперь вы администратор проекта Hamlet');
+    expect(inboxOf(olga)[0].body).toBe('Теперь вы администратор проекта «Hamlet»');
     expect(inboxOf(carmen)[0].body).toBe('Ahora administras Hamlet');
-    expect(inboxOf(klaus)[0].body).toBe('Du verwaltest jetzt Hamlet');
+    expect(inboxOf(klaus)[0].body).toBe('Du verwaltest jetzt das Projekt „Hamlet“');
     expect(inboxOf(john)[0].body).toBe('You are now an administrator of Hamlet');
 
     for (const reader of [olga, carmen, klaus, john]) {
       await notifyRoleChanged('Hamlet', reader, 'member');
     }
-    expect(inboxOf(olga)[0].body).toBe('Теперь вы участник проекта Hamlet');
+    expect(inboxOf(olga)[0].body).toBe('Вы больше не администратор проекта «Hamlet»');
     expect(inboxOf(carmen)[0].body).toBe('Ahora eres miembro de Hamlet');
-    expect(inboxOf(klaus)[0].body).toBe('Du bist jetzt Mitglied in Hamlet');
+    expect(inboxOf(klaus)[0].body).toBe('Du bist jetzt Mitglied im Projekt „Hamlet“');
     expect(inboxOf(john)[0].body).toBe('You are now a member of Hamlet');
   });
 
@@ -367,9 +371,9 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
 
     expect(bodies()).toEqual([
       'Лебединое озеро: Кордебалет, pasa a hoy a las 21:00',
-      'Лебединое озеро: Кордебалет – verlegt auf heute, 21:00',
+      'Лебединое озеро: Probe „Кордебалет“ – verlegt auf heute, 21:00',
       'Лебединое озеро: Кордебалет — теперь сегодня в 22:00',
-      'Лебединое озеро: Кордебалет — now today at 8:00 PM',
+      'Лебединое озеро: Кордебалет — moved to today at 8:00 PM',
     ]);
   });
 
@@ -377,20 +381,20 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
     await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['datetime'], { now: new Date('2026-10-01T06:00:00Z') });
 
     const [es, de, ru, en] = bodies();
-    expect(es).toBe('Лебединое озеро: Кордебалет, pasa al mar, 6 oct a las 21:00');
-    expect(de).toBe('Лебединое озеро: Кордебалет – verlegt auf Di., 6. Okt., 21:00');
+    expect(es).toBe('Лебединое озеро: Кордебалет, pasa al martes 6 de octubre a las 21:00');
+    expect(de).toBe('Лебединое озеро: Probe „Кордебалет“ – verlegt auf Di., 6. Okt., 21:00');
     expect(ru).toMatch(/^Лебединое озеро: Кордебалет — теперь вт, 6 окт\.? в 22:00$/);
-    expect(en).toBe('Лебединое озеро: Кордебалет — now on Tue, Oct 6 at 8:00 PM');
+    expect(en).toBe('Лебединое озеро: Кордебалет — moved to Tue, Oct 6 at 8:00 PM');
   });
 
   it('moved and to a new place', async () => {
     await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['datetime', 'location'], { now });
 
     expect(bodies()).toEqual([
-      'Лебединое озеро: Кордебалет, pasa a mañana a las 21:00 en Зал 2',
-      'Лебединое озеро: Кордебалет – verlegt auf morgen, 21:00, Ort: Зал 2',
+      'Лебединое озеро: Кордебалет, pasa a mañana a las 21:00. Lugar: Зал 2',
+      'Лебединое озеро: Probe „Кордебалет“ – verlegt auf morgen, 21:00, Ort: Зал 2',
       'Лебединое озеро: Кордебалет — теперь завтра в 22:00, место: Зал 2',
-      'Лебединое озеро: Кордебалет — now tomorrow at 8:00 PM at Зал 2',
+      'Лебединое озеро: Кордебалет — moved to tomorrow at 8:00 PM at Зал 2',
     ]);
   });
 
@@ -399,7 +403,7 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
 
     expect(bodies()).toEqual([
       'Лебединое озеро: Кордебалет, mañana a las 21:00 — nuevo lugar: Зал 2',
-      'Лебединое озеро: Кордебалет, morgen um 21:00 – neuer Ort: Зал 2',
+      'Лебединое озеро: Probe „Кордебалет“, morgen um 21:00 – neuer Ort: Зал 2',
       'Лебединое озеро: Кордебалет, завтра в 22:00 — новое место: Зал 2',
       'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — new location: Зал 2',
     ]);
@@ -410,9 +414,9 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
 
     expect(bodies()).toEqual([
       'Лебединое озеро: Кордебалет, mañana a las 21:00 — ya sin lugar asignado',
-      'Лебединое озеро: Кордебалет, morgen um 21:00 – kein Ort mehr',
+      'Лебединое озеро: Probe „Кордебалет“, morgen um 21:00 – kein Ort mehr',
       'Лебединое озеро: Кордебалет, завтра в 22:00 — место больше не указано',
-      'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — no location now',
+      'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — location removed',
     ]);
   });
 
@@ -420,8 +424,8 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
     await notifyRehearsalUpdated(swan, 'Лебединое озеро', all(), ['title'], { now });
 
     expect(bodies()).toEqual([
-      'Лебединое озеро: Кордебалет, mañana a las 21:00 — nuevo nombre',
-      'Лебединое озеро: Кордебалет, morgen um 21:00 – neuer Titel',
+      'Лебединое озеро: Кордебалет, mañana a las 21:00 — nuevo título',
+      'Лебединое озеро: Probe „Кордебалет“, morgen um 21:00 – neuer Titel',
       'Лебединое озеро: Кордебалет, завтра в 22:00 — новое название',
       'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — renamed',
     ]);
@@ -434,8 +438,8 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
     await notifyRehearsalUpdated(longer, 'Лебединое озеро', all(), ['end'], { now: today });
 
     expect(bodies()).toEqual([
-      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora hasta las 22:30',
-      'Лебединое озеро: Кордебалет, heute um 21:00 – jetzt bis 22:30',
+      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora termina a las 22:30',
+      'Лебединое озеро: Probe „Кордебалет“, heute um 21:00 – jetzt bis 22:30',
       'Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 23:30',
       'Лебединое озеро: Кордебалет, today at 8:00 PM — now until 9:30 PM',
     ]);
@@ -446,23 +450,24 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
     await notifyRehearsalUpdated(longer, 'Лебединое озеро', all(), ['end', 'location'], { now: today });
 
     expect(bodies()).toEqual([
-      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora hasta las 22:30, nuevo lugar: Зал 2',
-      'Лебединое озеро: Кордебалет, heute um 21:00 – jetzt bis 22:30, neuer Ort: Зал 2',
+      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora termina a las 22:30, nuevo lugar: Зал 2',
+      'Лебединое озеро: Probe „Кордебалет“, heute um 21:00 – jetzt bis 22:30, neuer Ort: Зал 2',
       'Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 23:30, новое место: Зал 2',
       'Лебединое озеро: Кордебалет, today at 8:00 PM — now until 9:30 PM, new location: Зал 2',
     ]);
   });
 
   // The start moved and the end stayed: the new start, and the end it keeps.
+  // Russian says a span "с … до …", not "в 21:00 до 23:30" (T-256).
   it('the start moved and the length changed: from when and until when', async () => {
     const earlier = { ...swan, startsAt: '2026-10-06T18:00:00.000Z', endsAt: '2026-10-06T20:30:00.000Z' };
     await notifyRehearsalUpdated(earlier, 'Лебединое озеро', all(), ['datetime', 'end'], { now: today });
 
     expect(bodies()).toEqual([
-      'Лебединое озеро: Кордебалет, pasa a hoy a las 20:00 hasta las 22:30',
-      'Лебединое озеро: Кордебалет – verlegt auf heute, 20:00 bis 22:30',
-      'Лебединое озеро: Кордебалет — теперь сегодня в 21:00 до 23:30',
-      'Лебединое озеро: Кордебалет — now today at 7:00 PM until 9:30 PM',
+      'Лебединое озеро: Кордебалет, pasa a hoy a las 20:00, hasta las 22:30',
+      'Лебединое озеро: Probe „Кордебалет“ – verlegt auf heute, 20:00 bis 22:30',
+      'Лебединое озеро: Кордебалет — теперь сегодня с 21:00 до 23:30',
+      'Лебединое озеро: Кордебалет — moved to today at 7:00 PM until 9:30 PM',
     ]);
   });
 
@@ -470,7 +475,203 @@ describe('A changed rehearsal says what changed, as a native speaker says it (T-
     const late = { ...swan, startsAt: '2026-10-06T23:00:00.000Z', endsAt: '2026-10-06T23:30:00.000Z' };
     await notifyRehearsalUpdated(late, 'Лебединое озеро', all(), ['end'], { now: today });
 
-    expect(bodies()[0]).toBe('Лебединое озеро: Кордебалет, mañana a la 1:00 — ahora hasta la 1:30');
+    expect(bodies()[0]).toBe('Лебединое озеро: Кордебалет, mañana a la 1:00 — ahora termina a la 1:30');
+  });
+
+  /**
+   * An end past midnight is the next day's, said so (T-256): "теперь до 1:00"
+   * read as the small hours of the same night only to whoever worked it out.
+   * Midnight itself is "полночь", not "0:00 следующего дня". The day is the
+   * reader's: 23:00 UTC is 2:00 the next day in Moscow, midnight in London.
+   */
+  it('made longer past midnight: the next day, in the reader\'s zone', async () => {
+    const late = { ...swan, endsAt: '2026-10-06T23:00:00.000Z' };
+    await notifyRehearsalUpdated(late, 'Лебединое озеро', all(), ['end'], { now: today });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora termina a la 1:00 del día siguiente',
+      'Лебединое озеро: Probe „Кордебалет“, heute um 21:00 – jetzt bis 1:00 am Folgetag',
+      'Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 2:00 следующего дня',
+      'Лебединое озеро: Кордебалет, today at 8:00 PM — now until midnight',
+    ]);
+  });
+
+  it('made longer to midnight: midnight, not "0:00 the next day"', async () => {
+    const late = { ...swan, endsAt: '2026-10-06T22:00:00.000Z' };
+    await notifyRehearsalUpdated(late, 'Лебединое озеро', all(), ['end'], { now: today });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora termina a la medianoche',
+      'Лебединое озеро: Probe „Кордебалет“, heute um 21:00 – jetzt bis Mitternacht',
+      'Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 1:00 следующего дня',
+      'Лебединое озеро: Кордебалет, today at 8:00 PM — now until 11:00 PM',
+    ]);
+
+    await notifyRehearsalUpdated({ ...swan, endsAt: '2026-10-06T21:00:00.000Z' }, 'Лебединое озеро', all(), ['end'], { now: today });
+    expect(bodies()[2]).toBe('Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до полуночи');
+  });
+
+  it('moved, ending past midnight', async () => {
+    const late = { ...swan, endsAt: '2026-10-06T23:00:00.000Z' };
+    await notifyRehearsalUpdated(late, 'Лебединое озеро', all(), ['datetime', 'end'], { now: today });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Кордебалет, pasa a hoy a las 21:00, hasta la 1:00 del día siguiente',
+      'Лебединое озеро: Probe „Кордебалет“ – verlegt auf heute, 21:00 bis 1:00 am Folgetag',
+      'Лебединое озеро: Кордебалет — теперь сегодня с 22:00 до 2:00 следующего дня',
+      'Лебединое озеро: Кордебалет — moved to today at 8:00 PM until midnight',
+    ]);
+  });
+
+  /** Renamed to nothing: not "a new name" (T-256). */
+  it('the title erased: "without a title", not "renamed"', async () => {
+    await notifyRehearsalUpdated({ ...swan, title: '' }, 'Лебединое озеро', all(), ['title'], { now });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Ensayo, mañana a las 21:00 — ya sin título',
+      'Лебединое озеро: Probe, morgen um 21:00 – Titel entfernt',
+      'Лебединое озеро: Репетиция, завтра в 22:00 — теперь без названия',
+      'Лебединое озеро: Rehearsal, tomorrow at 8:00 PM — title removed',
+    ]);
+  });
+
+  /** A cancelled rehearsal says which one: when it was (T-256). */
+  it('cancelled: when it was, as every other notice says it', async () => {
+    await notifyRehearsalDeleted(swan, 'Лебединое озеро', all(), { now });
+
+    expect(bodies()).toEqual([
+      'Лебединое озеро: Cancelado el ensayo «Кордебалет» previsto para mañana a las 21:00',
+      'Лебединое озеро: Probe „Кордебалет“ morgen um 21:00 abgesagt',
+      'Лебединое озеро: Репетиция «Кордебалет» на завтра в 22:00 отменена',
+      'Лебединое озеро: Кордебалет, tomorrow at 8:00 PM — canceled',
+    ]);
+
+    await notifyRehearsalDeleted({ ...swan, title: '' }, 'Лебединое озеро', all(), { now: new Date('2026-10-01T06:00:00Z') });
+    const [es, de, ru, en] = bodies();
+    expect(es).toBe('Лебединое озеро: Cancelado el ensayo previsto para el martes 6 de octubre a las 21:00');
+    expect(de).toBe('Лебединое озеро: Probe am Di., 6. Okt. um 21:00 abgesagt');
+    expect(ru).toMatch(/^Лебединое озеро: Репетиция на вт, 6 окт\.? в 22:00 отменена$/);
+    expect(en).toBe('Лебединое озеро: Rehearsal, on Tue, Oct 6 at 8:00 PM — canceled');
+  });
+});
+
+/**
+ * The rest of the native speakers' reading (T-256): English titles in Title
+ * Case (Apple HIG, notifications), "canceled"; a project's name in quotes
+ * after the word "project" in Russian and German, which also carries the
+ * German case ("ist dem Projekt „Der Kirschgarten“ beigetreten", not "ist Der
+ * Kirschgarten beigetreten"); no generic word in quotes as if it were a title.
+ */
+describe('Titles, names and the words around them, as native speakers read them (T-256)', () => {
+  let carmen;
+  let klaus;
+  let olga;
+  let nick;
+  const readersOf = () => [carmen, klaus, olga, nick];
+  const all = () => readersOf().map((user_id) => ({ user_id }));
+  const latest = () => readersOf().map((reader) => inboxOf(reader)[0]);
+  const titles = () => latest().map((row) => row.title);
+  const bodies = () => latest().map((row) => row.body);
+
+  beforeAll(() => {
+    carmen = addReader('carmen5', 'es', 'Europe/Madrid');
+    klaus = addReader('klaus5', 'de', 'Europe/Berlin');
+    olga = addReader('olga5', 'ru', 'Europe/Moscow');
+    nick = addReader('nick5', 'en', 'Europe/London');
+  });
+
+  const untitled = () => ({ ...rehearsal, title: '' });
+
+  it('the notices about a rehearsal', async () => {
+    await notifyAddedToRehearsal(rehearsal, 'Hamlet', all(), { now });
+    expect(titles()).toEqual(['Te han añadido a un ensayo', 'Du wurdest für eine Probe eingeteilt', 'Вас позвали на репетицию', 'You Were Added to a Rehearsal']);
+
+    await notifyRemovedFromRehearsal(rehearsal, 'Hamlet', all(), { now });
+    expect(titles()).toEqual(['Te han quitado de un ensayo', 'Du bist für eine Probe nicht mehr eingeteilt', 'Вас сняли с репетиции', 'You Were Taken Off a Rehearsal']);
+    expect(bodies()).toEqual([
+      'Hamlet: Full dress, mañana a las 21:00 — ya no estás en este ensayo',
+      'Hamlet: Probe „Full dress“, morgen um 21:00 – du bist nicht mehr dabei',
+      'Hamlet: Full dress, завтра в 22:00 — вас больше нет в составе',
+      'Hamlet: Full dress, tomorrow at 8:00 PM — you are no longer on it',
+    ]);
+
+    await notifyRehearsalCreated(rehearsal, 'Hamlet', all(), { now });
+    expect(titles()[3]).toBe('New Rehearsal');
+
+    await notifyRehearsalUpdated(rehearsal, 'Hamlet', all(), ['title'], { now });
+    expect(titles()[3]).toBe('Rehearsal Updated');
+
+    await notifyRehearsalDeleted(rehearsal, 'Hamlet', all(), { now });
+    expect(titles()).toEqual(['Ensayo cancelado', 'Probe abgesagt', 'Отменена репетиция', 'Rehearsal Canceled']);
+  });
+
+  it('"seen" with no title: the rehearsal, not "Rehearsal" in quotes', async () => {
+    await notifyMemberResponse(untitled(), 'Hamlet', 'Anna Smith', readersOf(), { now });
+
+    expect(titles()[3]).toBe('Rehearsal Seen');
+    expect(bodies()).toEqual([
+      'Anna Smith ha visto el ensayo (mañana a las 21:00) en Hamlet',
+      'Hamlet: Anna Smith hat die Probe (morgen um 21:00) als gesehen markiert',
+      'Hamlet: Репетиция, завтра в 22:00 — Anna Smith в курсе',
+      'Anna Smith has seen the rehearsal (tomorrow at 8:00 PM) in Hamlet',
+    ]);
+  });
+
+  it('the notices about a project: its name in quotes, the German case on "Projekt"', async () => {
+    await notifyMemberJoined('Der Kirschgarten', 'Anna Schmidt', readersOf(), data.projectId);
+    expect(titles()).toEqual(['Nuevo miembro', 'Neues Mitglied', 'Новый участник', 'New Member']);
+    expect(bodies()).toEqual([
+      'Anna Schmidt se unió a Der Kirschgarten',
+      'Anna Schmidt ist dem Projekt „Der Kirschgarten“ beigetreten',
+      'Anna Schmidt теперь в проекте «Der Kirschgarten»',
+      'Anna Schmidt joined Der Kirschgarten',
+    ]);
+
+    await notifyAdminAppointed('Der Kirschgarten', 'Anna Schmidt', readersOf(), data.projectId);
+    expect(titles()).toEqual(['Permisos de administrador', 'Adminrechte vergeben', 'Новый администратор', 'New Administrator']);
+    expect(bodies()).toEqual([
+      'Anna Schmidt ahora administra Der Kirschgarten',
+      'Anna Schmidt verwaltet jetzt das Projekt „Der Kirschgarten“',
+      'Anna Schmidt теперь администратор проекта «Der Kirschgarten»',
+      'Anna Schmidt is now an administrator of Der Kirschgarten',
+    ]);
+
+    for (const reader of readersOf()) await notifyRoleChanged('Der Kirschgarten', reader, 'admin');
+    expect(titles()[3]).toBe('Role Changed');
+
+    for (const reader of readersOf()) await notifyMemberRemoved('Der Kirschgarten', reader);
+    expect(titles()[3]).toBe('Removed from Project');
+    expect(bodies()).toEqual([
+      'Ya no formas parte del proyecto Der Kirschgarten',
+      'Du wurdest aus dem Projekt „Der Kirschgarten“ entfernt',
+      'Вас удалили из проекта «Der Kirschgarten»',
+      'You were removed from the project Der Kirschgarten',
+    ]);
+
+    await notifyProjectDeleted('Der Kirschgarten', readersOf());
+    expect(titles()[3]).toBe('Project Deleted');
+    expect(bodies()).toEqual([
+      'El proyecto Der Kirschgarten ha sido eliminado',
+      'Das Projekt „Der Kirschgarten“ wurde gelöscht',
+      'Проект «Der Kirschgarten» удалён',
+      'The project Der Kirschgarten has been deleted',
+    ]);
+  });
+
+  it('the reminders: English titles in Title Case, Spanish and German natural', async () => {
+    await notifyRehearsal24h(rehearsal, 'Hamlet', readersOf(), { now });
+    expect(titles()).toEqual(['Ensayo mañana a las 21:00', 'Probe morgen um 21:00', 'Репетиция завтра в 22:00', 'Rehearsal Tomorrow at 8:00 PM']);
+
+    await notifyRehearsal24h(rehearsal, 'Hamlet', readersOf(), { now: new Date('2026-10-06T06:00:00Z') });
+    expect(titles()[3]).toBe('Rehearsal Today at 8:00 PM');
+
+    await notifyRehearsal24h(rehearsal, 'Hamlet', readersOf(), { now: new Date('2026-10-01T06:00:00Z') });
+    expect(titles()[3]).toBe('Rehearsal on Tue, Oct 6 at 8:00 PM');
+
+    await notifyRehearsal1h(rehearsal, 'Hamlet', readersOf(), { now: new Date('2026-10-06T18:30:00Z') });
+    expect(titles()).toEqual(['Ensayo en breve: hoy a las 21:00', 'Probe beginnt bald: heute um 21:00', 'Скоро репетиция: сегодня в 22:00', 'Rehearsal Soon — Today at 8:00 PM']);
+    // The body keeps its lower case.
+    expect(bodies()[3]).toBe('Hamlet: Full dress');
   });
 });
 

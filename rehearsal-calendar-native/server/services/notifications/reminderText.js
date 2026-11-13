@@ -49,21 +49,61 @@ export function clockTime(locale, instant, timeZone) {
 }
 
 /**
+ * The end of a rehearsal, after "до", "until", "hasta", "bis" (T-256): the
+ * time when it ends the day it starts; the time and "the next day" past
+ * midnight — "до 1:00" read as the same night only to whoever worked it out;
+ * and midnight itself as midnight, not "0:00 the next day". Both days are the
+ * reader's, as `when` is.
+ */
+export function untilTime(locale, endsAt, startsAt, timeZone) {
+  const zone = zoneOf(timeZone);
+  const end = new Date(endsAt);
+  const words = t(locale, 'until');
+  const utc = zone === 'UTC';
+  const time = clockTime(locale, end, timeZone);
+  const endDay = dateIn(end, zone);
+  if (endDay !== nextDate(dateIn(new Date(startsAt), zone))) return words.at(time);
+  const midnight = new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(end) === '00:00';
+  return midnight ? words.midnight(utc) : words.nextDay(time);
+}
+
+/**
+ * The date in a sentence. Spanish spells the day and the month out, with no
+ * comma: "el martes 6 de octubre" — "el mar, 6 oct" read as "the sea" (T-256).
+ */
+function dateWords(locale, instant, zone) {
+  const tag = LOCALE_TAGS[locale] || LOCALE_TAGS.en;
+  if (locale === 'es') {
+    return new Intl.DateTimeFormat(tag, { timeZone: zone, weekday: 'long', day: 'numeric', month: 'long' })
+      .formatToParts(instant)
+      .map(({ type, value }) => (type === 'literal' && value.trim() === ',' ? ' ' : value))
+      .join('');
+  }
+  return new Intl.DateTimeFormat(tag, { timeZone: zone, weekday: 'short', day: 'numeric', month: 'short' }).format(instant);
+}
+
+// A wording a language has no words of its own for reads as this one: only
+// Russian says a moved rehearsal's span another way ("с 19:00 до 22:00"), only
+// English capitalises the day in a title ("Rehearsal Tomorrow at 7:00 PM").
+const WORDED_AS = { movedFrom: 'movedTo', titleWhen: 'when' };
+
+/**
  * "сегодня в 22:00", "tomorrow at 10:00 AM", "am Mo., 6. Okt. um 19:00".
  *
  * @param {string} locale - 'ru' | 'en' | 'es' | 'de'; anything else reads as 'en'
  * @param {Date|string} startsAt - the rehearsal's start, as stored
  * @param {Date} now - when the reminder is sent
  * @param {string} timeZone - the reader's IANA zone
- * @param {'when'|'movedTo'} wording - "at" a time, or where a rehearsal was
- *   moved to: Spanish says "pasa al mar, 6 oct", German "verlegt auf Di.,
- *   6. Okt., 19:00" — not "a el", not "auf am" (T-250)
+ * @param {'when'|'movedTo'|'movedFrom'|'titleWhen'} wording - "at" a time, or where
+ *   a rehearsal was moved to: Spanish says "pasa al martes 6 de octubre",
+ *   German "verlegt auf Di., 6. Okt., 19:00" — not "a el", not "auf am"
+ *   (T-250); where it was moved to with its end said too, "теперь завтра с
+ *   19:00" (T-256); or in a title, "Rehearsal Tomorrow at 7:00 PM" (T-256)
  */
 export function reminderWhen(locale, startsAt, now, timeZone, wording = 'when') {
   const zone = zoneOf(timeZone);
-  const tag = LOCALE_TAGS[locale] || LOCALE_TAGS.en;
   const start = new Date(startsAt);
-  const words = t(locale, wording);
+  const words = t(locale, wording) || t(locale, WORDED_AS[wording]);
 
   const time = clockTime(locale, start, timeZone);
 
@@ -71,6 +111,5 @@ export function reminderWhen(locale, startsAt, now, timeZone, wording = 'when') 
   const today = dateIn(now, zone);
   if (day === today) return words.today(time);
   if (day === nextDate(today)) return words.tomorrow(time);
-  const date = new Intl.DateTimeFormat(tag, { timeZone: zone, weekday: 'short', day: 'numeric', month: 'short' }).format(start);
-  return words.on(date, time);
+  return words.on(dateWords(locale, start, zone), time);
 }

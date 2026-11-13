@@ -67,7 +67,7 @@ it('the other admin\'s "New administrator" names the project, so the push and th
   expect(res.status).toBe(200);
 
   const [row] = inboxOf(secondAdminId);
-  expect(row).toMatchObject({ type: 'admin_appointed', title: 'New administrator' });
+  expect(row).toMatchObject({ type: 'admin_appointed', title: 'New Administrator' });
   // What the push carries.
   expect(Number(row.data.projectId)).toBe(Number(testData.projectId));
   // What the inbox opens it by.
