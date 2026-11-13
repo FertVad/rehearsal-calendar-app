@@ -47,7 +47,8 @@ const NOVEMBER: Record<Language, string> = {
   es: 'Noviembre de 2026',
   de: 'November 2026',
 };
-const MONDAY: Record<Language, string> = { ru: 'Пн', en: 'M', es: 'L', de: 'Mo' };
+// Spanish in two letters: "X" for Wednesday is Spain's alone (T-256).
+const MONDAY: Record<Language, string> = { ru: 'Пн', en: 'M', es: 'Lu', de: 'Mo' };
 
 describe('DayCalendar in every language', () => {
   it.each(Object.keys(translations) as Language[])('opens in %s, its month in its words', (language) => {

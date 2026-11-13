@@ -32,7 +32,7 @@ describe('"just now" inside the sync screen\'s sentence', () => {
     ['ru', 'Синхронизировано только что'],
     ['en', 'Synced just now'],
     ['es', 'Sincronizado ahora mismo'],
-    ['de', 'Synchronisiert gerade eben'],
+    ['de', 'Synchronisiert: gerade eben'],
   ] as const)('%s: %s', (language, expected) => {
     expect(synced(language, ago(10 * 1000))).toBe(expected);
   });
@@ -44,7 +44,7 @@ describe('minutes, hours and days inside the sentence, as each language writes t
     ['en', 'Synced 5 min ago', 'Synced 3h ago', 'Synced 2d ago'],
     ['es', 'Sincronizado hace 5 min', 'Sincronizado hace 3 h', 'Sincronizado hace 2 d'],
     // Nouns keep their capital in German, abbreviated too.
-    ['de', 'Synchronisiert vor 5 Min.', 'Synchronisiert vor 3 Std.', 'Synchronisiert vor 2 Tg.'],
+    ['de', 'Synchronisiert: vor 5 Min.', 'Synchronisiert: vor 3 Std.', 'Synchronisiert: vor 2 Tagen'],
   ] as const)('%s', (language, minutes, hours, days) => {
     expect(synced(language, ago(5 * MINUTE))).toBe(minutes);
     expect(synced(language, ago(3 * 60 * MINUTE))).toBe(hours);

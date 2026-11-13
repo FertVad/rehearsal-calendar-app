@@ -120,7 +120,7 @@ it('finds a zone by its city and by its name, and says when nothing is found', a
   expect(view.queryByText('Tokyo (UTC+9)')).toBeNull();
 
   fireEvent.changeText(view.getByTestId('timezone-search'), 'atlantis');
-  expect(view.getByText('Nothing found')).toBeTruthy();
+  expect(view.getByText('No Results')).toBeTruthy();
 });
 
 it('opens the timezone list whole again after a search', async () => {

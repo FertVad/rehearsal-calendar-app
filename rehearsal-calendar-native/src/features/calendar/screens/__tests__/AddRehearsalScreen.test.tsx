@@ -250,7 +250,7 @@ describe('The participants row (T-010)', () => {
     await settle();
 
     expect(screen.getByTestId('participants-row').props.accessibilityLabel)
-      .toBe('Participants, 3 of 3, Name7 busy 11:00–14:00');
+      .toBe('Participants, 3 of 3, Name7 is busy 11:00–14:00');
     // The sheet: their busy time beside them, nobody else's.
     fireEvent.press(screen.getByTestId('participants-row'));
     expect(screen.getByTestId('participant-7').props.accessibilityLabel).toBe('Name7, 11:00–14:00');
@@ -270,7 +270,7 @@ describe('The participants row (T-010)', () => {
       act(() => __changeCalendars([{ uses24hourClock: false }]));
 
       expect(screen.getByText(/^10:00\sAM$/)).toBeTruthy();
-      expect(screen.getByTestId('participants-conflict').props.children).toMatch(/^Name7 busy 11:00\sAM–2:00\sPM$/);
+      expect(screen.getByTestId('participants-conflict').props.children).toMatch(/^Name7 is busy 11:00\sAM–2:00\sPM$/);
       fireEvent.press(screen.getByTestId('participants-row'));
       expect(screen.getByTestId('participant-7').props.accessibilityLabel).toMatch(/^Name7, 11:00\sAM–2:00\sPM$/);
     } finally {
@@ -379,7 +379,7 @@ describe('Recommended time (T-238)', () => {
     });
 
     expect(shown(screen, 'rehearsal-end-time')).toBe('16:00');
-    expect(screen.getByTestId('participants-conflict').props.children).toBe('Name9 busy 14:00–17:00');
+    expect(screen.getByTestId('participants-conflict').props.children).toBe('Name9 is busy 14:00–17:00');
   });
 
   // T-238 review: the start's picker confirmed as it was, or the day shown

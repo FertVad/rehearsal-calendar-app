@@ -63,21 +63,21 @@ export const ru = {
     permissionDenied: 'Нет доступа',
     permissionDeniedMessage: 'Для этого нужен доступ к календарю',
     permissionRequired: 'Требуется доступ к календарю',
-    grantPermission: 'Предоставить доступ',
-    checkingPermissions: 'Проверка разрешений...',
+    grantPermission: 'Разрешить доступ',
+    checkingPermissions: 'Проверка разрешений…',
     // Export Settings
     selectCalendar: 'Выбрать календарь',
     // Actions
     syncedAgo: (when: string) => `Синхронизировано ${when}`,
     inCalendar: (count: number) => `В календаре: ${count}`,
-    removeAll: 'Удалить экспортированные репетиции',
-    removeAllConfirm: 'Удалить все репетиции из календаря?',
+    removeAll: 'Удалить репетиции из календаря',
+    removeAllConfirm: 'Удалить все репетиции из календаря телефона?',
     // Status
     syncSuccess: 'Синхронизировано',
-    removeAllSuccess: 'Все репетиции удалены из календаря',
+    removeAllSuccess: 'Все репетиции удалены из календаря телефона',
     removeAllPartial: (removed: number, failed: number) => `Удалено: ${removed}. Не удалось удалить: ${failed} — эти события остались в календаре.`,
     importIncomplete: (calendars: number) => `Не удалось прочитать календарей: ${calendars}.`,
-    exportIncomplete: (rehearsals: number) => `Не удалось записать в календарь репетиций: ${rehearsals}.`,
+    exportIncomplete: (rehearsals: number) => `Не удалось записать репетиций в календарь: ${rehearsals}.`,
     syncError: 'Ошибка синхронизации',
     // Errors
     noCalendarsFound: 'Календари не найдены',
@@ -91,7 +91,7 @@ export const ru = {
     justNow: 'только что',
     minutesAgo: (minutes: number) => `${minutes} мин назад`,
     hoursAgo: (hours: number) => `${hours} ч назад`,
-    daysAgo: (days: number) => `${days} дн. назад`,
+    daysAgo: (days: number) => (days === 1 ? 'вчера' : `${days} дн. назад`),
     // Additional status
     imported: 'Импортировано',
     exportedRehearsals: 'Экспортировано репетиций',
@@ -104,35 +104,35 @@ export const en = {
   calendarSync: {
     // Navigation
     title: 'Calendar Sync',
-    explanation: 'Rehearsals go into your phone’s calendar, and only the hours you are busy come back from it, never what the events are.',
+    explanation: 'Rehearsals go into your phone’s calendar, and only the hours you are busy come back from it — never the details of your events.',
     // Permissions
     permissionDenied: 'Access Denied',
     permissionDeniedMessage: 'Calendar access is required to use this feature',
-    permissionRequired: 'Calendar access required',
+    permissionRequired: 'Calendar Access Required',
     grantPermission: 'Grant Access',
-    checkingPermissions: 'Checking permissions...',
+    checkingPermissions: 'Checking permissions…',
     // Export Settings
     selectCalendar: 'Select Calendar',
     // Actions
     syncedAgo: (when: string) => `Synced ${when}`,
     inCalendar: (count: number) => `In the calendar: ${count}`,
-    removeAll: 'Remove All Exported',
+    removeAll: 'Remove Exported Rehearsals',
     removeAllConfirm: 'Remove All Rehearsals from the Calendar?',
     // Status
-    syncSuccess: 'Synced successfully',
+    syncSuccess: 'Synced',
     removeAllSuccess: 'All rehearsals removed from the calendar',
-    removeAllPartial: (removed: number, failed: number) => `Removed: ${removed}. Could not remove: ${failed} — those events are still in the calendar.`,
+    removeAllPartial: (removed: number, failed: number) => `Removed: ${removed}. Could not remove: ${failed} — ${failed === 1 ? 'that event is' : 'those events are'} still in the calendar.`,
     importIncomplete: (calendars: number) => `Calendars that could not be read: ${calendars}.`,
     exportIncomplete: (rehearsals: number) => `Rehearsals that could not be written to the calendar: ${rehearsals}.`,
     syncError: 'Sync Error',
     // Errors
     noCalendarsFound: 'No calendars found',
-    noWritableCalendars: 'No writable calendars',
+    noWritableCalendars: 'No editable calendars',
     // Phase 2: Import Settings
     noCalendarsSelected: 'No calendars selected',
     // Unified Sync
     autoSync: 'Auto Sync',
-    synchronize: 'Synchronize',
+    synchronize: 'Sync Now',
     // Time formatting
     justNow: 'just now',
     minutesAgo: (minutes: number) => `${minutes} min ago`,
@@ -150,13 +150,13 @@ export const es = {
   calendarSync: {
     // Navigation
     title: 'Sincronización',
-    explanation: 'Los ensayos pasan al calendario del teléfono, y de él solo llegan las horas que tienes ocupadas, nunca qué son los eventos.',
+    explanation: 'Los ensayos pasan al calendario del teléfono; de él solo llegan las horas que tienes ocupadas, nunca el nombre de los eventos.',
     // Permissions
     permissionDenied: 'Acceso denegado',
     permissionDeniedMessage: 'Se requiere acceso al calendario para usar esta función',
     permissionRequired: 'Se necesita acceso al calendario',
     grantPermission: 'Conceder acceso',
-    checkingPermissions: 'Comprobando permisos...',
+    checkingPermissions: 'Comprobando permisos…',
     // Export Settings
     selectCalendar: 'Seleccionar calendario',
     // Actions
@@ -167,7 +167,9 @@ export const es = {
     // Status
     syncSuccess: 'Sincronización completada',
     removeAllSuccess: 'Se eliminaron todos los ensayos del calendario',
-    removeAllPartial: (removed: number, failed: number) => `Eliminados: ${removed}. No se pudieron eliminar: ${failed} — esos eventos siguen en el calendario.`,
+    removeAllPartial: (removed: number, failed: number) => (failed === 1
+      ? `Eliminados: ${removed}. Un evento no se pudo eliminar y sigue en el calendario.`
+      : `Eliminados: ${removed}. ${failed} eventos no se pudieron eliminar y siguen en el calendario.`),
     importIncomplete: (calendars: number) => `Calendarios que no se pudieron leer: ${calendars}.`,
     exportIncomplete: (rehearsals: number) => `Ensayos que no se pudieron escribir en el calendario: ${rehearsals}.`,
     syncError: 'Error de sincronización',
@@ -196,17 +198,17 @@ export const de = {
   calendarSync: {
     // Navigation
     title: 'Kalender-Sync',
-    explanation: 'Proben kommen in den Kalender deines Telefons, und von dort nur die Stunden, in denen du beschäftigt bist – nie, was die Termine sind.',
+    explanation: 'Proben landen in deiner Kalender-App. Von dort übernimmt Rehearsly nur, wann du beschäftigt bist – nie, wie deine Termine heißen.',
     // Permissions
     permissionDenied: 'Zugriff verweigert',
     permissionDeniedMessage: 'Für diese Funktion ist Kalenderzugriff erforderlich',
     permissionRequired: 'Kalenderzugriff erforderlich',
     grantPermission: 'Zugriff gewähren',
-    checkingPermissions: 'Berechtigungen werden geprüft...',
+    checkingPermissions: 'Berechtigungen werden geprüft …',
     // Export Settings
     selectCalendar: 'Kalender auswählen',
     // Actions
-    syncedAgo: (when: string) => `Synchronisiert ${when}`,
+    syncedAgo: (when: string) => `Synchronisiert: ${when}`,
     inCalendar: (count: number) => `Im Kalender: ${count}`,
     removeAll: 'Alle exportierten Proben entfernen',
     removeAllConfirm: 'Alle Proben aus dem Kalender entfernen?',
@@ -229,7 +231,7 @@ export const de = {
     justNow: 'gerade eben',
     minutesAgo: (minutes: number) => `vor ${minutes} Min.`,
     hoursAgo: (hours: number) => `vor ${hours} Std.`,
-    daysAgo: (days: number) => `vor ${days} Tg.`,
+    daysAgo: (days: number) => (days === 1 ? 'gestern' : `vor ${days} Tagen`),
     // Additional status
     imported: 'Importiert',
     exportedRehearsals: 'Exportierte Proben',

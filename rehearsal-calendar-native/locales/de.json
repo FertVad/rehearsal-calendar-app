@@ -3,7 +3,7 @@
     "NSCalendarsUsageDescription": "Rehearsly trägt deine Proben in deinen Kalender ein. Aus den gewählten Kalendern übernimmt die App nur, wann du beschäftigt bist – nie, wie deine Termine heißen.",
     "NSCalendarsFullAccessUsageDescription": "Rehearsly trägt deine Proben in deinen Kalender ein. Aus den gewählten Kalendern übernimmt die App nur, wann du beschäftigt bist – nie, wie deine Termine heißen.",
     "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly trägt deine Proben in deinen Kalender ein.",
-    "NSRemindersUsageDescription": "Rehearsly arbeitet nur mit deinem Kalender und fragt nie nach Zugriff auf deine Erinnerungen.",
-    "NSRemindersFullAccessUsageDescription": "Rehearsly arbeitet nur mit deinem Kalender und fragt nie nach Zugriff auf deine Erinnerungen."
+    "NSRemindersUsageDescription": "Rehearsly verwendet deine Erinnerungen nicht.",
+    "NSRemindersFullAccessUsageDescription": "Rehearsly verwendet deine Erinnerungen nicht."
   }
 }

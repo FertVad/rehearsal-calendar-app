@@ -97,7 +97,7 @@ describe.each([
     expect(screen.getByText('Act I moved')).toBeTruthy();
   });
 
-  it('"Mark all read" says so', async () => {
+  it('"Mark All Read" says so', async () => {
     const screen = await opened(item(1, 'Act I moved'));
     mockUnread.markAllRead.mockResolvedValueOnce({ failed: error });
 

@@ -19,7 +19,7 @@ it('says it in English to an English app', () => {
   expect(formatConflictMessage(conflict(member('1', 'Grigory', 'Smirnov')), t))
     .toBe('Grigory Smirnov is busy at this time');
   expect(formatConflictMessage(conflict(member('1', 'Olga'), member('2', 'Ivan')), t))
-    .toBe('Olga, Ivan are busy at this time');
+    .toBe('Busy at this time: Olga, Ivan');
   // A member without a name is called one in the app's language.
   expect(formatConflictMessage(conflict(member('1', '')), t)).toBe('Member is busy at this time');
 });

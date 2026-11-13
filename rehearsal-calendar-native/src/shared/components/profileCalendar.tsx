@@ -58,7 +58,9 @@ export const calendarLocales: Record<Language, {
     monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
     monthNamesShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
     dayNames: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-    dayNamesShort: ['D', 'L', 'M', 'X', 'J', 'V', 'S'],
+    // Two letters: "X" for Wednesday is Spain's alone, and "M" twice is Latin
+    // America's; "Mi" reads as Wednesday everywhere (T-256).
+    dayNamesShort: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
     today: ''
   },
   de: {
