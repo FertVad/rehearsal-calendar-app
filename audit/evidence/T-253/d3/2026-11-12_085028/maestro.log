@@ -1,0 +1,143 @@
+08:50:28.606 [ INFO] maestro.cli.report.TestDebugReporter.logSystemInfo: Debug output path: /Users/vadimfertik/.maestro/tests/2026-11-12_085028
+08:50:28.608 [ INFO] MAESTRO.logSystemInfo: ---- System Info ----
+08:50:28.608 [ INFO] MAESTRO.logSystemInfo: Maestro Version: 2.11.0
+08:50:28.609 [ INFO] MAESTRO.logSystemInfo: CI: Undefined
+08:50:28.609 [ INFO] MAESTRO.logSystemInfo: OS Name: Mac OS X
+08:50:28.609 [ INFO] MAESTRO.logSystemInfo: OS Version: 26.3.1
+08:50:28.609 [ INFO] MAESTRO.logSystemInfo: Architecture: aarch64
+08:50:28.609 [ INFO] MAESTRO.logSystemInfo: Java Version: 25
+08:50:28.696 [ INFO] MAESTRO.logSystemInfo: Xcode Version: 26.6
+08:50:28.834 [ INFO] MAESTRO.logSystemInfo: Flutter Version: 3.35.4
+08:50:28.959 [ INFO] MAESTRO.logSystemInfo: Flutter Channel: stable
+08:50:28.959 [ INFO] MAESTRO.logSystemInfo: ---------------------
+08:50:29.024 [DEBUG] io.micrometer.common.util.internal.logging.InternalLoggerFactory.newDefaultFactory: Using SLF4J as the default logging framework
+08:50:29.847 [ INFO] maestro.cli.command.TestCommand.runShardSuite: [shard 1] Selected device 0E96462E-BD5B-4C19-9847-8E63D550B36E using port 56168 with execution plan ExecutionPlan(flowsToRun=[/private/tmp/claude-501/-Users-vadimfertik-Desktop-reh-app/d60f7f5e-3fdb-4f27-a84f-839bb5cb5451/scratchpad/slot/planner.yaml], sequence=FlowSequence(flows=[], continueOnFailure=true), workspaceConfig=WorkspaceConfig(flows=null, includeTags=null, excludeTags=null, executionOrder=null, baselineBranch=null, notifications=null, disableRetries=false, platform=PlatformConfiguration(android=AndroidConfiguration(disableAnimations=false), ios=IOSConfiguration(disableAnimations=false, snapshotKeyHonorModalViews=null)), testOutputDir=null))
+08:50:30.015 [TRACE] ios.xctest.XCTestIOSDevice.open: Opening a connection
+08:50:30.015 [TRACE] xcuitest.XCTestDriverClient.restartXCTestRunner: Restarting XCTest Runner (uninstalling, installing and starting)
+08:50:30.016 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:30.017 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:30.017 [TRACE] xcuitest.XCTestDriverClient.restartXCTestRunner: XCTest Runner uninstalled, will install and start it
+08:50:30.018 [ INFO] xcuitest.installer.LocalXCTestInstaller.start$lambda$3: start()
+08:50:30.018 [ INFO] xcuitest.installer.LocalXCTestInstaller.start$lambda$3: [Start] Install XCUITest runner on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:30.018 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:30.018 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:30.018 [ INFO] xcuitest.installer.IOSBuildProductsExtractor.extract: [Start] Writing build products
+08:50:30.066 [ INFO] xcuitest.installer.IOSBuildProductsExtractor.extract: [Done] Writing build products
+08:50:30.066 [ INFO] xcuitest.installer.IOSBuildProductsExtractor.extract: [Start] Writing maestro-driver-iosUITests-Runner app
+08:50:30.250 [ INFO] xcuitest.installer.IOSBuildProductsExtractor.extract: [Done] Writing maestro-driver-iosUITests-Runner app
+08:50:30.250 [ INFO] xcuitest.installer.IOSBuildProductsExtractor.extract: [Start] Writing maestro-driver-ios app
+08:50:30.256 [ INFO] xcuitest.installer.IOSBuildProductsExtractor.extract: [Done] Writing maestro-driver-ios app
+08:50:30.257 [ INFO] xcuitest.installer.LocalXCTestInstaller.startXCTestRunner: Installing driver with xcodebuild
+08:50:30.259 [ INFO] xcuitest.installer.LocalXCTestInstaller.startXCTestRunner: [Start] Running XcUITest with `xcodebuild test-without-building` with 56168 and config: IOSDriverConfig(prebuiltRunner=false, sourceDirectory=driver-iPhoneSimulator, context=CLI, snapshotKeyHonorModalViews=null)
+08:50:30.260 [ INFO] util.CommandLineUtils.runCommand: Running command line operation: [xcodebuild, test-without-building, -xctestrun, /var/folders/qv/yq628xd54pv_hh6l436fbyzc0000gn/T/0E96462E-BD5B-4C19-9847-8E63D550B36E11368046183110657641/maestro-driver-ios-config.xctestrun, -destination, id=0E96462E-BD5B-4C19-9847-8E63D550B36E, -derivedDataPath, /var/folders/qv/yq628xd54pv_hh6l436fbyzc0000gn/T/maestro_xctestrunner_xcodebuild_output1357452582484231370] with {TEST_RUNNER_PORT=56168}
+08:50:30.264 [ INFO] xcuitest.installer.LocalXCTestInstaller.startXCTestRunner: [Done] Running XcUITest with `xcodebuild test-without-building`
+08:50:30.264 [ INFO] xcuitest.installer.LocalXCTestInstaller.start$lambda$3: [Done] Install XCUITest runner on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:30.264 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:30.265 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:30.774 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:30.775 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:31.285 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:31.285 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:31.794 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:31.796 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:32.302 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:32.303 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:32.812 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:32.813 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:33.316 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:33.316 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:33.827 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:33.828 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:34.341 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:34.355 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:34.860 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:34.860 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:35.372 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:35.374 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:35.884 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:35.884 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:36.390 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:36.391 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:36.901 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:36.903 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:37.406 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:37.409 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:37.920 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:37.922 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:38.432 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:38.435 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:38.937 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:38.938 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Failed] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E, exception: java.net.ConnectException: Failed to connect to /127.0.0.1:56168
+08:50:39.450 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Start] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:39.474 [ INFO] xcuitest.installer.LocalXCTestInstaller.xcTestDriverStatusCheck: [Done] Perform XCUITest driver status check on 0E96462E-BD5B-4C19-9847-8E63D550B36E
+08:50:39.502 [ INFO] maestro.cli.runner.TestRunner.runSingle: Running flow planner.yaml...
+08:50:39.521 [ INFO] maestro.Maestro.cachedDeviceInfo_delegate$lambda$0: Getting device info
+08:50:39.649 [ INFO] maestro.Maestro.cachedDeviceInfo_delegate$lambda$0: Got device info: DeviceInfo(platform=IOS, widthPixels=1179, heightPixels=2556, widthGrid=393, heightGrid=852)
+08:50:39.705 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Define variables RUNNING
+08:50:39.708 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Define variables metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(defineVariablesCommand=DefineVariablesCommand(env={L=de, MAESTRO_CLI_NO_ANALYTICS=1, MAESTRO_FILENAME=planner, MAESTRO_DEVICE_UDID=0E96462E-BD5B-4C19-9847-8E63D550B36E, MAESTRO_SHARD_ID=1, MAESTRO_SHARD_INDEX=0}, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:39.709 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Define variables COMPLETED
+08:50:39.709 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Apply configuration RUNNING
+08:50:39.710 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Apply configuration metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(applyConfigurationCommand=ApplyConfigurationCommand(config=MaestroConfig(appId=com.rehearsal.app, name=null, tags=[], ext={}, onFlowStart=null, onFlowComplete=null, properties={}), label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:39.710 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Apply configuration COMPLETED
+08:50:39.710 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Tap on id: tab-planner RUNNING
+08:50:39.712 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Tap on id: tab-planner metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(tapOnElementCommand=TapOnElementCommand(selector=ElementSelector(textRegex=null, idRegex=tab-planner, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), retryIfNoChange=false, waitUntilVisible=false, longPress=false, repeat=null, waitToSettleTimeoutMs=null, relativePoint=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:40.012 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Tap on id: tab-planner metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(tapOnElementCommand=TapOnElementCommand(selector=ElementSelector(textRegex=null, idRegex=tab-planner, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), retryIfNoChange=false, waitUntilVisible=false, longPress=false, repeat=null, waitToSettleTimeoutMs=null, relativePoint=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:40.020 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Planner, tab, 4 of 5, title=, value=, text=, hintText=, resource-id=tab-planner, bounds=[235,780][314,824], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=235, y=780, width=79, height=44))
+08:50:40.021 [ INFO] device.IOSDevice.invoke-F9mIFpk: Waiting for animation to end with timeout 3000
+08:50:40.236 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:50:40.237 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (274, 802) using hierarchy based logic for wait
+08:50:40.240 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:50:40.240 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:40.883 [ INFO] device.IOSDevice.invoke-F9mIFpk: Waiting for animation to end with timeout 3000
+08:50:41.122 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:50:41.122 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Tap on id: tab-planner COMPLETED
+08:50:41.123 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Wait for animation to end RUNNING
+08:50:41.123 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Wait for animation to end metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(waitForAnimationToEndCommand=WaitForAnimationToEndCommand(timeout=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:41.124 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 15000
+08:50:41.125 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:50:41.125 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:41.263 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:50:41.263 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:41.607 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Wait for animation to end COMPLETED
+08:50:41.608 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Take screenshot ${L}-05 RUNNING
+08:50:42.129 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Take screenshot ${L}-05 metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(takeScreenshotCommand=TakeScreenshotCommand(path=de-05, cropOn=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:42.131 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:50:42.132 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:42.262 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Take screenshot ${L}-05 COMPLETED
+08:50:42.262 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Swipe from (50%,80%) to (50%,30%) in 900 ms RUNNING
+08:50:42.263 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Swipe from (50%,80%) to (50%,30%) in 900 ms metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(swipeCommand=SwipeCommand(direction=null, startPoint=null, endPoint=null, elementSelector=null, startRelative=50%,80%, endRelative=50%,30%, duration=900, waitToSettleTimeoutMs=null, relativePoint=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:42.291 [ INFO] device.IOSDevice.invoke-F9mIFpk: Waiting for animation to end with timeout 3000
+08:50:43.741 [ INFO] device.IOSDevice.invoke-F9mIFpk: Waiting for animation to end with timeout 3000
+08:50:43.921 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Swipe from (50%,80%) to (50%,30%) in 900 ms COMPLETED
+08:50:43.921 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Wait for animation to end RUNNING
+08:50:43.922 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Wait for animation to end metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(waitForAnimationToEndCommand=WaitForAnimationToEndCommand(timeout=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:43.923 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 15000
+08:50:43.923 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:50:43.923 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:44.065 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:50:44.066 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:44.387 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Wait for animation to end COMPLETED
+08:50:44.388 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Take screenshot ${L}-05b RUNNING
+08:50:44.393 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Take screenshot ${L}-05b metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(takeScreenshotCommand=TakeScreenshotCommand(path=de-05b, cropOn=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:44.393 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:50:44.393 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:44.525 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Take screenshot ${L}-05b COMPLETED
+08:50:44.525 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Swipe from (50%,80%) to (50%,30%) in 900 ms RUNNING
+08:50:44.525 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Swipe from (50%,80%) to (50%,30%) in 900 ms metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(swipeCommand=SwipeCommand(direction=null, startPoint=null, endPoint=null, elementSelector=null, startRelative=50%,80%, endRelative=50%,30%, duration=900, waitToSettleTimeoutMs=null, relativePoint=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:44.537 [ INFO] device.IOSDevice.invoke-F9mIFpk: Waiting for animation to end with timeout 3000
+08:50:45.964 [ INFO] device.IOSDevice.invoke-F9mIFpk: Waiting for animation to end with timeout 3000
+08:50:46.189 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Swipe from (50%,80%) to (50%,30%) in 900 ms COMPLETED
+08:50:46.190 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Wait for animation to end RUNNING
+08:50:46.191 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Wait for animation to end metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(waitForAnimationToEndCommand=WaitForAnimationToEndCommand(timeout=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:46.192 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 15000
+08:50:46.192 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:50:46.192 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:46.337 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:50:46.337 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:46.659 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Wait for animation to end COMPLETED
+08:50:46.659 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$0: Take screenshot ${L}-05c RUNNING
+08:50:46.662 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$11: Take screenshot ${L}-05c metadata CommandMetadata(numberOfRuns=null, evaluatedCommand=MaestroCommand(takeScreenshotCommand=TakeScreenshotCommand(path=de-05c, cropOn=null, label=null, optional=false)), logMessages=[], insight=Insight(message=, level=NONE), aiReasoning=null, labeledCommand=null)
+08:50:46.662 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:50:46.662 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:50:46.794 [ INFO] maestro.cli.runner.MaestroCommandRunner.runCommands$lambda$2: Take screenshot ${L}-05c COMPLETED
+08:50:47.068 [ INFO] maestro.cli.report.TestDebugReporter.deleteOldFiles: Performing purge of logs older than 14 days from /Users/vadimfertik/.maestro/tests

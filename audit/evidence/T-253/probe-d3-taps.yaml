@@ -1,3 +1,8 @@
+# NOT d3's sequence (see README): d3 confirmed the removal at 50 %, 52 % and
+# answered the "removed" alert at 50 %, 55 %; this probe left out the first,
+# so its 50 %, 55 % confirmed the removal and the alert stayed up. Kept as the
+# record of that mistake.
+#
 # T-253 probe, not a flow of the suite: the landing's (d3's) two sequences in
 # German, its dialogs answered as its script answered them - the form's
 # "unsaved changes" sheet by a tap at 50 %, 50 %, the "remove all" question by
