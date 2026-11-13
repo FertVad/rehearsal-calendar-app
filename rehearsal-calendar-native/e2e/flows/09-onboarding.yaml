@@ -79,9 +79,11 @@ tags:
       WAIT_MS: 10000
 # Notifications: not now. Its examples are what a notification says; they were
 # the form's "Add Rehearsal" and "Save Changes", framed like buttons (T-011).
+# They read as push titles do in English, "Rehearsal Time Changed" (T-256);
+# Maestro does not tell the case, proofreading.test.ts does.
 - assertVisible: "Notifications"
-- assertVisible: "You were added to a rehearsal"
-- assertVisible: "A rehearsal’s time changed"
+- assertVisible: "You Were Added to a Rehearsal"
+- assertVisible: "Rehearsal Time Changed"
 - assertNotVisible: "Add Rehearsal"
 - assertNotVisible: "Save Changes"
 # "Not now" above the bar, not in it.

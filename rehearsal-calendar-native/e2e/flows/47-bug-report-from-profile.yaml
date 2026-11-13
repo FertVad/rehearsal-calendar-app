@@ -34,7 +34,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: profile-report-bug
-      SEE: "Describe the issue..."
+      SEE: "Describe the issue…"
       WAIT_MS: "10000"
 - tapOn:
     id: bug-report-message
@@ -48,7 +48,7 @@ tags:
       WAIT_MS: "15000"
 - takeScreenshot: 47-report-sent
 - tapOn: "OK"
-- assertNotVisible: "Describe the issue..."
+- assertNotVisible: "Describe the issue…"
 - runScript:
     file: ../scripts/bug-report-received.js
     env:

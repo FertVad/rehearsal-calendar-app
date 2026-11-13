@@ -44,7 +44,7 @@ tags:
 # only the hours come in, never what the events are, as onboarding promises.
 - assertVisible:
     id: calendar-sync-explanation
-    text: ".*only the hours you are busy come back from it, never what the events are.*"
+    text: ".*only the hours you are busy come back from it — never the details of your events.*"
 # No access: the screen says so and offers it; there is nothing to switch.
 - assertVisible: "Grant Access"
 - assertNotVisible:

@@ -104,7 +104,7 @@ tags:
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Participants, 2 of 2, Smirnov busy.*"
+      TAP: "Participants, 2 of 2, Smirnov is busy.*"
       SEE: "All participants, 2 of 2"
       WAIT_MS: "5000"
 - assertVisible: "Grigory Smirnov, 10:00.AM–2:00.PM"
