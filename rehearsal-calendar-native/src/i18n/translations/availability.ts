@@ -267,7 +267,8 @@ export const de = {
     fromDeviceCalendar: 'aus dem Kalender',
     fromRehearsal: 'Probe',
     fromPreviousDay: 'vom Vortag',
-    nextDay: 'Folgetag',
+    // In the end's button beside its time; one line even beside "1:00 AM" (flow 87).
+    nextDay: 'am Folgetag',
     importedNote: 'Diese Zeiten sehen die anderen bei der Terminsuche. Um sie freizugeben, lösche den Termin in deiner Kalender-App.',
     startTime: 'Startzeit',
     endTime: 'Endzeit',

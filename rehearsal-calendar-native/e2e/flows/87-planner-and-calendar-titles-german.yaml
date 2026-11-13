@@ -6,6 +6,17 @@
 #   and bell. T-029 had put a large "Kalender" there. Its tab keeps the name.
 # Anna, whose account speaks German, only looks: nothing is saved. Flow 65
 # sees the same in Russian.
+#
+# And the words as the German native speaker of T-256 reads them:
+# - her row of «Szene mit Kattrin», a rehearsal of hers nobody is on, says
+#   "Du bist nicht eingeteilt", not "Du bist nicht in der Besetzung";
+# - the availability editor's slots are "Belegte Zeit", not "Beschäftigte
+#   Zeit";
+# - her busy night, 23:00 to 01:00, ends "am Folgetag", not "Folgetag": the
+#   words in the end's button beside its time, fontSize xs, on one line. The
+#   clock is the simulator's 12-hour one, "1:00 AM", the longer of the two.
+# The flow goes on whatever the words, and fails at the end naming every one
+# that was wrong.
 appId: ${APP_ID}
 name: Planner and the calendar's top in German
 tags:
@@ -13,7 +24,10 @@ tags:
   - planner
   - navigation
   - language
+  - availability
+  - rehearsals
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -45,3 +59,89 @@ tags:
     above:
       id: planner-filters
 - assertNotVisible: "Planer"
+
+# Her rehearsal nobody is on: the row's project and its mark, joined.
+- tapOn:
+    id: tab-calendar
+- extendedWaitUntil:
+    visible: "(?s).*Szene mit Kattrin.*Mutter Courage.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 87-not-on-it-de
+- runFlow:
+    when:
+      notVisible: "(?s).*Szene mit Kattrin.*Mutter Courage.*Du bist nicht eingeteilt.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Du bist nicht eingeteilt, not in der Besetzung | '}"
+
+# Her busy night in the availability editor.
+- tapOn:
+    id: tab-create
+- tapOn: "Als beschäftigt markieren"
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+      text: ".*, Teilweise"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${EVENING_DAY}
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible:
+      id: slot-0-start
+      text: "(23:00|11:00.PM).*"
+    timeout: 10000
+- assertVisible:
+    id: slot-0-end
+    text: "(01:00|1:00.AM).*"
+- runFlow:
+    when:
+      notVisible: "Belegte Zeit"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Belegte Zeit, not Beschäftigte Zeit | '}"
+- runFlow:
+    when:
+      notVisible:
+        id: slot-0-next-day
+        text: "am Folgetag"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: am Folgetag, not Folgetag | '}"
+- waitForAnimationToEnd
+- takeScreenshot: 87-night-slot-de
+# Whatever the words, they fit: one line of 12 pt, about 14 high (two would
+# be about 29), and no "…" drawn in the slot's row.
+- assertVisible:
+    id: slot-0-next-day
+    height: 14
+    tolerance: 5
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 87-night-slot-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+# Nothing changed: the editor closes unasked.
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+
+- evalScript: "${console.log('87 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

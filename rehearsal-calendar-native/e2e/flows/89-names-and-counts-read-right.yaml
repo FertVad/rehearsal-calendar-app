@@ -24,6 +24,9 @@
 # And as the native speakers of T-256 read them: an alert is left with
 # «Отменить», as iOS's own, not «Отмена»; a clash in the schedule is a
 # «Накладка в расписании», as the theatre says it, not «Конфликт расписания».
+# In Spanish her row of a rehearsal she is not on says «No estás en este
+# ensayo» (Tikhon's «Сцена с Тихоном», in two days), and her badge in «Гроза»
+# is «Admin principal», the first admin's, not the man's «Propietario».
 appId: ${APP_ID}
 name: Names and counts read right
 tags:
@@ -43,6 +46,58 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
+
+# Spanish: her row of «Сцена с Тихоном», Tikhon's alone, says she is not on it
+# (T-256): "No estás en este ensayo", not "No estás en el reparto".
+- extendedWaitUntil:
+    visible: "(?s).*Сцена с Тихоном.*Гроза.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 89-not-on-it-es
+- runFlow:
+    when:
+      notVisible: "(?s).*Сцена с Тихоном.*Гроза.*No estás en este ensayo.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: No estás en este ensayo, not en el reparto | '}"
+
+# Spanish: her own row in «Гроза» is its first admin's, "Admin principal",
+# not "Propietario" (T-256), and the badge is whole.
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Гроза.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Гроза.*"
+- extendedWaitUntil:
+    visible: ".*Compartir el enlace"
+    timeout: 15000
+- scrollUntilVisible:
+    element: ".*Марфа Кабанова.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: 89-owner-badge-es
+# The row is one button, its name and badge read joined.
+- runFlow:
+    when:
+      notVisible: "(?s).*Марфа Кабанова.*Admin principal.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Admin principal, not Propietario | '}"
+# Back to the list, where the Russian part opens «Гроза» again.
+- tapOn:
+    id: header-back
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Гроза.*"
+    timeout: 10000
+- tapOn:
+    id: tab-calendar
 
 # Spanish: the planner's slot tomorrow at 10:00, Tikhon busy in it.
 - tapOn: "Planner, tab.*"

@@ -925,6 +925,29 @@ export async function seed({ client, apiUrl, timezone }) {
       [made.id, ids.katerina]);
   }
 
+  // A rehearsal each of Kabanikha and Anna runs and is not on (89, 87; T-256):
+  // in two days at 18:00, Tikhon alone on Kabanikha's, nobody on Anna's. Their
+  // rows say so in Spanish and German. Inserted: the sign-ins are spent.
+  for (const [key, project, title, cast] of [
+    ['kabanikha', 'Гроза', 'Сцена с Тихоном', ['tikhon']],
+    ['courage', 'Mutter Courage', 'Szene mit Kattrin', []],
+  ]) {
+    const { rows: [own] } = await client.query(
+      `SELECT p.id FROM native_projects p
+       JOIN native_project_members m ON m.project_id = p.id
+       WHERE p.name = $1 AND m.user_id = $2`, [project, ids[key]]);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3::timestamptz, $4::timestamptz, 'Main hall', $5, NOW(), NOW()) RETURNING id`,
+      [own.id, title, localInstant(2, 18), localInstant(2, 20), ids[key]]);
+    for (const member of cast) {
+      await client.query(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())`,
+        [made.id, ids[member]]);
+    }
+  }
+
   // What the flow reads after moving the profile to Tokyo: the same instant on
   // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
   // the en_US simulator, on the 12-hour clock, shows it: "9:00 AM". A pattern
@@ -1013,6 +1036,12 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.zarechnaya, localInstant(5, 23), localInstant(6, 1)]);
+  // Anna's, the same night (87, T-256): the editor's end says the next day in
+  // German, in the button beside the time.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.courage, localInstant(5, 23), localInstant(6, 1)]);
   // Trigorin's two (27): the same night, and the morning's hour of his own.
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)

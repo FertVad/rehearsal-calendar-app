@@ -1,0 +1,28 @@
+T-256 review (Astra, P2 x2): the visible words flows did not read, and de 14 measured.
+
+Red before: src/i18n/translations/ restored from 3b16cd5
+(`git restore --source=3b16cd5 -- src/i18n/translations/`), flows of this commit, one run each.
+
+$ npm run e2e -- e2e/flows/87-planner-and-calendar-titles-german.yaml
+[Failed] Planner and the calendar's top in German (1m 24s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+JsConsole: 87 not as a native speaker writes it: "de: Du bist nicht eingeteilt, not in der Besetzung | de: Belegte Zeit, not Beschäftigte Zeit | de: am Folgetag, not Folgetag | "
+
+$ npm run e2e -- e2e/flows/89-names-and-counts-read-right.yaml
+[Failed] Names and counts read right (3m 47s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+JsConsole: 89 not as a native speaker writes it: "es: No estás en este ensayo, not en el reparto | es: Admin principal, not Propietario | ru: Отменить, not Отмена | ru: Накладка в расписании | "
+
+Then `git restore --source=HEAD -- src/i18n/translations/` and de `availability.nextDay` = 'am Folgetag'.
+
+Green after:
+[Passed] Planner and the calendar's top in German (2m 24s)
+[Passed] Names and counts read right (4m 19s)
+[Passed] The open month's name fits beside its arrows (3m 10s)      (90: Anna's seed grew)
+[Passed] The form's month in Spanish and in German (1m 52s)         (56: the same)
+
+de 14, the width: flow 87, screenshot 87-night-slot-de, iPhone 16, the simulator's 12-hour clock
+(the longer case): the end's button reads "1:00 AM   am Folgetag" on one line, nothing cut;
+slot-0-next-day height 14 ± 5 (two lines would be about 29) and no "…" from 0.07 to 0.95 of the
+screen (no-ellipsis.js). Taken: 'Folgetag' -> 'am Folgetag'.
+
+Two runs of 89 were cut by the 10-minute limit of the command while the machine was setting up
+(no flow result); the run after each was complete.
