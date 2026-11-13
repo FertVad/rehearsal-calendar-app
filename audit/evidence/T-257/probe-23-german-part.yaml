@@ -1,0 +1,128 @@
+# T-257 probe: flow 23's profile part and its German part, without the
+# planner's week (its label is the seed's and fails late in the evening,
+# before any step of T-257). Temporary; kept in audit/evidence/T-257.
+appId: ${APP_ID}
+name: T-257 probe - the picker in German
+tags:
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 30000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element: ".*Tel Aviv \\(UTC\\+[23]\\).*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Tel Aviv \\(UTC\\+[23]\\).*"
+- extendedWaitUntil:
+    visible: "Honolulu \\(UTC-10\\)"
+    timeout: 10000
+- scrollUntilVisible:
+    element: "Tokyo \\(UTC\\+9\\)"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Tokyo \\(UTC\\+9\\)"
+- extendedWaitUntil:
+    notVisible: "Honolulu \\(.*\\)"
+    timeout: 10000
+- assertVisible: ".*Tokyo \\(UTC\\+9\\).*"
+# From here, word for word the part T-257 added to flow 23.
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: profile-timezone
+    text: ".*Tokio \\(UTC\\+9\\).*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-timezone
+      SEE: "Zeitzone auswählen"
+      WAIT_MS: "10000"
+# The list in German, with the Spanish-speaking cities it lacked.
+- assertVisible: "Mexiko-Stadt \\(UTC-[56]\\)"
+- assertNotVisible: "Mexico City \\(UTC-[56]\\)"
+- tapOn:
+    id: timezone-search
+- inputText: "Moskau"
+- extendedWaitUntil:
+    visible: "Moskau \\(UTC\\+3\\)"
+    timeout: 5000
+- assertNotVisible: "Moscow \\(UTC\\+3\\)"
+- eraseText: 20
+- inputText: "Wien"
+- extendedWaitUntil:
+    visible: "Wien \\(UTC\\+[12]\\)"
+    timeout: 5000
+- takeScreenshot: 23-search-wien-in-german
+- eraseText: 20
+- inputText: "Vienna"
+- extendedWaitUntil:
+    visible: "Wien \\(UTC\\+[12]\\)"
+    timeout: 5000
+- eraseText: 20
+- inputText: "Kiew"
+- extendedWaitUntil:
+    visible: "Kiew \\(UTC\\+[23]\\)"
+    timeout: 5000
+- assertNotVisible: "Kyiv \\(UTC\\+[23]\\)"
+- takeScreenshot: 23-search-kiew-in-german
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Schließen"
+      GONE: "Zeitzone auswählen"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-timezone
+    text: ".*Tokio \\(UTC\\+9\\).*"
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "English"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-en
+      SEE: "Profile, tab.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-timezone
+    text: ".*Tokyo \\(UTC\\+9\\).*"
