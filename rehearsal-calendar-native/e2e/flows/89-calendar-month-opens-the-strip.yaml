@@ -115,6 +115,32 @@ tags:
     id: calendar-strip
 - takeScreenshot: 89-today-in-month-ru
 
+# A short swipe begun on a day turns the month and picks nothing (T-254,
+# review): read only where it ended, 45 pt from the right of a day's centre
+# ended still within the day's press area, and the day was picked - the grid
+# folded on it instead of turning. The third week's middle column is always
+# a day of the month shown, its cell some 48 pt wide; 11% is 43 pt.
+- swipe:
+    start: "54%, 41%"
+    end: "43%, 41%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: calendar-month
+      text: ${output.nextName}
+    timeout: 5000
+- assertVisible:
+    id: calendar-month-grid.day_${output.nextMid}
+- assertNotVisible:
+    id: calendar-strip
+- takeScreenshot: 89-short-swipe-on-a-day-ru
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-month-previous
+      SEE: ${output.thisName}
+      WAIT_MS: "5000"
+
 # A day of the grid: the strip again, the day under its frame.
 - tapOn:
     id: calendar-month-grid.day_${FAR_DAY}

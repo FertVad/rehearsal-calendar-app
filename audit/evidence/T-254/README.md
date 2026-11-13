@@ -51,6 +51,23 @@ which the list calls after its own scroll. The mock now goes to
   the strip under the grid as a seventh row. Against `…-after.png`: one name,
   arrows in the card's header, no strip.
 
+## Review: a short swipe over a day picked the day
+
+The swipe was read from the grid's touch end only, while the day's own press
+went on: a 45 pt swipe begun right of a day's centre ended inside the day's
+press area, so the day was picked too and the grid folded instead of turning.
+Fix 01d5af1: the grid claims the touch once it goes sideways
+(`onMoveShouldSetResponderCapture`), which cancels the day's press, and turns
+on its own release.
+
+- `jest-red-before-short-swipe.txt`: the new test red on 39cb3bb's
+  WeeklyCalendar.tsx, green on 01d5af1 (frontend 1417/1417).
+- e2e flow 89, one more step - a 43 pt swipe left over the third week's middle
+  day. On 39cb3bb's WeeklyCalendar.tsx: `[Failed] … "Декабрь 2026.*", id:
+  calendar-month is visible` - `89-short-swipe-on-a-day-ru-before.png`: the
+  grid folded, 12 picked. On 01d5af1: `1/1 Flow Passed` -
+  `89-short-swipe-on-a-day-ru-after.png`: Декабрь, the grid still open.
+
 The plan for those screenshots, as written before they were taken: on the base, flow 89 shoots `89-month-open-ru` and flow 90
 `90-month-open-es` right after the month opens and then fails on its first
 check — the strip under the grid (89), the grid's own title (90) — the "before";

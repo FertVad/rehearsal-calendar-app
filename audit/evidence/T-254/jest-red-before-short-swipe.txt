@@ -1,0 +1,18 @@
+npx jest --selectProjects frontend -t "The month opened out of the strip" src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx
+WeeklyCalendar.tsx of 39cb3bb (git restore --source=HEAD~1 on 01d5af1), the test of 01d5af1:
+
+    ✓ has no strip under it, and names its month once (679 ms)
+    ✓ turns by the header's arrows and by a swipe over it, the header naming the grid's month (317 ms)
+    ✕ turns on a short swipe begun on a day, and does not pick the day (607 ms)
+    ✓ goes no further than the strip's days, a year either side of today (354 ms)
+    ✓ shows its arrows only while open, 44 pt, as the grid's arrows were coloured (223 ms)
+    ✓ stays open on "Today", on today's month with today selected, and folds back to the strip on today (1353 ms)
+    ✓ folds back into the strip on a day picked in it, and hands the day on where the strip stops (636 ms)
+    ✓ folds back as it was when closed without a day (760 ms)
+  ● The month opened out of the strip › turns on a short swipe begun on a day, and does not pick the day
+    Received: null
+Tests:       1 failed, 22 skipped, 7 passed, 30 total
+
+(Received: null - the grid was gone: the day was picked and the month folded.)
+
+On 01d5af1's WeeklyCalendar.tsx: 8 passed of the block; the frontend project 1417/1417.
