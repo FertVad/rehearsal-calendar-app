@@ -60,6 +60,8 @@ const RANGE_DAYS = 366;
 const RELEASE_STOP_MS = 100;
 /** How far a finger goes sideways over the month to turn it, in points. */
 const SWIPE_MIN = 40;
+/** How far sideways a finger goes before the grid takes it from the day under it. */
+const SWIPE_CLAIM = 10;
 
 /** 'YYYY-MM' `step` months after `month`. */
 function monthAfter(month: string, step: number): string {
@@ -284,19 +286,30 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
 
   // A finger going sideways over the grid: to the left the next month, to
   // the right the one before. Not a pull down: that refreshes the screen.
+  // Once the finger goes sideways the grid takes the touch from the day it
+  // began on, and the day's press is cancelled: a swipe read only where it
+  // ended left a short one still inside the day's press area, and the day
+  // was picked as well - the grid folded on it instead of turning (T-254,
+  // review).
   const swipeFrom = useRef<{ x: number; y: number } | null>(null);
+  const travel = (event: GestureResponderEvent) => {
+    const from = swipeFrom.current;
+    if (!from) return null;
+    return { dx: event.nativeEvent.pageX - from.x, dy: event.nativeEvent.pageY - from.y };
+  };
   const handleGridTouchStart = useCallback((event: GestureResponderEvent) => {
     const { pageX, pageY, touches } = event.nativeEvent;
     swipeFrom.current = touches && touches.length > 1 ? null : { x: pageX, y: pageY };
   }, []);
-  const handleGridTouchEnd = useCallback((event: GestureResponderEvent) => {
-    const from = swipeFrom.current;
+  const handleGridMoveCapture = useCallback((event: GestureResponderEvent) => {
+    const moved = travel(event);
+    return !!moved && Math.abs(moved.dx) >= SWIPE_CLAIM && Math.abs(moved.dx) >= 2 * Math.abs(moved.dy);
+  }, []);
+  const handleGridRelease = useCallback((event: GestureResponderEvent) => {
+    const moved = travel(event);
     swipeFrom.current = null;
-    if (!from) return;
-    const dx = event.nativeEvent.pageX - from.x;
-    const dy = event.nativeEvent.pageY - from.y;
-    if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < 2 * Math.abs(dy)) return;
-    turnMonth(dx < 0 ? 1 : -1);
+    if (!moved || Math.abs(moved.dx) < SWIPE_MIN || Math.abs(moved.dx) < 2 * Math.abs(moved.dy)) return;
+    turnMonth(moved.dx < 0 ? 1 : -1);
   }, [turnMonth]);
   const handleGridTouchCancel = useCallback(() => {
     swipeFrom.current = null;
@@ -486,7 +499,10 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         <View
           testID="calendar-month-pages"
           onTouchStart={handleGridTouchStart}
-          onTouchEnd={handleGridTouchEnd}
+          onMoveShouldSetResponderCapture={handleGridMoveCapture}
+          onResponderTerminationRequest={() => false}
+          onResponderRelease={handleGridRelease}
+          onResponderTerminate={handleGridTouchCancel}
           onTouchCancel={handleGridTouchCancel}
         >
           <DayCalendar

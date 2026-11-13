@@ -570,11 +570,26 @@ describe('The month opened out of the strip', () => {
   beforeEach(() => mockScrolls.mockClear());
 
   const title = (screen: ReturnType<typeof render>) => screen.getByTestId('calendar-month');
-  const swipe = (screen: ReturnType<typeof render>, dx: number) => {
+  /**
+   * A finger over the grid, as React Native's responder system takes it: the
+   * grid sees it go down; as it moves, the grid is asked whether it takes the
+   * touch from the day under it. If it does, the day's press is cancelled and
+   * the grid gets the release; if not, the day under the finger - when there
+   * is one and the finger ended within its press area - is pressed.
+   */
+  const swipe = (screen: ReturnType<typeof render>, dx: number, onDay?: string) => {
     const pages = screen.getByTestId('calendar-month-pages');
+    const start = { nativeEvent: { pageX: 200, pageY: 300, touches: [{}] } };
+    const end = { nativeEvent: { pageX: 200 + dx, pageY: 305, touches: [] } };
     act(() => {
-      fireEvent(pages, 'touchStart', { nativeEvent: { pageX: 200, pageY: 300, touches: [{}] } });
-      fireEvent(pages, 'touchEnd', { nativeEvent: { pageX: 200 + dx, pageY: 305, touches: [] } });
+      pages.props.onTouchStart?.(start);
+      const taken = !!pages.props.onMoveShouldSetResponderCapture?.(end);
+      if (taken) {
+        pages.props.onResponderRelease?.(end);
+        return;
+      }
+      if (onDay) screen.UNSAFE_getByType(MonthGrid).props.onDayPress({ dateString: onDay });
+      pages.props.onTouchEnd?.(end);
     });
   };
 
@@ -617,6 +632,24 @@ describe('The month opened out of the strip', () => {
     expect(title(screen)).toHaveTextContent(/December 2029/);
     // Only one name all the while.
     expect(screen.getAllByText(/December 2029/)).toHaveLength(1);
+  });
+
+  // Review of T-254: a swipe of 45 pt begun at a day's left edge ends still
+  // inside the day's press area; read only where it ended, the day was picked
+  // too and the grid folded on it instead of turning.
+  it('turns on a short swipe begun on a day, and does not pick the day', () => {
+    const screen = render(<Calendar />);
+    fireEvent.press(screen.getByTestId('calendar-month'));
+
+    swipe(screen, -45, '2030-01-15');
+
+    expect(screen.UNSAFE_queryByType(MonthGrid)).toBeTruthy();
+    expect(title(screen)).toHaveTextContent(/February 2030/);
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
+
+    // A tap that stays put is still the day's.
+    swipe(screen, 0, '2030-02-14');
+    expect(screen.UNSAFE_queryByType(MonthGrid)).toBeNull();
   });
 
   it('goes no further than the strip\'s days, a year either side of today', () => {
