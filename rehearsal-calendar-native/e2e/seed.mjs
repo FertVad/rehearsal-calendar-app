@@ -257,6 +257,12 @@ export const PEOPLE = {
   // Cyrillic, as a Russian company types them: the nominative a sentence gets.
   kabanikha: { email: 'kabanikha@e2e.test', firstName: 'Марфа', lastName: 'Кабанова', onboarded: true, locale: 'es' },
   tikhon: { email: 'tikhon@e2e.test', firstName: 'Тихон', lastName: 'Кабанов', onboarded: true },
+  // Polly opens the form over her profile, picks her company, takes a
+  // recommended time and cancels; then turns sync on and off; and goes to
+  // the planner each time (91, T-253). Her account speaks German.
+  polly: { email: 'polly@e2e.test', firstName: 'Polly', lastName: 'Peachum', onboarded: true, locale: 'de' },
+  mackie: { email: 'mackie@e2e.test', firstName: 'Mackie', lastName: 'Messer', onboarded: true, locale: 'de' },
+  jenny: { email: 'jenny@e2e.test', firstName: 'Jenny', lastName: 'Diver', onboarded: true, locale: 'de' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -647,6 +653,19 @@ export async function seed({ client, apiUrl, timezone }) {
         [own.id, member]);
     }
   }
+  // Polly's (91, T-253): «Die Dreigroschenoper» with Mackie and Jenny, so her
+  // form has people to pick and times to recommend. Inserted: the sign-ins
+  // are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Die Dreigroschenoper', 'Schiffbauerdamm', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW()),
+              ($1, $4, 'member', 'active', NOW(), NOW())`,
+      [own.id, ids.polly, ids.mackie, ids.jenny]);
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -1003,6 +1022,11 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.tikhon, localInstant(1, 10), localInstant(1, 14)]);
+  // Mackie's today (91): busy 12:00-14:00, so Polly's form recommends times.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.mackie, localInstant(0, 12), localInstant(0, 14)]);
   // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
   // save of that day writes it.
   for (const key of ['yelena', 'mariya', 'astrov']) {

@@ -1,0 +1,215 @@
+# T-253 probe, not a flow of the suite: the landing's (d3's) two sequences in
+# German, its dialogs answered as its script answered them - the form's
+# "unsaved changes" sheet by a tap at 50 %, 50 %, the "remove all" question by
+# a tap at 50 %, 55 %, the alert after it not answered - and the planner's tab
+# tapped once after each, then by its place (70 %, 95 %) and "Kalender"
+# (10 %, 95 %), as d3 did. It says which taps did nothing.
+# Run from rehearsal-calendar-native:
+#   npm run e2e -- ../audit/evidence/T-253/probe-d3-taps.yaml
+appId: ${APP_ID}
+name: T-253 probe - the landing script's taps, in German
+tags:
+  - probe
+---
+- evalScript: ${output.missed = ''}
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${POLLY_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# The profile, scrolled to its end.
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible: ".*Sprache, Deutsch.*"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: profile-delete-account
+    direction: DOWN
+- waitForAnimationToEnd
+
+# The form over it.
+- tapOn:
+    id: tab-create
+- extendedWaitUntil:
+    visible: "Probe erstellen"
+    timeout: 5000
+- tapOn: "Probe erstellen"
+- extendedWaitUntil:
+    visible: "Probe hinzufügen"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible: ".*Die Dreigroschenoper.*"
+    commands:
+      - tapOn:
+          id: rehearsal-project
+      - tapOn: ".*Die Dreigroschenoper.*"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+    timeout: 10000
+- tapOn:
+    id: participants-row
+- extendedWaitUntil:
+    visible: ".*Mackie Messer.*"
+    timeout: 10000
+- tapOn: ".*Jenny Diver.*"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    visible: "Empfohlene Zeit"
+    timeout: 15000
+- tapOn:
+    id: "recommendation-.*"
+    index: 0
+    optional: true
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 30%"
+    duration: 400
+- waitForAnimationToEnd
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    visible: "Nicht speichern"
+    timeout: 5000
+- takeScreenshot: T-253-probe-form-leave-question
+# As d3 answered it: a tap at 50 %, 50 %.
+- tapOn:
+    point: "50%, 50%"
+- waitForAnimationToEnd
+- takeScreenshot: T-253-probe-profile-after-form
+
+# The planner's tab, once.
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: planner-filters
+    timeout: 10000
+    optional: true
+- takeScreenshot: T-253-probe-after-planner-tap-1
+- runFlow:
+    when:
+      notVisible:
+        id: planner-filters
+    commands:
+      - evalScript: "${output.missed = output.missed + 'after the form | '}"
+      - runFlow:
+          when:
+            visible:
+              id: header-cancel
+          commands:
+            - tapOn:
+                id: header-cancel
+            - tapOn: "Nicht speichern"
+            - waitForAnimationToEnd
+      - tapOn:
+          id: tab-planner
+
+# Back to the profile, and its "Kalender-Sync".
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible: ".*Kalender-Sync.*"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-calendar-sync
+- extendedWaitUntil:
+    visible: ".*Apple Calendar.*"
+    timeout: 15000
+- tapOn: ".*Apple Calendar.*"
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-run
+    timeout: 10000
+- tapOn:
+    id: calendar-sync-run
+- extendedWaitUntil:
+    visible: "(Erfolgreich )?[Ss]ynchronisiert"
+    timeout: 30000
+- tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-status
+    timeout: 10000
+- scrollUntilVisible:
+    element: ".*Alle exportierten Proben entfernen.*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Alle exportierten Proben entfernen.*"
+- extendedWaitUntil:
+    visible: "Alle Proben aus dem Kalender entfernen?"
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: T-253-probe-remove-all-question
+# As d3 confirmed it: a tap at 50 %, 55 %; the alert after it not answered.
+- tapOn:
+    point: "50%, 55%"
+- takeScreenshot: T-253-probe-remove-all-tapped
+- tapOn:
+    id: calendar-sync-toggle
+- takeScreenshot: T-253-probe-toggle-tapped
+- extendedWaitUntil:
+    notVisible:
+      id: calendar-sync-run
+    timeout: 10000
+    optional: true
+- waitForAnimationToEnd
+
+# The planner's tab, once, then by its place, then "Kalender".
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: planner-filters
+    timeout: 10000
+    optional: true
+- takeScreenshot: T-253-probe-after-planner-tap-2
+- runFlow:
+    when:
+      notVisible:
+        id: planner-filters
+    commands:
+      - evalScript: "${output.missed = output.missed + 'after the sync | '}"
+      - tapOn:
+          point: "70%, 95%"
+      - extendedWaitUntil:
+          visible:
+            id: planner-filters
+          timeout: 5000
+          optional: true
+      - takeScreenshot: T-253-probe-after-planner-tap-3
+      - runFlow:
+          when:
+            notVisible:
+              id: planner-filters
+          commands:
+            - evalScript: "${output.missed = output.missed + 'at 70,95 too | '}"
+      - tapOn:
+          point: "10%, 95%"
+      - extendedWaitUntil:
+          visible:
+            id: calendar-filter
+          timeout: 5000
+          optional: true
+      - takeScreenshot: T-253-probe-after-calendar-tap
+      - runFlow:
+          when:
+            notVisible:
+              id: calendar-filter
+          commands:
+            - evalScript: "${output.missed = output.missed + 'calendar at 10,95 too | '}"
+
+- evalScript: "${console.log('T-253 probe, taps that did nothing: ' + JSON.stringify(output.missed))}"

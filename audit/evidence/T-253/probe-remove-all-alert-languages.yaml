@@ -1,0 +1,54 @@
+# T-253 probe, not a flow of the suite: where the landing's tap at 50 %, 55 %
+# lands in the "remove all exported" question, in English, Russian, Spanish
+# and German. Polly turns sync on, syncs, asks to remove all, and taps there;
+# the flow says for each language whether the removal was confirmed (its
+# "done" alert came) and answers that alert, so the next language starts clean.
+appId: ${APP_ID}
+name: T-253 probe - the remove-all question at 50 %, 55 % in four languages
+tags:
+  - probe
+---
+- evalScript: ${output.hit = ''}
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${POLLY_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible:
+      id: profile-language
+    timeout: 10000
+- runFlow:
+    file: probe-remove-all-one-language.yaml
+    env:
+      L: en
+      SYNC_DONE: "Synced successfully|Sync Complete|Synchronized"
+      REMOVE: "Remove All Exported"
+      REMOVED: "All rehearsals removed from the calendar"
+- runFlow:
+    file: probe-remove-all-one-language.yaml
+    env:
+      L: ru
+      SYNC_DONE: "(Успешно )?[Сс]инхронизировано"
+      REMOVE: "Удалить экспортированные репетиции"
+      REMOVED: "Все репетиции удалены из календаря"
+- runFlow:
+    file: probe-remove-all-one-language.yaml
+    env:
+      L: es
+      SYNC_DONE: "Sincronización completada|Sincronizado correctamente"
+      REMOVE: "Eliminar todo lo exportado"
+      REMOVED: "Se eliminaron todos los ensayos del calendario"
+- runFlow:
+    file: probe-remove-all-one-language.yaml
+    env:
+      L: de
+      SYNC_DONE: "(Erfolgreich )?[Ss]ynchronisiert"
+      REMOVE: "Alle exportierten Proben entfernen"
+      REMOVED: "Alle Proben aus dem Kalender entfernt"
+- evalScript: "${console.log('T-253 probe, 50%,55% confirmed the removal in: ' + JSON.stringify(output.hit))}"
