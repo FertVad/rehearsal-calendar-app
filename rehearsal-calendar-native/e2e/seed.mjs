@@ -869,6 +869,24 @@ export async function seed({ client, apiUrl, timezone }) {
       [made.id, ids.laurencia]);
   }
 
+  // And Katerina's longer rehearsal (86, T-250): tomorrow 19:00 to 21:00, made
+  // to end at 22:00 — only the end moved, so it is told as "теперь до 22:00",
+  // not as a move. Seeded as it is after the edit; the flow sends the notice.
+  {
+    const { rows: [own] } = await client.query(
+      `SELECT p.id FROM native_projects p
+       JOIN native_project_members m ON m.project_id = p.id
+       WHERE p.name = 'Гроза' AND m.user_id = $1`, [ids.katerina]);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, 'Сцена на бульваре', $2::timestamptz, $3::timestamptz, 'Малый зал', $4, NOW(), NOW()) RETURNING id`,
+      [own.id, localInstant(1, 19), localInstant(1, 22), ids.katerina]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids.katerina]);
+  }
+
   // What the flow reads after moving the profile to Tokyo: the same instant on
   // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
   // the en_US simulator, on the 12-hour clock, shows it: "9:00 AM". A pattern

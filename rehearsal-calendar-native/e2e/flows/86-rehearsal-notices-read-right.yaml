@@ -31,7 +31,9 @@
 # And a move says where to (T-250), as the landing page says it: "Escena del
 # balcón, pasa a mañana a las 18:00", "Fechtszene – verlegt auf morgen,
 # 18:00", "Прогон — теперь завтра в 18:00" — not "…, mañana a las 18:00 —
-# fecha/hora". Sent first, so it is the lowest card.
+# fecha/hora". Sent first, so it is the lowest card. And a longer rehearsal is
+# no moved one: only its end changed, "Сцена на бульваре, завтра в 19:00 —
+# теперь до 22:00", not "— теперь завтра в 19:00". Sent before the move.
 appId: ${APP_ID}
 name: Rehearsal notices read right in Spanish, German and Russian
 tags:
@@ -236,6 +238,17 @@ tags:
       RIGHT: "0.9"
       TOP: "0.12"
       BOTTOM: "1"
+# Russian (T-250): longer, only the end moved (19:00–21:00 made 19:00–22:00,
+# the seed): "теперь до 22:00", and not told as a move ("— теперь завтра в
+# 19:00"). Sent first, so it is the lowest card.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Сцена на бульваре
+      CHANGE: end
 # Russian (T-250): moved, "теперь".
 - runScript:
     file: ../scripts/notify.js
@@ -332,6 +345,10 @@ tags:
 - scrollUntilVisible:
     element: ".*Изменена репетиция.*Гроза: Прогон — теперь (завтра|[а-я]{2}, .*) в 18:00.*"
     direction: DOWN
+- scrollUntilVisible:
+    element: ".*Изменена репетиция.*Гроза: Сцена на бульваре, (завтра|[а-я]{2}, .*) в 19:00 — теперь до 22:00.*"
+    direction: DOWN
+- assertNotVisible: ".*Сцена на бульваре — теперь.*"
 - takeScreenshot: 86-russian-cancelled-joined-seen-role
 - runScript:
     file: ../scripts/no-ellipsis.js
