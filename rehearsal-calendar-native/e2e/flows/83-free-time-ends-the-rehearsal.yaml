@@ -145,9 +145,9 @@ tags:
     id: header-cancel
 - runFlow:
     when:
-      visible: "Don't Save"
+      visible: "Don’t Save"
     commands:
-      - tapOn: "Don't Save"
+      - tapOn: "Don’t Save"
 - extendedWaitUntil:
     notVisible:
       id: header-cancel

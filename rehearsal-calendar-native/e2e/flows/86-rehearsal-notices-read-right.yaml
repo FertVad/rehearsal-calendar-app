@@ -34,12 +34,26 @@
 # fecha/hora". Sent first, so it is the lowest card. And a longer rehearsal is
 # no moved one: only its end changed, "Сцена на бульваре, завтра в 19:00 —
 # теперь до 22:00", not "— теперь завтра в 19:00". Sent before the move.
+#
+# And as the native speakers of T-256 read them. Russian: «назначена на
+# завтра» (without «на», «назначена сегодня» read as when it was set), «Вас
+# позвали на репетицию», a project's name in quotes, a «seen» in the order of
+# the others, «Прогон, завтра в 18:00 — Марфа Кабанова в курсе», and a
+# cancelled one says which: «Репетиция «Прогон» на завтра в 18:00 отменена».
+# Spanish: the place after «Lugar:», no article to guess; a cancelled one
+# «Cancelado el ensayo «…» previsto para mañana a las 18:00». German: «Probe
+# „Fechtszene“», the title no longer running into the date; «für eine Probe
+# eingeteilt»; «Du verwaltest jetzt das Projekt „Faust“», the case on
+# «Projekt»; «hat die Probe … als gesehen markiert», not watched it. Each card
+# is found by what both wordings share, its words checked and the flow goes
+# on; it fails at the end naming every one that was wrong.
 appId: ${APP_ID}
 name: Rehearsal notices read right in Spanish, German and Russian
 tags:
   - notifications
   - language
 ---
+- evalScript: ${output.wrong = ''}
 # Spanish (T-250): moved, said as where to.
 - runScript:
     file: ../scripts/notify.js
@@ -111,12 +125,21 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Notificaciones"
-      SEE: "(Marcar todas|Todavía nada)"
+      SEE: "(Marcar como leídas|Marcar todas|Todavía nada)"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del comendador» programado para el .* a las 18:00 en Corral de comedias de Almagro.*"
+    visible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del comendador» programado para el .* a las 18:00.*Corral de comedias de Almagro.*"
     timeout: 15000
-- assertVisible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00 en Patio.*"
+- runFlow:
+    when:
+      notVisible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del comendador» programado para el [a-záé]+ \\d+ de [a-z]+ a las 18:00\\. Lugar: Corral de comedias de Almagro.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: added, el martes 6 de octubre and Lugar: | '}"
+- runFlow:
+    when:
+      notVisible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00\\. Lugar: Patio.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: added, Lugar: | '}"
 - assertVisible: ".*Nuevo ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00.*"
 - takeScreenshot: 86-spanish
 - runScript:
@@ -135,8 +158,13 @@ tags:
     element: ".*Cambio de rol.*Ahora administras Fuenteovejuna.*"
     direction: DOWN
 - scrollUntilVisible:
-    element: ".*Ensayo cancelado.*Fuenteovejuna: Ensayo «Escena del balcón» cancelado.*"
+    element: ".*Ensayo cancelado.*Fuenteovejuna: .*«Escena del balcón».*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Ensayo cancelado.*Fuenteovejuna: Cancelado el ensayo «Escena del balcón» previsto para (mañana|el .*) a las 18:00.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: cancelled, previsto para when | '}"
 - scrollUntilVisible:
     element: ".*Ensayo visto.*Jacinta Labradora ha visto «Escena del balcón» \\((mañana|el .*) a las 18:00\\) en Fuenteovejuna.*"
     direction: DOWN
@@ -203,12 +231,21 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Mitteilungen"
-      SEE: "(Alle als gelesen|Noch nichts)"
+      SEE: "(Alle gelesen|Alle als gelesen|Noch nichts)"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*Du wurdest zu einer Probe hinzugefügt.*Faust: Fechtszene (morgen|am .*) um 18:00 angesetzt, Ort: Probebühne.*"
+    visible: ".*Du wurdest .*Probe.*Faust: .*Fechtszene.* (morgen|am .*) um 18:00 angesetzt, Ort: Probebühne.*"
     timeout: 15000
-- assertVisible: ".*Neue Probe.*Faust: Fechtszene (morgen|am .*) um 18:00 angesetzt.*"
+- runFlow:
+    when:
+      notVisible: ".*Du wurdest für eine Probe eingeteilt.*Faust: Probe „Fechtszene“ (morgen|am .*) um 18:00 angesetzt, Ort: Probebühne.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: added, für eine Probe eingeteilt, Probe „Fechtszene“ | '}"
+- runFlow:
+    when:
+      notVisible: ".*Neue Probe.*Faust: Probe „Fechtszene“ (morgen|am .*) um 18:00 angesetzt.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: new, Probe „Fechtszene“ | '}"
 - takeScreenshot: 86-german
 - runScript:
     file: ../scripts/no-ellipsis.js
@@ -220,14 +257,29 @@ tags:
       TOP: "0.12"
       BOTTOM: "1"
 - scrollUntilVisible:
-    element: ".*Rolle geändert.*Du verwaltest jetzt Faust.*"
+    element: ".*Rolle geändert.*Du verwaltest jetzt .*Faust.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Rolle geändert.*Du verwaltest jetzt das Projekt „Faust“.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: role, das Projekt „Faust“ | '}"
 - scrollUntilVisible:
-    element: ".*Probe gesehen.*Marthe Schwerdtlein hat „Fechtszene“ \\((morgen|am .*) um 18:00\\) in Faust gesehen.*"
+    element: ".*Probe gesehen.*Marthe Schwerdtlein hat .*Fechtszene.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Probe gesehen.*Faust: Marthe Schwerdtlein hat die Probe „Fechtszene“ \\((morgen|am .*) um 18:00\\) als gesehen markiert.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: seen, als gesehen markiert | '}"
 - scrollUntilVisible:
-    element: ".*Probe geändert.*Faust: Fechtszene – verlegt auf (morgen|[A-Z][a-z]\\.,.*), 18:00.*"
+    element: ".*Probe geändert.*Faust: .*Fechtszene.* – verlegt auf (morgen|[A-Z][a-z]\\.,.*), 18:00.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Probe geändert.*Faust: Probe „Fechtszene“ – verlegt auf (morgen|[A-Z][a-z]\\.,.*), 18:00.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: moved, Probe „Fechtszene“ | '}"
 - takeScreenshot: 86-german-role-seen
 - runScript:
     file: ../scripts/no-ellipsis.js
@@ -314,12 +366,21 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Уведомления"
-      SEE: "(Отметить все|Пока тихо)"
+      SEE: "(Прочитать все|Отметить все|Пока тихо)"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*Вас добавили в репетицию.*Гроза: Репетиция «Прогон» назначена (завтра|.*) в 18:00, место: Малый зал.*"
+    visible: ".*Вас .* репетици.*Гроза: Репетиция «Прогон» назначена .* в 18:00, место: Малый зал.*"
     timeout: 15000
-- assertVisible: ".*Новая репетиция.*Гроза: Репетиция «Прогон» назначена (завтра|.*) в 18:00.*"
+- runFlow:
+    when:
+      notVisible: ".*Вас позвали на репетицию.*Гроза: Репетиция «Прогон» назначена на (завтра|.*) в 18:00, место: Малый зал.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: added, позвали на, назначена на | '}"
+- runFlow:
+    when:
+      notVisible: ".*Новая репетиция.*Гроза: Репетиция «Прогон» назначена на (завтра|.*) в 18:00.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: new, назначена на | '}"
 - takeScreenshot: 86-russian
 - runScript:
     file: ../scripts/no-ellipsis.js
@@ -331,17 +392,37 @@ tags:
       TOP: "0.12"
       BOTTOM: "1"
 - scrollUntilVisible:
-    element: ".*Изменение роли.*Теперь вы администратор проекта Гроза.*"
+    element: ".*Изменение роли.*Теперь вы администратор проекта .*Гроза.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Изменение роли.*Теперь вы администратор проекта «Гроза».*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: role, «Гроза» in quotes | '}"
 - scrollUntilVisible:
-    element: ".*Репетиция просмотрена.*Марфа Кабанова в курсе: «Прогон» \\((завтра|.*) в 18:00\\), Гроза.*"
+    element: ".*Репетиция просмотрена.*Марфа Кабанова в курсе.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Репетиция просмотрена.*Гроза: Прогон, (завтра|.*) в 18:00 — Марфа Кабанова в курсе.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: seen, in the order of the others | '}"
 - scrollUntilVisible:
-    element: ".*Новый участник.*Марфа Кабанова теперь в проекте Гроза.*"
+    element: ".*Новый участник.*Марфа Кабанова теперь в проекте .*Гроза.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Новый участник.*Марфа Кабанова теперь в проекте «Гроза».*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: joined, «Гроза» in quotes | '}"
 - scrollUntilVisible:
-    element: ".*Отменена репетиция.*Гроза: Репетиция «Прогон» отменена.*"
+    element: ".*Отменена репетиция.*Гроза: Репетиция «Прогон».*отменена.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Отменена репетиция.*Гроза: Репетиция «Прогон» на (завтра|.*) в 18:00 отменена.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: cancelled, на when | '}"
 - scrollUntilVisible:
     element: ".*Изменена репетиция.*Гроза: Прогон — теперь (завтра|[а-я]{2}, .*) в 18:00.*"
     direction: DOWN
@@ -359,3 +440,13 @@ tags:
       RIGHT: "0.9"
       TOP: "0.12"
       BOTTOM: "1"
+
+- evalScript: "${console.log('86 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

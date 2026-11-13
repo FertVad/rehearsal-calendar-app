@@ -90,7 +90,7 @@ tags:
 - tapOn:
     id: rehearsal-submit
 - extendedWaitUntil:
-    visible: "Rehearsal updated successfully"
+    visible: "Rehearsal saved"
     timeout: 15000
 - tapOn: "OK"
 - extendedWaitUntil:

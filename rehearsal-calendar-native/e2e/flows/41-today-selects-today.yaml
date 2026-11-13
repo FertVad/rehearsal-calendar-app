@@ -101,7 +101,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: planner-period-custom
-      SEE: "Select Period"
+      SEE: "Select Dates"
       WAIT_MS: "10000"
 - assertVisible:
     id: date-range-calendar.day_${TODAY_DAY}
@@ -114,7 +114,7 @@ tags:
 - tapOn:
     id: date-range-cancel
 - extendedWaitUntil:
-    notVisible: "Select Period"
+    notVisible: "Select Dates"
     timeout: 10000
 - assertVisible:
     id: planner-period-week

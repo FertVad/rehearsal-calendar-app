@@ -26,7 +26,7 @@ tags:
 - extendedWaitUntil:
     visible: "All available"
     timeout: 15000
-- assertNotVisible: "Add rehearsal \\d.*"
+- assertNotVisible: "Add rehearsal, \\d.*"
 - takeScreenshot: 75-planner-as-actor
 - runScript:
     file: ../scripts/set-role.js
@@ -47,6 +47,6 @@ tags:
       PROJECT: "Verona Square"
       ROLE: admin
 - extendedWaitUntil:
-    visible: "Add rehearsal \\d.*"
+    visible: "Add rehearsal, \\d.*"
     timeout: 15000
 - takeScreenshot: 75-planner-as-admin

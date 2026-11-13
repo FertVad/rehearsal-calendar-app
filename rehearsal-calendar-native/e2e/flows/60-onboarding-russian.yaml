@@ -11,6 +11,12 @@
 # "No calendars found" and "Setting up calendar sync…" are not here: the
 # simulator always has its calendar, and the choice is saved on the phone at
 # once. Jest says them in Russian and German (CalendarSyncScreen.test.tsx).
+#
+# And her steps read as a native speaker's (T-256): access is asked with «Разрешить доступ», as iOS's own window says it, not
+# «Предоставить»; the example push is «Вас позвали на репетицию», as the real
+# one, not «добавили в репетицию»; the text promises an «уведомление», not a
+# «сообщение», and guesses no one's gender («узнать последним»). The flow goes
+# on whatever the words, and fails at the end naming every one that was wrong.
 appId: ${APP_ID}
 name: Onboarding in Russian, the greeting on one line
 tags:
@@ -18,6 +24,7 @@ tags:
   - language
   - calendar
 ---
+- evalScript: ${output.wrong = ''}
 - launchApp:
     clearState: true
     clearKeychain: true
@@ -49,8 +56,13 @@ tags:
       SEE: "Ваша занятость"
       WAIT_MS: 10000
 - assertVisible: "Это можно сделать потом: Профиль → .*"
+- runFlow:
+    when:
+      notVisible: "Разрешить доступ"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Разрешить доступ, as iOS | '}"
 # Refused: the app says why it asks, in her language.
-- tapOn: "Предоставить доступ"
+- tapOn: "(Разрешить|Предоставить) доступ"
 - extendedWaitUntil:
     visible: "Don’t Allow|Don't Allow"
     timeout: 10000
@@ -69,6 +81,17 @@ tags:
       SEE: "Не сейчас"
       WAIT_MS: 10000
 - assertVisible: "Уведомления"
+- takeScreenshot: 60-onboarding-notifications-ru
+- runFlow:
+    when:
+      notVisible: ".*Вас позвали на репетицию.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the example push, Вас позвали на репетицию | '}"
+- runFlow:
+    when:
+      notVisible: ".*Придёт уведомление, когда вас позовут на репетицию или изменят её время.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Придёт уведомление, no gender | '}"
 - assertVisible: "Назад"
 - assertVisible: "Включить"
 - assertVisible:
@@ -93,3 +116,13 @@ tags:
       WAIT_MS: 15000
 - assertVisible:
     id: calendar-today
+
+- evalScript: "${console.log('60 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

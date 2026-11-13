@@ -11,6 +11,10 @@
 # without regard to case, so the texts are copied and checked in JavaScript,
 # after the three screens are shot. The row is one element, its label
 # beginning with its date column (T-036). Nothing is saved.
+#
+# And a planner's day counts its times as a native speaker does (T-256): «3
+# варианта», not «3 слота» — "слот" is a programmer's word. Named with the
+# dates if wrong.
 appId: ${APP_ID}
 name: Dates in Russian, one format
 tags:
@@ -19,6 +23,7 @@ tags:
   - availability
   - language
 ---
+- evalScript: ${output.words = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -62,6 +67,11 @@ tags:
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 65-planner
+- runFlow:
+    when:
+      notVisible: ".*\\d+ вариант(а|ов)?.*"
+    commands:
+      - evalScript: "${output.words = output.words + 'ru: варианты, not слоты | '}"
 # The planner's large title over its filters is "Planner" in every language,
 # as "Smart Planner" is: the owner's decision (T-249). T-032 had made it
 # "Планер"; so had the tab, which says "Planner" too.
@@ -106,7 +116,7 @@ tags:
 # flow on its own.
 - evalScript: "${output.month = output.month.split(',')[0].trim()}"
 - evalScript: "${output.upcoming = output.upcoming.split(',').slice(0, 2).join(',')}"
-- evalScript: "${output.wrong = ''}"
+- evalScript: "${output.wrong = output.words}"
 - evalScript: "${output.wrong = output.wrong + (output.month.charAt(0) != output.month.charAt(0).toLowerCase() && output.month.slice(1) == output.month.slice(1).toLowerCase() && output.month.slice(-2) == 'г.' ? '' : output.month + ' | ')}"
 - evalScript: "${output.wrong = output.wrong + (output.availabilityMonth.charAt(0) != output.availabilityMonth.charAt(0).toLowerCase() && output.availabilityMonth.slice(1) == output.availabilityMonth.slice(1).toLowerCase() && output.availabilityMonth.slice(-2) == 'г.' ? '' : output.availabilityMonth + ' | ')}"
 # The upcoming row's date column (T-036): Intl's short day of the week, in

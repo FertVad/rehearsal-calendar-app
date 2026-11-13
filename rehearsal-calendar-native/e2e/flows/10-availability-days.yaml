@@ -18,11 +18,18 @@
 # and leaves the calendar where it was; the sheet's "Clear" is "Deselect"; a
 # save that fails, the sheet's or the close question's, says why on the screen
 # (T-021).
+# And the words read as a native speaker's (T-256): the overlap's alert is
+# closed with "OK", not "Understood"; the close question's "Don’t Save" has
+# its typographic apostrophe; no connection is "Could not connect. Check your
+# internet connection and try again.", not "Check the internet". The flow
+# goes on whatever the words, and fails at the end naming every one that was
+# wrong: a run on the old words names them all, not the first alone.
 appId: ${APP_ID}
 name: Availability saves the day it changed
 tags:
   - availability
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -154,7 +161,7 @@ tags:
     notVisible:
       id: availability-legend
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don.t Save"
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -224,15 +231,25 @@ tags:
     timeout: 10000
 - assertVisible: "Error \\(${MARK_DAY_LABEL}\\):[\\s\\S]*Slots must not overlap[\\s\\S]*"
 - takeScreenshot: 10-availability-overlap
-- tapOn: "Understood"
+- runFlow:
+    when:
+      notVisible: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: OK, not Understood | '}"
+- tapOn: "(OK|Understood)"
 # The overlapping slot is not saved: closing asks first (T-013).
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
 - takeScreenshot: 10-close-asks
-- tapOn: "Don't Save"
+- runFlow:
+    when:
+      notVisible: "Don’t Save"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Don’t Save, its apostrophe | '}"
+- tapOn: "Don.t Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
@@ -280,10 +297,16 @@ tags:
 - extendedWaitUntil:
     visible:
       id: availability-save-error
-      text: "No connection\\. Check the internet and try again\\."
       above:
         id: availability-save
     timeout: 15000
+- runFlow:
+    when:
+      notVisible:
+        id: availability-save-error
+        text: "Could not connect\\. Check your internet connection and try again\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Could not connect, not Check the internet | '}"
 - assertNotVisible: "OK"
 - takeScreenshot: 10-save-error-above-save
 # Letting go of the day with it changed asks, as the editor's arrow does
@@ -292,12 +315,12 @@ tags:
 - tapOn:
     id: day-${MARK_DAY}
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
 - tapOn:
     point: "50%, 8%"
 - extendedWaitUntil:
-    notVisible: "Don't Save"
+    notVisible: "Don.t Save"
     timeout: 5000
 - assertVisible:
     id: availability-save
@@ -312,13 +335,12 @@ tags:
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
 - tapOn: "Save"
 - extendedWaitUntil:
     visible:
       id: availability-save-error
-      text: "No connection\\. Check the internet and try again\\."
     timeout: 15000
 - assertNotVisible: "OK"
 - assertVisible:
@@ -327,10 +349,20 @@ tags:
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
-- tapOn: "Don't Save"
+- tapOn: "Don.t Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
     timeout: 10000
+
+- evalScript: "${console.log('10 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

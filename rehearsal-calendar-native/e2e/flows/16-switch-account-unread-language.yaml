@@ -5,6 +5,11 @@
 # showed Yasha's "1" on her bell, and stayed in
 # English, since the account's language only reached the screen at the next
 # start.
+#
+# And her language reads as a native speaker's (T-256): the "+" is «Добавить»,
+# not «Новое действие» (VoiceOver reads it; the sheet it opens has no title
+# and, in iOS 26, no Cancel). The flow goes on whatever the words, and fails
+# at the end naming every one that was wrong.
 appId: ${APP_ID}
 name: Switch accounts - count and language
 tags:
@@ -12,6 +17,7 @@ tags:
   - notifications
   - profile
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -57,6 +63,26 @@ tags:
       text: ".*Все проекты.*"
     timeout: 10000
 - takeScreenshot: 16-dunyasha-own-count-and-language
+- runFlow:
+    when:
+      notVisible:
+        id: tab-create
+        text: "Добавить.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: «+» is Добавить | '}"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Отметить занятость"
+      WAIT_MS: "10000"
+- takeScreenshot: 16-dunyasha-create-sheet
+# iOS 26 draws the sheet as a popover with no Cancel: a tap outside closes it.
+- tapOn:
+    point: "50%, 30%"
+- extendedWaitUntil:
+    notVisible: "Отметить занятость"
+    timeout: 10000
 # The hold ends, so the flows after this one read the count; still no "1".
 - runScript:
     file: ../scripts/release-answers.js
@@ -64,3 +90,13 @@ tags:
       MAIL_URL: ${MAIL_URL}
 - assertNotVisible:
     id: unread-badge
+
+- evalScript: "${console.log('16 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

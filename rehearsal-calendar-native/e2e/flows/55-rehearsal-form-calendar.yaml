@@ -2,7 +2,7 @@
 # sheet (T-018). Irina Arkadina opens the form: the date names its day of the
 # week, and a tap on it opens the month under it. Today takes a tap; the day
 # before does not, and tapping it leaves the date as it was. Tomorrow is
-# picked, and the date says so. Nothing is saved: "Don't Save" closes it.
+# picked, and the date says so. Nothing is saved: "Don’t Save" closes it.
 #
 # Yesterday is in the month shown but when the month's first day begins the
 # week, and tomorrow when it is in another month - or, at 23:xx, when the
@@ -86,9 +86,9 @@ tags:
     id: header-cancel
 - runFlow:
     when:
-      visible: "Don't Save"
+      visible: "Don’t Save"
     commands:
-      - tapOn: "Don't Save"
+      - tapOn: "Don’t Save"
 - extendedWaitUntil:
     notVisible:
       id: header-cancel

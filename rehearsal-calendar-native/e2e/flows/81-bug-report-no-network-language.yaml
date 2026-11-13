@@ -5,12 +5,16 @@
 # profile while its request goes nowhere (its connection closed, as when the
 # network goes): the window says there is no connection, in Russian. The error
 # stays an error: the sheet stays open with what he wrote.
+#
+# The empty field's hint ends in one "…", as iOS writes it, not three dots
+# (T-256). The flow goes on whatever it is, and fails at the end if wrong.
 appId: ${APP_ID}
 name: A bug report with no network says so in the account's language
 tags:
   - profile
   - language
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -30,8 +34,13 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: profile-report-bug
-      SEE: "Опишите проблему\\.\\.\\."
+      SEE: "Опишите проблему(…|\\.\\.\\.)"
       WAIT_MS: "10000"
+- runFlow:
+    when:
+      notVisible: "Опишите проблему…"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Опишите проблему…, one character | '}"
 - tapOn:
     id: bug-report-message
 - inputText: "The mayor cannot see the calendar"
@@ -64,3 +73,13 @@ tags:
 # Not sent, and not said to be: what he wrote is still there to send again.
 - assertVisible: "The mayor cannot see the calendar"
 - assertNotVisible: "Спасибо! Отчёт отправлен"
+
+- evalScript: "${console.log('81 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

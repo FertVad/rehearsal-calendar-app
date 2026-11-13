@@ -44,7 +44,7 @@ tags:
     id: day-${MORNING_DAY}
 # The night's end and the event, each with where it came from.
 - extendedWaitUntil:
-    visible: "Already on this day"
+    visible: "Already Scheduled"
     timeout: 10000
 - assertVisible: ".*from the day before.*"
 - assertVisible: ".*from calendar.*"

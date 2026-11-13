@@ -45,7 +45,7 @@ tags:
     id: day-${TRIP_DAY}
 # And the trip is on it, from his calendar.
 - extendedWaitUntil:
-    visible: "Already on this day"
+    visible: "Already Scheduled"
     timeout: 10000
 - assertVisible: "All day"
 - assertVisible: "from calendar"

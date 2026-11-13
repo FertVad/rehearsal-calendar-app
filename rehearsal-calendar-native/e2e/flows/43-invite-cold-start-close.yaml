@@ -63,7 +63,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: tab-profile
-      SEE: ".*Week starts on.*"
+      SEE: ".*Start Week On.*"
       WAIT_MS: "10000"
 - scrollUntilVisible:
     element:

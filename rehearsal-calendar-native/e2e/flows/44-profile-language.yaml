@@ -14,12 +14,17 @@
 # The tab taps go through tap-and-see.yaml: the simulator lost the one on the
 # profile tab after the restart, the calendar stayed, and the flow failed
 # looking for the sign-out (T-212; docs/e2e.md, "A lost tap").
+#
+# Back in English, the week's row reads as iOS's own (T-256): "Start Week
+# On", as Settings › Calendar says it, not "Week starts on". The flow goes on
+# whatever the words, and fails at the end naming every one that was wrong.
 appId: ${APP_ID}
 name: The profile's language, kept by the account
 tags:
   - profile
   - auth
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -216,3 +221,22 @@ tags:
     id: profile-language
     text: ".*English.*"
 - takeScreenshot: 44-english-again
+- scrollUntilVisible:
+    element: ".*(Start Week On|Week starts on).*"
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    when:
+      notVisible: ".*Start Week On.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Start Week On, as iOS | '}"
+
+- evalScript: "${console.log('44 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

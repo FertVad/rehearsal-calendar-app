@@ -24,7 +24,7 @@ tags:
 - extendedWaitUntil:
     visible: "All available"
     timeout: 15000
-- assertNotVisible: "Add rehearsal \\d.*"
+- assertNotVisible: "Add rehearsal, \\d.*"
 - runScript:
     file: ../scripts/set-role.js
     env:
@@ -38,6 +38,6 @@ tags:
 - launchApp:
     stopApp: false
 - extendedWaitUntil:
-    visible: "Add rehearsal \\d.*"
+    visible: "Add rehearsal, \\d.*"
     timeout: 15000
 - takeScreenshot: 76-planner-as-admin-on-return

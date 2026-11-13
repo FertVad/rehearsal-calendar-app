@@ -71,7 +71,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: header-back
-      SEE: ".*Week starts on.*"
+      SEE: ".*Start Week On.*"
       WAIT_MS: 10000
 - assertNotVisible: "Calendar access required"
 # The phone gives the access; the session stays, so no sign-in.
@@ -106,6 +106,6 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: header-back
-      SEE: ".*Week starts on.*"
+      SEE: ".*Start Week On.*"
       WAIT_MS: 10000
 - assertNotVisible: "Auto Sync"

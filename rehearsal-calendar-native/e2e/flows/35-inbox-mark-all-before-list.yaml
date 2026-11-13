@@ -36,5 +36,5 @@ tags:
 - extendedWaitUntil:
     visible: ".*Gymnasium council.*"
     timeout: 15000
-- assertNotVisible: "Nothing yet"
+- assertNotVisible: "No Notifications Yet"
 - takeScreenshot: 35-list-after-mark-all

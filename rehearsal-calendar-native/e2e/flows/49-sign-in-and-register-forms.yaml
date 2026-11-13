@@ -10,6 +10,10 @@
 # Nobody signs in: the address is no one's, and the registration never leaves
 # the form. Sign-in's refusal is said on sign-in only: not on registration,
 # and gone when the flow comes back to sign-in (T-224).
+#
+# The repeat's hint reads as American forms write it (T-256): "Re-enter
+# password", not "Repeat password". The flow goes on whatever it is, and
+# fails at the end if wrong.
 appId: ${APP_ID}
 name: Sign-in and registration forms
 tags:
@@ -18,6 +22,7 @@ env:
   NOBODY: nobody-t015@example.com
   WRONG: wrong-password-1
 ---
+- evalScript: ${output.wrong = ''}
 - launchApp:
     clearState: true
     clearKeychain: true
@@ -103,6 +108,11 @@ env:
     id: register-submit
     enabled: false
 - assertVisible: "At least 8 characters"
+- runFlow:
+    when:
+      notVisible: "Re-enter password"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Re-enter password | '}"
 # Both passwords shown: a hidden new password next to an address is where iOS
 # offers a strong password in place of the keyboard, and the flow's typing
 # would go nowhere. Once the first is shown, the second is the one still
@@ -179,3 +189,13 @@ env:
     timeout: 10000
 - assertNotVisible: "Wrong email or password"
 - takeScreenshot: 49-back-to-sign-in
+
+- evalScript: "${console.log('49 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

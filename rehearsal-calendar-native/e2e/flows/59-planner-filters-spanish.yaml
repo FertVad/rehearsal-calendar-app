@@ -22,6 +22,15 @@
 # names one person, "No disponible: Miranda Milan" and «Не может: Miranda
 # Milan», not "Ocupados"/«Заняты», plural for one (T-258). Checked where they
 # show, the flow going on; it fails at the end if either was wrong.
+#
+# And the words read as a native speaker's (T-256). The people the planner
+# weighs are called one thing on its screen: with nobody picked the row said
+# "Todos los miembros" over a sheet of "Todos los participantes" — now
+# participants, as the sheet says. A slot's "+" reads "Add rehearsal, 6:00 PM"
+# with a pause, and "Probe für 18:00 hinzufügen", the verb last; the German
+# third segment is "Tage", not "Daten" (data), and fits as the others do. The
+# flow goes on whatever the words, and fails at the end naming every one that
+# was wrong.
 appId: ${APP_ID}
 name: The planner's filters fit in four languages
 tags:
@@ -143,6 +152,39 @@ tags:
       SEE: "Todos los participantes, 8 de 8"
       WAIT_MS: "5000"
 - takeScreenshot: 59-participants-es
+# Nobody picked is everyone here, and the row says so in the sheet's word.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      SEE: "Todos los participantes, 0 de 8"
+      WAIT_MS: "5000"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible: "Todos los participantes, 0 de 8"
+    timeout: 10000
+- takeScreenshot: 59-nobody-picked-es
+- runFlow:
+    when:
+      notVisible:
+        id: participants-row
+        text: "Participantes, Todos los participantes"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Todos los participantes, not Todos los miembros, beside the sheet | '}"
+# Everyone picked again, as the rest of the flow reads it.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "Todos los participantes, 0 de 8"
+      WAIT_MS: "5000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      SEE: "Todos los participantes, 8 de 8"
+      WAIT_MS: "5000"
 - tapOn:
     id: participants-done
 - extendedWaitUntil:
@@ -198,8 +240,13 @@ tags:
       SEE: "Week"
       WAIT_MS: "10000"
 - extendedWaitUntil:
-    visible: "Add rehearsal \\d.*"
+    visible: "Add rehearsal,? \\d.*"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Add rehearsal, \\d.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Add rehearsal, its time after a comma | '}"
 - waitForAnimationToEnd
 - takeScreenshot: 59-planner-en
 - runScript:
@@ -343,8 +390,13 @@ tags:
       text: "Teilnehmer, 1 von 1"
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Probe hinzufügen \\d.*"
+    visible: "Probe (für \\d.* hinzufügen|hinzufügen \\d.*)"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Probe für \\d.* hinzufügen"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Probe für … hinzufügen, the verb last | '}"
 - waitForAnimationToEnd
 - takeScreenshot: 59-planner-de
 - runScript:
@@ -368,7 +420,14 @@ tags:
     text: "Monat"
 - assertVisible:
     id: planner-period-custom
-    text: "Daten"
+    text: "(Tage|Daten)"
+- runFlow:
+    when:
+      notVisible:
+        id: planner-period-custom
+        text: "Tage"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Tage, not Daten | '}"
 
 - evalScript: "${console.log('59 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
 - runFlow:

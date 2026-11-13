@@ -20,6 +20,10 @@
 # and «Бесприданница», which only she runs, go with it. Nothing else is saved.
 # Each text is checked where it shows and the flow goes on, so a run on the
 # old words names every one of them; it fails at the end if any was wrong.
+#
+# And as the native speakers of T-256 read them: an alert is left with
+# «Отменить», as iOS's own, not «Отмена»; a clash in the schedule is a
+# «Накладка в расписании», as the theatre says it, not «Конфликт расписания».
 appId: ${APP_ID}
 name: Names and counts read right
 tags:
@@ -153,7 +157,12 @@ tags:
       notVisible: "Тихон Кабанов больше не будет участником проекта\\."
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: removing a member | '}"
-- tapOn: "Отмена"
+- runFlow:
+    when:
+      notVisible: "Отменить"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Отменить, not Отмена | '}"
+- tapOn: "(Отменить|Отмена)"
 - extendedWaitUntil:
     notVisible: "Удалить участника\\?"
     timeout: 10000
@@ -173,7 +182,7 @@ tags:
       notVisible: "Тихон Кабанов станет администратором проекта\\."
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: making an admin | '}"
-- tapOn: "Отмена"
+- tapOn: "(Отменить|Отмена)"
 - extendedWaitUntil:
     notVisible: "Назначить администратором\\?"
     timeout: 10000
@@ -205,7 +214,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: rehearsal-submit
-      SEE: ".*Конфликт расписания"
+      SEE: ".*(Накладка в расписании|Конфликт расписания)"
       WAIT_MS: "10000"
 - takeScreenshot: 89-conflict-ru
 - runFlow:
@@ -213,11 +222,16 @@ tags:
       notVisible: "В это время не может: Тихон Кабанов[\\s\\S]*"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: the conflict | '}"
+- runFlow:
+    when:
+      notVisible: ".*Накладка в расписании"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Накладка в расписании | '}"
 - tapOn:
-    text: "Отмена"
+    text: "(Отменить|Отмена)"
     below: "Создать всё равно"
 - extendedWaitUntil:
-    notVisible: ".*Конфликт расписания"
+    notVisible: ".*(Накладка в расписании|Конфликт расписания)"
     timeout: 10000
 - tapOn:
     id: header-cancel

@@ -66,7 +66,7 @@ tags:
 - inputText: short1
 # The repeat is under the keyboard: a tap on a label puts it away first.
 - tapOn: "Last Name"
-- tapOn: "Repeat password"
+- tapOn: "Re-enter password"
 - inputText: other-password
 - tapOn: "Last Name"
 - tapOn: "your@email.com"

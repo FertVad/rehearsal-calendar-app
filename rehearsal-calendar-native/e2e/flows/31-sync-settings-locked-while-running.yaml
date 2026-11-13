@@ -8,13 +8,17 @@
 # the button spins, the switch does not move, and sync is still on after.
 #
 # The sync screen has no test ids but the switch's; the rest is found by its
-# English labels.
+# English labels. They read as a native speaker's (T-256): the button is "Sync
+# Now", not "Synchronize", and the alert after a run "Synced", with no
+# "successfully". The flow goes on whatever the words, and fails at the end
+# naming every one that was wrong.
 appId: ${APP_ID}
 name: Sync settings stay put while a sync runs
 tags:
   - calendar
   - profile
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -46,7 +50,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Apple Calendar.*"
-      SEE: ".*Synchronize.*"
+      SEE: ".*(Sync Now|Synchronize).*"
       WAIT_MS: 10000
 # His rehearsals' answer waits, its connection open, until the release below.
 - runScript:
@@ -56,28 +60,48 @@ tags:
       METHOD: GET
       PATH: "^/api/native/rehearsals/batch$"
       OPEN: "1"
-- tapOn: ".*Synchronize.*"
+- runFlow:
+    when:
+      notVisible: ".*Sync Now.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Sync Now, not Synchronize | '}"
+- tapOn: ".*(Sync Now|Synchronize).*"
 # The run is going while the export waits: the button spins rather than
 # offering itself again.
 - extendedWaitUntil:
-    notVisible: ".*Synchronize.*"
+    notVisible: ".*(Sync Now|Synchronize).*"
     timeout: 10000
-- assertNotVisible: ".*Synchronize.*"
+- assertNotVisible: ".*(Sync Now|Synchronize).*"
 # Switching sync off now does nothing: the run is still going.
 - tapOn:
     id: calendar-sync-toggle
-- assertNotVisible: ".*Synchronize.*"
+- assertNotVisible: ".*(Sync Now|Synchronize).*"
 - runScript:
     file: ../scripts/release-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
 - extendedWaitUntil:
-    visible: "Synced successfully"
+    visible: "Synced( successfully)?"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Synced"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Synced, no successfully | '}"
 - assertVisible: ".*Exported rehearsals: 1.*"
 - takeScreenshot: 31-sync-settings-locked-while-running
 - tapOn: "OK"
 # Sync is still on, as it was when the run began.
 - extendedWaitUntil:
-    visible: ".*Synchronize.*"
+    visible: ".*(Sync Now|Synchronize).*"
     timeout: 10000
+
+- evalScript: "${console.log('31 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

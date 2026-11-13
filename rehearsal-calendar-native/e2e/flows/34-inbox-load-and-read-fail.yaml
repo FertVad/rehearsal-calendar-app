@@ -9,12 +9,19 @@
 # connection", not the fixed "Could not load notifications" or "Could not mark
 # as read" that stood for the server down as well. A deletion that goes
 # nowhere says so too, and the card comes back.
+#
+# And no answer reads as a native speaker writes it (T-256): "Could not
+# connect. Check your internet connection and try again.", not "No
+# connection. Check the internet"; the empty inbox is "No Notifications Yet".
+# The flow waits for either, checks the words and goes on, and fails at the
+# end naming every one that was wrong.
 appId: ${APP_ID}
 name: Inbox load and read fail
 tags:
   - notifications
   - language
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -30,9 +37,14 @@ tags:
       DROP: "1"
 - tapOn: "Notifications"
 - extendedWaitUntil:
-    visible: "No connection\\. Check the internet and try again\\."
+    visible: "(Could not connect|No connection)\\. Check .* and try again\\."
     timeout: 15000
-- assertNotVisible: "Nothing yet"
+- runFlow:
+    when:
+      notVisible: "Could not connect\\. Check your internet connection and try again\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Could not connect, not Check the internet | '}"
+- assertNotVisible: "(No Notifications Yet|Nothing yet)"
 - assertNotVisible: "Could not load notifications"
 - takeScreenshot: 34-could-not-load
 - runScript:
@@ -58,7 +70,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Mark all read"
-      SEE: "No connection\\. Check the internet and try again\\."
+      SEE: "(Could not connect|No connection)\\. Check .* and try again\\."
       WAIT_MS: 15000
 - assertNotVisible: "Could not mark as read"
 - takeScreenshot: 34-could-not-mark-read
@@ -82,7 +94,7 @@ tags:
     direction: LEFT
 - tapOn: "Delete"
 - extendedWaitUntil:
-    visible: "No connection\\. Check the internet and try again\\."
+    visible: "(Could not connect|No connection)\\. Check .* and try again\\."
     timeout: 15000
 - assertNotVisible: "Could not delete"
 - takeScreenshot: 34-could-not-delete
@@ -93,3 +105,13 @@ tags:
     file: ../scripts/release-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
+
+- evalScript: "${console.log('34 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000
