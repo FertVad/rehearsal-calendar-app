@@ -1,0 +1,49 @@
+T-256 — e2e, red on the old words, green on HEAD.
+
+Red: src/i18n/translations and src/shared/components/profileCalendar.tsx restored from 3b16cd5
+(for flow 86: server/i18n/pushNotifications.js, server/services/notifications/reminderText.js and
+pushNotificationService.js from 3b16cd5), the flows of 658772a, then `git restore --source=HEAD`.
+Each flow goes on whatever the words and fails at the end naming every wrong one
+(id: words-not-as-a-native-speaker-writes-them; flow 65: dates-not-in-one-format).
+
+[Failed] 10 Availability saves the day it changed
+  10 not as a native speaker writes it: "en: OK, not Understood | en: Don’t Save, its apostrophe | en: Could not connect, not Check the internet | "
+[Failed] 13 A create tapped again after its answer was lost makes one project
+  13: "en: Could not connect, not Check the internet | "
+[Failed] 16 Switch accounts - count and language
+  16: "ru: «+» is Добавить | "
+[Failed] 19 Chosen project deleted
+  19: "en: the member list, not the members, deleted | en: Project deleted, no successfully | "
+[Failed] 31 Sync settings stay put while a sync runs
+  31: "en: Sync Now, not Synchronize | en: Synced, no successfully | "
+[Failed] 34 Inbox load and read fail
+  34: "en: Could not connect, not Check the internet | "
+[Failed] 44 The profile's language, kept by the account
+  44: "en: Start Week On, as iOS | "
+[Failed] 49 Sign-in and registration forms
+  49: "en: Re-enter password | "
+[Failed] 52 An admin edits and deletes from the details
+  52: "en: Rehearsal saved, no successfully | en: who will be notified, not told it is cancelled | en: 1 participant will be notified, not Participants (1) | "
+[Failed] 59 The planner's filters fit in four languages
+  59: "es: Todos los participantes, not Todos los miembros, beside the sheet | en: Add rehearsal, its time after a comma | de: Probe für … hinzufügen, the verb last | de: Tage, not Daten | "
+[Failed] 60 Onboarding in Russian
+  60: "ru: Разрешить доступ, as iOS | ru: the example push, Вас позвали на репетицию | ru: Придёт уведомление, no gender | "
+[Failed] 65 Dates in Russian, one format
+  65 not one format "ru: варианты, not слоты | "
+[Failed] 81 A bug report with no network
+  81: "ru: Опишите проблему…, one character | "
+[Failed] 84 The sync screen's bar and last sync in four languages
+  84: "en: Sync Now, not Synchronize | en: Synced, no successfully | es: nunca el nombre de los eventos | de: Synchronisiert: gerade eben, not Synchronisiert gerade eben | de: the hours you are busy, with a verb | "
+[Failed] 86 Rehearsal notices read right (old server texts)
+  86: "es: added, el martes 6 de octubre and Lugar: | es: added, Lugar: | es: cancelled, previsto para when | de: added, für eine Probe eingeteilt, Probe „Fechtszene“ | de: new, Probe „Fechtszene“ | de: role, das Projekt „Faust“ | de: seen, als gesehen markiert | de: moved, Probe „Fechtszene“ | ru: added, позвали на, назначена на | ru: new, назначена на | ru: role, «Гроза» in quotes | ru: seen, in the order of the others | ru: joined, «Гроза» in quotes | ru: cancelled, на when | "
+[Failed] 89 Names and counts read right
+  89: "ru: Отменить, not Отмена | ru: Накладка в расписании | "
+
+Green on HEAD (658772a / c1f6120), one or a few flows per `npm run e2e -- …`:
+[Passed] 10, 13, 16, 19, 31, 34, 44, 49, 52, 56, 59, 60, 65, 80, 81, 84, 86, 89
+[Passed] 85 (the form's «Отменить» beside «Изменить репетицию», no "…" on the shot), 06, 20, 25, 30, 78, 11
+
+Not shown on screen, held by Jest instead (client-red-before.txt): Spanish weekday letters
+in the month grid (the header's day names are hidden from accessibility, Maestro cannot read
+them; DayCalendar.locales.test), English Title Case (Maestro matches regardless of case).
+Flow 56 and 80: nothing of T-256 is on their screens; run green as regression.
