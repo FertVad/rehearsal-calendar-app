@@ -1,0 +1,37 @@
+T-256, round 4 (14.11.2026): items 1-4 of reviews/T-256-r2.md, red on the old words, green on HEAD.
+
+Red: src/i18n/translations/{auth,calendar,profile}.ts restored from 9b29497 (auto/main before the T-256
+carry-over: the old en resendIn / rateLimited / busyAtThisTime, the old de pushDeniedTitle), one run of each flow:
+  git restore --source=9b29497 -- src/i18n/translations/auth.ts src/i18n/translations/calendar.ts src/i18n/translations/profile.ts
+  npm run e2e -- e2e/flows/96-english-seconds-and-busy-read-right.yaml
+  npm run e2e -- e2e/flows/94-spanish-buttons-fit.yaml
+  git restore --source=HEAD -- (the same files)
+
+== 96, red (artifacts 2026-11-14_151919) ==
+[Failed] English seconds and busy people read right (2m 3s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+JsConsole: 96 not as a native speaker writes it: "en: Busy at this time: …, not … are busy at this time | en: in N seconds, not in N s | en: Wait N seconds and try again, not Wait N s | "
+
+== 94, red (artifacts 2026-11-14_152500) ==
+[Failed] Spanish buttons read right and fit (5m 11s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+JsConsole: 94-push-denied-de: no text cut there
+JsConsole: 94 not as a native speaker writes it: "es: Abrir configuración, not Abrir ajustes | de: Mitteilungen sind nicht erlaubt, not Benachrichtigungen sind nicht erlaubt | es: Reenviar código, not Enviar el código otra vez | es: Reenviar códigos, not Enviar los códigos otra vez | "
+(the Spanish words are of the same restored files: auth.ts, profile.ts)
+
+== Green on HEAD ==
+96: [Passed] English seconds and busy people read right (2m 30s)
+94 (artifacts 2026-11-14_150916): the flow ran to its end -
+  15:12:50 Run flow when "Mitteilungen sind nicht erlaubt" is not visible SKIPPED
+  15:12:52 JsConsole: 94-push-denied-de: no text cut there
+  15:16:46 JsConsole: 94 not as a native speaker writes it: ""
+  - the runner's command was cut by the 10-minute limit of the agent's shell during teardown, after the
+  flow had finished (the flow alone is ~7 min: two minutes of code cooldowns).
+
+== T-258's flows after the carry-over ==
+95: [Passed] German admin rights and busy people read right (2m 54s)
+59: [Passed] The planner's filters fit in four languages (4m 17s)
+60: [Passed] Onboarding in Russian, the greeting on one line (3m 17s)
+    (a first run stalled inside Maestro on an optional assert after a tap at 15:58:49 and got no answer
+    until the shell's limit - a Maestro/simulator stall, no check failed; the second run passed)
+
+== Jest ==
+npx jest --selectProjects frontend: 1508/1508 (proofreading.test.ts, proofreadingEdits.test.ts with T-258's words)

@@ -204,7 +204,7 @@
 | am nächsten Tag | am Folgetag | 26 |
 | Folgetag (конец ночного слота в редакторе занятости) | am Folgetag | 14 |
 | Teilnehmer (1) werden… | 1 Teilnehmer wird benachrichtigt | 27 |
-| Anna: beschäftigt 18:00 / und 1 weitere | Anna: 18:00 beschäftigt / und 1 weitere Person | 28, 29 |
+| Anna: beschäftigt 18:00 / und 1 weitere | Anna: 18:00 beschäftigt / und 1 weiterer (T-258; у редактора «und 1 weitere Person» — обрезалось) | 28, 29 |
 | Keine Projekte, die du verwaltest | …, in denen du Admin bist | 33 |
 | Keine verfügbare Zeit für alle… | Keine Zeit, in der alle… frei sind | 35 |
 | Proben kommen in den Kalender… nie, was die Termine sind | Proben landen in deiner Kalender-App. Von dort übernimmt Rehearsly nur, wann du beschäftigt bist – nie, wie deine Termine heißen. | 36 |
@@ -337,9 +337,12 @@
 | NSCalendars* (157, ошибка), NSReminders* | J:339–342, 349–352; permissionTexts.test. Системный запрос iOS: сценарии выдают доступ при запуске, окна нет |
 | common.loading, calendar.loading, rehearsals.loadingMembers, projects.loadingInvite, profile.reportBugPlaceholder, smartPlanner.analyzing, calendarSync.checkingPermissions, dontSave, availabilityChecking, timezoneInvalid, welcome.feature3 (189–199) | J:88, 92, 109, 116, 125, 127, 140, 143, 169, 177, 187; 10:251 (Don’t Save), 47:37 (Describe the issue…) |
 | common.selectPeriod, actionSheet.title (20, 21) | 41:104, 11:90; J:90, 93 |
-| auth.* (29–45): confirmPasswordPlaceholder, Google/Apple Account, resendIn, codeLocked, rateLimited, emailTakenTitle, emailNotVerified, verifySubtitleUnsent, passwordRule, nameInvalid, resetSubtitle, resetCodeSent, newPassword, otherAddress, noConnection, requestFailed | 49:115, 50:96, 11:50 (resetCodeSent); J:95–115 |
+| auth.resendIn (функция) | 96:140 (кнопка после отправки кодов смены почты: «… in N seconds», «1 second»); J:98, 99 |
+| auth.rateLimited (функция) | 96:181 (коды запрошены снова в ту же минуту — сервер отказывает: «Wait N seconds and try again.»); J:102, 103 |
+| auth.* (29–45): confirmPasswordPlaceholder, Google/Apple Account, codeLocked, emailTakenTitle, emailNotVerified, verifySubtitleUnsent, passwordRule, nameInvalid, resetSubtitle, resetCodeSent, newPassword, otherAddress, noConnection, requestFailed | 49:115, 50:96, 11:50 (resetCodeSent); J:95–115 |
 | rehearsals.deleteNotifies (68, функция), deleteNotifiedUnknown (69), rehearsalUpdated (67) | 52:236, 52:220, 52:105; J:117–119, 123 |
-| rehearsals.busyAtThisTime, busyAt (70, 71, функции) | 07:91 (busyAt); J:122, 129 |
+| rehearsals.busyAtThisTime (70, функция; изменена ветка двух и больше) | 96:76 (сохранение над двумя занятыми: «Busy at this time: Bob Acres, Lucius OTrigger»); 07:131 — ветка одного, не менялась; J:122 |
+| rehearsals.busyAt (71, функция) | 07:91; J:129 |
 | rehearsals.notOnRoster (72), noMembers, notFound (73, 74), updateError, loadMembers/AvailabilityError (Failed to…) | 78:34; J:120, 121, 124, 126, 128, 130 |
 | projects.* (126–128, Failed to…) | 19:63, 19:74; J:131–140 |
 | profile.* (109–120, Failed to…): Change Email, New Email, Current Password, Code sent to, Email Changed, Start Week On, No Results, deleteAccountWarning, avatarHint, pushDeniedMessage | 44:232, 61:110; J:141–159; регистр — proofreading.test:80–83. «Change Email» — «лучше так», значение существующего ключа: Jest (J:153) |
@@ -356,7 +359,7 @@
 |---|---|
 | calendarSync.explanation (18, ошибка) | 84:281; J:242 |
 | availability.importedNote (19, ошибка) | 89:146; J:231 |
-| smartPlanner.busyPrefix (20, ошибка) | 89:293; J:241 |
+| smartPlanner.busyPrefix (20, ошибка; с T-258 — по числу: «No disponible» / «No disponibles») | 89:293; 59 (T-258, один занятый); J:241 (обе формы) |
 | smartPlanner.unknownAvailability (21, ошибка) | 59:95; J:239 |
 | calendarSync.removeAllPartial (22, ошибка, функция) | 92:251 (форма с одним событием); J:244, 245 |
 | projects.owner (23, ошибка) | 89:260; J:215 |
@@ -384,7 +387,7 @@
 | availability.busyTime (13, ошибка), nextDay (14) | 87:146, 87:153; J:298, 299 |
 | calendar.smartPlannerSubtitle (22, ошибка, кнопка) | 87:65 (+ no-ellipsis по кнопке); J:264 |
 | rehearsals.deleteTitle (23, ошибка, функция), deleteNotifies (27, функция) | 89:453, 89:458; J:265–267 |
-| rehearsals.notFound (24, ошибка) | 95:131 (ссылка на репетицию чужого проекта — сервер отвечает 404); J:274 |
+| rehearsals.notFound (24, ошибка) | 95:136 (ссылка на репетицию чужого проекта — сервер отвечает 404); J:274 |
 | calendarSync.explanation (36, ошибка) | 84:343; J:312 |
 | notifications.clearAllConfirm (42, ошибка), clearAll (41), clearAllConfirmBody (43) | 86:334, 86:346, 86:339; J:318–320 |
 | actionSheet.title (4) | 87:113 (VO «+»: у листа нет заголовка, рисовать нечего); J:258 |
@@ -395,14 +398,15 @@
 | availability.deleteDataConfirm, deleteDataMessage (15–18) | 87:249, 87:254 (+ no-ellipsis 87:266); J:302, 303 |
 | availability.pastDateWarning (15–18) | J:304 («лучше так», текст) |
 | projects.makeAdmin, makeAdminConfirm, makeAdminMessage (68, пункт листа и окно) | 89:388, 89:406 (заголовок окна целиком: старый «Administratorrechte geben?» теперь в списке ошибок), 89:413; J:279, 281, 282 |
-| projects.removeAdmin, removeAdminConfirm, removeAdminMessage (68) | 95:78 (+ no-ellipsis 95:90), 95:100, 95:105 (Wang — администратор проекта Шен Те); J:280, 283, 284 |
+| projects.removeAdmin, removeAdminConfirm, removeAdminMessage (68) | 95:83 (+ no-ellipsis 95:90), 95:105, 95:110 (Wang — администратор проекта Шен Те); J:280, 283, 284 |
 | profile.notifications «Mitteilungen» (52) | 86:261 (вкладка ищется по нему); J:286 |
-| profile.push* (53–59), pushDeniedTitle | J:289–295 («лучше так», новые значения существующих ключей в тексте окна и строк профиля; окно отказа теперь создаётся — 94, по-испански) |
+| profile.pushDeniedTitle (заголовок окна) | 94:109 (окно отказа открыто и на немецком: «Mitteilungen sind nicht erlaubt» целиком, + no-ellipsis 94:116); J:290 |
+| profile.push* (53–59), кроме pushDeniedTitle | J:289, 291–295 («лучше так», новые значения существующих ключей в тексте окна и строк профиля) |
 | onboarding.calendarSync.title (46), apple (48), whatWhere.title (49), availability (50) | 60:210, 60:215, 60:243, 60:248 (+ no-ellipsis); J:325, 328, 331, 332 |
-| onboarding.calendarSync.google (48) | J:327. В симуляторе нет аккаунта Google — кнопки нет |
+| onboarding.calendarSync.google (48) | J:327. Без сценария (решение по делегированию 14.11, пункт 5): кнопка появляется, только если у календаря телефона источник с «google»/«gmail» в имени (`getCalendarProvider`, `CalendarSyncScreen.tsx`); аккаунт Google в симуляторе не завести — ограничение стенда, а не пробел сида |
 | auth.registerSubtitle (5), orContinueWith (6) | J:259, 260. Экраны до входа говорят на языке телефона (симулятор — en) |
-| rehearsals.andMore(1) (29, функция) | 95:165 (форма из Planner на завтра 10:00: заняты Wang и Yang Sun); J:273. Строка однострочная по замыслу и на 24-часовом немецком телефоне обрезается: «…und 1 weitere Per…» — см. «Не внесено / вопросы» ниже |
-| notifications.daysAgo (39, функция) | 95:197 (уведомление Шен Те трёхдневной давности: «vor 3 Tagen»); J:321 |
+| rehearsals.andMore(1) (29, функция) | 95:172 (форма из Planner на завтра 10:00: заняты Wang и Yang Sun; «… beschäftigt und 1 weiterer» точно до конца) + no-ellipsis 95:179; J:273. Строка T-258, окончательная |
+| notifications.daysAgo (39, функция) | 95:211 (уведомление Шен Те трёхдневной давности: «vor 3 Tagen»); J:321 |
 | calendarSync.daysAgo (38, функция) | J:315, 316; formatLastSync.test:41–48 («Synchronisiert: gestern») и :56 («vor 2 Tagen»), красные на 3b16cd5. Время последней синхронизации пишет телефон; «gestern» появляется, только когда сдвинулись часы — docs/e2e.md: такое закрепляет Jest |
 | calendarSync.syncedAgo (37, функция) | 84:332; J:314 |
 | notifications.markAllRead (40), onboarding.notifications.exampleAdded (51) | 86:262 (VO), 86:271; J:317, 324 |
@@ -414,8 +418,8 @@
 - en «Change Email» — значение существующего ключа, обычная подпись: J:153 (+ Title Case — proofreading.test:80).
 - es «Escribe el nombre / una descripción» — плейсхолдеры: J:213, 214.
 - de «Adminrechte geben / entziehen» — пункт листа «Mitglied verwalten» и окно: «geben» — сценарий 89:388 (пункт,
-  помещается), 89:406 (заголовок окна), 89:413 (текст окна); «entziehen» — 95:78 (пункт, + no-ellipsis 95:90),
-  95:100, 95:105 (окно).
+  помещается), 89:406 (заголовок окна), 89:413 (текст окна); «entziehen» — 95:83 (пункт, + no-ellipsis 95:90),
+  95:105, 95:110 (окно).
 - ru предупреждение об удалении проекта — J:54.
 
 ### Проверки круга 2
@@ -459,5 +463,36 @@
   (24 ч) обрезается: «Wasser: 10:00–14:00 beschäftigt und 1 weitere Per…» (`95-two-busy-de`). Старое «und 1
   weitere» помещалось с фамилией из шести букв и обрезалось с более длинной. Это не кнопка, вкладка, чип или
   заголовок; сценарий читает слова целиком и обрезку не проверяет. Вопрос Вадиму: короче по-немецки (например,
-  «und noch 1») — решает носитель.
+  «und noch 1») — решает носитель. **Закрыто T-258:** носитель выбрал «und 1 weiterer»; строка взята из T-258,
+  сценарий 95 читает её точно и проверяет обрезку (см. круг 4).
 - **ru 52 / de 38 `calendarSync.daysAgo`** — без сценария по правилу docs/e2e.md о часах (см. строки таблиц).
+
+## Круг 4 (14.11): перенос поверх T-258 и пять пунктов reviews/T-256-r2.md
+
+**Перенос.** 12 коммитов auto/deferred/T-256 перенесены `cherry-pick -x` поверх 9b29497 (T-258). Конфликты — по
+смыслу: `availability.ts` (es `busyPrefix` — функция T-258), `calendar.ts` (de `busyAt` — T-256, `andMore` — T-258),
+сценарий 59 (оба описания и обе проверки в одном списке), `seed.mjs` (одно описание Шен Те, Wang, Yang Sun, Shu Fu
+и «Der gute Mensch»; занятость Wang и Yang Sun — один раз; к ним добавлены Торцов, Глумов, Ерма, час Кабанихи),
+сценарий 95 (одна версия: админские права, недоступная репетиция, «vor 3 Tagen» и строка занятых, как её
+проверяет T-258 — точное совпадение «… beschäftigt und 1 weiterer» и `no-ellipsis.js`). Из T-258 взяты: de
+`rehearsals.andMore(1)` «und 1 weiterer», `smartPlanner.busyPrefix` по числу (ru «Не может / Не могут», es «No
+disponible / No disponibles», en «Busy», de «Beschäftigt»), ru `onboarding.whatWhere.projectWhere` «По
+приглашению: …». `proofreading.test.ts` и `proofreadingEdits.test.ts` приведены к ним (сравнение точное: «und 1
+weiterer» содержит «und 1 weitere»). Сценарии T-258 после переноса зелёные: 59, 60, 95.
+
+**Пункты.**
+
+| # | Ключ | Чем закреплено |
+|---|---|---|
+| 1 | en `auth.resendIn` | 96:140 — смена почты Лидии: после отправки кодов кнопка «You can ask for a new code in N seconds» / «1 second»; J:98, 99 |
+| 2 | en `auth.rateLimited` | 96:181 — коды запрошены снова в ту же минуту (экран закрыт и открыт заново): сервер отказывает по лимиту одного человека (`issueCode`, 429 `RATE_LIMITED`, `retryAfter`) — один запрос, общий лимит `/api/auth/*` не задет; J:102, 103 |
+| 3 | en `rehearsals.busyAtThisTime`, двое и больше | 96:76 — Лидия сохраняет репетицию из Planner на завтра 10:00, заняты Bob Acres и Lucius OTrigger: «Busy at this time: …»; J:122. Ветка одного — 07:131, не менялась |
+| 4 | de `profile.pushDeniedTitle` | 94:109 — окно отказа из 94 открыто и на немецком (язык Ермы переключён на Deutsch и обратно), заголовок «Mitteilungen sind nicht erlaubt» целиком; обрезка — no-ellipsis 94:116; J:290 |
+| 5 | de `onboarding.calendarSync.google` | J:327, без сценария: кнопка появляется, только если у календаря телефона источник Google (`getCalendarProvider`, `CalendarSyncScreen.tsx`); аккаунт Google в симуляторе не завести — ограничение стенда (решение по делегированию 14.11) |
+
+Сид: новые люди Lydia Languish (en), Bob Acres, Lucius OTrigger и проект «The Rivals»; Acres и OTrigger заняты
+завтра 10:00–14:00. Сценарий 96 новый; 94 дополнен немецким окном.
+
+**Красное до** — `e2e-review4-red-before-green-after.txt`: один прогон каждого сценария на `auth.ts`,
+`calendar.ts`, `profile.ts` из 9b29497 (до переноса T-256): 96 называет все три английские формы, 94 — немецкий
+заголовок (и прежние испанские слова тех же файлов). На HEAD 94 и 96 зелёные.
