@@ -271,3 +271,151 @@
 2. **de 14 «am Folgetag».** Ширину проверил сценарий 87 на iPhone 16 при 12-часовых часах симулятора (длинный
    случай, «1:00 AM»): подпись в одну строку (высота 14 ± 5, в две строки было бы около 29), «…» на снимке нет.
    Правка внесена.
+
+## Ревью Астры, круг 2: покрытие каждой экранной правки
+
+Правило (решение по делегированию, 13.11, 22:40): «ошибка», видная на экране, правка того, что рисует код, и
+подписи кнопок, вкладок, чипов и заголовков в de/es — сценарием, красным до; остальные «лучше так» — Jest.
+
+**Jest для всех.** `src/i18n/__tests__/proofreadingEdits.test.ts` (далее **J:строка**) — таблица всех 306 правок
+экранов (ключ × язык; функция — с аргументами, по строке на каждую форму числа) и 16 текстов запросов iOS. Для
+каждой строки две проверки: новая строка стоит в своём ключе, старой (3b16cd5, колонка «Сейчас» редактора) нет ни
+в одном ключе языка. Исключение одно, с причиной в тесте: es «Listo» остаётся в `success` — заголовок «Готово»
+после сохранения; правка es 35 касалась только кнопки `common.done`. Таблица снята с разницы переводов
+3b16cd5..HEAD, поэтому правок без строки в ней нет. Красный — `jest-edits-red-before.txt`: один прогон,
+306 + 16 неверных, каждая по имени.
+
+**Сценарии — дополнены языковые**, новых нет: 59, 60, 86, 87, 89 и `seed.mjs` (Адела es и Каттрин de — новые, не
+прошедшие онбординг; у Кабанихи — час из календаря телефона на MORNING_DAY). Каждая проверка пишет неверное слово в
+общий список, сценарий падает в конце. Красный — один прогон каждого на `src/i18n/translations` из 3b16cd5,
+список — `e2e-review2-red-before-green-after.txt`. «Помещается» — `no-ellipsis.js` по снимку (как с «am Folgetag»).
+
+Сценарий:строка — строка проверки в `e2e/flows/<NN>-….yaml`; «VO» — подпись VoiceOver (Maestro её читает).
+
+### ru
+
+| Ключ (строка редактора) | Чем закреплено |
+|---|---|
+| common/projects/profile.cancel (16, ошибка) | 89:481, 85:92; J:23, 53, 57 |
+| common.loading, calendar.loading, rehearsals.loadingMembers, projects.loadingInvite, smartPlanner.analyzing, calendarSync.checkingPermissions (26) | J:24, 38, 49, 55, 67, 74 (+ typography в proofreading.test) |
+| profile.reportBugPlaceholder (26) | 81:43; J:56 |
+| common.from / to (28) | J:25, 26 |
+| actionSheet.title «Добавить» (27) | 16:72 (VO «+»); J:27 |
+| auth.googleAccount…/appleAccount… (34), codeExpired (30), emailUnavailable (31), backToLogin (29), verifySubtitleUnsent (32), timezoneInvalid (33) | J:28–34 |
+| auth.noConnection, requestFailed (17, 18, ошибка) | J:35, 36. Сценария нет: показываются только при входе без связи с сервером, ни один сценарий этого не проходит (82 — смена сети, там другая строка) |
+| calendar.needProject (40), smartPlannerSubtitle (41), rehearsals.editRehearsal (42) | J:37, 39, 40; 85:86 (editRehearsal) |
+| rehearsals.deleteNotifies (43, функция) | 89:537; J:41–43 |
+| rehearsals.deleteNotifiedUnknown (44), updateError (46), seenError (48), markSeen (47) | J:44, 46–48 |
+| rehearsals.scheduleConflict (45) | 89:589; J:45 |
+| projects.joinByCode (59), deleteProjectWarning (60) | J:50, 54 |
+| projects.shareInviteMessage / Title (10, 11, ошибка) | J:51, 52; useInviteLink.test.ts. Сценария нет: текст уходит в системный лист «Поделиться» и в чат получателя, экран приложения его не рисует |
+| profile.pushDeniedTitle (58), timezoneError, weekStartError (56), emailChanged (57) | J:58–61 |
+| availability.addSlot (35), slotsOverlap (36), invalidSlot/fixSlots (37), slotSameStartEnd (38) | J:62–66 |
+| smartPlanner.noSlotsMessage (13, ошибка) | J:68. Сценария нет: пустой Planner бывает, только когда в периоде не осталось ни одного окна; в seed такого периода нет, а «сегодня вечером» зависит от часов прогона |
+| smartPlanner.slotsCount (39, функция) | 65:72; J:69–71 |
+| smartPlanner.unknownAvailability (12, ошибка) | 59:302; J:72 |
+| calendarSync.grantPermission, onboarding.…grantPermission (49) | 60:67; J:73, 86 |
+| calendarSync.removeAll (50), removeAllConfirm/Success (51) | J:75–77 |
+| calendarSync.exportIncomplete (14, ошибка) | J:78. Сценария нет: только при сбое записи в календарь телефона, сценария с таким сбоем нет |
+| calendarSync.daysAgo(1) «вчера» (52, функция) | J:79. Сценария нет: нужна последняя синхронизация вчера; телефонное хранилище сценарий не подделывает |
+| notifications.markAllRead (53) | J:80 (VO-подпись значка; 86 ждёт её любой из двух) |
+| onboarding.skipMessage (54) | J:81 |
+| onboarding.notifications.description (15, ошибка), exampleAdded (21) | 60:98, 60:93; J:82, 83 |
+| onboarding.calendarSync.google / apple (55) | J:84, 85 (кнопки появляются после доступа; 60 русский доступ отклоняет) |
+| NSReminders* (решение 6) | J:337, 338 (системный запрос iOS, не экран приложения) |
+
+### en
+
+| Ключ (строка) | Чем закреплено |
+|---|---|
+| common.noConnection (18, ошибка) | 10:309, 13:51, 34:46; J:89 |
+| common.dateRangeTooLong(1), auth.passwordHint(1) (19, 27, ошибка) | J:91, 94; plurals.test. На экран при 1 не выводятся: maxDays — лимит сервера, minLength — 8 |
+| auth.emailUnavailable (28, ошибка) | J:101. Сценария нет: только когда почтовый сервер отказывает |
+| availability.understood «OK» (51, ошибка) | 10:238; J:167 |
+| calendarSync.removeAllPartial(…, 1) (80, ошибка) | J:180. Сценария нет: только при частичном сбое удаления из календаря телефона |
+| notifications.markAllRead (92, ошибка) | 79:32; J:184; регистр — proofreading.test |
+| NSCalendars* (157, ошибка), NSReminders* | J:339–342, 349–352; permissionTexts.test. Системный запрос iOS: сценарии выдают доступ при запуске, окна нет |
+| common.loading, calendar.loading, rehearsals.loadingMembers, projects.loadingInvite, profile.reportBugPlaceholder, smartPlanner.analyzing, calendarSync.checkingPermissions, dontSave, availabilityChecking, timezoneInvalid, welcome.feature3 (189–199) | J:88, 92, 109, 116, 125, 127, 140, 143, 169, 177, 187; 10:251 (Don’t Save), 47:37 (Describe the issue…) |
+| common.selectPeriod, actionSheet.title (20, 21) | 41:104, 11:90; J:90, 93 |
+| auth.* (29–45): confirmPasswordPlaceholder, Google/Apple Account, resendIn, codeLocked, rateLimited, emailTakenTitle, emailNotVerified, verifySubtitleUnsent, passwordRule, nameInvalid, resetSubtitle, resetCodeSent, newPassword, otherAddress, noConnection, requestFailed | 49:115, 50:96, 11:50 (resetCodeSent); J:95–115 |
+| rehearsals.deleteNotifies (68, функция), deleteNotifiedUnknown (69), rehearsalUpdated (67) | 52:236, 52:220, 52:105; J:117–119, 123 |
+| rehearsals.busyAtThisTime, busyAt (70, 71, функции) | 07:91 (busyAt); J:122, 129 |
+| rehearsals.notOnRoster (72), noMembers, notFound (73, 74), updateError, loadMembers/AvailabilityError (Failed to…) | 78:34; J:120, 121, 124, 126, 128, 130 |
+| projects.* (126–128, Failed to…) | 19:63, 19:74; J:131–140 |
+| profile.* (109–120, Failed to…): Change Email, New Email, Current Password, Code sent to, Email Changed, Start Week On, No Results, deleteAccountWarning, avatarHint, pushDeniedMessage | 44:232, 61:110; J:141–159; регистр — proofreading.test:80–83. «Change Email» — «лучше так», значение существующего ключа: Jest (J:153) |
+| availability.* (52–59): couldNotLoad, lastLoadedShown, saveError, Busy Time, Already Scheduled, Start/End Time, busyAllDay | 28:48, 26:60, 26:88, 25:164; J:160–168 |
+| smartPlanner.noSlots, noSlotsMessage (60), errorLoading | J:170–172. Пустой Planner — см. ru 13 |
+| smartPlanner.addRehearsalAt (61, функция), allMembers (решение 4) | 59:240, 07:35; J:173, 174 |
+| calendarSync.* (81–86) | 31:67, 31:90, 84:129, 84:139; J:175–179, 181, 182 |
+| notifications.empty (93), clearAllConfirmBody (94) | 34:15; J:183, 185 |
+| onboarding.* (100–103, Доп. 4) | 09:85, 09:86; J:186, 188–192 |
+
+### es
+
+| Ключ (строка) | Чем закреплено |
+|---|---|
+| calendarSync.explanation (18, ошибка) | 84:281; J:242 |
+| availability.importedNote (19, ошибка) | 89:145; J:231 |
+| smartPlanner.busyPrefix (20, ошибка) | 89:256; J:241 |
+| smartPlanner.unknownAvailability (21, ошибка) | 59:95; J:239 |
+| calendarSync.removeAllPartial (22, ошибка, функция) | J:244, 245. Сценария нет: только при частичном сбое удаления |
+| projects.owner (23, ошибка) | 89:223; J:215 |
+| onboarding.whatWhere.* (25–28, ошибка) | 60:159, 164, 169, 174; J:250–253 |
+| dayNamesShort (29, ошибка) | DayCalendar.locales.test (буквы скрыты от доступности, Maestro их не читает) |
+| common.done «OK» (35, кнопка) | 59:168; J:196 |
+| smartPlanner.allMembers (решение 4, чип) | 59:188; J:240 |
+| notifications.markAllRead (60) / clearAll, clearAllConfirm (61, 62) | 86:200, 86:207; J:246–248 (markAllRead — VO-подпись значка) |
+| rehearsals.notOnRoster (58), seenCount (59, функция, VO), deleteNotifies (57, функция) | 89:71, 89:80, 89:106; J:208–211 |
+| availability.deleteData (50, кнопка) | 89:176 (с 2-го числа месяца: 1-го прошедших дней в редакторе нет); J:232 |
+| availability.deleteDataConfirm, deleteDataMessage, pastDateWarning (50–53) | J:233–235. Заголовок окна UIAlert — iOS переносит его сам |
+| auth.resendCode (43), profile.resendCodes (73) | J:198, 227. Кнопки короче прежних («Reenviar código» 15 знаков против 25); экран кода до входа говорит на языке телефона (симулятор — en) |
+| profile.openSettings (66) | J:223. Кнопка окна UIAlert «Уведомления не разрешены» — iOS раскладывает её сама; отказ в пушах сценарием не создаётся |
+| profile.timezoneNotFound (64), placeholders «Escribe…» (40–42, 67–70, 74, 75) | J:213, 214, 217, 219–221 — «лучше так», текст: Jest. «Escribe el nombre / una descripción» — J:213, 214 |
+| остальные «лучше так» (36–39, 44–49, 54–56, 63, 65, 71, 72, 76, 77, 89) | J:194, 195, 197, 199–207, 212, 216, 218, 222, 224–226, 228–230, 236–238, 243, 249; es.json — J:343–346 |
+
+### de
+
+| Ключ (строка) | Чем закреплено |
+|---|---|
+| smartPlanner.dates «Tage» (9, ошибка, сегмент) | 59:412; J:308 |
+| smartPlanner.unknownAvailability (11, ошибка) | 59:381; J:309 |
+| smartPlanner.addRehearsalAt (12, ошибка) | 59:375; J:310 |
+| availability.busyTime (13, ошибка), nextDay (14) | 87:146, 87:153; J:298, 299 |
+| calendar.smartPlannerSubtitle (22, ошибка, кнопка) | 87:65 (+ no-ellipsis по кнопке); J:264 |
+| rehearsals.deleteTitle (23, ошибка, функция), deleteNotifies (27, функция) | 89:409, 89:414; J:265–267 |
+| rehearsals.notFound (24, ошибка) | J:274. Сценария нет: экран «Probe nicht verfügbar» ни один сценарий не открывает по-немецки (и по-английски) |
+| calendarSync.explanation (36, ошибка) | 84:343; J:312 |
+| notifications.clearAllConfirm (42, ошибка), clearAll (41), clearAllConfirmBody (43) | 86:334, 86:346, 86:339; J:318–320 |
+| actionSheet.title (4) | 87:113 (VO «+»: у листа нет заголовка, рисовать нечего); J:258 |
+| rehearsals.notOnRoster (25), endsNextDay (26) | 87:102; J:268, 269 |
+| smartPlanner.allMembers (10, чип) | 59:440 (+ no-ellipsis); J:311 |
+| availability.selectedDates (19, заголовок, функция) | 87:186 (+ no-ellipsis); J:305 |
+| availability.deleteData (15–18, кнопка) | 87:229 (с 2-го числа месяца); J:301 |
+| availability.deleteDataConfirm, deleteDataMessage, pastDateWarning (15–18) | J:302–304 (UIAlert / текст) |
+| projects.makeAdmin, makeAdminConfirm, makeAdminMessage (68, пункт листа и окно) | 89:351, 89:369; J:279, 281, 282 |
+| projects.removeAdmin, removeAdminConfirm, removeAdminMessage (68) | J:280, 283, 284. Пункт виден только у участника-администратора; в 89 назначение меняло бы удаление аккаунта Кабанихи («единственный администратор»), а прогон с назначением и снятием не укладывался в 10 минут. «Adminrechte entziehen» короче прежнего «Administratorrechte entfernen» |
+| profile.notifications «Mitteilungen» (52) | 86:261 (вкладка ищется по нему); J:286 |
+| profile.push* (53–59), pushDeniedTitle | J:289–295 (окна UIAlert и строки при отказе в пушах — отказ сценарием не создаётся) |
+| onboarding.calendarSync.title (46), apple (48), whatWhere.title (49), availability (50) | 60:210, 60:215, 60:243, 60:248 (+ no-ellipsis); J:325, 328, 331, 332 |
+| onboarding.calendarSync.google (48) | J:327. В симуляторе нет аккаунта Google — кнопки нет |
+| auth.registerSubtitle (5), orContinueWith (6) | J:259, 260. Экраны до входа говорят на языке телефона (симулятор — en) |
+| rehearsals.andMore(1) (29, функция) | J:273. В немецкой форме нет двух занятых сразу ни в одном сценарии |
+| calendarSync.daysAgo / notifications.daysAgo (38, 39, функции) | J:315, 316, 321. Синхронизации и уведомлений старше суток в seed нет |
+| calendarSync.syncedAgo (37, функция) | 84:332; J:314 |
+| notifications.markAllRead (40), onboarding.notifications.exampleAdded (51) | 86:262 (VO), 86:271; J:317, 324 |
+| projects.shareInviteTitle (69) | J:278 (системный лист «Поделиться») |
+| остальные «лучше так» (1–3, 7, 8, 20, 21, 33–35, 44, 45, 47, 60–64, Доп.) | J:255–257, 261–263, 270–272, 275–277, 285, 287, 288, 296, 297, 300, 306, 307, 313, 322, 323, 326, 330; de.json — J:347, 348 |
+
+### Примеры ревьюера
+
+- en «Change Email» — значение существующего ключа, обычная подпись: J:153 (+ Title Case — proofreading.test:80).
+- es «Escribe el nombre / una descripción» — плейсхолдеры: J:213, 214.
+- de «Adminrechte geben / entziehen» — пункт листа «Mitglied verwalten» и кнопка окна: «geben» — сценарий 89:351,
+  369 (помещается, no-ellipsis); «entziehen» — J:280, 283, 284 (причина выше).
+- ru предупреждение об удалении проекта — J:54.
+
+### Проверки круга 2
+
+- Jest: `proofreadingEdits.test.ts` — 5/5 зелёные на HEAD; красный — `jest-edits-red-before.txt`.
+- e2e, красные одним прогоном на старых текстах и зелёные на HEAD: 59, 60, 86, 87, 89 —
+  `e2e-review2-red-before-green-after.txt`.

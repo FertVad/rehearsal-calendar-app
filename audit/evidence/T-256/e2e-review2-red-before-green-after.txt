@@ -1,0 +1,37 @@
+T-256 review 2 — the flows that now read every screen edit of their screens: red on the old words, green on HEAD.
+
+Red: `git restore --source=3b16cd5 -- src/i18n/translations` (server texts left at HEAD: flow 86's new checks are
+the inbox's own alert), one `npm run e2e -- e2e/flows/<flow>.yaml` each; every flow goes on whatever the words and
+fails at the end naming every wrong one (id: words-not-as-a-native-speaker-writes-them). JsConsole lines from
+e2e/out/artifacts/<run>/<flow>/logs/maestro.log.
+
+[Failed] Planner and the calendar's top in German (2m 52s)
+  87 not as a native speaker writes it: "de: Finde die beste Zeit für eine Probe, not Probezeit | de: Du bist nicht eingeteilt, not in der Besetzung | de: Was möchtest du tun?, not Neue Aktion | de: Belegte Zeit, not Beschäftigte Zeit | de: am Folgetag, not Folgetag | de: Ausgewählte Tage, not Daten | de: Einträge für diesen Tag löschen, not Daten | "
+  (A first red run stopped earlier: no-ellipsis over the whole calendar found "Mutter C…" — the old "Du bist nicht
+  in der Besetzung" cut the project's name. The check is now over the planner's button alone, so the run names
+  every word; the cut row is the defect the row check above already names.)
+
+[Failed] The planner's filters fit in four languages (2m 45s)
+  59 not as a native speaker writes it: "es: Quien no marca nada cuenta como libre, not Se cuentan como libres | es: OK, not Listo, on the sheet | es: Todos los participantes, not Todos los miembros, beside the sheet | en: Add rehearsal, its time after a comma | ru: Без отметок участник считается свободным, not они | de: Probe für … hinzufügen, the verb last | de: Wer nichts eingetragen hat, not Sie zählen | de: Tage, not Daten | de: Alle Teilnehmer, not Alle Mitglieder, beside the sheet | "
+
+[Failed] Rehearsal notices read right in Spanish, German and Russian (4m 45s)
+  86 not as a native speaker writes it: "es: ¿Borrar todas las notificaciones?, not Vaciar | es: Borrar todo, not Vaciar | de: Alle Mitteilungen löschen?, not leeren | de: Die Liste wird geleert, not wird leer sein | de: Alle löschen, not Leeren | "
+
+[Failed] Onboarding in Russian, the greeting on one line (3m 22s)
+  60 not as a native speaker writes it: "ru: Разрешить доступ, as iOS | ru: the example push, Вас позвали на репетицию | ru: Придёт уведомление, no gender | es: a project, in «» | es: a rehearsal, in «» | es: availability, in «» | es: the planner, in «» | de: Deine Verfügbarkeit, not Deine Zeiten | de: Apple Kalender, not Calendar | de: Wo ist was?, not Was ist wo | de: Verfügbarkeit, not Zeiten | "
+
+[Failed] Names and counts read right (5m 53s)
+  89 not as a native speaker writes it: "es: No estás en este ensayo, not en el reparto | es: Lo han visto, not Vistos | es: 1 participante recibirá una notificación, not Los participantes (1) | es: cuando buscan un horario, not al buscar un hueco | es: Eliminar las marcas de este día, not datos de esta fecha | es: Admin principal, not Propietario | es: No disponibles, not Ocupados | de: Adminrechte geben, not Administratorrechte | de: Adminrechte geben?, its message | de: „…“ (…) löschen?, the verb last | de: 1 Teilnehmer wird benachrichtigt, not Teilnehmer (1) | ru: Отменить, not Отмена | ru: Уведомление получит 1 участник, not Участники (1) | ru: Накладка в расписании | "
+
+Then `git restore --source=HEAD -- src/i18n/translations`, one flow per run:
+[Passed] Planner and the calendar's top in German (2m 42s)
+[Passed] The planner's filters fit in four languages (3m 37s)
+[Passed] Rehearsal notices read right in Spanish, German and Russian (4m 24s)
+[Passed] Onboarding in Russian, the greeting on one line (3m 30s)
+[Passed] Names and counts read right (6m 29s)
+Every no-ellipsis shot of the new checks: "no text cut there" (59-nobody-picked-de, 60-onboarding-calendar-de,
+60-onboarding-what-where-de, 87-planner-button-de, 87-two-days-de, 87-day-gone-de, 89-day-gone-es,
+89-make-admin-item-de).
+
+Machine, not the flows: two runs of 89 were cut by the 10-minute limit of the command (one with the app build, one
+with the give-and-take-back of Tikhon's admin role, since dropped); the run after each was complete.
