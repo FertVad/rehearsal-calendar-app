@@ -32,9 +32,12 @@ if (process.env.REHEARSLY_E2E === '1') {
   // and no flow could hold its answer. e2e/device stands in for expo-device
   // and expo-notifications — the real ones unless a flow launches the app as
   // a phone (e2e/device/pushDevice.js; cause fix 20, review 3). Imports from
-  // e2e/device itself get the real modules.
+  // e2e/device itself get the real modules. expo-calendar likewise, the real
+  // one unless a flow launches the app with a calendar that refuses an event
+  // (e2e/device/expo-calendar.js; flow 92, T-256).
   const device = path.join(__dirname, 'e2e', 'device');
   const standIns = {
+    'expo-calendar': path.join(device, 'expo-calendar.js'),
     'expo-device': path.join(device, 'expo-device.js'),
     'expo-notifications': path.join(device, 'expo-notifications.js'),
   };

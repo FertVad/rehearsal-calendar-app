@@ -17,8 +17,8 @@
 #   clock is the simulator's 12-hour one, "1:00 AM", the longer of the two;
 # - the planner's button on her calendar says "Finde die beste Zeit für eine
 #   Probe", two days picked are "Ausgewählte Tage: 2" (not "Daten"), and a day
-#   gone offers "Einträge für diesen Tag löschen" — each whole on the shot
-#   (no-ellipsis); the "+" says "Was möchtest du tun?" to VoiceOver, not "Neue
+#   gone offers "Einträge für diesen Tag löschen", whose alert asks
+#   "Einträge löschen?" — each whole on the shot (no-ellipsis); the "+" says "Was möchtest du tun?" to VoiceOver, not "Neue
 #   Aktion".
 # The flow goes on whatever the words, and fails at the end naming every one
 # that was wrong.
@@ -236,6 +236,42 @@ tags:
             RIGHT: "1"
             TOP: "0.07"
             BOTTOM: "0.95"
+      # Its alert asks "Einträge löschen?", not "Daten löschen?", and says
+      # whose and which (T-256); whole, and left.
+      - tapOn: ".*(Einträge für diesen Tag|Daten für dieses Datum) löschen.*"
+      - extendedWaitUntil:
+          visible: "(Einträge|Daten) löschen\\?"
+          timeout: 10000
+      - waitForAnimationToEnd
+      - takeScreenshot: 87-delete-entries-alert-de
+      - runFlow:
+          when:
+            notVisible: "Einträge löschen\\?"
+          commands:
+            - evalScript: "${output.wrong = output.wrong + 'de: Einträge löschen?, not Daten löschen? | '}"
+      - runFlow:
+          when:
+            notVisible: "Deine Einträge für diesen vergangenen Tag werden gelöscht\\."
+          commands:
+            - evalScript: "${output.wrong = output.wrong + 'de: the delete alert, its message | '}"
+      - runScript:
+          file: ../scripts/no-ellipsis.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            SHOT: 87-delete-entries-alert-de
+            LEFT: "0"
+            RIGHT: "1"
+            TOP: "0.07"
+            BOTTOM: "0.95"
+            RECORD: cut
+      - evalScript: "${output.wrong = output.wrong + (output.cut ? 'de: ' + output.cut + ' | ' : '')}"
+      # The alert's, not the editor's "Abbrechen" above it.
+      - tapOn:
+          text: "Abbrechen"
+          below: "(Einträge|Daten) löschen\\?"
+      - extendedWaitUntil:
+          notVisible: "(Einträge|Daten) löschen\\?"
+          timeout: 10000
       - tapOn:
           id: availability-deselect
 # Nothing changed: the editor closes unasked.

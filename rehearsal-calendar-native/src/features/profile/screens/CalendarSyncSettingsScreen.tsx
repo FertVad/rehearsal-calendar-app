@@ -584,6 +584,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                     exported stays in the user's own calendar. This is the way
                     to take it back. */}
                 <TouchableOpacity
+                  testID="calendar-sync-remove-all"
                   style={styles.removeAllButton}
                   onPress={handleRemoveAll}
                   disabled={isImporting || isSyncing || isRemoving}

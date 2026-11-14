@@ -268,6 +268,19 @@ export const PEOPLE = {
   polly: { email: 'polly@e2e.test', firstName: 'Polly', lastName: 'Peachum', onboarded: true, locale: 'de' },
   mackie: { email: 'mackie@e2e.test', firstName: 'Mackie', lastName: 'Messer', onboarded: true, locale: 'de' },
   jenny: { email: 'jenny@e2e.test', firstName: 'Jenny', lastName: 'Diver', onboarded: true, locale: 'de' },
+  // Tortsov runs «Бедность не порок» alone, three rehearsals of his in the
+  // coming days. His planner over one late evening has nothing to offer, and
+  // his phone's calendar will not take «Трактир» nor let «Святки» go; the sync
+  // says so in Russian, English and Spanish (92, T-256). His account speaks
+  // Russian.
+  tortsov: { email: 'tortsov@e2e.test', firstName: 'Lyubim', lastName: 'Tortsov', onboarded: true, locale: 'ru' },
+  // Glumov signs in and out, then the sign-in screen speaks Russian and fails
+  // twice: no connection, and an answer it has no words for (93, T-256).
+  glumov: { email: 'glumov@e2e.test', firstName: 'Yegor', lastName: 'Glumov', onboarded: true, locale: 'ru' },
+  // Yerma's phone refused notifications; she changes her address and resets
+  // her password, and waits for "send again" each time (94, T-256). Her
+  // account speaks Spanish.
+  yerma: { email: 'yerma@e2e.test', firstName: 'Yerma', lastName: 'Campo', onboarded: true, locale: 'es' },
   // Shen Te runs «Der gute Mensch»: Wang its admin, Yang Sun and Shu Fu in it,
   // Wang and Yang Sun busy tomorrow 10:00-14:00 (95, T-256, T-258). Her
   // account speaks German.
@@ -689,6 +702,28 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW()),
               ($1, $4, 'member', 'active', NOW(), NOW()), ($1, $5, 'member', 'active', NOW(), NOW())`,
       [own.id, ids.shente, ids.wang, ids.yangsun, ids.shufu]);
+  }
+  // Tortsov's (92, T-256), he alone in it, and his three rehearsals, he on
+  // each: «Трактир» the phone's calendar will not take, «Святки» it will not
+  // let go. Inserted: the sign-ins are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Бедность не порок', 'Островский', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids.tortsov]);
+    for (const [title, day] of [['Святки', 1], ['Трактир', 2], ['Финал', 3]]) {
+      const { rows: [made] } = await client.query(
+        `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3::timestamptz, $4::timestamptz, 'Main hall', $5, NOW(), NOW()) RETURNING id`,
+        [own.id, title, localInstant(day, 18), localInstant(day, 20), ids.tortsov]);
+      await client.query(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())`,
+        [made.id, ids.tortsov]);
+    }
   }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
@@ -1139,6 +1174,12 @@ export async function seed({ client, apiUrl, timezone }) {
     { title: 'Name-day toast', read: false },
   ]);
   await notify('solyony', [{ title: 'Duel at noon', read: false }]);
+  // Shen Te's, three days and an hour old: her inbox says "vor 3 Tagen" (95, T-256).
+  await client.query(
+    `INSERT INTO native_notifications (user_id, type, title, body, data, sent_at, created_at, read_at)
+     VALUES ($1, 'rehearsal_updated', 'Probenplan geändert', 'Der gute Mensch', '{}',
+             NOW() - INTERVAL '73 hours', NOW() - INTERVAL '73 hours', NULL)`,
+    [ids.shente]);
 
   return {
     password: PASSWORD,

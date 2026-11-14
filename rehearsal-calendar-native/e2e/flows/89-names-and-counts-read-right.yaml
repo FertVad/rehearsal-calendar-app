@@ -31,7 +31,8 @@
 # - Spanish: its seen count «Lo han visto», not «Vistos»; deleting it, asked
 #   and left, «1 participante recibirá una notificación»; the note under her
 #   hour from her phone's calendar «cuando buscan un horario»; a day gone's
-#   «Eliminar las marcas de este día», whole; the planner's «No disponibles:
+#   «Eliminar las marcas de este día», whole, and its alert «¿Eliminar las
+#   marcas?», whole and left; the planner's «No disponibles:
 #   Тихон Кабанов», not «Ocupados».
 # - German: Tikhon's action «Adminrechte geben», whole, and its alert, left;
 #   deleting «Сцена с Тихоном»
@@ -183,6 +184,42 @@ tags:
             RIGHT: "1"
             TOP: "0.07"
             BOTTOM: "0.95"
+      # Its alert asks "¿Eliminar las marcas?", not "¿Eliminar datos?", and
+      # says the day is gone (T-256); whole, and left.
+      - tapOn: ".*Eliminar (las marcas de este día|datos de esta fecha).*"
+      - extendedWaitUntil:
+          visible: "¿Eliminar (las marcas|datos)\\?"
+          timeout: 10000
+      - waitForAnimationToEnd
+      - takeScreenshot: 89-delete-marks-alert-es
+      - runFlow:
+          when:
+            notVisible: "¿Eliminar las marcas\\?"
+          commands:
+            - evalScript: "${output.wrong = output.wrong + 'es: ¿Eliminar las marcas?, not ¿Eliminar datos? | '}"
+      - runFlow:
+          when:
+            notVisible: "Se eliminarán tus marcas de este día, que ya pasó\\."
+          commands:
+            - evalScript: "${output.wrong = output.wrong + 'es: the delete alert, its message | '}"
+      - runScript:
+          file: ../scripts/no-ellipsis.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            SHOT: 89-delete-marks-alert-es
+            LEFT: "0"
+            RIGHT: "1"
+            TOP: "0.07"
+            BOTTOM: "0.95"
+            RECORD: cut
+      - evalScript: "${output.wrong = output.wrong + (output.cut ? 'es: ' + output.cut + ' | ' : '')}"
+      # The alert's, not the editor's "Cancelar" above it.
+      - tapOn:
+          text: "Cancelar"
+          below: "¿Eliminar (las marcas|datos)\\?"
+      - extendedWaitUntil:
+          notVisible: "¿Eliminar (las marcas|datos)\\?"
+          timeout: 10000
       - tapOn:
           id: availability-deselect
 # Nothing changed: the editor closes unasked.
@@ -362,6 +399,13 @@ tags:
 - extendedWaitUntil:
     visible: "(Adminrechte|Administratorrechte) geben\\?"
     timeout: 10000
+# Waited for whichever it says; its title is then read whole (review 2 of
+# T-256: the old "Administratorrechte geben?" went through).
+- runFlow:
+    when:
+      notVisible: "Adminrechte geben\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Adminrechte geben?, its title | '}"
 - runFlow:
     when:
       notVisible: "Möchtest du Тихон Кабанов wirklich Adminrechte für das Projekt geben\\?"

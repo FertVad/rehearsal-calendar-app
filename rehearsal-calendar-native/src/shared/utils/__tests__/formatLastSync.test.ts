@@ -38,6 +38,15 @@ describe('"just now" inside the sync screen\'s sentence', () => {
   });
 });
 
+describe('a sync a day ago is yesterday where the language says so (T-256: ru 52, de 38)', () => {
+  it.each([
+    ['ru', 'Синхронизировано вчера'],
+    ['de', 'Synchronisiert: gestern'],
+  ] as const)('%s', (language, expected) => {
+    expect(synced(language, ago(25 * 60 * MINUTE))).toBe(expected);
+  });
+});
+
 describe('minutes, hours and days inside the sentence, as each language writes them', () => {
   it.each([
     ['ru', 'Синхронизировано 5 мин назад', 'Синхронизировано 3 ч назад', 'Синхронизировано 2 дн. назад'],

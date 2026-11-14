@@ -441,6 +441,13 @@ one: a sign-out ends the tokens, and a change released after it is refused
 silence, or iOS may give up first and the failure is a timeout; bring the next controls
 into view before the tap.
 
+`FAIL` (a status from 400 to 599), with `CODE` and `ERROR`, answers the
+request at once with that status and `{ error, code }`, and the server never
+sees it: an answer the server gives in a state the stand cannot reach — its
+mail provider down is `FAIL: "503"`, `CODE: EMAIL_UNAVAILABLE`, as
+`passwordReset.js` answers then — or a refusal the app has no words of its own
+for, a 400 with no code (flow 93, T-256).
+
 `EXPECT` on `release-answers.js` is how many answers must have been held: a
 flow whose point is a late answer fails when there was none (flow 38).
 
@@ -454,7 +461,26 @@ defaults, which `Settings` reads) a device, the permission granted and a token
 made on the spot — Expo's servers are never asked, and the server's
 `EXPO_BASE_URL` is a closed local port, so nothing is sent to one. Without it
 the app is the simulator it is (flow 23). The app's own code has no hook for
-it (flow 38).
+it (flow 38). `rehearslyPushDevice: "denied"` plays a phone whose owner refused
+notifications in iOS's prompt: the permission denied, never asked again, and
+the profile offers the way to Settings (flow 94, T-256).
+
+The phone's calendar the same way: `e2e/device/expo-calendar.js` stands in for
+`expo-calendar`, the real module unless the launch gives
+`rehearslyCalendarRefusesWrite` or `rehearslyCalendarRefusesDelete`, each a
+text: an event whose title contains it is not written, or not removed, as iOS
+refuses with a read-only calendar. The simulator's calendar takes everything,
+and the sync counts a step failed only when EventKit threw — failures of the
+server's mappings are swallowed — so without it no flow could show what the
+sync says then (flow 92, T-256).
+
+A profile's zone where it is late evening now, from 22:45 to 23:44:
+`e2e/scripts/late-evening.js` with `API_URL`, `EMAIL` and `PASSWORD` saves it
+as the zone picker does and puts that zone's today in `${output.lateDay}`. The
+planner's working day ends at 23:00, so a period of that one day has no hour
+in it — the planner's empty state, which no week reaches (flow 92). Picked
+when the flow runs, not in the seed, which is an hour old by the end of a
+full run.
 
 A push itself can be delivered: `e2e/scripts/push.js` with `MAIL_URL`,
 `SIMULATOR`, `APP_ID`, `TYPE` (`role_changed`), `PROJECT` and `ROLE` hands the
@@ -484,7 +510,10 @@ How large an icon is drawn: a button that is only an icon is one element,
 box (`e2e/ink.mjs`; flow 62, the inbox's 24-point icons). `e2e/scripts/no-ink.js`
 with the same `SHOT`, `COLOUR` and region fails when anything there is drawn in
 that colour: an icon that must be gone from inside a card (flow 63, the tick the
-projects list no longer draws).
+projects list no longer draws). `e2e/scripts/no-ellipsis.js` with `SHOT` and a
+region fails when a "…" is drawn there in place of text that did not fit; with
+`RECORD` (a name) it puts what it found in `${output.<RECORD>}` instead, for a
+flow that names every wrong word at its end (flows 87, 89, 94, 95; T-256).
 
 What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
 with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has

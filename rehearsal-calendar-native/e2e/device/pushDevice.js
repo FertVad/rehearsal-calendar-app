@@ -4,7 +4,8 @@
 // answer to a token. A flow that needs one launches the app with
 // `arguments: { rehearslyPushDevice: "1" }`; iOS puts launch arguments among
 // the user defaults, which React Native's Settings reads. Without it the app
-// is the simulator it is (flow 23 says so on screen).
+// is the simulator it is (flow 23 says so on screen). `"denied"` plays a phone
+// whose owner refused notifications (expo-notifications.js, flow 94).
 //
 // Only an e2e bundle has this: metro.config.js hands these modules in for
 // expo-device and expo-notifications when REHEARSLY_E2E is set.

@@ -68,6 +68,13 @@
  * took. A silent connection is closed after HOLD_WINDOW_MS, if the app has not
  * given up on it first.
  *
+ * With `&fail=<status>` the request is not handled: it is answered at once with
+ * that status and `{ error, code }` from `&error=` and `&code=` (either may be
+ * left out) — an answer the server gives in a state the stand cannot reach:
+ * its mail provider down, `503` with `EMAIL_UNAVAILABLE` as passwordReset.js
+ * says it (flow 93), or a refusal the app has no words of its own for, a `400`
+ * with no code, as a proxy in front of the server gives one (flow 93, T-256).
+ *
  * With `&once=1` only the next matching request is held, and the ones after it
  * go through: a read on a slow connection and the change after it on a good
  * one (flow 36). A request held `before` says how the server answered it on
@@ -343,6 +350,12 @@ function holdAnswer(request, response, handle) {
     console.log(`[e2e] dropped the request ${request.method} ${pathname}: its connection closed, no answer`);
     request.socket.destroy();
   };
+  if (hold.fail) {
+    console.log(`[e2e] answered ${request.method} ${pathname} with ${hold.fail.status}${hold.fail.body.code ? ` ${hold.fail.body.code}` : ''}, not handled`);
+    request.resume();
+    response.writeHead(hold.fail.status, { 'Content-Type': 'application/json' });
+    return response.end(JSON.stringify(hold.fail.body));
+  }
   if (hold.drop && !hold.before) return drop();
   if (hold.lose) return loseAnswer(request, response, handle);
   if (hold.open) return holdOpen(request, response, hold);
@@ -426,7 +439,17 @@ http.createServer((request, response) => {
     const drop = url.searchParams.get('drop') === '1';
     const lose = url.searchParams.get('lose') === '1';
     const dead = url.searchParams.get('dead') === '1';
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, dead, until: Date.now() + HOLD_WINDOW_MS });
+    const failStatus = Number(url.searchParams.get('fail'));
+    const fail = failStatus >= 400 && failStatus <= 599
+      ? {
+          status: failStatus,
+          body: Object.fromEntries(['error', 'code']
+            .filter((key) => url.searchParams.get(key))
+            .map((key) => [key, url.searchParams.get(key)])),
+        }
+      : null;
+    if (url.searchParams.has('fail') && !fail) return answer(400, { error: 'fail is a status from 400 to 599' });
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, dead, fail, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
   const told = url.searchParams.get('type');
