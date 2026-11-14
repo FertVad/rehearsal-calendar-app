@@ -169,6 +169,11 @@ export const PEOPLE = {
   // New here too, and her account speaks Russian: onboarding in Russian, her
   // name in Cyrillic, the longest greeting of the four languages (60).
   nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
+  // New too, one in Spanish and one in German (60, T-256): the steps as the
+  // native speakers read them, the Spanish quotes and the German titles and
+  // buttons. Neither finishes it.
+  adela: { email: 'adela@e2e.test', firstName: 'Adela', lastName: 'Alba', onboarded: false, locale: 'es' },
+  kattrin: { email: 'kattrin@e2e.test', firstName: 'Kattrin', lastName: 'Haupt', onboarded: false, locale: 'de' },
   // Looks over his profile: the last button, the language sheet's bottom, a
   // zone found by search and chosen (61). An account of his own, since the
   // zone he picks stays.
@@ -1086,6 +1091,12 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual'),
             ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.wang, ids.yangsun, localInstant(1, 10), localInstant(1, 14)]);
+  // Kabanikha's hour from her phone's calendar on MORNING_DAY (89, T-256): the
+  // editor's note under it in Spanish. Far from the planner's tomorrow.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-market')`,
+    [ids.kabanikha, localInstant(6, 9), localInstant(6, 10)]);
   // Mackie's today (91): busy 12:00-14:00, so Polly's form recommends times.
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)

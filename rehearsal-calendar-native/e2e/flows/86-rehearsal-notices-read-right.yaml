@@ -44,7 +44,10 @@
 # «Cancelado el ensayo «…» previsto para mañana a las 18:00». German: «Probe
 # „Fechtszene“», the title no longer running into the date; «für eine Probe
 # eingeteilt»; «Du verwaltest jetzt das Projekt „Faust“», the case on
-# «Projekt»; «hat die Probe … als gesehen markiert», not watched it. Each card
+# «Projekt»; «hat die Probe … als gesehen markiert», not watched it. Clearing
+# the inbox is asked and left, «¿Borrar todas las notificaciones?» / «Borrar
+# todo», «Alle Mitteilungen löschen?» / «Alle löschen», not "Vaciar", "leeren".
+# Each card
 # is found by what both wordings share, its words checked and the flow goes
 # on; it fails at the end naming every one that was wrong.
 appId: ${APP_ID}
@@ -181,6 +184,31 @@ tags:
       RIGHT: "0.9"
       TOP: "0.12"
       BOTTOM: "1"
+# Clearing the inbox, asked and left (T-256): "Borrar todo", "¿Borrar todas las
+# notificaciones?", not "Vaciar". The bin's label is the alert's button.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(Borrar todo|Vaciar)"
+      SEE: "¿(Borrar todas las|Vaciar las) notificaciones\\?"
+      WAIT_MS: "10000"
+- takeScreenshot: 86-spanish-clear-all
+- runFlow:
+    when:
+      notVisible: "¿Borrar todas las notificaciones\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: ¿Borrar todas las notificaciones?, not Vaciar | '}"
+- runFlow:
+    when:
+      notVisible:
+        text: "Borrar todo"
+        rightOf: "Cancelar"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Borrar todo, not Vaciar | '}"
+- tapOn: "Cancelar"
+- extendedWaitUntil:
+    notVisible: "¿(Borrar todas las|Vaciar las) notificaciones\\?"
+    timeout: 10000
 # German (T-250): moved, "verlegt auf".
 - runScript:
     file: ../scripts/notify.js
@@ -290,6 +318,36 @@ tags:
       RIGHT: "0.9"
       TOP: "0.12"
       BOTTOM: "1"
+# Clearing the inbox, asked and left (T-256): "Alle Mitteilungen löschen?",
+# "Die Liste wird geleert", "Alle löschen" — not "leeren", "wird leer sein".
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(Alle löschen|Leeren)"
+      SEE: "(Alle Mitteilungen löschen|Mitteilungen leeren)\\?"
+      WAIT_MS: "10000"
+- takeScreenshot: 86-german-clear-all
+- runFlow:
+    when:
+      notVisible: "Alle Mitteilungen löschen\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Alle Mitteilungen löschen?, not leeren | '}"
+- runFlow:
+    when:
+      notVisible: "Die Liste wird geleert\\. Das lässt sich nicht rückgängig machen\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Die Liste wird geleert, not wird leer sein | '}"
+- runFlow:
+    when:
+      notVisible:
+        text: "Alle löschen"
+        rightOf: "Abbrechen"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Alle löschen, not Leeren | '}"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "(Alle Mitteilungen löschen|Mitteilungen leeren)\\?"
+    timeout: 10000
 # Russian (T-250): longer, only the end moved (19:00–21:00 made 19:00–22:00,
 # the seed): "теперь до 22:00", and not told as a move ("— теперь завтра в
 # 19:00"). Sent first, so it is the lowest card.

@@ -15,8 +15,12 @@
 # And her steps read as a native speaker's (T-256): access is asked with «Разрешить доступ», as iOS's own window says it, not
 # «Предоставить»; the example push is «Вас позвали на репетицию», as the real
 # one, not «добавили в репетицию»; the text promises an «уведомление», not a
-# «сообщение», and guesses no one's gender («узнать последним»). The flow goes
-# on whatever the words, and fails at the end naming every one that was wrong.
+# «сообщение», and guesses no one's gender («узнать последним»). Then two more
+# newcomers walk the same steps, no other flow does in their languages: Adela
+# in Spanish, whose last step puts its places in «», not “”; Kattrin in German,
+# whose titles and button are "Deine Verfügbarkeit", "Apple Kalender", "Wo ist
+# was?", "Verfügbarkeit", each whole. Neither finishes. The flow goes on
+# whatever the words, and fails at the end naming every one that was wrong.
 appId: ${APP_ID}
 name: Onboarding in Russian, the greeting on one line
 tags:
@@ -116,6 +120,144 @@ tags:
       WAIT_MS: 15000
 - assertVisible:
     id: calendar-today
+
+# Spanish (T-256): Adela, new, her account in Spanish, goes to the last step.
+# Its places are in «» as everywhere in Spanish, not “”.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: unset
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${ADELA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Empezar"
+      SEE: "Tu disponibilidad"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Configurar más tarde"
+      SEE: "Ahora no"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Ahora no"
+      SEE: "Dónde está cada cosa"
+      WAIT_MS: 10000
+- takeScreenshot: 60-onboarding-what-where-es
+- runFlow:
+    when:
+      notVisible: "«\\+» → «Crear proyecto»\\. Con un código: «Proyectos» → «Unirse con un código»"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: a project, in «» | '}"
+- runFlow:
+    when:
+      notVisible: "«\\+» → «.*», en los proyectos que administras"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: a rehearsal, in «» | '}"
+- runFlow:
+    when:
+      notVisible: "«\\+» → «Marcar horas ocupadas»"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: availability, in «» | '}"
+- runFlow:
+    when:
+      notVisible: "«Smart Planner», debajo del calendario"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the planner, in «» | '}"
+
+# German (T-256): Kattrin, new, her account in German, to the last step. The
+# calendar's step is "Deine Verfügbarkeit", not "Deine Zeiten", and with the
+# calendar allowed its button is "Apple Kalender", not "Apple Calendar" (the
+# simulator has no Google account, so no "Google Kalender"); the last is "Wo ist
+# was?", not "Was ist wo", its availability "Verfügbarkeit" — each whole on the
+# shot (no-ellipsis). Nothing is picked or saved.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      calendar: allow
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${KATTRIN_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Loslegen"
+      SEE: "Später einrichten"
+      WAIT_MS: 10000
+- extendedWaitUntil:
+    visible: ".*Apple (Kalender|Calendar).*"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 60-onboarding-calendar-de
+- runFlow:
+    when:
+      notVisible: "Deine Verfügbarkeit"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Deine Verfügbarkeit, not Deine Zeiten | '}"
+- runFlow:
+    when:
+      notVisible: ".*Apple Kalender.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Apple Kalender, not Calendar | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-calendar-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Später einrichten"
+      SEE: "Jetzt nicht"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Jetzt nicht"
+      SEE: "(Wo ist was\\?|Was ist wo)"
+      WAIT_MS: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 60-onboarding-what-where-de
+- runFlow:
+    when:
+      notVisible: "Wo ist was\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Wo ist was?, not Was ist wo | '}"
+- runFlow:
+    when:
+      notVisible: "Verfügbarkeit"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Verfügbarkeit, not Zeiten | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-what-where-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
 
 - evalScript: "${console.log('60 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
 - runFlow:

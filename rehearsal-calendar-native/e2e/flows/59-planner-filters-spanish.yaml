@@ -28,9 +28,13 @@
 # "Todos los miembros" over a sheet of "Todos los participantes" — now
 # participants, as the sheet says. A slot's "+" reads "Add rehearsal, 6:00 PM"
 # with a pause, and "Probe für 18:00 hinzufügen", the verb last; the German
-# third segment is "Tage", not "Daten" (data), and fits as the others do. The
-# flow goes on whatever the words, and fails at the end naming every one that
-# was wrong.
+# third segment is "Tage", not "Daten" (data), and fits as the others do. With
+# nobody picked the German row says "Alle Teilnehmer", whole. The note over the
+# slots names who has marked nothing with one rule for one or many: "Quien no
+# marca nada cuenta como libre", «Без отметок участник считается свободным»,
+# "Wer nichts eingetragen hat, zählt als frei" — not "they". The sheet's button
+# is "OK" in Spanish. The flow goes on whatever the words, and fails at the end
+# naming every one that was wrong.
 appId: ${APP_ID}
 name: The planner's filters fit in four languages
 tags:
@@ -87,6 +91,13 @@ tags:
 - extendedWaitUntil:
     visible: "Añadir ensayo \\d.*"
     timeout: 30000
+# The islanders have marked nothing: the note over the slots says how they
+# count, of one or of seven (T-256), not "Se cuentan como libres".
+- runFlow:
+    when:
+      notVisible: "(?s)Sin datos de disponibilidad: .*\\. Quien no marca nada cuenta como libre\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Quien no marca nada cuenta como libre, not Se cuentan como libres | '}"
 - assertVisible:
     id: planner-project
     text: "Proyecto, Video musical “Fuego lento”"
@@ -152,6 +163,14 @@ tags:
       SEE: "Todos los participantes, 8 de 8"
       WAIT_MS: "5000"
 - takeScreenshot: 59-participants-es
+# The sheet's button is "OK", as iOS's own (T-256), not "Listo".
+- runFlow:
+    when:
+      notVisible:
+        id: participants-done
+        text: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: OK, not Listo, on the sheet | '}"
 # Nobody picked is everyone here, and the row says so in the sheet's word.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -303,6 +322,12 @@ tags:
 - extendedWaitUntil:
     visible: "Добавить репетицию \\d.*"
     timeout: 30000
+# One rule for one name or seven, «участник» (T-256): «они» agreed with none.
+- runFlow:
+    when:
+      notVisible: "(?s)Нет данных о занятости: .*\\. Без отметок участник считается свободным\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Без отметок участник считается свободным, not они | '}"
 - waitForAnimationToEnd
 - takeScreenshot: 59-planner-ru
 - runScript:
@@ -397,6 +422,12 @@ tags:
       notVisible: "Probe für \\d.* hinzufügen"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'de: Probe für … hinzufügen, the verb last | '}"
+# She has marked nothing: "Wer nichts eingetragen hat", not "Sie zählen" (T-256).
+- runFlow:
+    when:
+      notVisible: "(?s)Keine Verfügbarkeit hinterlegt: .*\\. Wer nichts eingetragen hat, zählt als frei\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Wer nichts eingetragen hat, not Sie zählen | '}"
 - waitForAnimationToEnd
 - takeScreenshot: 59-planner-de
 - runScript:
@@ -428,6 +459,43 @@ tags:
         text: "Tage"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'de: Tage, not Daten | '}"
+# Nobody picked is everyone, said in the sheet's word: "Alle Teilnehmer", not
+# "Alle Mitglieder" (T-256), and whole in its row.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "Alle Teilnehmer, 1 von 1"
+      WAIT_MS: "5000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      SEE: "Alle Teilnehmer, 0 von 1"
+      WAIT_MS: "5000"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible: "Alle Teilnehmer, 0 von 1"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 59-nobody-picked-de
+- runFlow:
+    when:
+      notVisible:
+        id: participants-row
+        text: "Teilnehmer, Alle Teilnehmer"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Alle Teilnehmer, not Alle Mitglieder, beside the sheet | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-nobody-picked-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
 
 - evalScript: "${console.log('59 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
 - runFlow:

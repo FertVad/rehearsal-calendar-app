@@ -26,7 +26,17 @@
 # «Накладка в расписании», as the theatre says it, not «Конфликт расписания».
 # In Spanish her row of a rehearsal she is not on says «No estás en este
 # ensayo» (Tikhon's «Сцена с Тихоном», in two days), and her badge in «Гроза»
-# is «Admin principal», the first admin's, not the man's «Propietario».
+# is «Admin principal», the first admin's, not the man's «Propietario». The
+# rest of the screens she passes, as the native speakers wrote them (T-256):
+# - Spanish: its seen count «Lo han visto», not «Vistos»; deleting it, asked
+#   and left, «1 participante recibirá una notificación»; the note under her
+#   hour from her phone's calendar «cuando buscan un horario»; a day gone's
+#   «Eliminar las marcas de este día», whole; the planner's «No disponibles:
+#   Тихон Кабанов», not «Ocupados».
+# - German: Tikhon's action «Adminrechte geben», whole, and its alert, left;
+#   deleting «Сцена с Тихоном»
+#   asks «„…“ (…) löschen?» with «1 Teilnehmer wird benachrichtigt».
+# - Russian: deleting it, «Уведомление получит 1 участник».
 appId: ${APP_ID}
 name: Names and counts read right
 tags:
@@ -59,6 +69,129 @@ tags:
       notVisible: "(?s).*Сцена с Тихоном.*Гроза.*No estás en este ensayo.*"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'es: No estás en este ensayo, not en el reparto | '}"
+# Its count of who has seen it, as VoiceOver reads it: "Lo han visto", not
+# "Vistos" (T-256).
+- runFlow:
+    when:
+      notVisible:
+        id: seen-count
+        text: "Lo han visto: .*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Lo han visto, not Vistos | '}"
+# Deleting it, asked and left: the count of who will be told comes first and
+# takes its noun's number, "1 participante recibirá una notificación", not
+# "Los participantes (1) recibirán un aviso" (T-256).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(?s).*Сцена с Тихоном.*Гроза.*"
+      SEE: "Тихон Кабанов.*"
+      WAIT_MS: "15000"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-details-delete
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-delete
+      SEE: "¿Eliminar «Сцена с Тихоном», .*\\?"
+      WAIT_MS: "10000"
+- takeScreenshot: 89-delete-es
+- runFlow:
+    when:
+      notVisible: "1 participante recibirá una notificación"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: 1 participante recibirá una notificación, not Los participantes (1) | '}"
+- tapOn: "Cancelar"
+- extendedWaitUntil:
+    notVisible: "¿Eliminar «Сцена с Тихоном», .*\\?"
+    timeout: 10000
+- tapOn: "Cerrar"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-delete
+    timeout: 10000
+
+# Spanish: her hour from her phone's calendar on MORNING_DAY, the note under it
+# "cuando buscan un horario", not "al buscar un hueco" (T-256).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Marcar horas ocupadas"
+      WAIT_MS: "5000"
+- tapOn: "Marcar horas ocupadas"
+- scrollUntilVisible:
+    element:
+      id: day-${MORNING_DAY}
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MORNING_DAY}
+- tapOn:
+    id: day-${MORNING_DAY}
+- extendedWaitUntil:
+    visible: "Los demás ven estas horas .*"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible: "Los demás ven estas horas cuando buscan un horario\\..*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: cuando buscan un horario, not al buscar un hueco | '}"
+- tapOn:
+    id: availability-deselect
+# A day gone: its button says "Eliminar las marcas de este día", not "datos de
+# esta fecha" (T-256), and is whole. Only from the 2nd of a month: the editor
+# begins with this month, so on the 1st it has no day gone.
+- runFlow:
+    when:
+      true: ${YESTERDAY_DAY.slice(0, 7) == TODAY_DAY.slice(0, 7)}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: day-${YESTERDAY_DAY}
+          direction: UP
+          centerElement: true
+          timeout: 30000
+      - runFlow:
+          file: ../subflows/day-in-reach.yaml
+          env:
+            DAY: ${YESTERDAY_DAY}
+      - tapOn:
+          id: day-${YESTERDAY_DAY}
+      - extendedWaitUntil:
+          visible: ".*Eliminar (las marcas de este día|datos de esta fecha).*"
+          timeout: 10000
+      - waitForAnimationToEnd
+      - takeScreenshot: 89-day-gone-es
+      - runFlow:
+          when:
+            notVisible: ".*Eliminar las marcas de este día.*"
+          commands:
+            - evalScript: "${output.wrong = output.wrong + 'es: Eliminar las marcas de este día, not datos de esta fecha | '}"
+      - runScript:
+          file: ../scripts/no-ellipsis.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            SHOT: 89-day-gone-es
+            LEFT: "0"
+            RIGHT: "1"
+            TOP: "0.07"
+            BOTTOM: "0.95"
+      - tapOn:
+          id: availability-deselect
+# Nothing changed: the editor closes unasked.
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
 
 # Spanish: her own row in «Гроза» is its first admin's, "Admin principal",
 # not "Propietario" (T-256), and the badge is whole.
@@ -115,6 +248,12 @@ tags:
     centerElement: true
     timeout: 60000
 - waitForAnimationToEnd
+# The slot says who cannot come, "No disponibles", not "Ocupados" (T-256).
+- runFlow:
+    when:
+      notVisible: "No disponibles: Тихон Кабанов"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: No disponibles, not Ocupados | '}"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -158,6 +297,129 @@ tags:
 - extendedWaitUntil:
     notVisible:
       id: header-cancel
+    timeout: 10000
+
+# German, chosen in the profile (T-256): Tikhon's action is "Adminrechte
+# geben", not "Administratorrechte geben", whole in the sheet, and its alert
+# asks "Adminrechte geben?"; left, so «Гроза» is hers alone to run. And deleting «Сцена с Тихоном» asks with the verb last, „…“ (…)
+# löschen?, and "1 Teilnehmer wird benachrichtigt".
+- tapOn:
+    id: tab-profile
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Гроза.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Гроза.*"
+- extendedWaitUntil:
+    visible: ".*Link teilen"
+    timeout: 15000
+- scrollUntilVisible:
+    element: ".*Тихон Кабанов.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Тихон Кабанов.*"
+      SEE: "Mitglied verwalten"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 89-make-admin-item-de
+- runFlow:
+    when:
+      notVisible: ".*Adminrechte geben"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Adminrechte geben, not Administratorrechte | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 89-make-admin-item-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+- tapOn: ".*(Adminrechte|Administratorrechte) geben"
+- extendedWaitUntil:
+    visible: "(Adminrechte|Administratorrechte) geben\\?"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible: "Möchtest du Тихон Кабанов wirklich Adminrechte für das Projekt geben\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Adminrechte geben?, its message | '}"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "(Adminrechte|Administratorrechte) geben\\?"
+    timeout: 10000
+- tapOn:
+    id: header-back
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Гроза.*"
+    timeout: 10000
+# «Сцена с Тихоном» from the calendar.
+- tapOn:
+    id: tab-calendar
+- extendedWaitUntil:
+    visible: "(?s).*Сцена с Тихоном.*Гроза.*"
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(?s).*Сцена с Тихоном.*Гроза.*"
+      SEE: "Тихон Кабанов.*"
+      WAIT_MS: "15000"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-details-delete
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-delete
+      SEE: "„Сцена с Тихоном“.*löschen.*\\?"
+      WAIT_MS: "10000"
+- takeScreenshot: 89-delete-de
+- runFlow:
+    when:
+      notVisible: "„Сцена с Тихоном“ \\(.*\\) löschen\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: „…“ (…) löschen?, the verb last | '}"
+- runFlow:
+    when:
+      notVisible: "1 Teilnehmer wird benachrichtigt"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: 1 Teilnehmer wird benachrichtigt, not Teilnehmer (1) | '}"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "„Сцена с Тихоном“.*löschen.*\\?"
+    timeout: 10000
+- tapOn: "Schließen"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-delete
     timeout: 10000
 
 # Russian, chosen in the profile.
@@ -240,6 +502,49 @@ tags:
 - tapOn: "(Отменить|Отмена)"
 - extendedWaitUntil:
     notVisible: "Назначить администратором\\?"
+    timeout: 10000
+
+# Russian: deleting «Сцена с Тихоном», asked and left — who will be told in the
+# number's form, «Уведомление получит 1 участник», not «Участники (1) получат
+# уведомление» (T-256).
+- tapOn:
+    id: tab-calendar
+- extendedWaitUntil:
+    visible: "(?s).*Сцена с Тихоном.*Гроза.*"
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(?s).*Сцена с Тихоном.*Гроза.*"
+      SEE: "Тихон Кабанов.*"
+      WAIT_MS: "15000"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-details-delete
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-delete
+      SEE: "Удалить «Сцена с Тихоном», .*\\?"
+      WAIT_MS: "10000"
+- takeScreenshot: 89-delete-ru
+- runFlow:
+    when:
+      notVisible: "Уведомление получит 1 участник"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Уведомление получит 1 участник, not Участники (1) | '}"
+- tapOn:
+    text: "(Отменить|Отмена)"
+    below: "Удалить «Сцена с Тихоном», .*\\?"
+- extendedWaitUntil:
+    notVisible: "Удалить «Сцена с Тихоном», .*\\?"
+    timeout: 10000
+- tapOn: "Закрыть"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-delete
     timeout: 10000
 
 # Russian: the same slot.

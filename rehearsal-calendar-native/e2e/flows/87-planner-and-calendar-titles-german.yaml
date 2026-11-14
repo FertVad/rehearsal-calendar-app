@@ -14,7 +14,12 @@
 #   Zeit";
 # - her busy night, 23:00 to 01:00, ends "am Folgetag", not "Folgetag": the
 #   words in the end's button beside its time, fontSize xs, on one line. The
-#   clock is the simulator's 12-hour one, "1:00 AM", the longer of the two.
+#   clock is the simulator's 12-hour one, "1:00 AM", the longer of the two;
+# - the planner's button on her calendar says "Finde die beste Zeit für eine
+#   Probe", two days picked are "Ausgewählte Tage: 2" (not "Daten"), and a day
+#   gone offers "Einträge für diesen Tag löschen" — each whole on the shot
+#   (no-ellipsis); the "+" says "Was möchtest du tun?" to VoiceOver, not "Neue
+#   Aktion".
 # The flow goes on whatever the words, and fails at the end naming every one
 # that was wrong.
 appId: ${APP_ID}
@@ -46,6 +51,28 @@ tags:
 - assertVisible:
     id: tab-planner
     text: "Planner, tab.*"
+# She runs a project: the planner's button under the week says "Finde die beste
+# Zeit für eine Probe", not "Probezeit" (T-256), and whole.
+- extendedWaitUntil:
+    visible: ".*Finde die beste (Zeit für eine Probe|Probezeit).*"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 87-planner-button-de
+- runFlow:
+    when:
+      notVisible: ".*Finde die beste Zeit für eine Probe.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Finde die beste Zeit für eine Probe, not Probezeit | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 87-planner-button-de
+      # The button alone, under the week: the rows below have words of their own.
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.32"
+      BOTTOM: "0.40"
 - tapOn:
     id: tab-planner
 - extendedWaitUntil:
@@ -74,9 +101,22 @@ tags:
     commands:
       - evalScript: "${output.wrong = output.wrong + 'de: Du bist nicht eingeteilt, not in der Besetzung | '}"
 
-# Her busy night in the availability editor.
-- tapOn:
-    id: tab-create
+# Her busy night in the availability editor. The "+" says "Was möchtest du
+# tun?", not "Neue Aktion" (T-256): VoiceOver reads it, as flow 16 reads the
+# Russian; the sheet it opens has no title.
+- runFlow:
+    when:
+      notVisible:
+        id: tab-create
+        text: "Was möchtest du tun\\?.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Was möchtest du tun?, not Neue Aktion | '}"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Als beschäftigt markieren"
+      WAIT_MS: "5000"
 - tapOn: "Als beschäftigt markieren"
 - scrollUntilVisible:
     element:
@@ -128,6 +168,76 @@ tags:
       RIGHT: "1"
       TOP: "0.07"
       BOTTOM: "0.95"
+# The next day picked too: the editor's title counts "Tage", not "Daten"
+# (T-256, the owner's "Tage"), whole.
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: day-${MORNING_DAY}
+      SEE: "Ausgewählte (Tage|Daten): 2"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 87-two-days-de
+- runFlow:
+    when:
+      notVisible: "Ausgewählte Tage: 2"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Ausgewählte Tage, not Daten | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 87-two-days-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+- tapOn:
+    id: availability-deselect
+- extendedWaitUntil:
+    notVisible: "Ausgewählte (Tage|Daten): 2"
+    timeout: 10000
+# A day gone: its button says "Einträge für diesen Tag löschen", not "Daten
+# für dieses Datum" (T-256), and is whole. Only from the 2nd of a month: the
+# editor begins with this month, so on the 1st it has no day gone.
+- runFlow:
+    when:
+      true: ${YESTERDAY_DAY.slice(0, 7) == TODAY_DAY.slice(0, 7)}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: day-${YESTERDAY_DAY}
+          direction: UP
+          centerElement: true
+          timeout: 30000
+      - runFlow:
+          file: ../subflows/day-in-reach.yaml
+          env:
+            DAY: ${YESTERDAY_DAY}
+      - tapOn:
+          id: day-${YESTERDAY_DAY}
+      - extendedWaitUntil:
+          visible: ".*(Einträge für diesen Tag|Daten für dieses Datum) löschen.*"
+          timeout: 10000
+      - waitForAnimationToEnd
+      - takeScreenshot: 87-day-gone-de
+      - runFlow:
+          when:
+            notVisible: ".*Einträge für diesen Tag löschen.*"
+          commands:
+            - evalScript: "${output.wrong = output.wrong + 'de: Einträge für diesen Tag löschen, not Daten | '}"
+      - runScript:
+          file: ../scripts/no-ellipsis.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            SHOT: 87-day-gone-de
+            LEFT: "0"
+            RIGHT: "1"
+            TOP: "0.07"
+            BOTTOM: "0.95"
+      - tapOn:
+          id: availability-deselect
 # Nothing changed: the editor closes unasked.
 - tapOn:
     id: header-cancel
