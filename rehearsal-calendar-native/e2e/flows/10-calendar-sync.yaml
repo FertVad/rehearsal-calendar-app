@@ -28,8 +28,14 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- tapOn:
-    id: tab-profile
+# The tab is there before the app takes taps: a tap can go unanswered, so it
+# is tapped until the profile is on screen (14.11, the tab stayed on Calendar).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element: ".*Calendar Sync.*"
     direction: DOWN
@@ -82,8 +88,13 @@ tags:
     visible:
       id: tab-profile
     timeout: 30000
-- tapOn:
-    id: tab-profile
+# Just launched: the same unanswered tap as above, on the same tab.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element: ".*Calendar Sync.*"
     direction: DOWN
