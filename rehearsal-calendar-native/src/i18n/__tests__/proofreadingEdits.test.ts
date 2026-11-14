@@ -238,9 +238,7 @@ const EDITS: Edit[] = [
   ['es', 'smartPlanner.noSlotsMessage', null, 'Aquí aparecen las horas en que todos pueden. Para eso, cada uno tiene que marcar su tiempo — o prueba otro período.', 'Aquí aparecen las horas en que todos pueden. Para eso, cada uno tiene que marcar sus horas ocupadas. También puedes probar con otro período.'],
   ['es', 'smartPlanner.unknownAvailability', ['Anna', 'Hamlet', 'Planner'], 'Sin disponibilidad registrada: Anna. Se cuentan como libres.', 'Sin datos de disponibilidad: Anna. Quien no marca nada cuenta como libre.'],
   ['es', 'smartPlanner.allMembers', null, 'Todos los miembros', 'Todos los participantes'],
-  // By the number of people since T-258: "No disponible" for one.
-  ['es', 'smartPlanner.busyPrefix', [1], 'Ocupados', 'No disponible'],
-  ['es', 'smartPlanner.busyPrefix', [2], 'Ocupados', 'No disponibles'],
+  ['es', 'smartPlanner.busyPrefix', [2], 'Ocupados', 'No disponibles'], ['es', 'smartPlanner.busyPrefix', [1], 'Ocupados', 'No disponible'], // by the number since T-258
   ['es', 'calendarSync.explanation', null, 'Los ensayos pasan al calendario del teléfono, y de él solo llegan las horas que tienes ocupadas, nunca qué son los eventos.', 'Los ensayos pasan al calendario del teléfono; de él solo llegan las horas que tienes ocupadas, nunca el nombre de los eventos.'],
   ['es', 'calendarSync.checkingPermissions', null, 'Comprobando permisos...', 'Comprobando permisos…'],
   ['es', 'calendarSync.removeAllPartial', [1, 1], 'Eliminados: 1. No se pudieron eliminar: 1 — esos eventos siguen en el calendario.', 'Eliminados: 1. Un evento no se pudo eliminar y sigue en el calendario.'],
@@ -272,9 +270,7 @@ const EDITS: Edit[] = [
   ['de', 'rehearsals.noAdminProjects', null, 'Keine Projekte, die du verwaltest', 'Keine Projekte, in denen du Admin bist'],
   ['de', 'rehearsals.loadingMembers', null, 'Mitglieder werden geladen...', 'Mitglieder werden geladen …'],
   ['de', 'rehearsals.busyAt', ['Anna', 'Hamlet', 'Planner'], 'Anna: beschäftigt Hamlet', 'Anna: Hamlet beschäftigt'],
-  // T-258's words, final: "und 1 weitere Person" was cut on the phone. Exact
-  // comparison - "und 1 weiterer" holds "und 1 weitere" in it.
-  ['de', 'rehearsals.andMore', [1, 1], 'und 1 weitere', 'und 1 weiterer'],
+  ['de', 'rehearsals.andMore', [1, 1], 'und 1 weitere', 'und 1 weiterer'], // T-258's, final; compared exactly: it holds "und 1 weitere"
   ['de', 'rehearsals.notFound', null, 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht, oder du wurdest aus der Besetzung genommen.', 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht oder du bist nicht mehr dafür eingeteilt.'],
   ['de', 'rehearsals.noAvailableTime', null, 'Keine verfügbare Zeit für alle ausgewählten Teilnehmer', 'Keine Zeit, in der alle ausgewählten Teilnehmer frei sind'],
   ['de', 'projects.noProjects', null, 'Hier stehen deine Projekte', 'Hier erscheinen deine Projekte'],

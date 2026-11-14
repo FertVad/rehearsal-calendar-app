@@ -285,6 +285,13 @@ export const PEOPLE = {
   // Wang and Yang Sun busy tomorrow 10:00-14:00 (95, T-256, T-258). Her
   // account speaks German.
   shente: { email: 'shente@e2e.test', firstName: 'Shen', lastName: 'Te', onboarded: true, locale: 'de' },
+  // Lydia runs «The Rivals»: Bob Acres and Lucius O'Trigger in it, both busy
+  // tomorrow 10:00-14:00. She plans over the two of them, and asks for codes
+  // for a new address twice in a minute; nothing is saved or changed (96,
+  // T-256). Her account speaks English.
+  lydia: { email: 'lydia@e2e.test', firstName: 'Lydia', lastName: 'Languish', onboarded: true },
+  acres: { email: 'acres@e2e.test', firstName: 'Bob', lastName: 'Acres', onboarded: true },
+  otrigger: { email: 'otrigger@e2e.test', firstName: 'Lucius', lastName: 'OTrigger', onboarded: true },
   wang: { email: 'wang@e2e.test', firstName: 'Wang', lastName: 'Wasser', onboarded: true },
   yangsun: { email: 'yangsun@e2e.test', firstName: 'Yang', lastName: 'Sun', onboarded: true },
   shufu: { email: 'shufu@e2e.test', firstName: 'Shu', lastName: 'Fu', onboarded: true },
@@ -702,6 +709,18 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW()),
               ($1, $4, 'member', 'active', NOW(), NOW()), ($1, $5, 'member', 'active', NOW(), NOW())`,
       [own.id, ids.shente, ids.wang, ids.yangsun, ids.shufu]);
+  }
+  // Lydia's (96, T-256): Acres and O'Trigger members. Inserted: the sign-ins
+  // are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('The Rivals', 'Bath', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW()),
+              ($1, $4, 'member', 'active', NOW(), NOW())`,
+      [own.id, ids.lydia, ids.acres, ids.otrigger]);
   }
   // Tortsov's (92, T-256), he alone in it, and his three rehearsals, he on
   // each: «Трактир» the phone's calendar will not take, «Святки» it will not
@@ -1126,6 +1145,13 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual'),
             ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.wang, ids.yangsun, localInstant(1, 10), localInstant(1, 14)]);
+  // Acres' and O'Trigger's tomorrow (96, T-256): both busy in Lydia's slot at
+  // 10:00, so her save names two - "Busy at this time: …".
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual'),
+            ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.acres, ids.otrigger, localInstant(1, 10), localInstant(1, 14)]);
   // Kabanikha's hour from her phone's calendar on MORNING_DAY (89, T-256): the
   // editor's note under it in Spanish. Far from the planner's tomorrow.
   await client.query(

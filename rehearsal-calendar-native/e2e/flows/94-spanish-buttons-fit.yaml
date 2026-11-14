@@ -2,7 +2,8 @@
 # phone:
 # - the window of a phone that refused notifications offers "Abrir
 #   configuración" — the phone's own settings are "la configuración del
-#   teléfono" (owner's decision 5), not "Abrir ajustes";
+#   teléfono" (owner's decision 5), not "Abrir ajustes"; opened in German
+#   too, its title "Mitteilungen sind nicht erlaubt" read whole and uncut;
 # - the reset's button, once its minute is up, is "Reenviar código", not
 #   "Enviar el código otra vez";
 # - the address change's is "Reenviar códigos", not "Enviar los códigos otra
@@ -78,6 +79,63 @@ env:
 - extendedWaitUntil:
     notVisible: "Las notificaciones no están permitidas"
     timeout: 10000
+
+# The same window in German: "Mitteilungen sind nicht erlaubt", iOS's word
+# for notifications, as the rest of the app says it, not "Benachrichtigungen
+# sind nicht erlaubt" — whole, and nothing on the shot cut. Her language is
+# set back to Spanish after.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-notifications-device
+      SEE: "(Mitteilungen|Benachrichtigungen) sind nicht erlaubt"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 94-push-denied-de
+- runFlow:
+    when:
+      notVisible: "Mitteilungen sind nicht erlaubt"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Mitteilungen sind nicht erlaubt, not Benachrichtigungen sind nicht erlaubt | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 94-push-denied-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'de: ' + output.cut + ' | ' : '')}"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "(Mitteilungen|Benachrichtigungen) sind nicht erlaubt"
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Español"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-es
+      SEE: "Perfil, tab.*"
+      WAIT_MS: "10000"
 
 # Signed out: the sign-in screen in Spanish, a reset code asked for.
 - scrollUntilVisible:
