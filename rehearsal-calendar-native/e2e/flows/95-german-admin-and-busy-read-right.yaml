@@ -1,0 +1,88 @@
+# German, where a project's owner plans over two busy people (T-258, from the
+# native speakers' reading of T-256): the form's busy line counts the second
+# as iOS counts people, "und 1 weiterer" (Siri's "und %d weiterer", Podcasts'
+# "und 1 weiterer"), masculine after "Teilnehmer" as everywhere in the app.
+# "und 1 weitere Person" was cut on the phone: "…und 1 weitere Per…"
+# (95-two-busy-de). The line is one line by design (ParticipantPicker,
+# numberOfLines 1); the whole list is in the participants' sheet.
+#
+# Shen Te's account speaks German. Wang Wasser and Yang Sun are busy tomorrow
+# 10:00-14:00 in «Der gute Mensch». She plans tomorrow at 10:00 from the
+# planner and leaves the form; nothing is saved. The line is read whole, and
+# looked for a cut on the shot itself — the "…" iOS draws in place of what
+# does not fit (e2e/scripts/no-ellipsis.js) — since Maestro reads a label
+# whole however much of it is drawn.
+#
+# T-256 named this flow for more German texts (admin rights, a rehearsal not
+# found, the inbox's age); they come with T-256, not here.
+appId: ${APP_ID}
+name: German busy people read right and whole
+tags:
+  - language
+  - rehearsals
+  - planner
+  - participants
+---
+# On the 24-hour clock, as a German phone is: the busy line's times are
+# "10:00–14:00", not the simulator's "10:00 AM–2:00 PM" (flow 53).
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      AppleICUForce24HourTime: "<true/>"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${SHENTE_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# Tomorrow at 10:00 from the planner: Wang and Yang Sun busy.
+- tapOn:
+    id: tab-planner
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-add-${TOMORROW_DAY}-10:00
+      SEE: "Probe hinzufügen"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: participants-conflict
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 95-two-busy-de
+# Whole and exact: "und 1 weiterer" holds "und 1 weitere" in it, so the line
+# is matched to its end.
+- assertVisible:
+    id: participants-conflict
+    text: "Wasser: .*beschäftigt.* und 1 weiterer"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 95-two-busy-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Nicht speichern"
+    commands:
+      - tapOn: "Nicht speichern"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000

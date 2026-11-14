@@ -263,6 +263,13 @@ export const PEOPLE = {
   polly: { email: 'polly@e2e.test', firstName: 'Polly', lastName: 'Peachum', onboarded: true, locale: 'de' },
   mackie: { email: 'mackie@e2e.test', firstName: 'Mackie', lastName: 'Messer', onboarded: true, locale: 'de' },
   jenny: { email: 'jenny@e2e.test', firstName: 'Jenny', lastName: 'Diver', onboarded: true, locale: 'de' },
+  // Shen Te runs «Der gute Mensch»: Wang its admin, Yang Sun and Shu Fu in it,
+  // Wang and Yang Sun busy tomorrow 10:00-14:00 (95, T-256, T-258). Her
+  // account speaks German.
+  shente: { email: 'shente@e2e.test', firstName: 'Shen', lastName: 'Te', onboarded: true, locale: 'de' },
+  wang: { email: 'wang@e2e.test', firstName: 'Wang', lastName: 'Wasser', onboarded: true },
+  yangsun: { email: 'yangsun@e2e.test', firstName: 'Yang', lastName: 'Sun', onboarded: true },
+  shufu: { email: 'shufu@e2e.test', firstName: 'Shu', lastName: 'Fu', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -666,6 +673,18 @@ export async function seed({ client, apiUrl, timezone }) {
               ($1, $4, 'member', 'active', NOW(), NOW())`,
       [own.id, ids.polly, ids.mackie, ids.jenny]);
   }
+  // Shen Te's (95, T-256): Wang an admin of it, Yang Sun and Shu Fu members.
+  // Inserted: the sign-ins are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Der gute Mensch', 'Sezuan', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW()),
+              ($1, $4, 'member', 'active', NOW(), NOW()), ($1, $5, 'member', 'active', NOW(), NOW())`,
+      [own.id, ids.shente, ids.wang, ids.yangsun, ids.shufu]);
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -1026,6 +1045,18 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.tikhon, localInstant(1, 10), localInstant(1, 14)]);
+  // Miranda's tomorrow (59, T-258): the one busy in Bianca's slot at 10:00,
+  // which names her in the singular — "No disponible", "Не может".
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [islanders[2], localInstant(1, 10), localInstant(1, 14)]);
+  // Wang's and Yang Sun's tomorrow (95): both busy in Shen Te's slot at 10:00.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual'),
+            ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.wang, ids.yangsun, localInstant(1, 10), localInstant(1, 14)]);
   // Mackie's today (91): busy 12:00-14:00, so Polly's form recommends times.
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)

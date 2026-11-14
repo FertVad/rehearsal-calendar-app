@@ -17,6 +17,11 @@
 # for on the shot itself — the "…" iOS draws in place of what does not fit
 # (e2e/scripts/no-ellipsis.js, ink.mjs) — and the words are checked by their
 # text, the sizes by Maestro. Nothing is saved; her language stays German.
+#
+# Miranda Milan is busy tomorrow 10:00-14:00, alone of the eight: that slot
+# names one person, "No disponible: Miranda Milan" and «Не может: Miranda
+# Milan», not "Ocupados"/«Заняты», plural for one (T-258). Checked where they
+# show, the flow going on; it fails at the end if either was wrong.
 appId: ${APP_ID}
 name: The planner's filters fit in four languages
 tags:
@@ -24,6 +29,7 @@ tags:
   - participants
   - language
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -142,6 +148,29 @@ tags:
 - extendedWaitUntil:
     notVisible: "Todos los participantes, 8 de 8"
     timeout: 10000
+# Tomorrow's slot at 10:00, Miranda alone busy in it: "No disponible", one
+# person, not "Ocupados" nor "No disponibles" (T-258). The row is checked and
+# the flow goes on, so a run on the old words names Russian's too.
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- takeScreenshot: 59-one-busy-es
+- runFlow:
+    when:
+      notVisible:
+        id: planner-slot-${TOMORROW_DAY}
+        text: "No disponible: Miranda Milan"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: No disponible: Miranda Milan | '}"
+- scrollUntilVisible:
+    element:
+      id: planner-project
+    direction: UP
+    timeout: 60000
 
 # English.
 - runFlow:
@@ -254,6 +283,27 @@ tags:
 - assertVisible:
     id: planner-period-custom
     text: "Даты"
+# The same slot in Russian: «Не может», one person, not «Заняты» (T-258).
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- takeScreenshot: 59-one-busy-ru
+- runFlow:
+    when:
+      notVisible:
+        id: planner-slot-${TOMORROW_DAY}
+        text: "Не может: Miranda Milan"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Не может: Miranda Milan | '}"
+- scrollUntilVisible:
+    element:
+      id: planner-project
+    direction: UP
+    timeout: 60000
 
 # German, over the other long name.
 - runFlow:
@@ -319,3 +369,13 @@ tags:
 - assertVisible:
     id: planner-period-custom
     text: "Daten"
+
+- evalScript: "${console.log('59 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

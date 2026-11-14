@@ -82,6 +82,9 @@ tags:
       WAIT_MS: 10000
 - assertVisible: ".*Создать проект.*"
 - takeScreenshot: 60-onboarding-what-where-ru
+# Where to join a project: «По приглашению», not «По коду: … «Присоединиться
+# по коду»», the code twice (T-258).
+- assertVisible: "«\\+» → «Создать проект»\\. По приглашению: «Проекты» → «Присоединиться по коду»"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
