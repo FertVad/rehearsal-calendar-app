@@ -144,7 +144,8 @@ describe('A number takes its noun\'s form (T-256)', () => {
     expect(es.rehearsals.deleteNotifies(5)).toBe('5 participantes recibirán una notificación');
     expect(de.rehearsals.deleteNotifies(1)).toBe('1 Teilnehmer wird benachrichtigt');
     expect(de.rehearsals.deleteNotifies(5)).toBe('5 Teilnehmer werden benachrichtigt');
-    expect(de.rehearsals.andMore(1)).toBe('und 1 weitere Person');
+    // T-258's final words for one more: "und 1 weiterer" (below).
+    expect(de.rehearsals.andMore(1)).toBe('und 1 weiterer');
     expect(de.rehearsals.andMore(3)).toBe('und 3 weitere');
     expect(en.auth.passwordHint(1)).toBe('At least 1 character');
     expect(en.auth.resendIn(1)).toBe('You can ask for a new code in 1 second');
