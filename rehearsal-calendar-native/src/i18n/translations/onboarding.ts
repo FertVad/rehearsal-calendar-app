@@ -94,7 +94,8 @@ export const ru = {
       title: 'Что где',
       project: 'Проект',
       projectWhere: (create: string, projects: string, join: string) =>
-        `«+» → «${create}». По коду: «${projects}» → «${join}»`,
+        // Not "По коду: … «Присоединиться по коду»", the code twice (T-258).
+        `«+» → «${create}». По приглашению: «${projects}» → «${join}»`,
       rehearsal: 'Репетиция',
       rehearsalWhere: (create: string) => `«+» → «${create}», в проектах, где вы администратор`,
       availability: 'Занятость',

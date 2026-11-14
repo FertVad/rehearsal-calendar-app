@@ -23,6 +23,42 @@ describe('A person\'s name is the subject, so it stays as stored (T-250)', () =>
   });
 });
 
+// The native speakers' reading of T-256, its tails (T-258).
+describe('The planner\'s slot names its busy people by their number (T-258)', () => {
+  // "Заняты: Анна Иванова", "No disponibles: Laura" put one person in the
+  // plural; "не может" has no gender, as busyAtThisTime.
+  it('Russian and Spanish agree with one person and with two', () => {
+    expect(ru.smartPlanner.busyPrefix(1)).toBe('Не может');
+    expect(ru.smartPlanner.busyPrefix(2)).toBe('Не могут');
+    expect(es.smartPlanner.busyPrefix(1)).toBe('No disponible');
+    expect(es.smartPlanner.busyPrefix(2)).toBe('No disponibles');
+  });
+
+  it('English and German have one word for any number', () => {
+    expect(en.smartPlanner.busyPrefix(1)).toBe('Busy');
+    expect(en.smartPlanner.busyPrefix(2)).toBe('Busy');
+    expect(de.smartPlanner.busyPrefix(1)).toBe('Beschäftigt');
+    expect(de.smartPlanner.busyPrefix(2)).toBe('Beschäftigt');
+  });
+});
+
+describe('The onboarding says "по коду" once (T-258)', () => {
+  it('Russian joins a project "По приглашению"', () => {
+    expect(ru.onboarding.whatWhere.projectWhere('Создать проект', 'Проекты', 'Присоединиться по коду'))
+      .toBe('«+» → «Создать проект». По приглашению: «Проекты» → «Присоединиться по коду»');
+  });
+});
+
+describe('German counts one more busy person as iOS does: "und 1 weiterer" (T-258)', () => {
+  // "und 1 weitere Person" was cut on the phone (flow 95); masculine after
+  // "Teilnehmer", as everywhere in the app.
+  it('one and more', () => {
+    expect(de.rehearsals.andMore(1)).toBe('und 1 weiterer');
+    expect(de.rehearsals.andMore(2)).toBe('und 2 weitere');
+    expect(de.rehearsals.andMore(3)).toBe('und 3 weitere');
+  });
+});
+
 describe('After "Account deleted", the projects deleted with it: done, not to come (T-250)', () => {
   const ruSaid = (n: number) => ru.profile.deleteAccountProjectsWarning(n);
 

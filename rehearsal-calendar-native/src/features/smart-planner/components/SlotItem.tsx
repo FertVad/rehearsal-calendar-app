@@ -39,7 +39,7 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
       return t.smartPlanner.allBusy;
     }
     const names = slot.busyMembers.map(m => m.name).join(', ');
-    return `${t.smartPlanner.busyPrefix}: ${names}`;
+    return `${t.smartPlanner.busyPrefix(slot.busyMembers.length)}: ${names}`;
   };
 
   const range = formatTimeRange(slot.startTime, slot.endTime, getDateLocale(language), uses24);

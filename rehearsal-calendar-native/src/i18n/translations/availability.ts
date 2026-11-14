@@ -61,7 +61,8 @@ export interface SmartPlannerTranslations {
   allMembers: string;
   allAvailable: string;
   allBusy: string;
-  busyPrefix: string;
+  /** Before a slot's busy names: agrees with how many they are (T-258). */
+  busyPrefix: (count: number) => string;
 }
 
 export const ru = {
@@ -126,7 +127,8 @@ export const ru = {
     allMembers: 'Все участники',
     allAvailable: 'Все свободны',
     allBusy: 'Все заняты',
-    busyPrefix: 'Заняты',
+    // "не может" has no gender, as busyAtThisTime; "Заняты" was plural for one.
+    busyPrefix: (count: number) => (count === 1 ? 'Не может' : 'Не могут'),
   },
 };
 
@@ -184,7 +186,7 @@ export const en = {
     allMembers: 'All Members',
     allAvailable: 'All available',
     allBusy: 'All busy',
-    busyPrefix: 'Busy',
+    busyPrefix: () => 'Busy',
   },
 };
 
@@ -242,7 +244,8 @@ export const es = {
     allMembers: 'Todos los miembros',
     allAvailable: 'Todos disponibles',
     allBusy: 'Todos ocupados',
-    busyPrefix: 'Ocupados',
+    // "No disponible(s)" has no gender; "Ocupados" guessed one, and the plural.
+    busyPrefix: (count: number) => (count === 1 ? 'No disponible' : 'No disponibles'),
   },
 };
 
@@ -301,6 +304,6 @@ export const de = {
     allMembers: 'Alle Mitglieder',
     allAvailable: 'Alle verfügbar',
     allBusy: 'Alle beschäftigt',
-    busyPrefix: 'Beschäftigt',
+    busyPrefix: () => 'Beschäftigt',
   },
 };

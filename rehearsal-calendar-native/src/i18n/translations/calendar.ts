@@ -417,7 +417,9 @@ export const de = {
     allParticipants: 'Alle Teilnehmer',
     searchParticipants: 'Suchen',
     busyAt: (name: string, time: string) => `${name}: beschäftigt ${time}`,
-    andMore: (count: number) => `und ${count} weitere`,
+    // One more as iOS counts people ("und 1 weiterer"), masculine after
+    // "Teilnehmer"; "und 1 weitere Person" was cut on the phone (T-258).
+    andMore: (count: number) => (count === 1 ? 'und 1 weiterer' : `und ${count} weitere`),
     wholeDay: 'ganztägig',
     admin: 'Admin',
     // "abgemeldet" is signed out; taken off the cast is "aus der Besetzung genommen".
