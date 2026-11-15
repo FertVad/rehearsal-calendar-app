@@ -153,6 +153,7 @@ describe('the search finds a name typed without accents, with a space for a hyph
     ['ru', 'нью йорк', 'Нью-Йорк (UTC-4)'],
     ['ru', 'Тель Авив', 'Тель-Авив (UTC+3)'],
     ['ru', 'Лос Анджелес', 'Лос-Анджелес (UTC-7)'],
+    ['ru', 'ёка', 'Екатеринбург (UTC+5)'],
     ['de', 'Kyjiw', 'Kiew (UTC+3)'],
     ['de', 'mexiko stadt', 'Mexiko-Stadt (UTC-6)'],
   ])('in %s, "%s" finds %s', (language, query, label) => {
@@ -177,7 +178,6 @@ describe('the search finds a name typed without accents, with a space for a hyph
   it.each([
     ['ru', 'Нью-Йорк', 'America/New_York'],
     ['ru', 'йорк', 'America/New_York'],
-    ['ru', 'ёка', 'Asia/Yekaterinburg'],
     ['ru', 'екатеринбург', 'Asia/Yekaterinburg'],
     ['en', 'new_york', 'America/New_York'],
     ['en', 'NEW YORK', 'America/New_York'],
