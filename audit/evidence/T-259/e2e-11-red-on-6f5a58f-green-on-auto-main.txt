@@ -1,0 +1,49 @@
+T-259 — full e2e red: "Password reset by emailed code" (e2e/flows/11-password-reset.yaml)
+Nightly full run on auto/main 6f5a58f (2026-11-14 06:38) failed with
+  [Failed] Password reset by emailed code (48s) (Element not found: Id matching regex: login-forgot-password)
+
+Cause: the flow went stale after the accepted T-250 edit, not broken app code.
+  95f7901 fix(i18n) (T-250) changed English resetSubtitle
+    "Enter the address of your account and we will send it a code."
+    -> "Enter your account’s email address and we will send a code to it."
+  The flow on 6f5a58f still waits for SEE ".*Enter the address of your account.*".
+  The first tap on login-forgot-password works and opens the reset screen; the SEE
+  does not match; tap-and-see taps again, and login-forgot-password is no longer on
+  the reset screen -> "Element not found".
+Fix already on auto/main: 4a570eb test(e2e): flow 11 reads the reset's T-256 subtitle
+  (SEE ".*Enter your account’s email address.*"; app text in T-256:
+  "Enter your account’s email address, and we will send you a code.").
+No app or flow changes in T-259.
+
+=== RED BEFORE: rehearsal-calendar-native tree at 6f5a58f ===
+$ git restore --source=6f5a58f -- rehearsal-calendar-native
+$ npm run e2e -- e2e/flows/11-password-reset.yaml        (2026-11-15 ~12:44 IST)
+[e2e] native inputs 12fe823420b7 (app.json, locales, assets, packages)
+[e2e] the Debug app was built from these inputs: kept
+...
+[e2e] installing the Debug app and running the flows
+[Failed] Password reset by emailed code (1m 11s) (Element not found: Id matching regex: login-forgot-password)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-15T10:46:12.364Z  tapped "id login-forgot-password" again: no ".*Enter the address of your account.*" after the first tap
+
+Screen hierarchy of that run (e2e/out/artifacts/2026-11-15_124354/Password reset by emailed code/,
+not in git), step-015-assertCondition-${SEE}.json and step-024-tapOnElement-${TAP_ID}.json:
+  "Enter your account’s email address and we will send a code to it."
+-> the reset screen is open with the T-250 subtitle; the same failure as the nightly run.
+
+$ git restore --source=HEAD -- .
+
+=== GREEN AFTER: auto/main 56ccddc (contains 4a570eb) ===
+$ npm run e2e -- e2e/flows/11-password-reset.yaml        (2026-11-15 ~13:10 IST)
+[e2e] native inputs 20c71dcf180d (app.json, locales, assets, packages)
+[e2e] the Debug app was built from these inputs: kept
+...
+[e2e] installing the Debug app and running the flows
+[Passed] Password reset by emailed code (1m 28s)
+
+1/1 Flow Passed in 1m 28s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
