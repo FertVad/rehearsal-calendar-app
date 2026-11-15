@@ -19,8 +19,12 @@
 # newcomers walk the same steps, no other flow does in their languages: Adela
 # in Spanish, whose last step puts its places in «», not “”; Kattrin in German,
 # whose titles and button are "Deine Verfügbarkeit", "Apple Kalender", "Wo ist
-# was?", "Verfügbarkeit", each whole. Neither finishes. The flow goes on
-# whatever the words, and fails at the end naming every one that was wrong.
+# was?", "Verfügbarkeit", each whole. The flow goes on whatever the words, and
+# fails at the end naming every one that was wrong.
+#
+# The second reading (T-261): the last step joins a project "by invitation" in
+# all three, and all three leave by Skip, whose window answers nothing and so
+# has one "OK" — «ОК» in Russian, as iOS — not «Да», "Sí", "Ja".
 appId: ${APP_ID}
 name: Onboarding in Russian, the greeting on one line
 tags:
@@ -112,10 +116,22 @@ tags:
 # Where to join a project: «По приглашению», not «По коду: … «Присоединиться
 # по коду»», the code twice (T-258).
 - assertVisible: "«\\+» → «Создать проект»\\. По приглашению: «Проекты» → «Присоединиться по коду»"
+# She leaves by «Пропустить», not «Начать»: the window that says where the
+# settings are answers nothing, so its one button is «ОК», as in Russian iOS,
+# not «Да» (T-261).
+- assertVisible: "Начать"
+- tapOn:
+    id: onboarding-skip
+- extendedWaitUntil:
+    visible: "Настройки доступны в профиле"
+    timeout: 10000
+- assertVisible: ".*в разделе «Профиль» → «Настройки»\\."
+- takeScreenshot: 60-onboarding-skip-ru
+- assertNotVisible: "Да"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Начать"
+      TAP: "ОК"
       SEE: "Сегодня"
       WAIT_MS: 15000
 - assertVisible:
@@ -155,11 +171,13 @@ tags:
       SEE: "Dónde está cada cosa"
       WAIT_MS: 10000
 - takeScreenshot: 60-onboarding-what-where-es
+# "Con una invitación", not "Con un código: … «Unirse con un código»", the
+# code twice (T-261).
 - runFlow:
     when:
-      notVisible: "«\\+» → «Crear proyecto»\\. Con un código: «Proyectos» → «Unirse con un código»"
+      notVisible: "«\\+» → «Crear proyecto»\\. Con una invitación: «Proyectos» → «Unirse con un código»"
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'es: a project, in «» | '}"
+      - evalScript: "${output.wrong = output.wrong + 'es: a project, in «», Con una invitación | '}"
 - runFlow:
     when:
       notVisible: "«\\+» → «.*», en los proyectos que administras"
@@ -175,6 +193,27 @@ tags:
       notVisible: "«Smart Planner», debajo del calendario"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'es: the planner, in «» | '}"
+# Skipped, the window's one button is "OK", not "Sí" (T-261).
+- tapOn:
+    id: onboarding-skip
+- extendedWaitUntil:
+    visible: "Ajustes disponibles en el perfil"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: OK after Omitir, not Sí | '}"
+      - tapOn: "Sí"
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: calendar-today
+    timeout: 15000
 
 # German (T-256): Kattrin, new, her account in German, to the last step. The
 # calendar's step is "Deine Verfügbarkeit", not "Deine Zeiten", and with the
@@ -258,6 +297,39 @@ tags:
       RIGHT: "1"
       TOP: "0.07"
       BOTTOM: "0.95"
+# "Per Einladung", not "Mit einem Code: … „Mit einem Code beitreten“" (T-261).
+- runFlow:
+    when:
+      notVisible: "„\\+“ → „Projekt erstellen“\\. Per Einladung: „Projekte“ → „Mit einem Code beitreten“"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Per Einladung, not the code twice | '}"
+# Skipped: the message ends with its full stop, and the one button is "OK",
+# not "Ja" — nothing was asked (T-261).
+- tapOn:
+    id: onboarding-skip
+- extendedWaitUntil:
+    visible: "Einstellungen im Profil verfügbar"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible: ".*unter Profil → Einstellungen ändern\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the skip message ends with a full stop | '}"
+- runFlow:
+    when:
+      notVisible: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: OK after Überspringen, not Ja | '}"
+      - tapOn: "Ja"
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: calendar-today
+    timeout: 15000
 
 - evalScript: "${console.log('60 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
 - runFlow:

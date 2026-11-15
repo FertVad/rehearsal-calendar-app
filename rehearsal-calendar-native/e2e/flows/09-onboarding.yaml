@@ -99,7 +99,10 @@ tags:
       SEE: "What.s where"
       WAIT_MS: 10000
 # What is where, in the labels the app shows there; no week-start step.
-- assertVisible: ".*Create Project.*Join with a code.*"
+# Joined "Invited?", not "With a code: … “Join with a Code”", the code twice
+# (T-261).
+- assertVisible: "“\\+” → “Create Project”\\. Invited\\? “Projects” → “Join with a Code”"
+- assertNotVisible: ".*With a code:.*"
 - assertVisible: ".*Create Rehearsal.*admin.*"
 - assertVisible: ".*Mark Busy.*"
 - assertVisible: ".*Smart Planner.*under the calendar.*"

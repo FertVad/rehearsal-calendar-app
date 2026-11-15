@@ -165,8 +165,11 @@ export function ParticipantPicker({
           <Text style={styles.rowValue} numberOfLines={1}>{value}</Text>
           {!disabled && <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />}
         </View>
+        {/* Two lines: by full name "Beschäftigt: Wang Wasser (10:00–14:00)
+            und 1 weiterer" is wider than the row, and one line cut its count
+            (T-261, flow 95). */}
         {conflict ? (
-          <Text testID="participants-conflict" style={styles.conflict} numberOfLines={1}>
+          <Text testID="participants-conflict" style={styles.conflict} numberOfLines={2}>
             {conflict}
           </Text>
         ) : null}

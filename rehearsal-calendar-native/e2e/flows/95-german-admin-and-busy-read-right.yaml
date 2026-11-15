@@ -8,11 +8,12 @@
 # - a rehearsal she may not see: "Diese Probe ist nicht verfügbar. Vielleicht
 #   wurde sie gelöscht oder du bist nicht mehr dafür eingeteilt.", not "…oder
 #   du wurdest aus der Besetzung genommen.";
-# - the form over two busy people: "… beschäftigt und 1 weiterer", as iOS
+# - the form over two busy people: "Beschäftigt: Wang Wasser (10:00–14:00)
+#   und 1 weiterer" (T-261), as iOS
 #   counts people (Siri's "und %d weiterer"), masculine after "Teilnehmer"
 #   (T-258): "und 1 weitere Person" was cut on the phone, "…und 1 weitere
-#   Per…". The line is one line by design (ParticipantPicker, numberOfLines 1),
-#   so it is read whole and looked for a cut on the shot itself — the "…" iOS
+#   Per…". The line has at most two lines (ParticipantPicker, numberOfLines
+#   2: by full name one line cut it, "…und 1 wei…", T-261), so it is read whole and looked for a cut on the shot itself — the "…" iOS
 #   draws (e2e/scripts/no-ellipsis.js) — since Maestro reads a label whole
 #   however much of it is drawn;
 # - a notice in her inbox three days old: "vor 3 Tagen", not "vor 3 Tg.".
@@ -164,14 +165,16 @@ tags:
 - waitForAnimationToEnd
 - takeScreenshot: 95-two-busy-de
 # Whole and exact (T-258): "und 1 weiterer" holds "und 1 weitere" in it, so
-# the line is matched to its end; and looked for a cut on the shot.
+# the line is matched to its end; and looked for a cut on the shot. A label
+# first, the full name, the time in brackets, so "und 1 weiterer" follows a
+# name, not "beschäftigt" (T-261).
 - runFlow:
     when:
       notVisible:
         id: participants-conflict
-        text: "Wasser: .* beschäftigt und 1 weiterer"
+        text: "Beschäftigt: Wang Wasser \\(10:00–14:00\\) und 1 weiterer"
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'de: … beschäftigt und 1 weiterer | '}"
+      - evalScript: "${output.wrong = output.wrong + 'de: Beschäftigt: Wang Wasser (10:00–14:00) und 1 weiterer | '}"
 - runScript:
     file: ../scripts/no-ellipsis.js
     env:

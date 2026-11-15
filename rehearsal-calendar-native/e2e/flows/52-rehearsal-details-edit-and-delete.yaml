@@ -225,8 +225,9 @@ tags:
     env:
       MAIL_URL: ${MAIL_URL}
 - tapOn: "Try again"
+# The date in brackets: its own commas ran into the title's (T-261).
 - extendedWaitUntil:
-    visible: "Delete “Ghost watch”, .*, 7:00.PM\\?"
+    visible: "Delete “Ghost watch” \\(.*, 7:00.PM\\)\\?"
     timeout: 10000
 - assertVisible: "(1 participant|Participants \\(1\\)) will be notified"
 - runFlow:

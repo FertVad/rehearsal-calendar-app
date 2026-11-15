@@ -711,14 +711,14 @@ export async function seed({ client, apiUrl, timezone }) {
       [own.id, ids.shente, ids.wang, ids.yangsun, ids.shufu]);
   }
   // Lydia's (96, T-256): Acres and O'Trigger members. Inserted: the sign-ins
-  // are spent.
+  // are spent. Acres joined first, so the form names him first (T-261).
   {
     const { rows: [own] } = await client.query(
       `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
        VALUES ('The Rivals', 'Bath', $1, NOW(), NOW()) RETURNING id`, [timezone]);
     await client.query(
       `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
-       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW()),
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW() - INTERVAL '1 day'),
               ($1, $4, 'member', 'active', NOW(), NOW())`,
       [own.id, ids.lydia, ids.acres, ids.otrigger]);
   }
@@ -1146,12 +1146,16 @@ export async function seed({ client, apiUrl, timezone }) {
             ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.wang, ids.yangsun, localInstant(1, 10), localInstant(1, 14)]);
   // Acres' and O'Trigger's tomorrow (96, T-256): both busy in Lydia's slot at
-  // 10:00, so her save names two - "Busy at this time: …".
+  // 10:00, so her save names two - "Busy at this time: …". Acres all day, as
+  // a save of that day writes it, O'Trigger 10:00-14:00, which makes the slot:
+  // the line under her form's participants says "Busy: Bob Acres (all day)
+  // and 1 more" (T-261).
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
-     VALUES ($1, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual'),
-            ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
-    [ids.acres, ids.otrigger, localInstant(1, 10), localInstant(1, 14)]);
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual'),
+            ($4, $5::timestamptz, $6::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.acres, `${localDate(1)}T00:00:00.000Z`, `${localDate(1)}T23:59:59.999Z`,
+      ids.otrigger, localInstant(1, 10), localInstant(1, 14)]);
   // Kabanikha's hour from her phone's calendar on MORNING_DAY (89, T-256): the
   // editor's note under it in Spanish. Far from the planner's tomorrow.
   await client.query(

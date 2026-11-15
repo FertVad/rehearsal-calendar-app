@@ -73,7 +73,8 @@ tags:
     timeout: 60000
 - takeScreenshot: 07-planner-the-bear
 # A rehearsal planned in that slot says on its participants row that he is
-# busy then, and his sheet row gives his hours (T-010). Only opened: nothing
+# busy then, and his sheet row gives his hours (T-010) - by his full name,
+# as the Planner and the warning name him, not "Smirnov is busy" (T-261). Only opened: nothing
 # is saved, so the slots stay as they were for the rest of the flow.
 # His slot is his busy hours, 10:00-14:00 tomorrow; its "+" by its id, as
 # `rightOf` takes whichever "+" comes first in the tree.
@@ -88,7 +89,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: participants-row
-      text: "Participants, 2 of 2, Smirnov is busy 10:00.AM–2:00.PM"
+      text: "Participants, 2 of 2, Busy: Grigory Smirnov \\(10:00.AM–2:00.PM\\)"
       below:
         id: rehearsal-project
     timeout: 15000
@@ -104,7 +105,7 @@ tags:
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Participants, 2 of 2, Smirnov is busy.*"
+      TAP: "Participants, 2 of 2, Busy: Grigory Smirnov.*"
       SEE: "All participants, 2 of 2"
       WAIT_MS: "5000"
 - assertVisible: "Grigory Smirnov, 10:00.AM–2:00.PM"

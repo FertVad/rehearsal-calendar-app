@@ -38,6 +38,8 @@
 #   deleting «Сцена с Тихоном»
 #   asks «„…“ (…) löschen?» with «1 Teilnehmer wird benachrichtigt».
 # - Russian: deleting it, «Уведомление получит 1 участник».
+# - Spanish and Russian ask with the date in brackets, as German does:
+#   «¿Eliminar «…» (…)?», «Удалить «…» (…)?» (T-261).
 appId: ${APP_ID}
 name: Names and counts read right
 tags:
@@ -97,9 +99,15 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: rehearsal-details-delete
-      SEE: "¿Eliminar «Сцена с Тихоном», .*\\?"
+      SEE: "¿Eliminar «Сцена с Тихоном»(,| \\().*\\?"
       WAIT_MS: "10000"
 - takeScreenshot: 89-delete-es
+# The date in brackets: its own commas ran into the title's (T-261).
+- runFlow:
+    when:
+      notVisible: "¿Eliminar «Сцена с Тихоном» \\(.*\\)\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: ¿Eliminar «…» (fecha)? | '}"
 - runFlow:
     when:
       notVisible: "1 participante recibirá una notificación"
@@ -107,7 +115,7 @@ tags:
       - evalScript: "${output.wrong = output.wrong + 'es: 1 participante recibirá una notificación, not Los participantes (1) | '}"
 - tapOn: "Cancelar"
 - extendedWaitUntil:
-    notVisible: "¿Eliminar «Сцена с Тихоном», .*\\?"
+    notVisible: "¿Eliminar «Сцена с Тихоном»(,| \\().*\\?"
     timeout: 10000
 - tapOn: "Cerrar"
 - extendedWaitUntil:
@@ -571,9 +579,15 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: rehearsal-details-delete
-      SEE: "Удалить «Сцена с Тихоном», .*\\?"
+      SEE: "Удалить «Сцена с Тихоном»(,| \\().*\\?"
       WAIT_MS: "10000"
 - takeScreenshot: 89-delete-ru
+# The date in brackets (T-261).
+- runFlow:
+    when:
+      notVisible: "Удалить «Сцена с Тихоном» \\(.*\\)\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Удалить «…» (дата)? | '}"
 - runFlow:
     when:
       notVisible: "Уведомление получит 1 участник"
@@ -581,9 +595,9 @@ tags:
       - evalScript: "${output.wrong = output.wrong + 'ru: Уведомление получит 1 участник, not Участники (1) | '}"
 - tapOn:
     text: "(Отменить|Отмена)"
-    below: "Удалить «Сцена с Тихоном», .*\\?"
+    below: "Удалить «Сцена с Тихоном»(,| \\().*\\?"
 - extendedWaitUntil:
-    notVisible: "Удалить «Сцена с Тихоном», .*\\?"
+    notVisible: "Удалить «Сцена с Тихоном»(,| \\().*\\?"
     timeout: 10000
 - tapOn: "Закрыть"
 - extendedWaitUntil:
