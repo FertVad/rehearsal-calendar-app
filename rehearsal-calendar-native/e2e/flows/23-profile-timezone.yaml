@@ -262,7 +262,60 @@ tags:
       TAP: "Schließen"
       GONE: "Zeitzone auswählen"
       WAIT_MS: "10000"
-# Still Tokyo: nothing was chosen. Back to English.
+# Still Tokyo: nothing was chosen.
+- assertVisible:
+    id: profile-timezone
+    text: ".*Tokio \\(UTC\\+9\\).*"
+# The search in Spanish, typed without the accent (T-262). Spanish names are
+# written with theirs, and a search rarely types them: "moscu" found nothing,
+# "Moscú" being neither in English nor in the zone's name. The search folds
+# both sides with String.prototype.normalize - this step is what shows the
+# app's Hermes has it.
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Español"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-es
+      SEE: "Perfil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: profile-timezone
+    text: ".*Tokio \\(UTC\\+9\\).*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-timezone
+      SEE: "Seleccionar zona horaria"
+      WAIT_MS: "10000"
+- tapOn:
+    id: timezone-search
+- inputText: "moscu"
+- extendedWaitUntil:
+    visible: "Moscú \\(UTC\\+3\\)"
+    timeout: 5000
+- takeScreenshot: 23-search-moscu-in-spanish
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Cerrar"
+      GONE: "Seleccionar zona horaria"
+      WAIT_MS: "10000"
+# Back to English.
 - assertVisible:
     id: profile-timezone
     text: ".*Tokio \\(UTC\\+9\\).*"

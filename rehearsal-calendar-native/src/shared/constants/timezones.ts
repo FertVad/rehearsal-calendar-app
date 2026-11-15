@@ -18,6 +18,7 @@ export interface TimezoneOption {
   value: string;   // IANA timezone identifier
   label: string;   // the city in the language of the interface, with its offset
   labelEn: string; // the same in English, which the search finds too
+  searchAlso?: string[]; // other spellings the search finds, never shown
 }
 
 type CityNames = Record<Language, string>;
@@ -25,6 +26,8 @@ type CityNames = Record<Language, string>;
 interface CuratedZone {
   value: string;
   city: CityNames;
+  // Spellings people type that no language here shows: "Kyjiw" (T-262).
+  searchAlso?: string[];
 }
 
 const CURATED: CuratedZone[] = [
@@ -46,7 +49,8 @@ const CURATED: CuratedZone[] = [
   { value: 'Europe/Vienna', city: { en: 'Vienna', ru: 'Вена', es: 'Viena', de: 'Wien' } },
   // Each language's own norm: Kyiv in English, Kiev in Spanish (FundéuRAE),
   // Kiew in German, Киев in Russian (the owner's decision, 13.11.2026).
-  { value: 'Europe/Kiev', city: { en: 'Kyiv', ru: 'Киев', es: 'Kiev', de: 'Kiew' } },
+  // "Kyjiw", as the Auswärtiges Amt writes it, is found but not shown (T-262).
+  { value: 'Europe/Kiev', city: { en: 'Kyiv', ru: 'Киев', es: 'Kiev', de: 'Kiew' }, searchAlso: ['Kyjiw'] },
   { value: 'Europe/Istanbul', city: { en: 'Istanbul', ru: 'Стамбул', es: 'Estambul', de: 'Istanbul' } },
   { value: 'Europe/Moscow', city: { en: 'Moscow', ru: 'Москва', es: 'Moscú', de: 'Moskau' } },
 
@@ -116,30 +120,31 @@ const PHONE_ZONES: Record<string, Partial<Record<Exclude<Language, 'en'>, string
   'Asia/Bishkek': { ru: 'Бишкек' },
   'Asia/Dushanbe': { ru: 'Душанбе' },
   'Asia/Ashgabat': { ru: 'Ашхабад' },
-  'Asia/Nicosia': { ru: 'Никосия' },
+  'Asia/Nicosia': { ru: 'Никосия', de: 'Nikosia' },
 
-  // Europe
-  'Europe/Paris': { ru: 'Париж' },
-  'Europe/Lisbon': { ru: 'Лиссабон', de: 'Lissabon' },
-  'Europe/Rome': { ru: 'Рим', de: 'Rom' },
-  'Europe/Amsterdam': { ru: 'Амстердам' },
-  'Europe/Brussels': { ru: 'Брюссель', de: 'Brüssel' },
-  'Europe/Luxembourg': { de: 'Luxemburg' },
+  // Europe. The Spanish names are the second reading's (T-262), as FundéuRAE
+  // and iOS write them: Spanish read the English IANA names before.
+  'Europe/Paris': { ru: 'Париж', es: 'París' },
+  'Europe/Lisbon': { ru: 'Лиссабон', es: 'Lisboa', de: 'Lissabon' },
+  'Europe/Rome': { ru: 'Рим', es: 'Roma', de: 'Rom' },
+  'Europe/Amsterdam': { ru: 'Амстердам', es: 'Ámsterdam' },
+  'Europe/Brussels': { ru: 'Брюссель', es: 'Bruselas', de: 'Brüssel' },
+  'Europe/Luxembourg': { es: 'Luxemburgo', de: 'Luxemburg' },
   'Europe/Busingen': { de: 'Büsingen' },
-  'Europe/Prague': { ru: 'Прага', de: 'Prag' },
-  'Europe/Warsaw': { ru: 'Варшава', de: 'Warschau' },
+  'Europe/Prague': { ru: 'Прага', es: 'Praga', de: 'Prag' },
+  'Europe/Warsaw': { ru: 'Варшава', es: 'Varsovia', de: 'Warschau' },
   'Europe/Budapest': { ru: 'Будапешт' },
-  'Europe/Belgrade': { ru: 'Белград', de: 'Belgrad' },
+  'Europe/Belgrade': { ru: 'Белград', es: 'Belgrado', de: 'Belgrad' },
   'Europe/Podgorica': { ru: 'Подгорица' },
-  'Europe/Sofia': { ru: 'София' },
-  'Europe/Bucharest': { ru: 'Бухарест', de: 'Bukarest' },
-  'Europe/Athens': { ru: 'Афины', de: 'Athen' },
+  'Europe/Sofia': { ru: 'София', es: 'Sofía' },
+  'Europe/Bucharest': { ru: 'Бухарест', es: 'Bucarest', de: 'Bukarest' },
+  'Europe/Athens': { ru: 'Афины', es: 'Atenas', de: 'Athen' },
   'Europe/Helsinki': { ru: 'Хельсинки' },
-  'Europe/Stockholm': { ru: 'Стокгольм' },
+  'Europe/Stockholm': { ru: 'Стокгольм', es: 'Estocolmo' },
   'Europe/Oslo': { ru: 'Осло' },
-  'Europe/Copenhagen': { ru: 'Копенгаген', de: 'Kopenhagen' },
-  'Europe/Dublin': { ru: 'Дублин' },
-  'Atlantic/Canary': { es: 'Canarias' },
+  'Europe/Copenhagen': { ru: 'Копенгаген', es: 'Copenhague', de: 'Kopenhagen' },
+  'Europe/Dublin': { ru: 'Дублин', es: 'Dublín' },
+  'Atlantic/Canary': { es: 'Canarias', de: 'Kanaren' },
 
   // The Americas
   'America/Toronto': { ru: 'Торонто' },
@@ -163,10 +168,21 @@ const PHONE_ZONES: Record<string, Partial<Record<Exclude<Language, 'en'>, string
   'America/Havana': { es: 'La Habana' },
   'America/Santo_Domingo': { es: 'Santo Domingo' },
   'America/Puerto_Rico': { es: 'Puerto Rico' },
+  // Zones of Mexico, Argentina, Ecuador and Chile that read their IANA names,
+  // without accents, or "Easter" in English (T-262).
+  'America/Merida': { es: 'Mérida' },
+  'America/Mazatlan': { es: 'Mazatlán' },
+  'America/Ciudad_Juarez': { es: 'Ciudad Juárez' },
+  'America/Bahia_Banderas': { es: 'Bahía de Banderas' },
+  'America/Argentina/Cordoba': { es: 'Córdoba' },
+  'America/Argentina/Tucuman': { es: 'Tucumán' },
+  'America/Argentina/Rio_Gallegos': { es: 'Río Gallegos' },
+  'Pacific/Galapagos': { es: 'Galápagos' },
+  'Pacific/Easter': { es: 'Isla de Pascua' },
 
   // Asia
   'Asia/Hong_Kong': { de: 'Hongkong' },
-  'Asia/Tehran': { de: 'Teheran' },
+  'Asia/Tehran': { es: 'Teherán', de: 'Teheran' },
   'Asia/Ho_Chi_Minh': { ru: 'Хошимин' },
   'Asia/Makassar': { ru: 'Макасар' },
   'Asia/Colombo': { ru: 'Коломбо' },
@@ -186,6 +202,7 @@ const ALIASES: Record<string, string> = {
   'Europe/Zaporozhye': 'Europe/Kiev',
   'Asia/Calcutta': 'Asia/Kolkata',
   'America/Buenos_Aires': 'America/Argentina/Buenos_Aires',
+  'America/Cordoba': 'America/Argentina/Cordoba', // as ICU names it
   'Asia/Tel_Aviv': 'Asia/Jerusalem',
   'Asia/Istanbul': 'Europe/Istanbul',
   'Asia/Saigon': 'Asia/Ho_Chi_Minh',
@@ -255,10 +272,12 @@ function cityOf(tz: string, language: Language): string {
 }
 
 function option(tz: string, language: Language, at: Date): TimezoneOption {
+  const searchAlso = CURATED.find((t) => t.value === canonical(tz))?.searchAlso;
   return {
     value: tz,
     label: withOffset(cityOf(tz, language), tz, at),
     labelEn: withOffset(cityOf(tz, 'en'), tz, at),
+    ...(searchAlso ? { searchAlso } : {}),
   };
 }
 
@@ -281,17 +300,37 @@ export function getTimezonesWithDevice(language: string, at: Date = new Date()):
 }
 
 /**
+ * A name as the search compares it: lower case, without accents, a hyphen or
+ * an underscore read as a space. "Moscú" is "moscu", "Кишинёв" is "кишинев",
+ * "Буэнос-Айрес" is "буэнос айрес" and "New_York" is "new york" (T-262):
+ * people type names without the accents a keyboard hides behind a long press,
+ * and with a space for a hyphen. NFD splits "ú" into "u" and its accent, "ё"
+ * into "е" and its diaeresis; the accents, U+0300 to U+036F, are dropped.
+ * Both sides are folded, so "й", folded to "и", still finds "Нью-Йорк".
+ */
+function fold(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLocaleLowerCase()
+    .replace(/[-‐‑_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * The options whose city, in the language they were made in or in English,
- * or zone name has `query` in it, in any case: "hon" finds Honolulu,
- * "pacific" the zones of the Pacific, and "new york" and "new_york" find the
+ * or zone name, or another spelling of it ("Kyjiw"), has `query` in it, in
+ * any case and with or without accents: "hon" finds Honolulu, "pacific" the
+ * zones of the Pacific, "moscu" Moscú, and "new york" and "new_york" find the
  * same. An empty query is every option.
  */
 export function searchTimezones(options: TimezoneOption[], query: string): TimezoneOption[] {
-  const q = query.trim().toLocaleLowerCase().replace(/_/g, ' ');
+  const q = fold(query);
   if (!q) return options;
   return options.filter((opt) =>
-    [opt.label, opt.labelEn, opt.value.replace(/_/g, ' ')]
-      .some((text) => text.toLocaleLowerCase().includes(q)));
+    [opt.label, opt.labelEn, opt.value, ...(opt.searchAlso ?? [])]
+      .some((text) => fold(text).includes(q)));
 }
 
 /**
