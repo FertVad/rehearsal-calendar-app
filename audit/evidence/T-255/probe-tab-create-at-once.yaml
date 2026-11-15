@@ -1,0 +1,44 @@
+# T-255 probe, not a flow: flow 10's opening - a fresh launch and sign-in,
+# then the "+" as soon as the calendar's tab bar is there (no tap-and-see on
+# "Sign In", so the "+" comes inside the second after it, where iOS hosts its
+# "Save Password" controller in the app), "Mark Busy" looked for - five times.
+# Run from e2e/flows (its subflows are relative): copied there as
+# 10-probe-tab-create.yaml, `npm run e2e -- e2e/flows/10-probe-tab-create.yaml`,
+# then removed. Output: probes.txt.
+appId: ${APP_ID}
+name: T-255 probe - Mark Busy at once after sign-in
+---
+- evalScript: ${output.misses = 0}
+- evalScript: ${output.tries = 0}
+- repeat:
+    times: 5
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
+      - runFlow:
+          file: ../subflows/sign-in-fill.yaml
+          env:
+            EMAIL: ${TREPLEV_EMAIL}
+      - evalScript: ${output.tries += 1}
+      - tapOn:
+          id: login-submit
+      - tapOn:
+          id: tab-create
+      - extendedWaitUntil:
+          visible: "Mark Busy"
+          timeout: 10000
+          optional: true
+      - runFlow:
+          when:
+            notVisible: "Mark Busy"
+          commands:
+            - evalScript: ${output.misses += 1}
+            - evalScript: "${console.log('T-255 probe: no Mark Busy at try ' + output.tries)}"
+            - takeScreenshot: probe-no-mark-busy
+      - evalScript: "${console.log('T-255 probe: try ' + output.tries + ', misses ' + output.misses)}"
+- runFlow:
+    when:
+      true: ${output.misses > 0}
+    commands:
+      - assertVisible: "T-255 probe missed Mark Busy"
