@@ -1,0 +1,36 @@
+T-256 — the supervisor's checks of 15.11: flow 89 failed, 65 of 66 passed.
+
+[Failed] Names and counts read right (6m 10s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+maestro.log: JsConsole: 89 not as a native speaker writes it: "es: No disponibles, not Ocupados | "
+
+Cause: flow 89 was not carried over T-258. It waited for the plural
+"No disponibles: Тихон Кабанов", but T-258's final busyPrefix goes by the
+number of people, and Tikhon is the slot's only busy person: the app says
+"No disponible: Тихон Кабанов" (src/i18n/translations/availability.ts:248),
+which is right. The app is right, the flow was wrong.
+
+Fix: flow 89 (lines 288-293) waits for "No disponible: Тихон Кабанов" — Maestro
+matches the whole text, so neither "Ocupados: …" (before T-256) nor the plural
+"No disponibles: …" for one person passes.
+
+Red before / green after. Flow 89 whole does not fit one 10-minute command
+(about 3 minutes to bring the stand up, 6.5 for the flow), so its planner part
+was run alone: a temporary flow, sign-in as Kabanikha (Spanish) and the slot
+tomorrow at 10:00 in «Гроза», with the same check, line for line; deleted
+after, not committed.
+
+1) Old texts: availability.ts and SlotItem.tsx restored from 3b16cd5.
+   [Failed] tmp 89 busy line (52s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+   JsConsole: 89 not as a native speaker writes it: "es: No disponible, one busy, not Ocupados nor No disponibles | "
+   The screen's hierarchy: "Ocupados: Тихон Кабанов".
+   Files back to HEAD after.
+
+2) HEAD:
+   [Passed] tmp 89 busy line (1m 55s)
+   1/1 Flow Passed in 1m 55s
+
+3) Flow 89 whole on HEAD with the fix, cut by the 10-minute limit in its
+   Russian part (after the check): maestro.log
+   Run flow when "No disponible: Тихон Кабанов" is not visible SKIPPED
+   (i.e. it was on screen). The rest of flow 89 passed in the supervisor's run
+   above, where only this word was named.

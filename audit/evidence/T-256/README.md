@@ -359,7 +359,7 @@
 |---|---|
 | calendarSync.explanation (18, ошибка) | 84:281; J:242 |
 | availability.importedNote (19, ошибка) | 89:146; J:231 |
-| smartPlanner.busyPrefix (20, ошибка; с T-258 — по числу: «No disponible» / «No disponibles») | 89:293; 59 (T-258, один занятый); J:241 (обе формы) |
+| smartPlanner.busyPrefix (20, ошибка; с T-258 — по числу: «No disponible» / «No disponibles») | 89:293 («No disponible» — один занятый; приведено к T-258 15.11, e2e-supervisor-run-15-11.txt); 59 (T-258, один занятый); J:241 (обе формы) |
 | smartPlanner.unknownAvailability (21, ошибка) | 59:95; J:239 |
 | calendarSync.removeAllPartial (22, ошибка, функция) | 92:251 (форма с одним событием); J:244, 245 |
 | projects.owner (23, ошибка) | 89:260; J:215 |

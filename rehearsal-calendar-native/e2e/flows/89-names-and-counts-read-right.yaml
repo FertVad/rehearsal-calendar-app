@@ -32,8 +32,8 @@
 #   and left, «1 participante recibirá una notificación»; the note under her
 #   hour from her phone's calendar «cuando buscan un horario»; a day gone's
 #   «Eliminar las marcas de este día», whole, and its alert «¿Eliminar las
-#   marcas?», whole and left; the planner's «No disponibles:
-#   Тихон Кабанов», not «Ocupados».
+#   marcas?», whole and left; the planner's «No disponible:
+#   Тихон Кабанов», not «Ocupados», and singular for one (T-258).
 # - German: Tikhon's action «Adminrechte geben», whole, and its alert, left;
 #   deleting «Сцена с Тихоном»
 #   asks «„…“ (…) löschen?» with «1 Teilnehmer wird benachrichtigt».
@@ -285,12 +285,12 @@ tags:
     centerElement: true
     timeout: 60000
 - waitForAnimationToEnd
-# The slot says who cannot come, "No disponibles", not "Ocupados" (T-256).
+# Who cannot come, "No disponible" (T-256), singular for Tikhon alone (T-258).
 - runFlow:
     when:
-      notVisible: "No disponibles: Тихон Кабанов"
+      notVisible: "No disponible: Тихон Кабанов"
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'es: No disponibles, not Ocupados | '}"
+      - evalScript: "${output.wrong = output.wrong + 'es: No disponible, one busy, not Ocupados nor No disponibles | '}"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
