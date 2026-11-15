@@ -57,7 +57,26 @@ mostly the first taps after a launch; in flow 10's green run above, one: the
 first tap on the email field, which `retry` took again. Lost taps happen here,
 in the minute after a launch, and flow 10's "+" is the fourth tap after one.
 
-## Where it stands
+## The decision: tap-and-see without the log (16.11.2026)
+
+Taken by Claude on the owner's delegation, with no device log of the red run:
+all three "+" taps of flow 10 go through `e2e/subflows/tap-and-see.yaml`
+(`TAP_ID: tab-create`, `SEE: "Mark Busy"`, `WAIT_MS: 5000`, as in flows 27 and
+28), then "Mark Busy" is tapped as before. Nothing else in the flow or the app
+changed. Why without the log:
+
+- The log was deleted by the supervisor's pruning (`KEEP_POINTED_MS`, three
+  days) while the task waited in the queue - the supervisor's defect, fixed
+  there, not by this task.
+- The analysis above ruled out the app-side causes; the failure came on the
+  fourth tap after a launch, in the minute when this machine loses taps.
+- docs/e2e.md "A lost tap" sends through tap-and-see a tap whose loss "has
+  failed or can fail a flow"; the "+" already goes so in 11 flows.
+
+Flow 10 after the change: green, `taps taken again (tap-and-see.yaml): 0`
+(green-after.txt).
+
+## Where it stood before the decision
 
 The rule (task, docs/e2e.md "A lost tap"): the "+" goes through
 `e2e/subflows/tap-and-see.yaml` only if the red run's device log shows the tap

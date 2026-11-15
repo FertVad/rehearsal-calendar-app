@@ -1,0 +1,11 @@
+T-255: flow 10 with its three "+" taps through e2e/subflows/tap-and-see.yaml
+(TAP_ID: tab-create, SEE: "Mark Busy", WAIT_MS: 5000), auto/main 7f18425 + the
+flow's change, 16.11.2026.
+
+npm run e2e -- e2e/flows/10-availability-days.yaml
+
+[Passed] Availability saves the day it changed (3m 59s)
+
+1/1 Flow Passed in 4m
+
+[e2e] taps taken again (tap-and-see.yaml): 0

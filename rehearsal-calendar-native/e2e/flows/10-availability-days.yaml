@@ -34,8 +34,14 @@ tags:
     file: ../subflows/sign-in.yaml
     env:
       EMAIL: ${TREPLEV_EMAIL}
-- tapOn:
-    id: tab-create
+# A tap the simulator loses is taken once more (T-207); this one failed the
+# flow on ec914b4, the sheet never there (T-255, audit/evidence/T-255).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
 - tapOn: "Mark Busy"
 # It opens on this week, not on the first of the month (T-021): today's week
 # is the first row under the legend, this month's title gone up above it.
@@ -162,8 +168,12 @@ tags:
       id: availability-legend
     timeout: 10000
 - assertNotVisible: "Don.t Save"
-- tapOn:
-    id: tab-create
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
 - tapOn: "Mark Busy"
 - scrollUntilVisible:
     element:
@@ -261,8 +271,12 @@ tags:
 # past ten seconds — those are iOS's to keep, T-220). With no answer, why is
 # no connection, in the app's language; the save's own "Failed to save
 # availability" is for a failure that is not the network's (T-228).
-- tapOn:
-    id: tab-create
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
 - tapOn: "Mark Busy"
 - scrollUntilVisible:
     element:
