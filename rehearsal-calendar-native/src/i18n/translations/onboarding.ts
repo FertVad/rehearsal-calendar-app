@@ -146,7 +146,7 @@ export const en = {
       title: 'What’s Where',
       project: 'Project',
       projectWhere: (create: string, projects: string, join: string) =>
-        `“+” → “${create}”. With a code: “${projects}” → “${join}”`,
+        `“+” → “${create}”. Invited? “${projects}” → “${join}”`,
       rehearsal: 'Rehearsal',
       rehearsalWhere: (create: string) => `“+” → “${create}”, in projects where you are an admin`,
       availability: 'Availability',
@@ -198,7 +198,7 @@ export const es = {
       title: 'Dónde está cada cosa',
       project: 'Proyecto',
       projectWhere: (create: string, projects: string, join: string) =>
-        `«+» → «${create}». Con un código: «${projects}» → «${join}»`,
+        `«+» → «${create}». Con una invitación: «${projects}» → «${join}»`,
       rehearsal: 'Ensayo',
       rehearsalWhere: (create: string) => `«+» → «${create}», en los proyectos que administras`,
       availability: 'Disponibilidad',
@@ -213,7 +213,7 @@ export const es = {
 export const de = {
   onboarding: {
     skipTitle: 'Einstellungen im Profil verfügbar',
-    skipMessage: 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen ändern',
+    skipMessage: 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen ändern.',
     skip: 'Überspringen',
     next: 'Weiter',
     welcome: {
@@ -226,7 +226,7 @@ export const de = {
     },
     notifications: {
       title: 'Mitteilungen',
-      description: 'Du erfährst es, wenn dich jemand für eine Probe einträgt und wenn sich ihre Zeit ändert. Ohne Mitteilungen erfährst du es zuletzt.',
+      description: 'Du erfährst es, wenn dich jemand für eine Probe einteilt und wenn sich ihre Zeit ändert. Ohne Mitteilungen erfährst du es zuletzt.',
       allow: 'Einschalten',
       later: 'Jetzt nicht',
       exampleAdded: 'Du wurdest für eine Probe eingeteilt',
@@ -249,7 +249,7 @@ export const de = {
       title: 'Wo ist was?',
       project: 'Projekt',
       projectWhere: (create: string, projects: string, join: string) =>
-        `„+“ → „${create}“. Mit einem Code: „${projects}“ → „${join}“`,
+        `„+“ → „${create}“. Per Einladung: „${projects}“ → „${join}“`,
       rehearsal: 'Probe',
       rehearsalWhere: (create: string) => `„+“ → „${create}“, in Projekten, in denen du Admin bist`,
       availability: 'Verfügbarkeit',

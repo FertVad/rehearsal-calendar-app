@@ -1,3 +1,6 @@
+// A project's name in quotes: those it was typed with are not doubled (T-261).
+import { quoteName } from '../../../shared/quoteName.cjs';
+
 export interface ProjectsTranslations {
   title: string;
   noProjects: string;
@@ -101,8 +104,8 @@ export const ru = {
     joinByCode: 'Присоединиться к проекту',
     joinByCodeSubtitle: 'Введите код или вставьте ссылку из приглашения',
     joinByCodePlaceholder: 'Код или ссылка',
-    shareInviteMessage: (projectName: string) => `Присоединяйтесь к проекту «${projectName}» в приложении Rehearsly:`,
-    shareInviteTitle: (projectName: string) => `Приглашение в проект «${projectName}»`,
+    shareInviteMessage: (projectName: string) => `Присоединяйтесь к проекту ${quoteName(projectName, 'ru')} в приложении Rehearsly:`,
+    shareInviteTitle: (projectName: string) => `Приглашение в проект ${quoteName(projectName, 'ru')}`,
     manageMember: 'Управление участником',
     makeAdmin: 'Сделать администратором',
     removeAdmin: 'Снять права администратора',
@@ -121,7 +124,7 @@ export const ru = {
     memberActionError: 'Не удалось выполнить действие',
     deleteProject: 'Удалить проект',
     deleteProjectConfirm: 'Удалить проект?',
-    deleteProjectMessage: (projectName: string) => `Вы уверены, что хотите удалить проект «${projectName}»?`,
+    deleteProjectMessage: (projectName: string) => `Вы уверены, что хотите удалить проект ${quoteName(projectName, 'ru')}?`,
     deleteProjectWarning: 'Все репетиции и данные проекта будут удалены безвозвратно, а участники потеряют к нему доступ.',
     projectDeleted: 'Проект удалён',
     deleteProjectError: 'Не удалось удалить проект',
@@ -173,7 +176,7 @@ export const en = {
     joinByCode: 'Join a Project',
     joinByCodeSubtitle: 'Enter the code, or paste the invite link',
     joinByCodePlaceholder: 'Code or link',
-    shareInviteMessage: (projectName: string) => `Join the project “${projectName}” in the Rehearsly app:`,
+    shareInviteMessage: (projectName: string) => `Join the project ${quoteName(projectName, 'en')} in the Rehearsly app:`,
     shareInviteTitle: (projectName: string) => `Invitation to ${projectName}`,
     manageMember: 'Manage Member',
     makeAdmin: 'Make Admin',
@@ -191,7 +194,7 @@ export const en = {
     memberActionError: 'Could not complete the action',
     deleteProject: 'Delete Project',
     deleteProjectConfirm: 'Delete Project?',
-    deleteProjectMessage: (projectName: string) => `Are you sure you want to delete the project “${projectName}”?`,
+    deleteProjectMessage: (projectName: string) => `Are you sure you want to delete the project ${quoteName(projectName, 'en')}?`,
     deleteProjectWarning: 'All rehearsals, the member list, and other project data will be permanently deleted.',
     projectDeleted: 'Project deleted',
     deleteProjectError: 'Could not delete the project',
@@ -244,8 +247,8 @@ export const es = {
     joinByCode: 'Unirse a un proyecto',
     joinByCodeSubtitle: 'Escribe el código o pega el enlace',
     joinByCodePlaceholder: 'Código o enlace',
-    shareInviteMessage: (projectName: string) => `Únete al proyecto «${projectName}» en la app Rehearsly:`,
-    shareInviteTitle: (projectName: string) => `Invitación al proyecto ${projectName}`,
+    shareInviteMessage: (projectName: string) => `Únete al proyecto ${quoteName(projectName, 'es')} en la app Rehearsly:`,
+    shareInviteTitle: (projectName: string) => `Invitación al proyecto ${quoteName(projectName, 'es')}`,
     manageMember: 'Gestionar miembro',
     // "administrador" of a member is a man's word: "admin", as the badge.
     makeAdmin: 'Hacer admin',
@@ -263,8 +266,8 @@ export const es = {
     memberActionError: 'No se pudo realizar la acción',
     deleteProject: 'Eliminar proyecto',
     deleteProjectConfirm: '¿Eliminar proyecto?',
-    deleteProjectMessage: (projectName: string) => `¿Seguro que quieres eliminar el proyecto «${projectName}»?`,
-    deleteProjectWarning: 'Todos los ensayos, miembros y datos del proyecto se eliminarán de forma permanente.',
+    deleteProjectMessage: (projectName: string) => `¿Seguro que quieres eliminar el proyecto ${quoteName(projectName, 'es')}?`,
+    deleteProjectWarning: 'Todos los ensayos y datos del proyecto se eliminarán de forma permanente, y sus miembros perderán el acceso.',
     projectDeleted: 'Proyecto eliminado',
     deleteProjectError: 'No se pudo eliminar el proyecto',
     inviteNotFound: 'Invitación no encontrada',
@@ -315,8 +318,8 @@ export const de = {
     joinByCode: 'Einem Projekt beitreten',
     joinByCodeSubtitle: 'Gib den Code ein oder füg den Link ein',
     joinByCodePlaceholder: 'Code oder Link',
-    shareInviteMessage: (projectName: string) => `Tritt dem Projekt „${projectName}“ in der Rehearsly-App bei:`,
-    shareInviteTitle: (projectName: string) => `Einladung zum Projekt „${projectName}“`,
+    shareInviteMessage: (projectName: string) => `Tritt dem Projekt ${quoteName(projectName, 'de')} in der Rehearsly-App bei:`,
+    shareInviteTitle: (projectName: string) => `Einladung zum Projekt ${quoteName(projectName, 'de')}`,
     manageMember: 'Mitglied verwalten',
     // "zum Administrator" is a man's word; the push says "verwaltet" (T-251).
     makeAdmin: 'Adminrechte geben',
@@ -334,8 +337,8 @@ export const de = {
     memberActionError: 'Aktion konnte nicht ausgeführt werden',
     deleteProject: 'Projekt löschen',
     deleteProjectConfirm: 'Projekt löschen?',
-    deleteProjectMessage: (projectName: string) => `Möchtest du das Projekt „${projectName}“ wirklich löschen?`,
-    deleteProjectWarning: 'Alle Proben, Mitglieder und Projektdaten werden unwiderruflich gelöscht.',
+    deleteProjectMessage: (projectName: string) => `Möchtest du das Projekt ${quoteName(projectName, 'de')} wirklich löschen?`,
+    deleteProjectWarning: 'Alle Proben, die Mitgliederliste und alle anderen Projektdaten werden unwiderruflich gelöscht.',
     projectDeleted: 'Projekt gelöscht',
     deleteProjectError: 'Projekt konnte nicht gelöscht werden',
     inviteNotFound: 'Einladung nicht gefunden',

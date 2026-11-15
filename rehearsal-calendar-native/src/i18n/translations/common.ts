@@ -23,7 +23,9 @@ export interface CommonTranslations {
   from: string;
   to: string;
   done: string;
-  yes: string;
+  /** The one button of a notice that asks nothing, as iOS has it: "Да" and
+   *  "Ja" answered a question nobody asked (onboarding's Skip, T-261). */
+  ok: string;
   /** Leaving a sheet with unsaved changes: the destructive choice (useLeaveGuard). */
   dontSave: string;
   /** Its title where there is no action sheet (Android). */
@@ -87,7 +89,7 @@ export const ru = {
     from: 'С:',
     to: 'По:',
     done: 'Готово',
-    yes: 'Да',
+    ok: 'ОК',
     dontSave: 'Не сохранять',
     unsavedChanges: 'Изменения не сохранены',
   },
@@ -139,7 +141,7 @@ export const en = {
     from: 'From:',
     to: 'To:',
     done: 'Done',
-    yes: 'Yes',
+    ok: 'OK',
     dontSave: 'Don’t Save',
     unsavedChanges: 'Unsaved Changes',
   },
@@ -191,7 +193,7 @@ export const es = {
     from: 'Desde:',
     to: 'Hasta:',
     done: 'OK',
-    yes: 'Sí',
+    ok: 'OK',
     dontSave: 'No guardar',
     unsavedChanges: 'Cambios sin guardar',
   },
@@ -243,7 +245,7 @@ export const de = {
     from: 'Von:',
     to: 'Bis:',
     done: 'Fertig',
-    yes: 'Ja',
+    ok: 'OK',
     dontSave: 'Nicht speichern',
     unsavedChanges: 'Ungespeicherte Änderungen',
   },

@@ -1,3 +1,5 @@
+import { quoteName } from '../../shared/quoteName.cjs';
+
 /**
  * Push notification translations
  * Supported locales: 'ru', 'en', 'es', 'de'. Falls back to 'en' on unknown locale.
@@ -21,16 +23,24 @@
 //
 // A project's name follows the word "project" in quotes in Russian and
 // German, and the German case goes on "Projekt": "ist Der Kirschgarten
-// beigetreten" wanted a dative the name cannot take (T-256).
+// beigetreten" wanted a dative the name cannot take (T-256). Spanish too:
+// "se unió a Bodas de sangre 2026" ran into the sentence (T-261).
 //
 // `until` is the end, already worded for the reader: "22:00", "1:00
 // следующего дня", "полуночи" (reminderText.js, untilTime).
 //
 // English titles are in Title Case, as Apple's HIG asks of a notification's
 // title; the text is in sentence case (T-256).
-const ruRehearsal = (title) => (title ? `Репетиция «${title}»` : 'Репетиция');
-const esRehearsal = (title) => (title ? `Ensayo «${title}»` : 'Ensayo');
-const deRehearsal = (title) => (title ? `Probe „${title}“` : 'Probe');
+// A name in quotes goes through quoteName: quotes it was typed with are not
+// doubled, those inside it are the language's second level — «Прогон „Чайки“»,
+// not «Прогон «Чайки»» (T-261).
+const ru = (name) => quoteName(name, 'ru');
+const en = (name) => quoteName(name, 'en');
+const es = (name) => quoteName(name, 'es');
+const de = (name) => quoteName(name, 'de');
+const ruRehearsal = (title) => (title ? `Репетиция ${ru(title)}` : 'Репетиция');
+const esRehearsal = (title) => (title ? `Ensayo ${es(title)}` : 'Ensayo');
+const deRehearsal = (title) => (title ? `Probe ${de(title)}` : 'Probe');
 // "a las 19:00", "hasta las 22:00" — but one o'clock is singular: "a la 1:00",
 // "hasta la 1:30" (T-250).
 const esLas = (time) => (/^1\D/.test(time) ? `la ${time}` : `las ${time}`);
@@ -92,12 +102,12 @@ const translations = {
     memberJoined: {
       title: 'Новый участник',
       body: ({ memberName, projectName }) =>
-        `${memberName} теперь в проекте «${projectName}»`,
+        `${memberName} теперь в проекте ${ru(projectName)}`,
     },
     adminAppointed: {
       title: 'Новый администратор',
       body: ({ memberName, projectName }) =>
-        `${memberName} теперь администратор проекта «${projectName}»`,
+        `${memberName} теперь администратор проекта ${ru(projectName)}`,
     },
     roleChanged: {
       title: 'Изменение роли',
@@ -106,17 +116,17 @@ const translations = {
       // Rights taken away say so: "теперь вы участник" read as "you were let
       // into the project" (T-256).
       body: ({ admin, projectName }) =>
-        (admin ? `Теперь вы администратор проекта «${projectName}»` : `Вы больше не администратор проекта «${projectName}»`),
+        (admin ? `Теперь вы администратор проекта ${ru(projectName)}` : `Вы больше не администратор проекта ${ru(projectName)}`),
     },
     memberRemoved: {
       title: 'Удаление из проекта',
       body: ({ projectName }) =>
-        `Вас удалили из проекта «${projectName}»`,
+        `Вас удалили из проекта ${ru(projectName)}`,
     },
     projectDeleted: {
       title: 'Проект удалён',
       body: ({ projectName }) =>
-        `Проект «${projectName}» удалён`,
+        `Проект ${ru(projectName)} удалён`,
     },
     // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
@@ -198,7 +208,7 @@ const translations = {
     memberResponse: {
       title: 'Rehearsal Seen',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} has seen ${rehearsalTitle ? `“${rehearsalTitle}”` : 'the rehearsal'} (${when}) in ${projectName}`,
+        `${responderName} has seen ${rehearsalTitle ? en(rehearsalTitle) : 'the rehearsal'} (${when}) in ${projectName}`,
     },
     memberJoined: {
       title: 'New Member',
@@ -212,8 +222,10 @@ const translations = {
     },
     roleChanged: {
       title: 'Role Changed',
+      // Rights taken away say so: "You are now a member" read as being let into
+      // the project (T-261).
       body: ({ admin, projectName }) =>
-        `You are now ${admin ? 'an administrator' : 'a member'} of ${projectName}`,
+        (admin ? `You are now an administrator of ${projectName}` : `You are no longer an administrator of ${projectName}`),
     },
     memberRemoved: {
       title: 'Removed from Project',
@@ -306,41 +318,41 @@ const translations = {
     rehearsalDeleted: {
       title: 'Ensayo cancelado',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: Cancelado el ensayo${rehearsalTitle ? ` «${rehearsalTitle}»` : ''} previsto para ${when}`,
+        `${projectName}: Cancelado el ensayo${rehearsalTitle ? ` ${es(rehearsalTitle)}` : ''} previsto para ${when}`,
     },
     memberResponse: {
       title: 'Ensayo visto',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${responderName} ha visto ${rehearsalTitle ? `«${rehearsalTitle}»` : 'el ensayo'} (${when}) en ${projectName}`,
+        `${responderName} ha visto ${rehearsalTitle ? es(rehearsalTitle) : 'el ensayo'} (${when}) en ${projectName}`,
     },
     memberJoined: {
       title: 'Nuevo miembro',
       body: ({ memberName, projectName }) =>
-        `${memberName} se unió a ${projectName}`,
+        `${memberName} se unió al proyecto ${es(projectName)}`,
     },
     adminAppointed: {
       // "Nueva administración" read as "a new government" (T-256).
       title: 'Permisos de administrador',
       body: ({ memberName, projectName }) =>
-        `${memberName} ahora administra ${projectName}`,
+        `${memberName} ahora administra el proyecto ${es(projectName)}`,
     },
     roleChanged: {
       title: 'Cambio de rol',
       // A verb, as adminAppointed says it: "administrador" agreed with a man
       // reading it, and "miembro" with anyone (T-251).
       body: ({ admin, projectName }) =>
-        (admin ? `Ahora administras ${projectName}` : `Ahora eres miembro de ${projectName}`),
+        (admin ? `Ahora administras el proyecto ${es(projectName)}` : `Ya no administras el proyecto ${es(projectName)}`),
     },
     memberRemoved: {
       // No participle: "eliminado" agreed with a man reading it (T-251).
       title: 'Ya no estás en el proyecto',
       body: ({ projectName }) =>
-        `Ya no formas parte del proyecto ${projectName}`,
+        `Ya no formas parte del proyecto ${es(projectName)}`,
     },
     projectDeleted: {
       title: 'Proyecto eliminado',
       body: ({ projectName }) =>
-        `El proyecto ${projectName} ha sido eliminado`,
+        `El proyecto ${es(projectName)} ha sido eliminado`,
     },
     // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
@@ -383,7 +395,8 @@ const translations = {
         `${projectName}: ${deRehearsal(rehearsalTitle)} ${when} angesetzt${location ? `, Ort: ${location}` : ''}`,
     },
     removedFromRehearsal: {
-      title: 'Du bist für eine Probe nicht mehr eingeteilt',
+      // One line on the lock screen: "eingeteilt" was cut off (T-261).
+      title: 'Nicht mehr eingeteilt',
       body: ({ projectName, rehearsalTitle, when }) =>
         `${projectName}: ${deRehearsal(rehearsalTitle)}, ${when} – du bist nicht mehr dabei`,
     },
@@ -420,34 +433,34 @@ const translations = {
     memberResponse: {
       title: 'Probe gesehen',
       body: ({ responderName, projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${responderName} hat ${rehearsalTitle ? `die Probe „${rehearsalTitle}“` : 'die Probe'} (${when}) als gesehen markiert`,
+        `${projectName}: ${responderName} hat ${rehearsalTitle ? `die Probe ${de(rehearsalTitle)}` : 'die Probe'} (${when}) als gesehen markiert`,
     },
     memberJoined: {
       title: 'Neues Mitglied',
       body: ({ memberName, projectName }) =>
-        `${memberName} ist dem Projekt „${projectName}“ beigetreten`,
+        `${memberName} ist dem Projekt ${de(projectName)} beigetreten`,
     },
     adminAppointed: {
       // "Neue Verwaltung" read as the management of a building (T-256).
       title: 'Adminrechte vergeben',
       body: ({ memberName, projectName }) =>
-        `${memberName} verwaltet jetzt das Projekt „${projectName}“`,
+        `${memberName} verwaltet jetzt das Projekt ${de(projectName)}`,
     },
     roleChanged: {
       title: 'Rolle geändert',
       // A verb, as adminAppointed says it: "Administrator" is a man's (T-251).
       body: ({ admin, projectName }) =>
-        (admin ? `Du verwaltest jetzt das Projekt „${projectName}“` : `Du bist jetzt Mitglied im Projekt „${projectName}“`),
+        (admin ? `Du verwaltest jetzt das Projekt ${de(projectName)}` : `Du verwaltest das Projekt ${de(projectName)} nicht mehr`),
     },
     memberRemoved: {
       title: 'Aus dem Projekt entfernt',
       body: ({ projectName }) =>
-        `Du wurdest aus dem Projekt „${projectName}“ entfernt`,
+        `Du wurdest aus dem Projekt ${de(projectName)} entfernt`,
     },
     projectDeleted: {
       title: 'Projekt gelöscht',
       body: ({ projectName }) =>
-        `Das Projekt „${projectName}“ wurde gelöscht`,
+        `Das Projekt ${de(projectName)} wurde gelöscht`,
     },
     // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {

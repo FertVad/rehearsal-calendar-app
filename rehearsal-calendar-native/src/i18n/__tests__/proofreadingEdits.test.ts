@@ -6,6 +6,9 @@
  * here even where no flow walks to it. Flows hold what a person sees on the
  * phone; this holds every word. One run names every edit that is not in.
  *
+ * "After" is the wording now: where the second reading (T-261) changed a T-256
+ * edit again, its row has the newer one, and T-261 has its own rows below.
+ *
  * A function is called with the arguments of its row: a name where it takes a
  * name, numbers where the number chooses the words (one row per wording).
  */
@@ -126,7 +129,7 @@ const EDITS: Edit[] = [
   ['en', 'rehearsals.notOnRoster', null, 'You are not in the cast', 'Not on this rehearsal'],
   ['en', 'rehearsals.loadingMembers', null, 'Loading members...', 'Loading members…'],
   ['en', 'rehearsals.noMembers', null, 'No members in project', 'No members in this project'],
-  ['en', 'rehearsals.busyAt', ['Anna', 'Hamlet', 'Planner'], 'Anna busy Hamlet', 'Anna is busy Hamlet'],
+  ['en', 'rehearsals.busyAt', ['Anna', 'Hamlet', 'Planner'], 'Anna busy Hamlet', 'Busy: Anna (Hamlet)'],
   ['en', 'rehearsals.notFound', null, 'This rehearsal is not available. It may have been deleted, or you were taken off it.', 'This rehearsal is not available. It may have been deleted, or you may have been taken off it.'],
   ['en', 'projects.inviteLinkError', null, 'Failed to create invite link', 'Could not create the invite link'],
   ['en', 'projects.fetchError', null, 'Failed to load project data', 'Could not load the project'],
@@ -200,10 +203,10 @@ const EDITS: Edit[] = [
   ['es', 'auth.emailNotVerified', null, 'Primero confirma tu dirección: introduce el código del correo.', 'Primero confirma tu dirección: escribe el código del correo.'],
   ['es', 'auth.passwordRule', null, 'Contraseña: al menos 8 caracteres y como máximo 72 bytes — 72 letras latinas, menos con acentos u otros alfabetos.', 'Contraseña: al menos 8 caracteres y como máximo 72 bytes (72 letras sin tilde; menos si usas tildes, ñ u otros alfabetos).'],
   ['es', 'auth.nameInvalid', null, 'El nombre es obligatorio; nombre y apellido tienen como máximo 100 caracteres.', 'El nombre es obligatorio; el nombre y el apellido no pueden superar los 100 caracteres.'],
-  ['es', 'auth.timezoneInvalid', null, 'No se reconoció la zona horaria del dispositivo. Revísala en Ajustes.', 'No se reconoció la zona horaria del dispositivo. Revísala en la configuración del teléfono.'],
+  ['es', 'auth.timezoneInvalid', null, 'No se reconoció la zona horaria del dispositivo. Revísala en Ajustes.', 'No se reconoció la zona horaria del teléfono. Revísala en la configuración de fecha y hora.'],
   ['es', 'auth.resetSubtitle', null, 'Introduce la dirección de tu cuenta y te enviaremos un código.', 'Escribe la dirección de tu cuenta y te enviaremos un código.'],
   ['es', 'auth.resetCodeSent', ['Anna', 'Hamlet', 'Planner'], 'Si Anna tiene una cuenta, le hemos enviado un código de seis dígitos. Introdúcelo junto con una contraseña nueva.', 'Si hay una cuenta con Anna, te enviamos un código de seis dígitos a esa dirección. Escríbelo junto con una contraseña nueva.'],
-  ['es', 'auth.noConnection', null, 'Sin conexión con el servidor. Comprueba tu conexión a internet e inténtalo de nuevo', 'No hay conexión con el servidor. Comprueba que tienes internet e inténtalo de nuevo'],
+  ['es', 'auth.noConnection', null, 'Sin conexión con el servidor. Comprueba tu conexión a internet e inténtalo de nuevo', 'No hay conexión con el servidor. Comprueba que tienes internet e inténtalo de nuevo.'],
   ['es', 'calendar.loading', null, 'Cargando ensayos...', 'Cargando ensayos…'],
   ['es', 'rehearsals.deleteNotifies', [1, 1], 'Los participantes (1) recibirán un aviso', '1 participante recibirá una notificación'],
   ['es', 'rehearsals.deleteNotifies', [2, 3], 'Los participantes (2) recibirán un aviso', '2 participantes recibirán una notificación'],
@@ -242,12 +245,12 @@ const EDITS: Edit[] = [
   ['es', 'calendarSync.explanation', null, 'Los ensayos pasan al calendario del teléfono, y de él solo llegan las horas que tienes ocupadas, nunca qué son los eventos.', 'Los ensayos pasan al calendario del teléfono; de él solo llegan las horas que tienes ocupadas, nunca el nombre de los eventos.'],
   ['es', 'calendarSync.checkingPermissions', null, 'Comprobando permisos...', 'Comprobando permisos…'],
   ['es', 'calendarSync.removeAllPartial', [1, 1], 'Eliminados: 1. No se pudieron eliminar: 1 — esos eventos siguen en el calendario.', 'Eliminados: 1. Un evento no se pudo eliminar y sigue en el calendario.'],
-  ['es', 'calendarSync.removeAllPartial', [2, 3], 'Eliminados: 2. No se pudieron eliminar: 3 — esos eventos siguen en el calendario.', 'Eliminados: 2. 3 eventos no se pudieron eliminar y siguen en el calendario.'],
+  ['es', 'calendarSync.removeAllPartial', [2, 3], 'Eliminados: 2. No se pudieron eliminar: 3 — esos eventos siguen en el calendario.', 'Eliminados: 2. No se pudieron eliminar 3 eventos, que siguen en el calendario.'],
   ['es', 'notifications.markAllRead', null, 'Marcar todas', 'Marcar como leídas'],
   ['es', 'notifications.clearAll', null, 'Vaciar', 'Borrar todo'],
   ['es', 'notifications.clearAllConfirm', null, '¿Vaciar las notificaciones?', '¿Borrar todas las notificaciones?'],
   ['es', 'onboarding.welcome.feature1', null, 'Cada uno marca cuándo está ocupado', 'Cada uno marca sus horas ocupadas'],
-  ['es', 'onboarding.whatWhere.projectWhere', ['Anna', 'Hamlet', 'Planner'], '“+” → “Anna”. Con un código: “Hamlet” → “Planner”', '«+» → «Anna». Con un código: «Hamlet» → «Planner»'],
+  ['es', 'onboarding.whatWhere.projectWhere', ['Anna', 'Hamlet', 'Planner'], '“+” → “Anna”. Con un código: “Hamlet” → “Planner”', '«+» → «Anna». Con una invitación: «Hamlet» → «Planner»'],
   ['es', 'onboarding.whatWhere.rehearsalWhere', ['Anna', 'Hamlet', 'Planner'], '“+” → “Anna”, en los proyectos que administras', '«+» → «Anna», en los proyectos que administras'],
   ['es', 'onboarding.whatWhere.availabilityWhere', ['Anna', 'Hamlet', 'Planner'], '“+” → “Anna”', '«+» → «Anna»'],
   ['es', 'onboarding.whatWhere.plannerWhere', ['Anna', 'Hamlet', 'Planner'], '“Anna”, debajo del calendario', '«Anna», debajo del calendario'],
@@ -269,7 +272,7 @@ const EDITS: Edit[] = [
   ['de', 'rehearsals.notOnRoster', null, 'Du bist nicht in der Besetzung', 'Du bist nicht eingeteilt'],
   ['de', 'rehearsals.noAdminProjects', null, 'Keine Projekte, die du verwaltest', 'Keine Projekte, in denen du Admin bist'],
   ['de', 'rehearsals.loadingMembers', null, 'Mitglieder werden geladen...', 'Mitglieder werden geladen …'],
-  ['de', 'rehearsals.busyAt', ['Anna', 'Hamlet', 'Planner'], 'Anna: beschäftigt Hamlet', 'Anna: Hamlet beschäftigt'],
+  ['de', 'rehearsals.busyAt', ['Anna', 'Hamlet', 'Planner'], 'Anna: beschäftigt Hamlet', 'Beschäftigt: Anna (Hamlet)'],
   ['de', 'rehearsals.andMore', [1, 1], 'und 1 weitere', 'und 1 weiterer'], // T-258's, final; compared exactly: it holds "und 1 weitere"
   ['de', 'rehearsals.notFound', null, 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht, oder du wurdest aus der Besetzung genommen.', 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht oder du bist nicht mehr dafür eingeteilt.'],
   ['de', 'rehearsals.noAvailableTime', null, 'Keine verfügbare Zeit für alle ausgewählten Teilnehmer', 'Keine Zeit, in der alle ausgewählten Teilnehmer frei sind'],
@@ -319,7 +322,7 @@ const EDITS: Edit[] = [
   ['de', 'notifications.clearAllConfirm', null, 'Mitteilungen leeren?', 'Alle Mitteilungen löschen?'],
   ['de', 'notifications.clearAllConfirmBody', null, 'Die Liste wird leer sein. Das lässt sich nicht rückgängig machen.', 'Die Liste wird geleert. Das lässt sich nicht rückgängig machen.'],
   ['de', 'notifications.daysAgo', [2, 3], 'vor 2 Tg.', 'vor 2 Tagen'],
-  ['de', 'onboarding.skipMessage', null, 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen einrichten', 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen ändern'],
+  ['de', 'onboarding.skipMessage', null, 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen einrichten', 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen ändern.'],
   ['de', 'onboarding.welcome.feature3', null, 'Die Probe landet in jedem Kalender', 'Die Probe landet bei allen im Kalender'],
   ['de', 'onboarding.notifications.exampleAdded', null, 'Du wurdest zu einer Probe hinzugefügt', 'Du wurdest für eine Probe eingeteilt'],
   ['de', 'onboarding.calendarSync.title', null, 'Deine Zeiten', 'Deine Verfügbarkeit'],
@@ -334,8 +337,8 @@ const EDITS: Edit[] = [
 
 // [file, key, before (3b16cd5), after] — iOS's own permission prompts.
 const IOS_TEXTS: Array<[string, string, string, string]> = [
-  ['locales/ru.json', 'NSRemindersUsageDescription', 'Rehearsly работает только с календарём и не запрашивает доступ к напоминаниям.', 'Rehearsly не использует напоминания.'],
-  ['locales/ru.json', 'NSRemindersFullAccessUsageDescription', 'Rehearsly работает только с календарём и не запрашивает доступ к напоминаниям.', 'Rehearsly не использует напоминания.'],
+  ['locales/ru.json', 'NSRemindersUsageDescription', 'Rehearsly работает только с календарём и не запрашивает доступ к напоминаниям.', 'Rehearsly не использует ваши напоминания.'],
+  ['locales/ru.json', 'NSRemindersFullAccessUsageDescription', 'Rehearsly работает только с календарём и не запрашивает доступ к напоминаниям.', 'Rehearsly не использует ваши напоминания.'],
   ['locales/en.json', 'NSCalendarsUsageDescription', 'Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.', 'Rehearsly adds your rehearsals to your calendar. From the calendars you pick, it reads only the hours you are busy, never what your events are called.'],
   ['locales/en.json', 'NSCalendarsFullAccessUsageDescription', 'Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.', 'Rehearsly adds your rehearsals to your calendar. From the calendars you pick, it reads only the hours you are busy, never what your events are called.'],
   ['locales/en.json', 'NSRemindersUsageDescription', 'Rehearsly works only with your calendar and never asks for access to your reminders.', 'Rehearsly does not use your reminders.'],

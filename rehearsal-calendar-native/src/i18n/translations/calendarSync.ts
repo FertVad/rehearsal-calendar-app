@@ -137,7 +137,7 @@ export const en = {
     justNow: 'just now',
     minutesAgo: (minutes: number) => `${minutes} min ago`,
     hoursAgo: (hours: number) => `${hours}h ago`,
-    daysAgo: (days: number) => `${days}d ago`,
+    daysAgo: (days: number) => (days === 1 ? 'yesterday' : `${days}d ago`),
     // Additional status
     imported: 'Imported',
     exportedRehearsals: 'Exported rehearsals',
@@ -169,7 +169,7 @@ export const es = {
     removeAllSuccess: 'Se eliminaron todos los ensayos del calendario',
     removeAllPartial: (removed: number, failed: number) => (failed === 1
       ? `Eliminados: ${removed}. Un evento no se pudo eliminar y sigue en el calendario.`
-      : `Eliminados: ${removed}. ${failed} eventos no se pudieron eliminar y siguen en el calendario.`),
+      : `Eliminados: ${removed}. No se pudieron eliminar ${failed} eventos, que siguen en el calendario.`),
     importIncomplete: (calendars: number) => `Calendarios que no se pudieron leer: ${calendars}.`,
     exportIncomplete: (rehearsals: number) => `Ensayos que no se pudieron escribir en el calendario: ${rehearsals}.`,
     syncError: 'Error de sincronización',
@@ -185,7 +185,7 @@ export const es = {
     justNow: 'ahora mismo',
     minutesAgo: (minutes: number) => `hace ${minutes} min`,
     hoursAgo: (hours: number) => `hace ${hours} h`,
-    daysAgo: (days: number) => `hace ${days} d`,
+    daysAgo: (days: number) => (days === 1 ? 'ayer' : `hace ${days} d`),
     // Additional status
     imported: 'Importados',
     exportedRehearsals: 'Ensayos exportados',

@@ -377,7 +377,7 @@ describe('TodayRehearsals Component', () => {
       await waitFor(() => expect(alert).toHaveBeenCalled());
 
       const [title, message, buttons] = alert.mock.calls[0] as any[];
-      expect(title).toBe('Delete “Table read”, Mon, Dec 29, 10:00?');
+      expect(title).toBe('Delete “Table read” (Mon, Dec 29, 10:00)?');
       expect(message).toBe('2 participants will be notified');
       expect(buttons.map((b: any) => b.style)).toEqual(['cancel', 'destructive']);
       alert.mockRestore();

@@ -154,7 +154,7 @@ describe('A number takes its noun\'s form (T-256)', () => {
     expect(de.common.dateRangeTooLong(1)).toBe('Wähle einen Zeitraum von höchstens 1 Tag, einschließlich des ersten und letzten Tages.');
     expect(en.calendarSync.removeAllPartial(3, 1)).toBe('Removed: 3. Could not remove: 1 — that event is still in the calendar.');
     expect(es.calendarSync.removeAllPartial(3, 1)).toBe('Eliminados: 3. Un evento no se pudo eliminar y sigue en el calendario.');
-    expect(es.calendarSync.removeAllPartial(3, 2)).toBe('Eliminados: 3. 2 eventos no se pudieron eliminar y siguen en el calendario.');
+    expect(es.calendarSync.removeAllPartial(3, 2)).toBe('Eliminados: 3. No se pudieron eliminar 2 eventos, que siguen en el calendario.');
   });
 
   it('one person or several, without a gender', () => {
@@ -182,12 +182,11 @@ describe('Words around what the user typed (T-256)', () => {
     expect(de.rehearsals.deleteTitle('Durchlauf 2. Akt', 'Do., 29. Okt., 18:00')).toBe('„Durchlauf 2. Akt“ (Do., 29. Okt., 18:00) löschen?');
     expect(de.rehearsals.deleteTitle(null, 'Do., 29. Okt., 18:00')).toBe('Probe (Do., 29. Okt., 18:00) löschen?');
     expect(de.smartPlanner.addRehearsalAt('18:00–21:00')).toBe('Probe für 18:00–21:00 hinzufügen');
-    expect(de.rehearsals.busyAt('Anna', '18:00–20:00')).toBe('Anna: 18:00–20:00 beschäftigt');
   });
 
   it('Spanish quotes are « » everywhere', () => {
     expect(es.onboarding.whatWhere.projectWhere('Crear proyecto', 'Proyectos', 'Unirse con un código'))
-      .toBe('«+» → «Crear proyecto». Con un código: «Proyectos» → «Unirse con un código»');
+      .toBe('«+» → «Crear proyecto». Con una invitación: «Proyectos» → «Unirse con un código»');
     expect(es.onboarding.whatWhere.plannerWhere('Planner')).toBe('«Planner», debajo del calendario');
   });
 });

@@ -315,7 +315,7 @@ export const es = {
     verifySubtitleUnsent: (email: string) => `Tu cuenta está creada. Para entrar, confirma ${email} con el código del correo.`,
     passwordRule: 'Contraseña: al menos 8 caracteres y como máximo 72 bytes (72 letras sin tilde; menos si usas tildes, ñ u otros alfabetos).',
     nameInvalid: 'El nombre es obligatorio; el nombre y el apellido no pueden superar los 100 caracteres.',
-    timezoneInvalid: 'No se reconoció la zona horaria del dispositivo. Revísala en la configuración del teléfono.',
+    timezoneInvalid: 'No se reconoció la zona horaria del teléfono. Revísala en la configuración de fecha y hora.',
     forgotPassword: '¿Olvidaste tu contraseña?',
     resetTitle: 'Nueva contraseña',
     resetSubtitle: 'Escribe la dirección de tu cuenta y te enviaremos un código.',
@@ -327,8 +327,8 @@ export const es = {
     otherAddress: 'Otra dirección',
     currentPasswordInvalid: 'La contraseña actual no es correcta',
     emailUnchanged: 'Esta ya es tu dirección',
-    noConnection: 'No hay conexión con el servidor. Comprueba que tienes internet e inténtalo de nuevo',
-    requestFailed: 'Algo salió mal. Inténtalo de nuevo',
+    noConnection: 'No hay conexión con el servidor. Comprueba que tienes internet e inténtalo de nuevo.',
+    requestFailed: 'Algo salió mal. Inténtalo de nuevo.',
   },
 };
 
@@ -408,7 +408,7 @@ export const de = {
     otherAddress: 'Andere Adresse',
     currentPasswordInvalid: 'Das aktuelle Passwort ist falsch',
     emailUnchanged: 'Das ist bereits deine Adresse',
-    noConnection: 'Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut',
-    requestFailed: 'Etwas ist schiefgelaufen. Versuche es erneut',
+    noConnection: 'Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.',
+    requestFailed: 'Etwas ist schiefgelaufen. Versuche es erneut.',
   },
 };

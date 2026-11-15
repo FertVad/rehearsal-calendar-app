@@ -318,7 +318,7 @@ describe('No word agrees with a title, a member or a reader the server cannot kn
       await notifyRoleChanged('Hamlet', reader, 'admin');
     }
     expect(inboxOf(olga)[0].body).toBe('Теперь вы администратор проекта «Hamlet»');
-    expect(inboxOf(carmen)[0].body).toBe('Ahora administras Hamlet');
+    expect(inboxOf(carmen)[0].body).toBe('Ahora administras el proyecto «Hamlet»');
     expect(inboxOf(klaus)[0].body).toBe('Du verwaltest jetzt das Projekt „Hamlet“');
     expect(inboxOf(john)[0].body).toBe('You are now an administrator of Hamlet');
 
@@ -326,15 +326,16 @@ describe('No word agrees with a title, a member or a reader the server cannot kn
       await notifyRoleChanged('Hamlet', reader, 'member');
     }
     expect(inboxOf(olga)[0].body).toBe('Вы больше не администратор проекта «Hamlet»');
-    expect(inboxOf(carmen)[0].body).toBe('Ahora eres miembro de Hamlet');
-    expect(inboxOf(klaus)[0].body).toBe('Du bist jetzt Mitglied im Projekt „Hamlet“');
-    expect(inboxOf(john)[0].body).toBe('You are now a member of Hamlet');
+    // Rights taken away say so in every language (T-261).
+    expect(inboxOf(carmen)[0].body).toBe('Ya no administras el proyecto «Hamlet»');
+    expect(inboxOf(klaus)[0].body).toBe('Du verwaltest das Projekt „Hamlet“ nicht mehr');
+    expect(inboxOf(john)[0].body).toBe('You are no longer an administrator of Hamlet');
   });
 
   it('someone removed from a project, in Spanish, is no participle', async () => {
     await notifyMemberRemoved('Hamlet', carmen);
 
-    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ya no estás en el proyecto', body: 'Ya no formas parte del proyecto Hamlet' });
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ya no estás en el proyecto', body: 'Ya no formas parte del proyecto «Hamlet»' });
   });
 });
 
@@ -587,7 +588,8 @@ describe('Titles, names and the words around them, as native speakers read them 
     expect(titles()).toEqual(['Te han añadido a un ensayo', 'Du wurdest für eine Probe eingeteilt', 'Вас позвали на репетицию', 'You Were Added to a Rehearsal']);
 
     await notifyRemovedFromRehearsal(rehearsal, 'Hamlet', all(), { now });
-    expect(titles()).toEqual(['Te han quitado de un ensayo', 'Du bist für eine Probe nicht mehr eingeteilt', 'Вас сняли с репетиции', 'You Were Taken Off a Rehearsal']);
+    // The German title is one line on the lock screen (T-261).
+    expect(titles()).toEqual(['Te han quitado de un ensayo', 'Nicht mehr eingeteilt', 'Вас сняли с репетиции', 'You Were Taken Off a Rehearsal']);
     expect(bodies()).toEqual([
       'Hamlet: Full dress, mañana a las 21:00 — ya no estás en este ensayo',
       'Hamlet: Probe „Full dress“, morgen um 21:00 – du bist nicht mehr dabei',
@@ -621,7 +623,7 @@ describe('Titles, names and the words around them, as native speakers read them 
     await notifyMemberJoined('Der Kirschgarten', 'Anna Schmidt', readersOf(), data.projectId);
     expect(titles()).toEqual(['Nuevo miembro', 'Neues Mitglied', 'Новый участник', 'New Member']);
     expect(bodies()).toEqual([
-      'Anna Schmidt se unió a Der Kirschgarten',
+      'Anna Schmidt se unió al proyecto «Der Kirschgarten»',
       'Anna Schmidt ist dem Projekt „Der Kirschgarten“ beigetreten',
       'Anna Schmidt теперь в проекте «Der Kirschgarten»',
       'Anna Schmidt joined Der Kirschgarten',
@@ -630,7 +632,7 @@ describe('Titles, names and the words around them, as native speakers read them 
     await notifyAdminAppointed('Der Kirschgarten', 'Anna Schmidt', readersOf(), data.projectId);
     expect(titles()).toEqual(['Permisos de administrador', 'Adminrechte vergeben', 'Новый администратор', 'New Administrator']);
     expect(bodies()).toEqual([
-      'Anna Schmidt ahora administra Der Kirschgarten',
+      'Anna Schmidt ahora administra el proyecto «Der Kirschgarten»',
       'Anna Schmidt verwaltet jetzt das Projekt „Der Kirschgarten“',
       'Anna Schmidt теперь администратор проекта «Der Kirschgarten»',
       'Anna Schmidt is now an administrator of Der Kirschgarten',
@@ -642,7 +644,7 @@ describe('Titles, names and the words around them, as native speakers read them 
     for (const reader of readersOf()) await notifyMemberRemoved('Der Kirschgarten', reader);
     expect(titles()[3]).toBe('Removed from Project');
     expect(bodies()).toEqual([
-      'Ya no formas parte del proyecto Der Kirschgarten',
+      'Ya no formas parte del proyecto «Der Kirschgarten»',
       'Du wurdest aus dem Projekt „Der Kirschgarten“ entfernt',
       'Вас удалили из проекта «Der Kirschgarten»',
       'You were removed from the project Der Kirschgarten',
@@ -651,7 +653,7 @@ describe('Titles, names and the words around them, as native speakers read them 
     await notifyProjectDeleted('Der Kirschgarten', readersOf());
     expect(titles()[3]).toBe('Project Deleted');
     expect(bodies()).toEqual([
-      'El proyecto Der Kirschgarten ha sido eliminado',
+      'El proyecto «Der Kirschgarten» ha sido eliminado',
       'Das Projekt „Der Kirschgarten“ wurde gelöscht',
       'Проект «Der Kirschgarten» удалён',
       'The project Der Kirschgarten has been deleted',
@@ -672,6 +674,111 @@ describe('Titles, names and the words around them, as native speakers read them 
     expect(titles()).toEqual(['Ensayo en breve: hoy a las 21:00', 'Probe beginnt bald: heute um 21:00', 'Скоро репетиция: сегодня в 22:00', 'Rehearsal Soon — Today at 8:00 PM']);
     // The body keeps its lower case.
     expect(bodies()[3]).toBe('Hamlet: Full dress');
+  });
+});
+
+/**
+ * The second reading (T-261). A name typed in quotes — a theatre writes a
+ * production's name so — had them doubled: «Проект ««Вишнёвый сад»» удалён»,
+ * «Репетиция «Прогон «Чайки»» назначена». The quotes around a whole name go,
+ * those inside it become the language's second level. Rights taken away say
+ * so in every language, and Spanish quotes the project as the others do.
+ */
+describe('A name in quotes, rights taken away, Spanish project notices (T-261)', () => {
+  let carmen;
+  let klaus;
+  let olga;
+  let nick;
+  const readersOf = () => [carmen, klaus, olga, nick];
+  const all = () => readersOf().map((user_id) => ({ user_id }));
+  const bodies = () => readersOf().map((reader) => inboxOf(reader)[0].body);
+
+  beforeAll(() => {
+    carmen = addReader('carmen6', 'es', 'Europe/Madrid');
+    klaus = addReader('klaus6', 'de', 'Europe/Berlin');
+    olga = addReader('olga6', 'ru', 'Europe/Moscow');
+    nick = addReader('nick6', 'en', 'Europe/London');
+  });
+
+  it('a project named in quotes is not quoted twice', async () => {
+    await notifyProjectDeleted('«Вишнёвый сад»', readersOf());
+    expect(bodies()).toEqual([
+      'El proyecto «Вишнёвый сад» ha sido eliminado',
+      'Das Projekt „Вишнёвый сад“ wurde gelöscht',
+      'Проект «Вишнёвый сад» удалён',
+      // English sets no quotes of its own here: the name as typed.
+      'The project «Вишнёвый сад» has been deleted',
+    ]);
+
+    await notifyMemberJoined('"Der Kirschgarten"', 'Anna Schmidt', readersOf(), data.projectId);
+    expect(bodies()).toEqual([
+      'Anna Schmidt se unió al proyecto «Der Kirschgarten»',
+      'Anna Schmidt ist dem Projekt „Der Kirschgarten“ beigetreten',
+      'Anna Schmidt теперь в проекте «Der Kirschgarten»',
+      'Anna Schmidt joined "Der Kirschgarten"',
+    ]);
+
+    await notifyMemberRemoved('„Die Räuber“', olga);
+    expect(inboxOf(olga)[0].body).toBe('Вас удалили из проекта «Die Räuber»');
+  });
+
+  it('quotes inside a rehearsal\'s title are the second level', async () => {
+    await notifyRehearsalCreated({ ...rehearsal, title: 'Прогон «Чайки»' }, 'Hamlet', all(), { now });
+    expect(bodies()).toEqual([
+      'Hamlet: Ensayo «Прогон “Чайки”» programado para mañana a las 21:00',
+      'Hamlet: Probe „Прогон ‚Чайки‘“ morgen um 21:00 angesetzt',
+      'Hamlet: Репетиция «Прогон „Чайки“» назначена на завтра в 22:00',
+      'Hamlet: Прогон «Чайки» scheduled tomorrow at 8:00 PM',
+    ]);
+
+    await notifyMemberResponse({ ...rehearsal, title: 'Szene „Fenster“' }, 'Hamlet', 'Anna Smith', readersOf(), { now });
+    expect(bodies()).toEqual([
+      'Anna Smith ha visto «Szene “Fenster”» (mañana a las 21:00) en Hamlet',
+      'Hamlet: Anna Smith hat die Probe „Szene ‚Fenster‘“ (morgen um 21:00) als gesehen markiert',
+      'Hamlet: Szene „Fenster“, завтра в 22:00 — Anna Smith в курсе',
+      'Anna Smith has seen “Szene ‘Fenster’” (tomorrow at 8:00 PM) in Hamlet',
+    ]);
+
+    await notifyRehearsalDeleted({ ...rehearsal, title: '“Escena del duelo”' }, 'Hamlet', [{ user_id: carmen }], { now });
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Cancelado el ensayo «Escena del duelo» previsto para mañana a las 21:00');
+  });
+
+  it('a role given and a role taken away, in every language', async () => {
+    for (const reader of readersOf()) await notifyRoleChanged('«Hamlet»', reader, 'admin');
+    expect(bodies()).toEqual([
+      'Ahora administras el proyecto «Hamlet»',
+      'Du verwaltest jetzt das Projekt „Hamlet“',
+      'Теперь вы администратор проекта «Hamlet»',
+      'You are now an administrator of «Hamlet»',
+    ]);
+
+    for (const reader of readersOf()) await notifyRoleChanged('Bodas de sangre 2026', reader, 'member');
+    expect(readersOf().map((reader) => inboxOf(reader)[0].title)).toEqual(['Cambio de rol', 'Rolle geändert', 'Изменение роли', 'Role Changed']);
+    expect(bodies()).toEqual([
+      'Ya no administras el proyecto «Bodas de sangre 2026»',
+      'Du verwaltest das Projekt „Bodas de sangre 2026“ nicht mehr',
+      'Вы больше не администратор проекта «Bodas de sangre 2026»',
+      'You are no longer an administrator of Bodas de sangre 2026',
+    ]);
+  });
+
+  it('Spanish: the project in quotes after "proyecto" in every notice about it', async () => {
+    await notifyAdminAppointed('Bodas de sangre 2026', 'Lucía Martín', [carmen], data.projectId);
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Permisos de administrador', body: 'Lucía Martín ahora administra el proyecto «Bodas de sangre 2026»' });
+    await notifyMemberJoined('Hamlet', 'Lucía Martín', [carmen], data.projectId);
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Nuevo miembro', body: 'Lucía Martín se unió al proyecto «Hamlet»' });
+    await notifyMemberRemoved('Hamlet', carmen);
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ya no estás en el proyecto', body: 'Ya no formas parte del proyecto «Hamlet»' });
+    await notifyProjectDeleted('Bodas de sangre 2026', [carmen]);
+    expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Proyecto eliminado', body: 'El proyecto «Bodas de sangre 2026» ha sido eliminado' });
+  });
+
+  it('German: taken off a rehearsal, in a title that fits one line', async () => {
+    await notifyRemovedFromRehearsal(rehearsal, 'Hamlet', [{ user_id: klaus }], { now });
+    expect(inboxOf(klaus)[0]).toMatchObject({
+      title: 'Nicht mehr eingeteilt',
+      body: 'Hamlet: Probe „Full dress“, morgen um 21:00 – du bist nicht mehr dabei',
+    });
   });
 });
 

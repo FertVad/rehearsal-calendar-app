@@ -1,3 +1,6 @@
+// A rehearsal's title in quotes: those it was typed with are not doubled (T-261).
+import { quoteName } from '../../../shared/quoteName.cjs';
+
 export interface CalendarTranslations {
   needProject: string;
   allProjects: string;
@@ -82,7 +85,8 @@ export interface RehearsalsTranslations {
   /** The sheet's three-state box over everyone. */
   allParticipants: string;
   searchParticipants: string;
-  /** Under the participants row: someone picked is busy at the rehearsal's time. */
+  /** Under the participants row: someone picked is busy at the rehearsal's time,
+   *  by full name; `time` is their busy span or wholeDay (T-261). */
   busyAt: (name: string, time: string) => string;
   andMore: (count: number) => string;
   /** Beside the name of someone busy the whole day. */
@@ -127,8 +131,9 @@ export const ru = {
     locationPlaceholder: 'Адрес или название места',
     createError: 'Не удалось создать репетицию',
     deleteConfirm: 'Удалить',
+    // The date in brackets: its own commas ran into the title's (T-261).
     deleteTitle: (title: string | null, when: string) =>
-      title ? `Удалить «${title}», ${when}?` : `Удалить репетицию, ${when}?`,
+      title ? `Удалить ${quoteName(title, 'ru')} (${when})?` : `Удалить репетицию (${when})?`,
     // "Участники (1)" was a stopgap: the number takes its noun's form,
     // 1 / 21 участник, 2–4 / 22–24 участника, 0, 5–20, 25 участников.
     deleteNotifies: (count: number) => {
@@ -221,7 +226,7 @@ export const en = {
     createError: 'Could not create the rehearsal',
     deleteConfirm: 'Delete',
     deleteTitle: (title: string | null, when: string) =>
-      title ? `Delete “${title}”, ${when}?` : `Delete the rehearsal, ${when}?`,
+      title ? `Delete ${quoteName(title, 'en')} (${when})?` : `Delete the rehearsal (${when})?`,
     deleteNotifies: (count: number) =>
       (count === 0 ? 'No one will be notified' : `${count} ${count === 1 ? 'participant' : 'participants'} will be notified`),
     deleteNotifiedUnknown: 'Could not find out who will be notified. Check your connection and try again.',
@@ -261,7 +266,9 @@ export const en = {
     participantsEveryone: (total: number) => `All participants · ${total}`,
     allParticipants: 'All participants',
     searchParticipants: 'Search',
-    busyAt: (name: string, time: string) => `${name} is busy ${time}`,
+    // A label first, so "and 2 more" follows the name and not the time, as the
+    // Planner says it; "is busy … and 2 more" read as two more spans (T-261).
+    busyAt: (name: string, time: string) => `Busy: ${name} (${time})`,
     andMore: (count: number) => `and ${count} more`,
     wholeDay: 'all day',
     admin: 'admin',
@@ -304,10 +311,10 @@ export const es = {
     createError: 'Error al crear el ensayo',
     deleteConfirm: 'Eliminar',
     deleteTitle: (title: string | null, when: string) =>
-      title ? `¿Eliminar «${title}», ${when}?` : `¿Eliminar el ensayo, ${when}?`,
+      title ? `¿Eliminar ${quoteName(title, 'es')} (${when})?` : `¿Eliminar el ensayo (${when})?`,
     deleteNotifies: (count: number) =>
       (count === 1 ? '1 participante recibirá una notificación' : `${count} participantes recibirán una notificación`),
-    deleteNotifiedUnknown: 'No se pudo saber quién recibirá el aviso de la cancelación. Revisa la conexión e inténtalo de nuevo.',
+    deleteNotifiedUnknown: 'No se pudo saber quién recibirá la notificación de la cancelación. Comprueba la conexión e inténtalo de nuevo.',
     deleteError: 'No se pudo eliminar el ensayo',
     edit: 'Editar',
     participants: 'Participantes',
@@ -388,7 +395,7 @@ export const de = {
     createError: 'Fehler beim Erstellen der Probe',
     deleteConfirm: 'Löschen',
     deleteTitle: (title: string | null, when: string) =>
-      title ? `„${title}“ (${when}) löschen?` : `Probe (${when}) löschen?`,
+      title ? `${quoteName(title, 'de')} (${when}) löschen?` : `Probe (${when}) löschen?`,
     deleteNotifies: (count: number) =>
       (count === 1 ? '1 Teilnehmer wird benachrichtigt' : `${count} Teilnehmer werden benachrichtigt`),
     deleteNotifiedUnknown: 'Es ließ sich nicht ermitteln, wer über die Absage benachrichtigt wird. Prüfe die Verbindung und versuche es erneut.',
@@ -428,7 +435,8 @@ export const de = {
     participantsEveryone: (total: number) => `Alle Teilnehmer · ${total}`,
     allParticipants: 'Alle Teilnehmer',
     searchParticipants: 'Suchen',
-    busyAt: (name: string, time: string) => `${name}: ${time} beschäftigt`,
+    // "und 1 weiterer" after the name, not after "beschäftigt" (T-261).
+    busyAt: (name: string, time: string) => `Beschäftigt: ${name} (${time})`,
     // One more as iOS counts people ("und 1 weiterer"), masculine after
     // "Teilnehmer"; "und 1 weitere Person" was cut on the phone (T-258).
     andMore: (count: number) => (count === 1 ? 'und 1 weiterer' : `und ${count} weitere`),
