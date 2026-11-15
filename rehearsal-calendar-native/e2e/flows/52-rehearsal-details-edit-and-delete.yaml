@@ -218,7 +218,7 @@ tags:
       notVisible: "Could not find out who will be notified\\..*"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'en: who will be notified, not told it is cancelled | '}"
-- assertNotVisible: "Delete “Ghost watch”.*"
+- assertNotVisible: "Delete “Ghost watch.*"
 - takeScreenshot: 52-roster-not-read
 - runScript:
     file: ../scripts/release-answers.js
@@ -226,8 +226,11 @@ tags:
       MAIL_URL: ${MAIL_URL}
 - tapOn: "Try again"
 # The date in brackets: its own commas ran into the title's (T-261).
+# Its name, typed „Ghost watch ‚Act I‘“, is set in English quotes once, the
+# inner ones as English nests them: a closing ‘ before the closing “ once made
+# that “ an opening one, and the name read “‘Ghost watch ‘Act I’‘” (review).
 - extendedWaitUntil:
-    visible: "Delete “Ghost watch” \\(.*, 7:00.PM\\)\\?"
+    visible: "Delete “Ghost watch ‘Act I’” \\(.*, 7:00.PM\\)\\?"
     timeout: 10000
 - assertVisible: "(1 participant|Participants \\(1\\)) will be notified"
 - runFlow:
