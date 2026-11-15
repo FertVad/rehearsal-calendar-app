@@ -111,6 +111,26 @@ describe('T-261: a name typed in quotes is not quoted twice', () => {
     expect(quoteName('Run of “The Seagull”', 'en')).toBe('“Run of ‘The Seagull’”');
   });
 
+  // Review of T-261: a mark right after a closing one was read as an opening
+  // one — „Durchlauf ‚Die Möwe‘“ kept its outer pair and became
+  // „‚Durchlauf ‚Die Möwe‘‚“. A name already quoted right stays as it is.
+  it('a name already nested right keeps its quotes, in every language', () => {
+    expect(quoteName('„Durchlauf ‚Die Möwe‘“', 'de')).toBe('„Durchlauf ‚Die Möwe‘“');
+    expect(quoteName('«Прогон „Чайки“»', 'ru')).toBe('«Прогон „Чайки“»');
+    expect(quoteName('«Pasada de “La gaviota”»', 'es')).toBe('«Pasada de “La gaviota”»');
+    expect(quoteName('“Run of ‘The Seagull’”', 'en')).toBe('“Run of ‘The Seagull’”');
+    expect(quoteName('„Durchlauf ‚Die Möwe‘“', 'en')).toBe('“Durchlauf ‘Die Möwe’”');
+    expect(quoteName('„Durchlauf ‚Die Möwe‘“', 'ru')).toBe('«Durchlauf „Die Möwe“»');
+    expect(quoteName('„Durchlauf ‚Die Möwe‘“', 'es')).toBe('«Durchlauf “Die Möwe”»');
+    // Typed with one level twice, the German way: the second “ closes too.
+    expect(quoteName('„Probe „Die Möwe““', 'de')).toBe('„Probe ‚Die Möwe‘“');
+    expect(quoteName('Probe „Die Möwe“ – Teil 2', 'de')).toBe('„Probe ‚Die Möwe‘ – Teil 2“');
+    // On the screens: the question before deleting, the invitation.
+    expect(de.rehearsals.deleteTitle('„Durchlauf ‚Die Möwe‘“', 'Sa., 22. Aug., 19:00')).toBe('„Durchlauf ‚Die Möwe‘“ (Sa., 22. Aug., 19:00) löschen?');
+    expect(en.rehearsals.deleteTitle('„Ghost watch ‚Act I‘“', 'Sat, Aug 22, 7:00 PM')).toBe('Delete “Ghost watch ‘Act I’” (Sat, Aug 22, 7:00 PM)?');
+    expect(de.projects.deleteProjectMessage('„Durchlauf ‚Die Möwe‘“')).toBe('Möchtest du das Projekt „Durchlauf ‚Die Möwe‘“ wirklich löschen?');
+  });
+
   it('two names in quotes are not one, and an apostrophe is not a quote', () => {
     expect(quoteName('«Чайка» и «Гамлет»', 'ru')).toBe('«„Чайка“ и „Гамлет“»');
     expect(quoteName('Rock’n’roll', 'ru')).toBe('«Rock’n’roll»');

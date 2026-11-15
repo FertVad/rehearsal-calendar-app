@@ -29,13 +29,18 @@ const SINGLE = '‘’‚';
 const ALWAYS_OPEN = '«„‚';
 const ALWAYS_CLOSE = '»';
 const WORD = /[\p{L}\p{N}]/u;
-const BEFORE_OPENING = /[\s([{«„‚“‘"\-–—/]/u;
+const BEFORE_OPENING = /[\s([{\-–—/]/u;
 
 /**
  * The quote marks of a name: where each one is, whether it opens or closes,
  * and whether it is a double or a single one. An apostrophe — "Rock’n’roll",
  * "Actors’ studio" — is not a mark: a single closing mark counts only after a
  * single opening one.
+ *
+ * A mark that could open or close (“ ” " ‘ ’) opens at the start or after a
+ * space, a bracket or a dash. Right after another mark it goes the way that one
+ * went: “‘ opens twice, but in „Durchlauf ‚Die Möwe‘“ the “ after the closing ‘
+ * closes too, as does the second “ of „Probe „Die Möwe““.
  */
 function marksOf(text) {
   const marks = [];
@@ -46,9 +51,11 @@ function marksOf(text) {
     if (!double && !SINGLE.includes(c)) continue;
     const prev = i === 0 ? '' : text[i - 1];
     const next = i + 1 < text.length ? text[i + 1] : '';
+    const last = marks.length ? marks[marks.length - 1] : null;
     let open;
     if (ALWAYS_OPEN.includes(c)) open = true;
     else if (ALWAYS_CLOSE.includes(c)) open = false;
+    else if (last && last.at === i - 1) open = last.open;
     else open = prev === '' || BEFORE_OPENING.test(prev);
     if (!double) {
       if (open && c === '’') continue;

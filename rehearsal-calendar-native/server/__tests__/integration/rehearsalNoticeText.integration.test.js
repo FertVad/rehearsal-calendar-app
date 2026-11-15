@@ -722,6 +722,21 @@ describe('A name in quotes, rights taken away, Spanish project notices (T-261)',
     expect(inboxOf(olga)[0].body).toBe('Вас удалили из проекта «Die Räuber»');
   });
 
+  // Review of T-261: a mark right after a closing one read as an opening one,
+  // and a name nested right lost its outer pair: „‚Durchlauf ‚Die Möwe‘‚“.
+  it('a project named with quotes nested right keeps them', async () => {
+    await notifyProjectDeleted('„Durchlauf ‚Die Möwe‘“', readersOf());
+    expect(bodies()).toEqual([
+      'El proyecto «Durchlauf “Die Möwe”» ha sido eliminado',
+      'Das Projekt „Durchlauf ‚Die Möwe‘“ wurde gelöscht',
+      'Проект «Durchlauf „Die Möwe“» удалён',
+      'The project „Durchlauf ‚Die Möwe‘“ has been deleted',
+    ]);
+
+    await notifyRehearsalCreated({ ...rehearsal, title: '„Durchlauf ‚Die Möwe‘“' }, 'Hamlet', [{ user_id: klaus }], { now });
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Durchlauf ‚Die Möwe‘“ morgen um 21:00 angesetzt');
+  });
+
   it('quotes inside a rehearsal\'s title are the second level', async () => {
     await notifyRehearsalCreated({ ...rehearsal, title: 'Прогон «Чайки»' }, 'Hamlet', all(), { now });
     expect(bodies()).toEqual([
