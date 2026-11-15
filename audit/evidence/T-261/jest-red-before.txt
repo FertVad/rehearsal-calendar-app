@@ -1,0 +1,68 @@
+T-261 — Jest red before the fix, green after.
+
+How: the fix commit d88851a was made; then its app and server files were set
+back to the base 97c9a65 with
+  git restore --source=97c9a65 -- locales/ru.json server/i18n/pushNotifications.js \
+    src/features/calendar/screens/AddRehearsalScreen.tsx src/features/onboarding/hooks/useOnboarding.ts \
+    src/i18n/translations src/shared/components/ParticipantPicker.tsx src/shared/utils/conflictDetection.ts
+keeping the new and changed tests and shared/quoteName.cjs (a new file, used by
+nothing on the base), the tests were run, and the files were restored with
+git restore --source=HEAD.
+
+== On the base (97c9a65 code, T-261 tests) ==
+
+$ npx jest --selectProjects frontend --verbose src/i18n/__tests__/secondReading.test.ts \
+    src/shared/utils/__tests__/busyLine.test.ts src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx
+FAIL frontend src/i18n/__tests__/secondReading.test.ts
+    ✕ the line under the form's participants: a label, the name, the time in brackets
+    ✕ a full stop after the last sentence
+    ✕ the question before deleting a rehearsal: its date in brackets
+    ✕ the one button after Skip in the onboarding is OK
+    ✕ yesterday is yesterday in English and Spanish too
+    ✕ "What is where": by invitation, not the code twice
+    ✕ Spanish: one device, one word for a notice, no sentence opening on a number
+    ✕ deleting a project deletes no people
+    ✕ German: one verb for being put on a rehearsal
+    ✕ Spanish: the project in the invitation's title is in quotes
+    ✕ Russian iOS prompt: your reminders
+    ✕ on every screen that quotes a name, in every language
+FAIL frontend src/shared/utils/__tests__/busyLine.test.ts
+  ✕ someone with no surname is named by the first name; nobody busy is no line
+  ✕ one rule for the whole day, in the line and in the sheet
+    ✕ English
+    ✕ German
+    ✕ Russian
+    ✕ Spanish
+FAIL frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx
+    ✕ counts the people, and names someone picked who is busy at the time
+    ✕ names the first one busy in full, all day as the sheet says it, and how many more
+    ✕ follows the phone's 12/24 hours when it is changed with the form open
+    ✕ lengthened by hand past the free time, it warns as before
+Tests:       22 failed, 39 passed, 61 total
+
+(The three quoteName-only cases of secondReading pass on the base: the function
+is the new file itself. What the base does wrong with it is the screen case,
+"on every screen that quotes a name", red above.)
+
+$ npx jest --selectProjects backend --verbose server/__tests__/integration/rehearsalNoticeText.integration.test.js
+FAIL backend server/__tests__/integration/rehearsalNoticeText.integration.test.js
+    ✕ a role given reads right in Russian, and agrees with no reader in Spanish and German
+    ✕ someone removed from a project, in Spanish, is no participle
+    ✕ the notices about a rehearsal
+    ✕ the notices about a project: its name in quotes, the German case on "Projekt"
+    ✕ a project named in quotes is not quoted twice
+    ✕ quotes inside a rehearsal's title are the second level
+    ✕ a role given and a role taken away, in every language
+    ✕ Spanish: the project in quotes after "proyecto" in every notice about it
+    ✕ German: taken off a rehearsal, in a title that fits one line
+Tests:       9 failed, 38 passed, 47 total
+
+The proofreading tests (proofreading.test.ts, proofreadingEdits.test.ts) and
+the delete-question tests (TodayRehearsals, RehearsalDetailsScreen) were red on
+the base as well, for the same strings.
+
+== On the fix (d88851a) ==
+
+All of the above green (frontend: src/i18n src/shared src/features/calendar
+src/features/onboarding src/features/projects — 772 passed; backend
+rehearsalNoticeText — 47 passed).
