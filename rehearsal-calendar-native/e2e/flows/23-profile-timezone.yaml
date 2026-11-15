@@ -266,6 +266,20 @@ tags:
 - assertVisible:
     id: profile-timezone
     text: ".*Tokio \\(UTC\\+9\\).*"
+# A zone a phone reports that the list does not offer is named on the profile
+# by the table of such zones, PHONE_ZONES (T-262). Spanish read the English
+# IANA names of Europe - "Lisbon" - and the bare IANA names of Latin America,
+# without their accents - "Cordoba"; German read "Canary". The picker offers
+# only the list and the phone's Honolulu, so each zone is saved as from
+# another device (set-timezone.js), and the app reads it with the profile the
+# server answers a change of language with, or at a start.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: Europe/Lisbon
 # The search in Spanish, typed without the accent (T-262). Spanish names are
 # written with theirs, and a search rarely types them: "moscu" found nothing,
 # "Moscú" being neither in English nor in the zone's name. The search folds
@@ -293,9 +307,13 @@ tags:
       id: profile-timezone
     direction: DOWN
     centerElement: true
-- assertVisible:
-    id: profile-timezone
-    text: ".*Tokio \\(UTC\\+9\\).*"
+# Lisbon, saved elsewhere, in Spanish: Lisboa - UTC+0, or UTC+1 in summer.
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Lisboa \\(UTC\\+[01]\\).*"
+    timeout: 10000
+- takeScreenshot: 23-phone-zone-lisboa-in-spanish
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -315,10 +333,86 @@ tags:
       TAP: "Cerrar"
       GONE: "Seleccionar zona horaria"
       WAIT_MS: "10000"
-# Back to English.
 - assertVisible:
     id: profile-timezone
-    text: ".*Tokio \\(UTC\\+9\\).*"
+    text: ".*Lisboa \\(UTC\\+[01]\\).*"
+# Córdoba, under the older name a phone may still report, America/Cordoba:
+# the zone of America/Argentina/Cordoba, as Buenos Aires's. Read at a start.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: America/Cordoba
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Calendario, tab.*"
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Idioma, Español.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Córdoba \\(UTC-3\\).*"
+    timeout: 10000
+- takeScreenshot: 23-phone-zone-cordoba-in-spanish
+# The Canaries in German: Kanaren.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: Atlantic/Canary
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Kanaren \\(UTC\\+[01]\\).*"
+    timeout: 10000
+- takeScreenshot: 23-phone-zone-kanaren-in-german
+# Back to Tokyo, as the flow chose it above, and to English.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: Asia/Tokyo
 - swipe:
     start: "50%, 40%"
     end: "50%, 85%"
@@ -336,6 +430,8 @@ tags:
       TAP_ID: language-en
       SEE: "Profile, tab.*"
       WAIT_MS: "10000"
-- assertVisible:
-    id: profile-timezone
-    text: ".*Tokyo \\(UTC\\+9\\).*"
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Tokyo \\(UTC\\+9\\).*"
+    timeout: 10000

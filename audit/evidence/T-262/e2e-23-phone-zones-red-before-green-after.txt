@@ -1,0 +1,36 @@
+T-262 review [P2] - flow 23 shows the new names of PHONE_ZONES on screen: a zone a
+phone reports that the picker does not offer, saved to the profile from another
+device (e2e/scripts/set-timezone.js), and read back by the app - with the profile
+the server answers a change of language with, or at a start:
+  Europe/Lisbon    in Spanish -> "Lisboa (UTC+0|1)"   (was "Lisbon")
+  America/Cordoba  in Spanish -> "Córdoba (UTC-3)"    (was "Cordoba"; the alias to America/Argentina/Cordoba)
+  Atlantic/Canary  in German  -> "Kanaren (UTC+0|1)"  (was "Canary")
+then Asia/Tokyo again and English, as the flow chose them above.
+
+Green, on the fix, `npm run e2e -- e2e/flows/23-profile-timezone.yaml`:
+
+[Passed] The profile's timezone, not the device's (3m 47s)
+1/1 Flow Passed in 3m 48s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Red, on the old code: `git restore --source=52683a3 -- rehearsal-calendar-native/src/shared/constants/timezones.ts`,
+the same flow, then `git restore --source=HEAD -- …/timezones.ts`:
+
+[Failed] The profile's timezone, not the device's (3m 13s) (Assertion is false: ".*Lisboa \(UTC\+[01]\).*", id: profile-timezone is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+A flow stops at its first failure, so each later step was shown red on its own,
+on the fix with only its name taken out, then `git restore --source=HEAD`:
+
+Without 'America/Argentina/Cordoba': { es: 'Córdoba' } and the America/Cordoba alias:
+[Failed] The profile's timezone, not the device's (3m 28s) (Assertion is false: ".*Córdoba \(UTC-3\).*", id: profile-timezone is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Without de: 'Kanaren' of Atlantic/Canary:
+[Failed] The profile's timezone, not the device's (3m 38s) (Assertion is false: ".*Kanaren \(UTC\+[01]\).*", id: profile-timezone is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 1
+
+Each fails on its own step and nowhere before it.
