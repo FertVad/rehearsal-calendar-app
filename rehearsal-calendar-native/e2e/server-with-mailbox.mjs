@@ -145,6 +145,15 @@
  *                                            `xcrun simctl push` of what
  *                                            notifyRoleChanged sends
  *
+ * It raises the server's minimum app build, as the owner does in Vercel to
+ * force an update (T-265, flow 97): the server's own middleware then refuses
+ * the app with 426 UPDATE_REQUIRED. The minimum lives in this process's
+ * environment, which server/middleware/appBuild.js reads on every request:
+ *
+ *   GET /min-build?above=1   MIN_IOS_BUILD = the app's build (app.json) + 1,
+ *                            for MIN_BUILD_WINDOW_MS at most
+ *   GET /min-build?above=0   MIN_IOS_BUILD unset again, as on the stand
+ *
  * And it keeps count of the taps the flows had to take again:
  *
  *   GET /tap-again?tap=<what>&see=<what>   e2e/subflows/tap-and-see.yaml did not
@@ -172,6 +181,10 @@ import { ellipses, inkBox } from './ink.mjs';
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
 const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
 const TAPS_AGAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'taps-again.log');
+const APP_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'app.json');
+// The minimum a flow raised lapses on its own, as a hold does.
+const MIN_BUILD_WINDOW_MS = 180000;
+let minBuildLapse;
 
 assert.equal(process.env.EMAIL_TRANSPORT, 'capture-for-tests', 'The e2e server keeps its mail in memory, never sends it');
 assert.equal(process.env.MAIL_HOST, '127.0.0.1', 'The mailbox answers on 127.0.0.1 only');
@@ -586,6 +599,24 @@ http.createServer((request, response) => {
     });
     child.stdin.end(JSON.stringify(payload));
     return;
+  }
+  if (request.method === 'GET' && url.pathname === '/min-build') {
+    clearTimeout(minBuildLapse);
+    if (url.searchParams.get('above') !== '1') {
+      delete process.env.MIN_IOS_BUILD;
+      console.log('[e2e] MIN_IOS_BUILD unset: every build is answered');
+      return answer(200, { minIosBuild: 0 });
+    }
+    const build = Number(JSON.parse(fs.readFileSync(APP_JSON, 'utf8')).expo.ios.buildNumber);
+    if (!Number.isInteger(build)) return answer(500, { error: 'app.json has no whole ios.buildNumber' });
+    process.env.MIN_IOS_BUILD = String(build + 1);
+    // A flow that fails before lowering it must not refuse the flows after it.
+    minBuildLapse = setTimeout(() => {
+      delete process.env.MIN_IOS_BUILD;
+      console.log('[e2e] MIN_IOS_BUILD lapsed: every build is answered');
+    }, MIN_BUILD_WINDOW_MS);
+    console.log(`[e2e] MIN_IOS_BUILD=${process.env.MIN_IOS_BUILD}: the app's build ${build} is refused`);
+    return answer(200, { minIosBuild: build + 1 });
   }
   if (request.method === 'GET' && url.pathname === '/tap-again') {
     const line = `${new Date().toISOString()}  tapped "${url.searchParams.get('tap')}" again: no "${url.searchParams.get('see')}" after the first tap`;

@@ -12,6 +12,39 @@ The Rehearsal Calendar Native App API is a RESTful API built for managing theate
 
 **Response Format:** JSON
 
+## App Build and Forced Updates
+
+Every request of the app names its build (T-265), set by the one request
+interceptor in `src/shared/services/api.ts`, from the binary itself:
+
+```
+X-App-Version: 1.0.0
+X-App-Build: 6
+```
+
+When the server's `MIN_IOS_BUILD` is a whole number above 0, a request under
+`/api/native` or `/api/auth` whose `X-App-Build` is lower — or missing, which
+counts as build 0 (TestFlight builds 1–5 send none) — is refused before
+anything else is done, the database included:
+
+```
+426 Upgrade Required
+{ "error": "Update required", "code": "UPDATE_REQUIRED" }
+```
+
+The app shows "Update Required" instead of everything and keeps the session.
+Unset, 0 or not a whole number (that is logged), nobody is refused. Pages,
+`/invite/*`, `/admin`, `/api/cron`, `/api/health` and `/api/ready` are never
+checked.
+
+#### Check the Build
+
+**Endpoint:** `GET /api/native/app-version` — no sign-in. Asked by the app on
+launch and on every return to the foreground.
+
+**Response (200):** `{ "minIosBuild": 6 }` (0 when no minimum is set). A build
+below the minimum gets the 426 above instead.
+
 ## Authentication
 
 The API uses JWT (JSON Web Token) based authentication with separate access and refresh tokens.

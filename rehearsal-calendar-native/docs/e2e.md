@@ -458,6 +458,14 @@ mail provider down is `FAIL: "503"`, `CODE: EMAIL_UNAVAILABLE`, as
 `passwordReset.js` answers then — or a refusal the app has no words of its own
 for, a 400 with no code (flow 93, T-256).
 
+A build the server no longer answers: `e2e/scripts/require-update.js` with
+`MAIL_URL` and `ON: "1"` raises the server's `MIN_IOS_BUILD` to the app's
+build (`app.json`) plus one, and the server's own middleware refuses the app
+with 426 `UPDATE_REQUIRED`; `ON: "0"` unsets it. The stand runs with none, and
+a raised one lapses after three minutes; the flow lowers it in
+`onFlowComplete` too, so a failure half-way refuses no flow after it (flow 97,
+T-265).
+
 `EXPECT` on `release-answers.js` is how many answers must have been held: a
 flow whose point is a late answer fails when there was none (flow 38).
 

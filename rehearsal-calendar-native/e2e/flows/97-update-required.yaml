@@ -1,0 +1,79 @@
+# The server can require a newer build (T-265). The director is signed in;
+# the local server's minimum is raised above the app's build, as the owner
+# raises MIN_IOS_BUILD in Vercel, and the server's own middleware refuses the
+# app with 426. On the return to the foreground the app checks, and "Update
+# Required" stands in place of everything, with the App Store button and no
+# way to close it; a cold launch shows it again. The minimum lowered, the next
+# return takes it down, and the director is still signed in, the calendar with
+# their rehearsals. The old app showed no screen: every request failed and the
+# calendar stayed, empty of what it could not read.
+appId: ${APP_ID}
+name: Update required, then not
+tags:
+  - auth
+  - update
+onFlowComplete:
+  # A flow that fails half-way must not leave the minimum raised.
+  - runScript:
+      file: ../scripts/require-update.js
+      env:
+        MAIL_URL: ${MAIL_URL}
+        ON: "0"
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*Hamlet.*"
+    timeout: 30000
+- runScript:
+    file: ../scripts/require-update.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      ON: "1"
+- pressKey: Home
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: update-required
+    timeout: 15000
+- assertVisible: "Update Required"
+- assertVisible:
+    id: update-required-open-store
+    text: "Open App Store"
+- assertNotVisible:
+    id: tab-calendar
+- takeScreenshot: 97-update-required
+# From a cold launch too, before anything else is read.
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: update-required
+    timeout: 15000
+- assertNotVisible:
+    id: tab-calendar
+- takeScreenshot: 97-update-required-on-launch
+# The minimum lowered: the next return checks, and the app is back, signed in.
+- runScript:
+    file: ../scripts/require-update.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      ON: "0"
+- pressKey: Home
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 15000
+- assertNotVisible:
+    id: update-required
+- assertNotVisible:
+    id: login-submit
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*Hamlet.*"
+    timeout: 30000
+- takeScreenshot: 97-signed-in-after-the-update

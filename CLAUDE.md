@@ -972,6 +972,23 @@ own `pop: true` (`{ screen: 'Projects', params: { screen: 'ProjectsMain', pop:
 true } }`). `backToTabs.test.tsx` holds it against the real stack and tab
 routers.
 
+### 14. Forcing an update: `MIN_IOS_BUILD`
+Every request names the app's build (`X-App-Build`, from `api.ts`); the server
+refuses one older than `MIN_IOS_BUILD` with 426 `UPDATE_REQUIRED` on
+`/api/native` and `/api/auth`, before the database
+(`server/middleware/appBuild.js`), and the app shows "Update Required" in
+place of the navigator, signed in underneath (`shared/services/appUpdate.ts`,
+set only by api.ts's response interceptor). No header is build 0. Unset or 0:
+nobody is refused — production and the e2e stand run so.
+
+**Raising it is the owner's action, and only once the new build is live in the
+App Store** — earlier, everyone is locked out with nothing to update to: set
+`MIN_IOS_BUILD` (a whole number, the oldest build still allowed) in Vercel →
+Production → Environment Variables, then redeploy; a value takes effect only
+with a deployment. Lowering it or removing it, then redeploying, lets old
+builds back in; their screen goes on the next return to the foreground.
+Flow 97 shows it against the local server.
+
 ## Environment Setup
 
 ### Required Environment Variables
@@ -1011,6 +1028,9 @@ CRON_SECRET=<generate-with-openssl-rand-base64-32>
 # Server URL (invite links, universal links)
 BASE_URL=https://your-app.vercel.app  # required in production
 HOST=0.0.0.0  # required for physical device access
+
+# Forced update (T-265): the oldest app build answered; unset or 0 = none refused
+MIN_IOS_BUILD=   # owner only, after the build is in the App Store (pitfall 14)
 ```
 
 **.env** (Frontend - Optional)
