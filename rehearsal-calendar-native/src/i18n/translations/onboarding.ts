@@ -161,7 +161,7 @@ export const en = {
 export const es = {
   onboarding: {
     skipTitle: 'Ajustes disponibles en el perfil',
-    skipMessage: 'Puedes configurar el inicio de la semana y la sincronización del calendario en cualquier momento en Perfil → Ajustes',
+    skipMessage: 'Puedes configurar el inicio de la semana y la sincronización del calendario en cualquier momento en Perfil → Ajustes.',
     skip: 'Omitir',
     next: 'Siguiente',
     welcome: {
