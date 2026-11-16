@@ -89,6 +89,7 @@ jest.mock('../../shared/hooks/useNotifications', () => ({ useNotifications: () =
 jest.mock('../../shared/hooks/useAutoCalendarSync', () => ({ useAutoCalendarSync: () => undefined }));
 jest.mock('../../shared/components/CreateActionSheet', () => ({ CreateActionSheet: () => null }));
 jest.mock('../../shared/services/api', () => ({ rehearsalsAPI: {}, projectsAPI: {} }));
+jest.mock('../../shared/hooks/useAppVersionCheck', () => ({ useAppVersionCheck: () => undefined }));
 
 // Each param list, key for key; the type check refuses a missing or extra one.
 const DECLARED = [

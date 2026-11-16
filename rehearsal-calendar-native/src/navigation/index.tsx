@@ -16,6 +16,9 @@ import { useProjects } from '../contexts/ProjectContext';
 import { canScheduleAny } from '../shared/utils/rehearsalRights';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { useAutoCalendarSync } from '../shared/hooks/useAutoCalendarSync';
+import { useAppVersionCheck } from '../shared/hooks/useAppVersionCheck';
+import { useUpdateRequired } from '../shared/services/appUpdate';
+import { UpdateRequiredScreen } from '../shared/components/UpdateRequiredScreen';
 import { OnboardingNavigator } from '../features/onboarding';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
@@ -319,6 +322,10 @@ function AppNavigator() {
 
 export default function Navigation() {
   const { user, isAuthenticated, loading } = useAuth();
+  // The server may refuse this build as too old (T-265): asked on launch and
+  // on every return, before anyone signs in.
+  useAppVersionCheck();
+  const updateRequired = useUpdateRequired();
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
   const navigationRef = useNavigationContainerRef<AppStackParamList>();
 
@@ -365,6 +372,12 @@ export default function Navigation() {
     }, 500);
     return () => clearTimeout(timer);
   }, [appStackMounted, pendingInviteCode, navigationRef]);
+
+  // Instead of everything, as the spinner below is: nothing in the app works
+  // for a build the server refuses. The session stays as it is underneath.
+  if (updateRequired) {
+    return <UpdateRequiredScreen />;
+  }
 
   if (loading) {
     return (

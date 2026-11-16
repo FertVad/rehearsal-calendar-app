@@ -64,6 +64,7 @@ jest.mock('../../shared/hooks/useNotifications', () => ({ useNotifications: () =
 jest.mock('../../shared/hooks/useAutoCalendarSync', () => ({ useAutoCalendarSync: () => undefined }));
 jest.mock('../../shared/components/CreateActionSheet', () => ({ CreateActionSheet: () => null }));
 jest.mock('../../shared/services/api', () => ({ rehearsalsAPI: {}, projectsAPI: {} }));
+jest.mock('../../shared/hooks/useAppVersionCheck', () => ({ useAppVersionCheck: () => undefined }));
 
 // The three root navigators, each naming its stage. The app stack is the one
 // navigator index.tsx draws itself; it is told apart as whatever is neither.
