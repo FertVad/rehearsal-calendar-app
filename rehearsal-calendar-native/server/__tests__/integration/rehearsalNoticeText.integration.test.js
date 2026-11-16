@@ -737,6 +737,19 @@ describe('A name in quotes, rights taken away, Spanish project notices (T-261)',
     expect(inboxOf(klaus)[0].body).toBe('Hamlet: Probe „Durchlauf ‚Die Möwe‘“ morgen um 21:00 angesetzt');
   });
 
+  // Review of T-261, round 2: an apostrophe inside ‚…‘ closed the pair, and
+  // ‚Actors’ Studio‘ read „‚Actors‘ Studio‘“. A single closing mark closes
+  // only its own pair; else it is an apostrophe.
+  it('an apostrophe inside German single quotes stays an apostrophe', async () => {
+    await notifyProjectDeleted('‚Actors’ Studio‘', readersOf());
+    expect(bodies()).toEqual([
+      'El proyecto «Actors’ Studio» ha sido eliminado',
+      'Das Projekt „Actors’ Studio“ wurde gelöscht',
+      'Проект «Actors’ Studio» удалён',
+      'The project ‚Actors’ Studio‘ has been deleted',
+    ]);
+  });
+
   it('quotes inside a rehearsal\'s title are the second level', async () => {
     await notifyRehearsalCreated({ ...rehearsal, title: 'Прогон «Чайки»' }, 'Hamlet', all(), { now });
     expect(bodies()).toEqual([

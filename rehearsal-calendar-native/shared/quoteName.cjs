@@ -26,6 +26,8 @@ const AROUND = { '«': '»', '"': '"', '“': '”', '„': '“', '‘': '’',
 
 const DOUBLE = '«»"“”„';
 const SINGLE = '‘’‚';
+// A single opening mark and the one mark that closes it.
+const SINGLE_CLOSES = { '‚': '‘', '‘': '’' };
 const ALWAYS_OPEN = '«„‚';
 const ALWAYS_CLOSE = '»';
 const WORD = /[\p{L}\p{N}]/u;
@@ -34,8 +36,8 @@ const BEFORE_OPENING = /[\s([{\-–—/]/u;
 /**
  * The quote marks of a name: where each one is, whether it opens or closes,
  * and whether it is a double or a single one. An apostrophe — "Rock’n’roll",
- * "Actors’ studio" — is not a mark: a single closing mark counts only after a
- * single opening one.
+ * "Actors’ studio", ‚Actors’ Studio‘ — is not a mark: a single closing mark
+ * counts only as the one closing the single mark open last (‚…‘, ‘…’).
  *
  * A mark that could open or close (“ ” " ‘ ’) opens at the start or after a
  * space, a bracket or a dash. Right after another mark it goes the way that one
@@ -44,7 +46,9 @@ const BEFORE_OPENING = /[\s([{\-–—/]/u;
  */
 function marksOf(text) {
   const marks = [];
-  let openSingles = 0;
+  // The single marks open now, innermost last: a closing one closes only its
+  // own pair — ‚ by ‘, ‘ by ’ — so the ’ of ‚Actors’ Studio‘ is an apostrophe.
+  const openSingles = [];
   for (let i = 0; i < text.length; i += 1) {
     const c = text[i];
     const double = DOUBLE.includes(c);
@@ -59,8 +63,9 @@ function marksOf(text) {
     else open = prev === '' || BEFORE_OPENING.test(prev);
     if (!double) {
       if (open && c === '’') continue;
-      if (!open && (openSingles === 0 || (WORD.test(prev) && WORD.test(next)))) continue;
-      openSingles += open ? 1 : -1;
+      if (open) openSingles.push(c);
+      else if (SINGLE_CLOSES[openSingles[openSingles.length - 1]] !== c || (WORD.test(prev) && WORD.test(next))) continue;
+      else openSingles.pop();
     }
     marks.push({ at: i, open, double });
   }

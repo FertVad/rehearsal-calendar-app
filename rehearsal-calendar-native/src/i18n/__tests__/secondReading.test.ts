@@ -138,6 +138,29 @@ describe('T-261: a name typed in quotes is not quoted twice', () => {
     expect(quoteName('Hamlet', 'de')).toBe('„Hamlet“');
   });
 
+  // Review of T-261, round 2: an apostrophe inside ‚…‘ was read as the mark
+  // closing it — ‚Actors’ Studio‘ became „‚Actors‘ Studio‘“. A single closing
+  // mark closes only its own pair: ‚ is closed by ‘, ‘ by ’; else it is an
+  // apostrophe.
+  it('an apostrophe inside German single quotes stays an apostrophe', () => {
+    expect(quoteName('‚Actors’ Studio‘', 'de')).toBe('„Actors’ Studio“');
+    expect(quoteName('‚Actors’ Studio‘', 'en')).toBe('“Actors’ Studio”');
+    expect(quoteName('‚Actors’ Studio‘', 'ru')).toBe('«Actors’ Studio»');
+    expect(quoteName('‚Actors’ Studio‘', 'es')).toBe('«Actors’ Studio»');
+    expect(quoteName('Probe ‚Actors’ Studio‘', 'de')).toBe('„Probe ‚Actors’ Studio‘“');
+    expect(quoteName('Probe ‚Actors’ Studio‘', 'en')).toBe('“Probe ‘Actors’ Studio’”');
+    expect(quoteName('Probe ‚Actors’ Studio‘', 'ru')).toBe('«Probe „Actors’ Studio“»');
+    expect(quoteName('Probe ‚Actors’ Studio‘', 'es')).toBe('«Probe “Actors’ Studio”»');
+    expect(quoteName('„Ghost watch ‚Actors’ Act‘“', 'en')).toBe('“Ghost watch ‘Actors’ Act’”');
+    // What was right stays right.
+    expect(quoteName('Rock’n’Roll', 'de')).toBe('„Rock’n’Roll“');
+    expect(quoteName('‘Hamlet’ and ‘Lear’', 'en')).toBe('“‘Hamlet’ and ‘Lear’”');
+    expect(quoteName('Прогон ‚Чайки‘', 'ru')).toBe('«Прогон „Чайки“»');
+    // On the screen: the question before deleting a rehearsal.
+    expect(de.rehearsals.deleteTitle('‚Actors’ Studio‘', 'Sa., 22. Aug., 19:00')).toBe('„Actors’ Studio“ (Sa., 22. Aug., 19:00) löschen?');
+    expect(en.rehearsals.deleteTitle('„Ghost watch ‚Actors’ Act‘“', 'Sat, Aug 22, 7:00 PM')).toBe('Delete “Ghost watch ‘Actors’ Act’” (Sat, Aug 22, 7:00 PM)?');
+  });
+
   it('on every screen that quotes a name, in every language', () => {
     // Projects: the invitation and the question before deleting.
     expect(ru.projects.deleteProjectMessage('«Вишнёвый сад»')).toBe('Вы уверены, что хотите удалить проект «Вишнёвый сад»?');
