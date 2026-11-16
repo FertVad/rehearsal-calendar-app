@@ -29,7 +29,7 @@ tags:
       TAP: "Notifications"
       # The inbox, with something in it or not: nothing at all is what
       # Orlando got before (T-233), and the wait below is what says so.
-      SEE: "(Mark all read|Nothing yet)"
+      SEE: "(Mark All Read|No Notifications Yet)"
       WAIT_MS: "15000"
 - extendedWaitUntil:
     visible: ".*You were added to a rehearsal.*Frederick Court: Wrestling match scheduled (tomorrow|on .*) at 4:00.PM at The lawn.*"

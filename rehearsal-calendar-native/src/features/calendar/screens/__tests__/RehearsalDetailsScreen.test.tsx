@@ -244,9 +244,9 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     await settle();
 
     const [title, message, buttons] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
-    expect(title).toBe('Delete “Act I run-through”, Thu, Jan 10, 18:00?');
+    expect(title).toBe('Delete “Act I run-through” (Thu, Jan 10, 18:00)?');
     // Everyone on it but whoever deletes it: the other actor.
-    expect(message).toBe('Participants (1) will be notified');
+    expect(message).toBe('1 participant will be notified');
     expect(buttons.map((b: any) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Delete', 'destructive']]);
   });
 
@@ -296,15 +296,15 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     const [title, message, buttons] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
     expect(title).toBe('Error');
     expect(message).toBe(translations.en.rehearsals.deleteNotifiedUnknown);
-    expect(buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Try again']);
+    expect(buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Try Again']);
     expect(buttons.some((b: any) => b.style === 'destructive')).toBe(false);
 
     await act(async () => { buttons[1].onPress(); });
     await settle();
 
     const [title2, message2] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
-    expect(title2).toBe('Delete “Act I run-through”, Thu, Jan 10, 18:00?');
-    expect(message2).toBe('Participants (1) will be notified');
+    expect(title2).toBe('Delete “Act I run-through” (Thu, Jan 10, 18:00)?');
+    expect(message2).toBe('1 participant will be notified');
   });
 
   it('keeps the details when a read again fails, and takes the next one (review)', async () => {

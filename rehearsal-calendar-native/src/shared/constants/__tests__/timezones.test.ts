@@ -61,9 +61,9 @@ it('gives the offset in force at the moment, either side of a change of clocks',
 });
 
 it('lists every zone with the offset of the moment it is asked', () => {
-  const july = getTimezonesWithDevice(JULY);
-  expect(july.find((z) => z.value === 'America/New_York')?.labelEn).toBe('New York (UTC-4)');
-  expect(july.find((z) => z.value === 'Asia/Jerusalem')?.labelRu).toBe('Тель-Авив (UTC+3)');
-  const january = getTimezonesWithDevice(JANUARY);
-  expect(january.find((z) => z.value === 'Asia/Jerusalem')?.labelEn).toBe('Tel Aviv (UTC+2)');
+  const july = getTimezonesWithDevice('en', JULY);
+  expect(july.find((z) => z.value === 'America/New_York')?.label).toBe('New York (UTC-4)');
+  expect(getTimezonesWithDevice('ru', JULY).find((z) => z.value === 'Asia/Jerusalem')?.label).toBe('Тель-Авив (UTC+3)');
+  const january = getTimezonesWithDevice('en', JANUARY);
+  expect(january.find((z) => z.value === 'Asia/Jerusalem')?.label).toBe('Tel Aviv (UTC+2)');
 });

@@ -1,0 +1,43 @@
+T-258, e2e red before, green after (rehearsal-calendar-native, iPhone 16 simulator).
+
+Note: T-256 is not in auto/main (it is on auto/deferred/T-256). The target
+strings of T-258 are written on HEAD as they are final. Flow 95 did not exist
+here: it is made with T-256's file name and seed (Shen Te, «Der gute Mensch»,
+Wang Wasser and Yang Sun busy tomorrow 10:00-14:00), only its busy-line part;
+the other German texts of T-256's flow 95 come with T-256.
+
+1. Flows 59 and 60, red on the base's words
+   git restore --source=6f5a58f -- src/i18n/translations/availability.ts \
+     src/i18n/translations/onboarding.ts src/features/smart-planner/components/SlotItem.tsx
+   npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml e2e/flows/60-onboarding-russian.yaml
+
+   [Failed] The planner's filters fit in four languages (3m 3s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+   [Failed] Onboarding in Russian, the greeting on one line (1m 30s) (Assertion is false: "«\+» → «Создать проект»\. По приглашению: «Проекты» → «Присоединиться по коду»" is visible)
+   2/2 Flows Failed
+
+   Flow 59 named both slot lines: "es: No disponible: Miranda Milan | ru: Не может: Miranda Milan | ".
+   Its shot 59-one-busy-es read "10:00 a. m.–2:00 p. m. / Ocupados: Miranda Milan" (one person, plural).
+
+   git restore --source=HEAD -- (the same files)
+
+2. Flow 95, red on "und 1 weitere Person" (T-256's de andMore(1), set by hand
+   in src/i18n/translations/calendar.ts for the run, then put back)
+   npm run e2e -- e2e/flows/95-german-admin-and-busy-read-right.yaml
+
+   [Failed] German busy people read right and whole (2m 7s) (Assertion is false: "Wasser: .*beschäftigt.* und 1 weiterer", id: participants-conflict is visible)
+   1/1 Flow Failed
+
+   Its shot 95-two-busy-de: "Wasser: beschäftigt 10:00–14:00 und 1 weitere Per…" — cut.
+   (On HEAD's own "und 1 weitere" the exact match fails as well: the line is matched to its end.)
+
+3. Green on the fix (HEAD 7b3d6b2 + the flows and seed)
+   npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml e2e/flows/60-onboarding-russian.yaml \
+     e2e/flows/95-german-admin-and-busy-read-right.yaml
+
+   [Passed] The planner's filters fit in four languages (3m 3s)
+   [Passed] Onboarding in Russian, the greeting on one line (54s)
+   [Passed] German busy people read right and whole (56s)
+   3/3 Flows Passed in 4m 56s
+
+   95-two-busy-de: "Wasser: beschäftigt 10:00–14:00 und 1 weiterer", whole;
+   no-ellipsis.js found no "…" between 0.07 and 0.9 of the screen.

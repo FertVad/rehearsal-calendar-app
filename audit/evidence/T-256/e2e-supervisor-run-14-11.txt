@@ -1,0 +1,42 @@
+T-256 - the supervisor's e2e run of 14.11 (artifacts e2e/out/artifacts/2026-11-14_183513),
+three flows failed. What each one was, from its Maestro log, screenshot and the run's metro.log / server.log.
+
+1. e2e/flows/10-calendar-sync.yaml - "No visible element found: .*Calendar Sync.*"
+   Log: after the second launchApp (permissions calendar: allow) tab-profile was visible at 19:04:51,
+   "Tap on id: tab-profile" COMPLETED, then scrollUntilVisible ".*Calendar Sync.*" scrolled 20 s and failed.
+   Screenshot step-136: the app is still on the Calendar tab (Calendar highlighted, Today / Upcoming Events) -
+   the tab tap went unanswered, the app just launched. The flow scrolled the calendar, not the profile.
+   Not a T-256 text: the profile row reads "Calendar Sync" in en before and after (calendarSync.title unchanged);
+   the same flow passed in the run of 16:22 the same day.
+   Fix: both taps on tab-profile go through subflows/tap-and-see.yaml (TAP_ID tab-profile,
+   SEE ".*Language, English.*"), as flows 59 and 91 already tap it - a lost tap is tapped once more and
+   reported by the run, a second loss still fails.
+   No red-before: the lost tap is a race of the launch, not a state the old flow can be put in on demand.
+   After: npm run e2e -- e2e/flows/10-calendar-sync.yaml
+     [Passed] Calendar sync settings, with and without calendar access (2m 13s)
+     1/1 Flow Passed; taps taken again (tap-and-see.yaml): 0
+
+2. e2e/flows/87-planner-and-calendar-titles-german.yaml - "Assertion is false: id: login-submit is visible"
+   Log: launchApp with clear state took 80 s (clearing app state 20:46:11 -> 20:47:14), then login-submit
+   was waited for 90 s. Screenshot step-014: the red "Could not connect to development server"
+   (localhost:8081) - the Debug app could not reach Metro. The stand, not the flow: nothing of the app
+   was on screen. Flow unchanged.
+   After: npm run e2e -- e2e/flows/87-planner-and-calendar-titles-german.yaml
+     [Passed] Planner and the calendar's top in German (3m 53s)
+     1/1 Flow Passed; taps taken again (tap-and-see.yaml): 0
+
+3. e2e/flows/89-names-and-counts-read-right.yaml - "Assertion is false: .*Гроза.*, id: project-card is visible"
+   Screenshot step-299: Profile in German with the alert "Error / Sin conexión. Comprueba que tienes
+   internet e inténtalo de nuevo." - the switch of the language (PUT /auth/me) got no answer.
+   metro.log 5132-5158: GET /native/projects/51, /members, /availability and PUT /auth/me all
+   "Network Error", resent on a new connection, failed again, "timeout of 10000ms exceeded";
+   server.log has none of these requests (no restart, "[e2e] server listening" once) - they never
+   reached the local server. The same window as flow 87's lost Metro (20:46-21:06): the simulator's
+   connection to localhost, not the flow. The flow's words are not reached. Flow unchanged.
+   Not run alone here: the flow takes 11-12 min (11m 39s in the supervisor's run), longer than the
+   10 min a command of this session may take (npm run e2e -- e2e/flows/89-... was cut at 10m 0s,
+   exit 143). So it is not shown green here; the supervisor's run of the task's flows is its check.
+   Note, not hidden: in the run of 16:22 the same flow failed earlier, at another step - scrollUntilVisible
+   id: day-${MORNING_DAY} in the Spanish availability sheet (screenshot step-138: the sheet scrolled to
+   May 2027, no day marked). In the run of 18:35 that step passed and the flow went on to step 299.
+   Two runs, two different steps, neither at a T-256 word.

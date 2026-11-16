@@ -1,0 +1,62 @@
+T-262 - Jest red before, green after.
+
+Base: 52683a3. Fix: 9850ec4.
+Red: `git restore --source=52683a3 -- rehearsal-calendar-native/src/shared/constants/timezones.ts`,
+then `npx jest --selectProjects frontend src/shared/constants/__tests__/timezoneNames.test.ts --verbose`,
+then `git restore --source=HEAD -- …/timezones.ts`.
+
+On the old timezones.ts: Tests: 42 failed, 1525 passed, 1567 total.
+(The run was taken before "ёка" moved from the "still finds" cases to the new ones:
+the old code never found it, "ёка" not being in "Екатеринбург".)
+
+Failing on the old code:
+    ✕ in es, "moscu" finds Moscú (UTC+3)
+    ✕ in es, "sidney" finds Sídney (UTC+10)
+    ✕ in es, "ciudad de mexico" finds Ciudad de México (UTC-6)
+    ✕ in ru, "Буэнос Айрес" finds Буэнос-Айрес (UTC-3)
+    ✕ in ru, "нью йорк" finds Нью-Йорк (UTC-4)
+    ✕ in ru, "Тель Авив" finds Тель-Авив (UTC+3)
+    ✕ in ru, "Лос Анджелес" finds Лос-Анджелес (UTC-7)
+    ✕ in de, "Kyjiw" finds Kiew (UTC+3)
+    ✕ in de, "mexiko stadt" finds Mexiko-Stadt (UTC-6)
+    ✕ "Кишинев" finds Кишинёв, the phone's zone
+    ✕ "Kyjiw" finds Kyiv under its newer IANA name too, and is never shown
+    ✕ in ru, "ёка" still finds Asia/Yekaterinburg   (now: in ru, "ёка" finds Екатеринбург (UTC+5))
+    ✕ America/Merida in Spanish reads Mérida (UTC-6)            Received: "Merida (UTC-6)"
+    ✕ America/Mazatlan in Spanish reads Mazatlán (UTC-7)
+    ✕ America/Ciudad_Juarez in Spanish reads Ciudad Juárez (UTC-7)
+    ✕ America/Bahia_Banderas in Spanish reads Bahía de Banderas (UTC-6)
+    ✕ America/Argentina/Cordoba in Spanish reads Córdoba (UTC-3)
+    ✕ America/Cordoba in Spanish reads Córdoba (UTC-3)
+    ✕ America/Argentina/Tucuman in Spanish reads Tucumán (UTC-3)
+    ✕ America/Argentina/Rio_Gallegos in Spanish reads Río Gallegos (UTC-3)
+    ✕ Pacific/Galapagos in Spanish reads Galápagos (UTC-6)
+    ✕ Pacific/Easter in Spanish reads Isla de Pascua (UTC-5)
+    ✕ Europe/Paris in Spanish reads París (UTC+1)
+    ✕ Europe/Lisbon in Spanish reads Lisboa (UTC+0)
+    ✕ Europe/Rome in Spanish reads Roma (UTC+1)
+    ✕ Europe/Amsterdam in Spanish reads Ámsterdam (UTC+1)
+    ✕ Europe/Brussels in Spanish reads Bruselas (UTC+1)
+    ✕ Europe/Luxembourg in Spanish reads Luxemburgo (UTC+1)
+    ✕ Europe/Prague in Spanish reads Praga (UTC+1)
+    ✕ Europe/Warsaw in Spanish reads Varsovia (UTC+1)
+    ✕ Europe/Belgrade in Spanish reads Belgrado (UTC+1)
+    ✕ Europe/Bucharest in Spanish reads Bucarest (UTC+2)
+    ✕ Europe/Athens in Spanish reads Atenas (UTC+2)
+    ✕ Europe/Stockholm in Spanish reads Estocolmo (UTC+1)
+    ✕ Europe/Copenhagen in Spanish reads Copenhague (UTC+1)
+    ✕ Europe/Dublin in Spanish reads Dublín (UTC+0)              Received: "Dublin (UTC+0)"
+    ✕ Europe/Sofia in Spanish reads Sofía (UTC+2)                Received: "Sofia (UTC+2)"
+    ✕ Asia/Tehran in Spanish reads Teherán (UTC+3:30)            Received: "Tehran (UTC+3:30)"
+    ✕ Atlantic/Canary in German reads Kanaren (UTC+0)            Received: "Canary (UTC+0)"
+    ✕ Asia/Nicosia in German reads Nikosia (UTC+2)               Received: "Nicosia (UTC+2)"
+    ✕ Europe/Nicosia in German reads Nikosia (UTC+2)             Received: "Nicosia (UTC+2)"
+    ✕ is found by its Spanish name without accents, and by its English one
+                                                                 Received: "Easter (UTC-5)"
+
+Passing on the old code too - what the search found before (ru "Нью-Йорк", "йорк",
+"екатеринбург"; en "new_york", "NEW YORK", "pacific", "kyiv", "buenos"; de "Zürich",
+"zurich", "Kiev", "Mexiko-Stadt"; es "Bogotá", "São Paulo"), "other languages keep
+the names they had", and every test written before T-262.
+
+On the fix (HEAD): Tests: 1567 passed, 1567 total.

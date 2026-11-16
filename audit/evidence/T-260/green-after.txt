@@ -1,0 +1,41 @@
+T-260 green after: shape tests use the transport's own deadline
+(EXPO_TIMEOUT_MS = 10 000 ms, past Jest's 5 s test timeout); only the two
+deadline tests take the 300 ms deadline (deadlined()). The same 400 ms stall
+now leaves the answer to be judged by its shape.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/services/expoTransport.test.js
+
+PASS __tests__/services/expoTransport.test.js
+  Answers Expo gives
+    ✓ a ticket per message (45 ms)
+    ✓ receipts by ticket (5 ms)
+  Answers that fail the request, and nothing else
+    ✓ a send answered with an error list is a rejection (42 ms)
+    ✓ a send answered with an HTML page is a rejection (6 ms)
+    ✓ a send answered with a 200 that is not JSON is a rejection (5 ms)
+    ✓ a send answered with the wrong number of tickets is a rejection (10 ms)
+    ✓ a send answered with a 200 of null is a rejection (4 ms)
+    ✓ a send answered with a 503 whose errors are not a list is a rejection (4 ms)
+    ✓ a send answered with a 200 that is a list is a rejection (3 ms)
+    ✓ a receipts request answered with {} is a rejection, not "no receipts yet" (4 ms)
+    ✓ a receipts request answered with data null is a rejection, not "no receipts yet" (3 ms)
+    ✓ a send answered with null is a rejection for its shape even when the machine stalls (405 ms)
+    ✓ a receipts request answered with data null is a rejection for its shape even when the machine stalls (406 ms)
+    ✓ a receipts request answered with null is a rejection (R8-04) (4 ms)
+    ✓ an answer that never comes is a rejection at the deadline (307 ms)
+    ✓ an answer that stops half-way is a rejection at the deadline (304 ms)
+
+Tests:       16 passed, 16 total
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/services __tests__/integration/reminderScheduler.integration.test.js
+Test Suites: 8 passed, 8 total
+Tests:       258 passed, 258 total
+
+Other short Expo deadlines in server tests (all checked, none changed):
+- __tests__/integration/reminderScheduler.integration.test.js:599 timeoutMs: 300
+  — only used against a server that never answers ("an Expo that takes the
+  request and never answers (R8-01)"): these are deadline tests.
+- __tests__/postgres/r8Reminders.mjs:183 timeoutMs: 1000 — same, a silent
+  Expo, the R8-01 deadline scenario.
+- __tests__/browser/ownedFixture.test.mjs:53 timeoutMs: 50 — a context.close()
+  that never resolves; a deadline test of the cleanup.

@@ -236,6 +236,24 @@ that form. A flow that needs the 24-hour clock launches with `arguments: {
 AppleICUForce24HourTime: "<true/>" }` — the key Settings writes, read among the
 user defaults as a property list: `"YES"` is a string and is ignored (flow 53).
 
+AutoFill Passwords is off (`noPasswordOffer` in `run.mjs`): iOS offers no
+"Save Password?" sheet after a sign-in, and no flow waits for one.
+
+## A lost driver
+
+Maestro's iOS driver (2.11.0) is one long XCTest test. When its status-bar
+query meets a scene of InputUI, the keyboard's process, just as SpringBoard
+takes it down, XCTest fails with `kAXErrorInvalidUIElement` and the test ends,
+and with it the driver: every flow after that fails with
+`DeviceUnreachableException` (or "Unknown error", its first command failing
+with "Device became unreachable"), none of them having run. It was the
+password sheet going at flow 66 on 3b38601, and the keyboard going 4.5 s after
+it hid, with the sheet off, at flow 54 on d74e9d2 (T-246,
+`audit/evidence/T-246/`). It is a race inside Maestro's driver and no flow can
+take it out - not with waits and not with repeats. The supervisor runs every
+flow that failed after the first lost driver once more, on its own; those are
+not unstable flows. Turning the sheet off left it one cause fewer, not none.
+
 ## A lost tap
 
 The simulator loses about one tap in 250, and Maestro does not notice. For
@@ -257,7 +275,8 @@ editor, whose day then closed unasked with nothing changed (T-218), flow 49 at
 the registration form's first "Show password", so the second went to the same
 eye and the repeat stayed hidden (T-223), flow 59 at "Sign In", the form left
 filled in and the calendar never asked for (T-225), flow 38 at the profile tab
-after a restart (T-234).
+after a restart (T-234), flow 73 at a rehearsal's eye after the move, the mark
+never taken back and no request sent (T-247, `audit/evidence/T-247`).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
@@ -267,10 +286,13 @@ It is below the app, and cannot be made to happen on demand. The rule:
   (the wait the flow had anyway). It taps and waits; if `SEE` is not there it
   taps once more - never more - and waits again, and then `SEE` must come.
   No pause, no longer wait. A tap whose result is something leaving the
-  screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of the
-  "Save Password?" sheet at every sign-in (T-213); or `GONE_ID` (its id), for
+  screen gives `GONE` (the text that goes) instead of `SEE`: "Cancel" of an
+  invitation, `GONE: "Project Invitation"` (flow 43); or `GONE_ID` (its id), for
   a control whose label is in the screen's language: "Sign In"
-  (`login-submit`) at every sign-in (T-225).
+  (`login-submit`) at every sign-in (T-225). A toggle, whose label is the same
+  either way, gives `SELECTED` (`"true"` or `"false"`): the toggle tapped is
+  then so and enabled again; with `RIGHT_OF`, the text of its row, when every
+  row has one - a rehearsal's eye, `seen-toggle` (flow 73, T-247).
 - Only for a tap that may be taken twice: the second comes when the first left
   no trace on screen, but a first that landed late would be repeated.
 - Every second tap is printed at the end of the run - `[e2e] taps taken again
@@ -429,6 +451,13 @@ one: a sign-out ends the tokens, and a change released after it is refused
 silence, or iOS may give up first and the failure is a timeout; bring the next controls
 into view before the tap.
 
+`FAIL` (a status from 400 to 599), with `CODE` and `ERROR`, answers the
+request at once with that status and `{ error, code }`, and the server never
+sees it: an answer the server gives in a state the stand cannot reach — its
+mail provider down is `FAIL: "503"`, `CODE: EMAIL_UNAVAILABLE`, as
+`passwordReset.js` answers then — or a refusal the app has no words of its own
+for, a 400 with no code (flow 93, T-256).
+
 `EXPECT` on `release-answers.js` is how many answers must have been held: a
 flow whose point is a late answer fails when there was none (flow 38).
 
@@ -442,7 +471,26 @@ defaults, which `Settings` reads) a device, the permission granted and a token
 made on the spot — Expo's servers are never asked, and the server's
 `EXPO_BASE_URL` is a closed local port, so nothing is sent to one. Without it
 the app is the simulator it is (flow 23). The app's own code has no hook for
-it (flow 38).
+it (flow 38). `rehearslyPushDevice: "denied"` plays a phone whose owner refused
+notifications in iOS's prompt: the permission denied, never asked again, and
+the profile offers the way to Settings (flow 94, T-256).
+
+The phone's calendar the same way: `e2e/device/expo-calendar.js` stands in for
+`expo-calendar`, the real module unless the launch gives
+`rehearslyCalendarRefusesWrite` or `rehearslyCalendarRefusesDelete`, each a
+text: an event whose title contains it is not written, or not removed, as iOS
+refuses with a read-only calendar. The simulator's calendar takes everything,
+and the sync counts a step failed only when EventKit threw — failures of the
+server's mappings are swallowed — so without it no flow could show what the
+sync says then (flow 92, T-256).
+
+A profile's zone where it is late evening now, from 22:45 to 23:44:
+`e2e/scripts/late-evening.js` with `API_URL`, `EMAIL` and `PASSWORD` saves it
+as the zone picker does and puts that zone's today in `${output.lateDay}`. The
+planner's working day ends at 23:00, so a period of that one day has no hour
+in it — the planner's empty state, which no week reaches (flow 92). Picked
+when the flow runs, not in the seed, which is an hour old by the end of a
+full run.
 
 A push itself can be delivered: `e2e/scripts/push.js` with `MAIL_URL`,
 `SIMULATOR`, `APP_ID`, `TYPE` (`role_changed`), `PROJECT` and `ROLE` hands the
@@ -457,8 +505,12 @@ An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
 "`TITLE` `COUNT`" (flow 33). With `TYPE` it sends one as the server's own code
 sends it: `member_joined` with `PROJECT` and `MEMBER` (flow 61),
+`admin_appointed` with the same — "New administrator", told to those who run
+the project, the role left as it is (flow 88),
 `rehearsal_updated` with `REHEARSAL` (a title) and `CHANGE`, `member_response`
-with `REHEARSAL` and `MEMBER` (flow 62).
+with `REHEARSAL` and `MEMBER` (flow 62), `rehearsal_created` and
+`added_to_rehearsal` with `REHEARSAL` — a new rehearsal and one the reader was
+put on, in the reader's language (flow 86).
 
 How large an icon is drawn: a button that is only an icon is one element,
 44 a side, and Maestro sees nothing inside it. `e2e/scripts/icon-size.js` with
@@ -468,7 +520,10 @@ How large an icon is drawn: a button that is only an icon is one element,
 box (`e2e/ink.mjs`; flow 62, the inbox's 24-point icons). `e2e/scripts/no-ink.js`
 with the same `SHOT`, `COLOUR` and region fails when anything there is drawn in
 that colour: an icon that must be gone from inside a card (flow 63, the tick the
-projects list no longer draws).
+projects list no longer draws). `e2e/scripts/no-ellipsis.js` with `SHOT` and a
+region fails when a "…" is drawn there in place of text that did not fit; with
+`RECORD` (a name) it puts what it found in `${output.<RECORD>}` instead, for a
+flow that names every wrong word at its end (flows 87, 89, 94, 95; T-256).
 
 What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
 with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has
@@ -542,10 +597,11 @@ whether it has gone, which waited seven seconds every time.
   launch is slow, and text typed before it is up goes nowhere. The inputs do not
   report focus, so there is nothing else to wait on. It taps "Sign In"
   through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
-  left flow 59 on a filled-in form (T-225). It also dismisses iOS's
-  "Save Password?" sheet, which covers the screen and hides the whole app from
-  Maestro, through `tap-and-see.yaml` with `GONE: "Not Now"`: one lost tap on
-  it left flow 51 waiting under the sheet (T-213). A flow that acts before
+  left flow 59 on a filled-in form (T-225). iOS's "Save Password?" sheet
+  after a sign-in is off on the e2e simulator: the runner turns AutoFill
+  Passwords off at boot (`noPasswordOffer` in `e2e/run.mjs`), so no flow waits
+  for it or taps "Not Now" (T-213 did, T-246 took it out). Flow 01 sees that it
+  stays away. A flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
 - Maestro's `launchApp` grants the app every permission unless it is given
   `permissions:`, so the sign-in subflow's launch leaves calendar access

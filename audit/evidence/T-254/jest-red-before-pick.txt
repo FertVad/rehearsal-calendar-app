@@ -1,0 +1,36 @@
+npx jest --selectProjects frontend (WeeklyCalendar.test.tsx with the mock that
+goes to initialScrollIndex when laid out, on 1726cf4's WeeklyCalendar.tsx):
+
+  ● The month › selects a day picked in it, closes, and brings the day to the middle of the strip
+
+    Expected: "2030-01-24"
+    Received: "2030-01-10"
+
+      553 |     expect(strip.props.data[Math.floor((offset + 335 / 2 - pad) / length)].date).toBe('2030-01-24');
+
+  ● The month opened out of the strip › folds back into the strip on a day picked in it, and hands the day on where the strip stops
+
+    expect(jest.fn()).toHaveBeenLastCalledWith(...expected)
+
+    Expected: {"animated": true, "offset": 18720}
+    Received
+           1: {"animated": true, "offset": 18720}
+    ->     2
+              Object {
+            -   "animated": true,
+            -   "offset": 18720,
+            +   "animated": false,
+            +   "offset": 17568,
+              },
+
+    Number of calls: 2
+
+Test Suites: 1 failed, 144 passed, 145 total
+Tests:       2 failed, 1414 passed, 1416 total
+
+Call 1 is the strip's scroll to the day picked, asked for at its mount; call 2
+the list's own, unanimated, to initialScrollIndex (the day selected before)
+when its content is laid out - which undid it.
+
+After (be69d57): npx jest --selectProjects frontend --testPathPatterns WeeklyCalendar
+Tests: 29 passed, 29 total

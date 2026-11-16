@@ -34,7 +34,7 @@ export function useOnboarding() {
       t.onboarding.skipMessage,
       [
         {
-          text: t.common.yes,
+          text: t.common.ok,
           onPress: async () => {
             try {
               await completeOnboarding();

@@ -1,0 +1,34 @@
+T-256 — supervisor's e2e failed on 1443ab2..b583b5c: four flows outside the
+task's list still looked for the English texts the native speakers replaced.
+
+Cause: 658772a updated the flows that read the changed words, but these
+looked for them too and were not searched (07's "Smirnov busy" is a template,
+`${name} busy ${time}` -> `${name} is busy ${time}`, which a search for whole
+strings misses). The app is right; the flows were stale.
+
+RED (supervisor's run on b583b5c, flows as they were):
+[Failed] Planner follows the project (Element not found: Text matching regex: Participants, 2 of 2, Smirnov busy.*)
+[Failed] Onboarding to the end, nothing granted (Assertion is false: "A rehearsal’s time changed" is visible)
+[Failed] Calendar sync settings, with and without calendar access (Assertion is false: ".*only the hours you are busy come back from it, never what the events are.*", id: calendar-sync-explanation is visible)
+[Failed] Registration says what is wrong under each field (No visible element found: "A first name is required; first and last name are at most 100 characters.")
+
+Every removed translation string was then checked against e2e/flows and
+e2e/subflows (case-insensitive, as Maestro matches; case is proofreading.test.ts's).
+Same cause, outside the supervisor's run:
+- 47: SEE "Describe the issue..." — the placeholder ends in "…" now; the regex's
+  three dots need three characters, and its assertNotVisible passed vacuously.
+- 51: "Participants \(2\) will be notified" -> "2 participants will be notified".
+- 82: assertNotVisible "No connection to the server.*" would pass on the new
+  "Could not connect to the server…" whatever happened; it now names both.
+
+GREEN (fixed flows, this tree):
+[Passed] Onboarding to the end, nothing granted (1m 52s)
+[Passed] Registration says what is wrong under each field (47s)
+2/2 Flows Passed in 2m 40s
+[Passed] Planner follows the project (2m 13s)
+[Passed] Calendar sync settings, with and without calendar access (1m 16s)
+2/2 Flows Passed in 3m 29s
+[Passed] No beta banner; a bug report sent from the profile (1m 25s)
+[Passed] An admin swipes a rehearsal away, an actor has no swipe (1m 42s)
+[Passed] A sign-in on a connection the network left behind goes through (47s)
+3/3 Flows Passed in 3m 55s

@@ -1,0 +1,22 @@
+T-262 - flow 23, the search in Spanish typed without the accent: "moscu" finds "Moscú (UTC+3)".
+Shows String.prototype.normalize works in the app's Hermes on the simulator.
+
+Green, on the fix (9850ec4), `npm run e2e -- e2e/flows/23-profile-timezone.yaml`:
+
+[e2e] installing the Debug app and running the flows
+Waiting for flows to complete...
+[Passed] The profile's timezone, not the device's (3m 4s)
+1/1 Flow Passed in 3m 5s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Red, on the old code: `git restore --source=52683a3 -- rehearsal-calendar-native/src/shared/constants/timezones.ts`,
+the same flow, then `git restore --source=HEAD -- …/timezones.ts`:
+
+[e2e] installing the Debug app and running the flows
+Waiting for flows to complete...
+[Failed] The profile's timezone, not the device's (3m 12s) (Assertion is false: "Moscú \(UTC\+3\)" is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+It fails on the new step and nowhere before it: the German part above (Moskau, Wien,
+Vienna, Kiew) passes on both.

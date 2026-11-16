@@ -20,13 +20,6 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 # The simulator lost this tap once and the flow scrolled the calendar for the
 # sync row (T-221), so it is taken once more if the profile did not open.
 - runFlow:
@@ -56,7 +49,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Apple Calendar.*"
-      SEE: ".*Synchronize.*"
+      SEE: ".*Sync Now.*"
       WAIT_MS: 10000
 # The import's request gets no answer: its connection is closed, as when the
 # network goes. It was an answer held 40 s, past the app's ten — but those ten
@@ -70,7 +63,7 @@ tags:
       METHOD: POST
       PATH: "^/api/native/availability/imported/sync$"
       DROP: "1"
-- tapOn: ".*Synchronize.*"
+- tapOn: ".*Sync Now.*"
 - extendedWaitUntil:
     visible: "Sync error"
     timeout: 20000

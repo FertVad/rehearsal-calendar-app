@@ -1,0 +1,22 @@
+T-248 review: e2e/flows/86-rehearsal-notices-read-right.yaml on the fix
+(server/i18n/pushNotifications.js as at HEAD), with the inbox flows beside it.
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml e2e/flows/79-added-to-rehearsal-told.yaml e2e/flows/62-inbox-says-when.yaml
+[e2e] installing the Debug app and running the flows
+[Passed] Rehearsal notices read right in Spanish, German and Russian (2m 20s)
+[Passed] Added to a rehearsal, told (38s)
+[Passed] Inbox says when (38s)
+
+3/3 Flows Passed in 3m 37s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Flow 86 alone passed before the red runs too (2m 33s). It waits, in each
+reader's inbox, for:
+  Fuenteovejuna: Ensayo «Escena del balcón» programado para mañana a las 18:00 en Patio
+  Fuenteovejuna: Ensayo «Escena del balcón» programado para mañana a las 18:00
+  Faust: Fechtszene morgen um 18:00 angesetzt, Ort: Probebühne
+  Faust: Fechtszene morgen um 18:00 angesetzt
+  Гроза: Репетиция «Прогон» назначена завтра в 18:00, место: Малый зал
+  Гроза: Репетиция «Прогон» назначена завтра в 18:00
+(screenshots 86-spanish, 86-german, 86-russian in the run's artifacts)

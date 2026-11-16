@@ -77,15 +77,15 @@ it('does not bring back a card deleted while a load was out', async () => {
   expect(screen.getByText('Act I moved')).toBeTruthy();
 });
 
-// Every change takes its turn, not only a deletion (review): "Mark all read"
+// Every change takes its turn, not only a deletion (review): "Mark All Read"
 // succeeded, then a load asked for before it answered with the cards unread —
 // the count at zero and the dots and the button back.
-it('does not make cards unread again after "Mark all read" while a load was out', async () => {
+it('does not make cards unread again after "Mark All Read" while a load was out', async () => {
   const unread = (id: number, title: string) => ({ ...item(id, title), read: false });
   mockList.mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } });
   const screen = render(<NotificationsScreen />);
   await act(async () => { mockFocus.run?.(); });
-  const markAll = await waitFor(() => screen.getByLabelText('Mark all read'));
+  const markAll = await waitFor(() => screen.getByLabelText('Mark All Read'));
 
   const stale = deferred();
   mockList
@@ -93,11 +93,11 @@ it('does not make cards unread again after "Mark all read" while a load was out'
     .mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved')] } });
   await act(async () => { mockFocus.run?.(); });
   await act(async () => { await markAll.props.onPress(); });
-  expect(screen.queryByLabelText('Mark all read')).toBeNull();
+  expect(screen.queryByLabelText('Mark All Read')).toBeNull();
 
   await act(async () => { stale.resolve({ data: { notifications: [unread(1, 'Act I moved')] } }); });
 
-  expect(screen.queryByLabelText('Mark all read')).toBeNull();
+  expect(screen.queryByLabelText('Mark All Read')).toBeNull();
 });
 
 // The whole time a change is on its way counts (review): a load asked for after
@@ -127,12 +127,12 @@ it('does not bring back a card when a load answers while its deletion is on its 
   expect(screen.getByText('Act I moved')).toBeTruthy();
 });
 
-it('keeps cards read when a load answers while "Mark all read" is on its way', async () => {
+it('keeps cards read when a load answers while "Mark All Read" is on its way', async () => {
   const unread = (id: number, title: string) => ({ ...item(id, title), read: false });
   mockList.mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } });
   const screen = render(<NotificationsScreen />);
   await act(async () => { mockFocus.run?.(); });
-  const markAll = await waitFor(() => screen.getByLabelText('Mark all read'));
+  const markAll = await waitFor(() => screen.getByLabelText('Mark All Read'));
 
   const marking = deferred();
   mockMarkAllRead.mockReturnValueOnce(marking.promise);
@@ -146,5 +146,5 @@ it('keeps cards read when a load answers while "Mark all read" is on its way', a
 
   await act(async () => { marking.resolve(true); await pressed; });
 
-  expect(screen.queryByLabelText('Mark all read')).toBeNull();
+  expect(screen.queryByLabelText('Mark All Read')).toBeNull();
 });

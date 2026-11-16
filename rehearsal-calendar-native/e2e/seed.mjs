@@ -169,6 +169,11 @@ export const PEOPLE = {
   // New here too, and her account speaks Russian: onboarding in Russian, her
   // name in Cyrillic, the longest greeting of the four languages (60).
   nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
+  // New too, one in Spanish and one in German (60, T-256): the steps as the
+  // native speakers read them, the Spanish quotes and the German titles and
+  // buttons. Neither finishes it.
+  adela: { email: 'adela@e2e.test', firstName: 'Adela', lastName: 'Alba', onboarded: false, locale: 'es' },
+  kattrin: { email: 'kattrin@e2e.test', firstName: 'Kattrin', lastName: 'Haupt', onboarded: false, locale: 'de' },
   // Looks over his profile: the last button, the language sheet's bottom, a
   // zone found by search and chosen (61). An account of his own, since the
   // zone he picks stays.
@@ -244,6 +249,52 @@ export const PEOPLE = {
   // Opens his rehearsals of long names, «Изменить» beside them, in Russian and
   // German, and the form from there (85, T-244). His account speaks Russian.
   baptista: { email: 'baptista@e2e.test', firstName: 'Baptista', lastName: 'Minola', onboarded: true, locale: 'ru' },
+  // Each told of a new rehearsal and of being put on one, by the server's own
+  // words in her account's language (86, T-248): the title of one whose
+  // gender the old participle got wrong, the German its word order. A project
+  // of her own each, so no other flow's notices mix in.
+  laurencia: { email: 'laurencia@e2e.test', firstName: 'Laurencia', lastName: 'Fuenteovejuna', onboarded: true, locale: 'es' },
+  gretchen: { email: 'gretchen@e2e.test', firstName: 'Gretchen', lastName: 'Faust', onboarded: true, locale: 'de' },
+  katerina: { email: 'katerina@e2e.test', firstName: 'Katerina', lastName: 'Kabanova', onboarded: true, locale: 'ru' },
+  // Kabanikha runs two projects alone, Tikhon in the first and busy tomorrow
+  // 10:00-14:00. She plans over him in Spanish and Russian, opens his row, and
+  // deletes her account, the projects with it (89, T-250). Their names in
+  // Cyrillic, as a Russian company types them: the nominative a sentence gets.
+  kabanikha: { email: 'kabanikha@e2e.test', firstName: 'Марфа', lastName: 'Кабанова', onboarded: true, locale: 'es' },
+  tikhon: { email: 'tikhon@e2e.test', firstName: 'Тихон', lastName: 'Кабанов', onboarded: true },
+  // Polly opens the form over her profile, picks her company, takes a
+  // recommended time and cancels; then turns sync on and off; and goes to
+  // the planner each time (91, T-253). Her account speaks German.
+  polly: { email: 'polly@e2e.test', firstName: 'Polly', lastName: 'Peachum', onboarded: true, locale: 'de' },
+  mackie: { email: 'mackie@e2e.test', firstName: 'Mackie', lastName: 'Messer', onboarded: true, locale: 'de' },
+  jenny: { email: 'jenny@e2e.test', firstName: 'Jenny', lastName: 'Diver', onboarded: true, locale: 'de' },
+  // Tortsov runs «Бедность не порок» alone, three rehearsals of his in the
+  // coming days. His planner over one late evening has nothing to offer, and
+  // his phone's calendar will not take «Трактир» nor let «Святки» go; the sync
+  // says so in Russian, English and Spanish (92, T-256). His account speaks
+  // Russian.
+  tortsov: { email: 'tortsov@e2e.test', firstName: 'Lyubim', lastName: 'Tortsov', onboarded: true, locale: 'ru' },
+  // Glumov signs in and out, then the sign-in screen speaks Russian and fails
+  // twice: no connection, and an answer it has no words for (93, T-256).
+  glumov: { email: 'glumov@e2e.test', firstName: 'Yegor', lastName: 'Glumov', onboarded: true, locale: 'ru' },
+  // Yerma's phone refused notifications; she changes her address and resets
+  // her password, and waits for "send again" each time (94, T-256). Her
+  // account speaks Spanish.
+  yerma: { email: 'yerma@e2e.test', firstName: 'Yerma', lastName: 'Campo', onboarded: true, locale: 'es' },
+  // Shen Te runs «Der gute Mensch»: Wang its admin, Yang Sun and Shu Fu in it,
+  // Wang and Yang Sun busy tomorrow 10:00-14:00 (95, T-256, T-258). Her
+  // account speaks German.
+  shente: { email: 'shente@e2e.test', firstName: 'Shen', lastName: 'Te', onboarded: true, locale: 'de' },
+  // Lydia runs «The Rivals»: Bob Acres and Lucius O'Trigger in it, both busy
+  // tomorrow 10:00-14:00. She plans over the two of them, and asks for codes
+  // for a new address twice in a minute; nothing is saved or changed (96,
+  // T-256). Her account speaks English.
+  lydia: { email: 'lydia@e2e.test', firstName: 'Lydia', lastName: 'Languish', onboarded: true },
+  acres: { email: 'acres@e2e.test', firstName: 'Bob', lastName: 'Acres', onboarded: true },
+  otrigger: { email: 'otrigger@e2e.test', firstName: 'Lucius', lastName: 'OTrigger', onboarded: true },
+  wang: { email: 'wang@e2e.test', firstName: 'Wang', lastName: 'Wasser', onboarded: true },
+  yangsun: { email: 'yangsun@e2e.test', firstName: 'Yang', lastName: 'Sun', onboarded: true },
+  shufu: { email: 'shufu@e2e.test', firstName: 'Shu', lastName: 'Fu', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -617,6 +668,82 @@ export async function seed({ client, apiUrl, timezone }) {
         [own.id, member]);
     }
   }
+  // Kabanikha's two (89, T-250): «Гроза» with Tikhon, the newer; «Бесприданница»
+  // hers alone. Both go with her account. Inserted: the sign-ins are spent.
+  for (const [name, cast, age] of [['Бесприданница', [], '1 day'], ['Гроза', [ids.tikhon], '0 days']]) {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Островский', $2, NOW() - $3::interval, NOW() - $3::interval) RETURNING id`, [name, timezone, age]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids.kabanikha]);
+    for (const member of cast) {
+      await client.query(
+        `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+         VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+        [own.id, member]);
+    }
+  }
+  // Polly's (91, T-253): «Die Dreigroschenoper» with Mackie and Jenny, so her
+  // form has people to pick and times to recommend. Inserted: the sign-ins
+  // are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Die Dreigroschenoper', 'Schiffbauerdamm', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW()),
+              ($1, $4, 'member', 'active', NOW(), NOW())`,
+      [own.id, ids.polly, ids.mackie, ids.jenny]);
+  }
+  // Shen Te's (95, T-256): Wang an admin of it, Yang Sun and Shu Fu members.
+  // Inserted: the sign-ins are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Der gute Mensch', 'Sezuan', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW()),
+              ($1, $4, 'member', 'active', NOW(), NOW()), ($1, $5, 'member', 'active', NOW(), NOW())`,
+      [own.id, ids.shente, ids.wang, ids.yangsun, ids.shufu]);
+  }
+  // Lydia's (96, T-256): Acres and O'Trigger members. Inserted: the sign-ins
+  // are spent. Acres joined first, so the form names him first (T-261).
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('The Rivals', 'Bath', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW() - INTERVAL '1 day'),
+              ($1, $4, 'member', 'active', NOW(), NOW())`,
+      [own.id, ids.lydia, ids.acres, ids.otrigger]);
+  }
+  // Tortsov's (92, T-256), he alone in it, and his three rehearsals, he on
+  // each: «Трактир» the phone's calendar will not take, «Святки» it will not
+  // let go. Inserted: the sign-ins are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Бедность не порок', 'Островский', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids.tortsov]);
+    for (const [title, day] of [['Святки', 1], ['Трактир', 2], ['Финал', 3]]) {
+      const { rows: [made] } = await client.query(
+        `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3::timestamptz, $4::timestamptz, 'Main hall', $5, NOW(), NOW()) RETURNING id`,
+        [own.id, title, localInstant(day, 18), localInstant(day, 20), ids.tortsov]);
+      await client.query(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())`,
+        [made.id, ids.tortsov]);
+    }
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -678,7 +805,10 @@ export async function seed({ client, apiUrl, timezone }) {
     // Claudius deletes the first from its details on the project's page,
     // Gertrude told of it, and edits the second from its details twice (52).
     // Made by Gaev, signed in already: the seed's twenty sign-ins are spent.
-    ghost: await rehearsal(courtId, 'Ghost watch', 2, 19, 20, ['claudius', 'gertrude'], 'gaev'),
+    // The first is named in German quotes nested right, which the question
+    // before deleting it keeps, set in English ones (T-261 review), with an
+    // apostrophe inside the inner pair that stays one (T-261 review, round 2).
+    ghost: await rehearsal(courtId, '„Ghost watch ‚Actors’ Act‘“', 2, 19, 20, ['claudius', 'gertrude'], 'gaev'),
     mousetrap: await rehearsal(courtId, 'The Mousetrap', 3, 19, 20, ['claudius', 'gertrude'], 'gaev'),
     // Off the form's five-minute step, as a rehearsal made before it (54).
     storm: await rehearsal(learId, 'Storm scene', 1, [10, 7], 12, ['cordelia'], 'gaev'),
@@ -798,6 +928,88 @@ export async function seed({ client, apiUrl, timezone }) {
     }
   }
 
+  // Laurencia's, Gretchen's and Katerina's (86, T-248): tomorrow 18:00 to
+  // 20:00, she alone on it. Spanish a feminine title, Russian a masculine one:
+  // "Escena del balcón programado", "Прогон назначена" on the old words.
+  // Inserted: the sign-ins are spent.
+  for (const [key, project, title, location] of [
+    ['laurencia', 'Fuenteovejuna', 'Escena del balcón', 'Patio'],
+    ['gretchen', 'Faust', 'Fechtszene', 'Probebühne'],
+    ['katerina', 'Гроза', 'Прогон', 'Малый зал'],
+  ]) {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Her own', $2, NOW(), NOW()) RETURNING id`, [project, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids[key]]);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, $6, NOW(), NOW()) RETURNING id`,
+      [own.id, title, localInstant(1, 18), localInstant(1, 20), location, ids[key]]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids[key]]);
+  }
+
+  // And Laurencia's longest notice (86, T-252): "added", on a date, not
+  // tomorrow, with a long place — the card cut it at its second line.
+  {
+    const { rows: [own] } = await client.query(
+      `SELECT id FROM native_projects WHERE name = 'Fuenteovejuna'`);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, 'Escena del comendador', $2::timestamptz, $3::timestamptz, 'Corral de comedias de Almagro', $4, NOW(), NOW()) RETURNING id`,
+      [own.id, localInstant(5, 18), localInstant(5, 20), ids.laurencia]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids.laurencia]);
+  }
+
+  // And Katerina's longer rehearsal (86, T-250): tomorrow 19:00 to 21:00, made
+  // to end at 22:00 — only the end moved, so it is told as "теперь до 22:00",
+  // not as a move. Seeded as it is after the edit; the flow sends the notice.
+  {
+    const { rows: [own] } = await client.query(
+      `SELECT p.id FROM native_projects p
+       JOIN native_project_members m ON m.project_id = p.id
+       WHERE p.name = 'Гроза' AND m.user_id = $1`, [ids.katerina]);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, 'Сцена на бульваре', $2::timestamptz, $3::timestamptz, 'Малый зал', $4, NOW(), NOW()) RETURNING id`,
+      [own.id, localInstant(1, 19), localInstant(1, 22), ids.katerina]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids.katerina]);
+  }
+
+  // A rehearsal each of Kabanikha and Anna runs and is not on (89, 87; T-256):
+  // in two days at 18:00, Tikhon alone on Kabanikha's, nobody on Anna's. Their
+  // rows say so in Spanish and German. Inserted: the sign-ins are spent.
+  for (const [key, project, title, cast] of [
+    ['kabanikha', 'Гроза', 'Сцена с Тихоном', ['tikhon']],
+    ['courage', 'Mutter Courage', 'Szene mit Kattrin', []],
+  ]) {
+    const { rows: [own] } = await client.query(
+      `SELECT p.id FROM native_projects p
+       JOIN native_project_members m ON m.project_id = p.id
+       WHERE p.name = $1 AND m.user_id = $2`, [project, ids[key]]);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3::timestamptz, $4::timestamptz, 'Main hall', $5, NOW(), NOW()) RETURNING id`,
+      [own.id, title, localInstant(2, 18), localInstant(2, 20), ids[key]]);
+    for (const member of cast) {
+      await client.query(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())`,
+        [made.id, ids[member]]);
+    }
+  }
+
   // What the flow reads after moving the profile to Tokyo: the same instant on
   // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
   // the en_US simulator, on the 12-hour clock, shows it: "9:00 AM". A pattern
@@ -809,11 +1021,15 @@ export async function seed({ client, apiUrl, timezone }) {
   const times = { watch_tokyo: tokyo(zoneInstant(CHOSEN_ZONE, 1, 2)) };
 
   // The planner's week in Tel Aviv, as its header names it in English, an
-  // interval of dates (T-017): "Oct 16 – Oct 22", "Oct 28 – Nov 3".
+  // interval of dates (T-017): "Oct 16 – Oct 22", "Oct 28 – Nov 3". A pattern:
+  // the header names the days in its list, and the working day ends at 23:00,
+  // so late in Tel Aviv's evening today has no slot left and the list begins
+  // with tomorrow — "Nov 14 – Nov 19" at 23:50 on Nov 13 (T-257's check). The
+  // week read as UTC midnights (DF01) began with yesterday, which neither fits.
   const plannerDay = (offset) => new Date(`${zoneDate(CHOSEN_ZONE, offset)}T00:00:00Z`)
     .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   const labels = {
-    week_chosen: `${plannerDay(0)} – ${plannerDay(6)}`,
+    week_chosen: `(?:${plannerDay(0)}|${plannerDay(1)}) – ${plannerDay(6)}`,
     // New York's offset today, as the timezone picker names it: "UTC-4" in
     // its summer, "UTC-5" in its winter (23). Node's Intl has the offset.
     new_york_offset: new Intl.DateTimeFormat('en', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' })
@@ -882,6 +1098,12 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.zarechnaya, localInstant(5, 23), localInstant(6, 1)]);
+  // Anna's, the same night (87, T-256): the editor's end says the next day in
+  // German, in the button beside the time.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.courage, localInstant(5, 23), localInstant(6, 1)]);
   // Trigorin's two (27): the same night, and the morning's hour of his own.
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
@@ -909,6 +1131,45 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual'),
             ($4, $5::timestamptz, $6::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.benedick, localInstant(1, 9), localInstant(1, 13), ids.claudio, localInstant(1, 14), localInstant(1, 17)]);
+  // Tikhon's tomorrow (89): the rehearsal Kabanikha plans at 10:00 meets it.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.tikhon, localInstant(1, 10), localInstant(1, 14)]);
+  // Miranda's tomorrow (59, T-258): the one busy in Bianca's slot at 10:00,
+  // which names her in the singular — "No disponible", "Не может".
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [islanders[2], localInstant(1, 10), localInstant(1, 14)]);
+  // Wang's and Yang Sun's tomorrow (95): both busy in Shen Te's slot at 10:00.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual'),
+            ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.wang, ids.yangsun, localInstant(1, 10), localInstant(1, 14)]);
+  // Acres' and O'Trigger's tomorrow (96, T-256): both busy in Lydia's slot at
+  // 10:00, so her save names two - "Busy at this time: …". Acres all day, as
+  // a save of that day writes it, O'Trigger 10:00-14:00, which makes the slot:
+  // the line under her form's participants says "Busy: Bob Acres (all day)
+  // and 1 more" (T-261).
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual'),
+            ($4, $5::timestamptz, $6::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.acres, `${localDate(1)}T00:00:00.000Z`, `${localDate(1)}T23:59:59.999Z`,
+      ids.otrigger, localInstant(1, 10), localInstant(1, 14)]);
+  // Kabanikha's hour from her phone's calendar on MORNING_DAY (89, T-256): the
+  // editor's note under it in Spanish. Far from the planner's tomorrow.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-market')`,
+    [ids.kabanikha, localInstant(6, 9), localInstant(6, 10)]);
+  // Mackie's today (91): busy 12:00-14:00, so Polly's form recommends times.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.mackie, localInstant(0, 12), localInstant(0, 14)]);
   // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
   // save of that day writes it.
   for (const key of ['yelena', 'mariya', 'astrov']) {
@@ -946,6 +1207,12 @@ export async function seed({ client, apiUrl, timezone }) {
     { title: 'Name-day toast', read: false },
   ]);
   await notify('solyony', [{ title: 'Duel at noon', read: false }]);
+  // Shen Te's, three days and an hour old: her inbox says "vor 3 Tagen" (95, T-256).
+  await client.query(
+    `INSERT INTO native_notifications (user_id, type, title, body, data, sent_at, created_at, read_at)
+     VALUES ($1, 'rehearsal_updated', 'Probenplan geändert', 'Der gute Mensch', '{}',
+             NOW() - INTERVAL '73 hours', NOW() - INTERVAL '73 hours', NULL)`,
+    [ids.shente]);
 
   return {
     password: PASSWORD,

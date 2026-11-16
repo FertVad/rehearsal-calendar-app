@@ -29,13 +29,6 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 - tapOn: "Planner, tab.*"
 - extendedWaitUntil:
     visible:
@@ -152,9 +145,9 @@ tags:
     id: header-cancel
 - runFlow:
     when:
-      visible: "Don't Save"
+      visible: "Don’t Save"
     commands:
-      - tapOn: "Don't Save"
+      - tapOn: "Don’t Save"
 - extendedWaitUntil:
     notVisible:
       id: header-cancel

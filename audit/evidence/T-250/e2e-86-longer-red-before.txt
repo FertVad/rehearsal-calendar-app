@@ -1,0 +1,79 @@
+# T-250, review round 2: flow 86, a longer rehearsal (only its end moved), red on the old words
+#
+# The old words: server/i18n/pushNotifications.js as of 074bffa, the task before
+# b66a8f4 ("a longer rehearsal says until when, not that it moved"), which is
+# where the longer rehearsal was fixed. `git restore --source=074bffa --
+# rehearsal-calendar-native/server/i18n/pushNotifications.js`, then
+# `git restore --source=HEAD -- …` after the run.
+#
+# Not the task's base 256f55b: there flow 86 stops earlier, at the Spanish move
+# ("pasa a mañana a las 18:00", fixed in 89e7da0), and says nothing of the
+# longer rehearsal. On 074bffa every earlier step passes and the flow stops
+# exactly at the new step.
+#
+# The seed: Katerina's «Сцена на бульваре», tomorrow 19:00–22:00 (19:00–21:00
+# made to end at 22:00); the flow sends notifyRehearsalUpdated with the change
+# key 'end' (scripts/notify.js, CHANGE: end).
+#
+# (Two earlier attempts were cut at 10 minutes in prepare: the native project
+# was rebuilt for the task's locales/*.json and CocoaPods fetched the React
+# Native tarballs at ~90 KB/s. A machine's slowness; the third run reached the
+# flow.)
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/86-rehearsal-notices-read-right.yaml
+
+[e2e] native inputs 12fe823420b7 (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] E2E_APP (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/e2e/.build/Build/Products/Debug-iphonesimulator/Rehearsly.app) was not built from this tree's app.json and packages: not used
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] Rehearsal notices read right in Spanish, German and Russian (3m 10s) (No visible element found: ".*Изменена репетиция.*Гроза: Сцена на бульваре, (завтра|[а-я]{2}, .*) в 19:00 — теперь до 22:00.*")
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+# What Katerina's inbox said at the failing step (screen-hierarchy,
+# step-276-scrollUntilVisible, Гроза cards):
+#
+#   Гроза: Прогон — теперь завтра в 18:00, только что
+#   Гроза: Репетиция «Прогон» назначена завтра в 18:00, только что
+#   Гроза: Репетиция «Прогон» назначена завтра в 18:00, место: Малый зал, только что
+#   Гроза: Репетиция «Прогон» отменена, только что
+#   Гроза: Сцена на бульваре, завтра в 19:00 — новое название, только что
+#
+# The longer rehearsal was told as a new name: the old words had no "end".
+
+# Green after `git restore --source=HEAD -- rehearsal-calendar-native/server/i18n/pushNotifications.js`
+# (HEAD 5c1e977 with the flow and the seed of this change):
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+
+[e2e] native inputs 12fe823420b7 (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Passed] Rehearsal notices read right in Spanish, German and Russian (2m 45s)
+
+1/1 Flow Passed in 2m 46s

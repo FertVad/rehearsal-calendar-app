@@ -1,0 +1,67 @@
+$ node audit/evidence/T-253/d3-touches.mjs --save audit/evidence/T-253/d3 <runs>
+Every synthesized touch of d3's German runs (10.11 and 12.11), and of the
+Russian, English and Spanish planner shots of 12.11 for comparison.
+reinit = backboardd registered XCTest's digitizer a second time ("unknown
+digitizer ... initializing now"); skipped = "didn't see a previous touch
+down ... skipping event"; lifted = "presence: none" before the playback ended;
+cancelledWhileTouching = "canceling paths contacts: [pathIndex ..." with the
+contact still down. A reinit alone happens on delivered touches too; a touch
+is lost when it is cancelled while still down.
+
+## 2026-11-10_183616/planner                (10.11, DE, Planner by id from Profil)
+18:36:27.414  point 274, 802  reinit=true skipped=10 lifted=false cancelledWhileTouching=true  => LOST (T-207 signature)
+18:36:29.387  (swipe)          delivered
+18:36:32.590  (swipe)          delivered
+
+## 2026-11-10_183828/planner                (10.11, DE, again)
+18:38:42.317  point 274, 802  reinit=false skipped=0 lifted=true  => delivered
+
+## 2026-11-12_084658/form                   (the form over Profil)
+21 touches, 08:47:09.886 - 08:47:46.171, all delivered; the last, 196, 426
+(50 %, 50 %), took "Nicht speichern".
+
+## 2026-11-12_084753/planner                (attempt 1, Planner by id)
+08:48:04.291  point 274, 802  reinit=true skipped=10 lifted=false cancelledWhileTouching=true  => LOST (T-207 signature)
+08:48:06.435  (swipe)          delivered
+08:48:09.153  (swipe)          delivered
+
+## 2026-11-12_084815/sync                   (Profil by id, then the sync)
+08:48:26.461  point 353, 802  reinit=true skipped=10 lifted=false cancelledWhileTouching=true  => LOST (T-207 signature; Profil was already shown, so nothing failed)
+08:48:27.911 - 08:48:40.303   5 touches, delivered
+
+## 2026-11-12_084850/finish                 (remove all, sync off)
+08:49:01.370  point 196, 485  delivered
+08:49:03.821  point 196, 540  delivered   "Alle exportierten entfernen" by text: the question
+08:49:05.841  point 196, 443  delivered   50 %, 52 %: the question's "remove" - the removal ran
+08:49:08.802  point 196, 468  delivered   50 %, 55 %: the "removed" alert's OK
+08:49:10.520  point 326, 224  delivered   calendar-sync-toggle: off (de-off.png)
+
+## 2026-11-12_085028/planner                (attempt 2, Planner by id)
+08:50:40.539  point 274, 802  reinit=true skipped=10 lifted=false cancelledWhileTouching=true  => LOST (T-207 signature)
+08:50:42.522  (swipe)          delivered
+08:50:44.739  (swipe)          delivered
+
+## 2026-11-12_085110/planner-pt             (attempt 3, Planner at 70 %, 95 %)
+08:51:22.184  point 275, 809  reinit=true skipped=10 lifted=false cancelledWhileTouching=true  => LOST (T-207 signature)
+08:51:24.157  (swipe)          delivered
+08:51:26.419  (swipe)          delivered
+
+## 2026-11-12_085203/probe                  (Kalender, Planner, Projekte, Planner)
+08:52:16.306  point 39, 809   reinit=true skipped=0 lifted=true  => delivered
+08:52:18.068  point 275, 809  delivered
+08:52:20.296  point 117, 809  delivered
+08:52:21.752  point 275, 809  delivered
+
+## 2026-11-12_085243/probe2                 (Profil, Planner)
+08:52:54.251  point 353, 809  reinit=true skipped=0 lifted=true  => delivered
+08:52:55.750  point 275, 809  delivered
+
+## 2026-11-12_085316/planner                (the planner shot again)
+08:53:27.887  point 274, 802  reinit=true skipped=0 lifted=true  => delivered
+
+## 2026-11-12_083526/planner (RU), 083944/planner (EN), 084345/planner (ES)
+08:35:41.921 / 08:39:55.026 / 08:43:55.773  point 274, 802  => delivered
+
+## Sign-in, rest, form, sync, finish in RU, EN, ES; DE sign-in, rest and
+## sync - 18 runs of 12.11, 08:32 - 08:48:40
+190 touches: 189 delivered, 1 lost - the DE sync's first, above.

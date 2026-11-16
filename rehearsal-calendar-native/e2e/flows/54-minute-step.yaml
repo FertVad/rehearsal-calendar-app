@@ -26,13 +26,6 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 
 # 10:07, opened in the form and saved with its time untouched.
 - scrollUntilVisible:
@@ -97,7 +90,7 @@ tags:
 - tapOn:
     id: rehearsal-submit
 - extendedWaitUntil:
-    visible: "Rehearsal updated successfully"
+    visible: "Rehearsal saved"
     timeout: 15000
 - tapOn: "OK"
 - extendedWaitUntil:

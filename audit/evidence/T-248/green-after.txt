@@ -1,0 +1,40 @@
+T-248 — green after the fix
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText.integration.test.js
+
+PASS __tests__/integration/rehearsalNoticeText.integration.test.js
+  Each reader is told when, on their own clock and in their own language
+    ✓ a new rehearsal (131 ms)
+    ✓ a changed rehearsal, with what changed (6 ms)
+    ✓ a response names the rehearsal and when it is (6 ms)
+    ✓ further out, the date (5 ms)
+  Put on or taken off a rehearsal (T-233)
+    ✓ whoever is added is told which one, when and where, and a tap opens it (6 ms)
+    ✓ whoever is taken off is told so, and a tap does not try to open it (5 ms)
+  Spanish and German say a rehearsal is set for a day, in their own word order (T-248)
+    ✓ a new rehearsal tomorrow (9 ms)
+    ✓ a new rehearsal today (4 ms)
+    ✓ a new rehearsal further out, on its date (5 ms)
+    ✓ added to one, with and without a place (12 ms)
+    ✓ added to one on its date, with a place (9 ms)
+    ✓ added to one today (3 ms)
+  Any title reads correctly, whatever its gender (T-248)
+    ✓ a feminine title in Spanish, a masculine one in Russian (2 ms)
+    ✓ added to one with a neuter title in Russian (1 ms)
+    ✓ with no title, the word "rehearsal" alone (4 ms)
+  "New member"
+    ✓ carries its project, so a tap can open it (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+
+Whole server suite (npx jest): 76 suites passed, 1 failed — __tests__/startup/runtimeStartup.test.js
+(8 tests): its fixture copies the entrypoint to a temp dir and runs a child node, which ends
+with "import-failed", exit code null (killed by a signal) in this sandbox. It does not touch
+the push texts; the edited module imports cleanly
+(node -e "await import('./i18n/pushNotifications.js')" → "H: Ensayo programado para hoy a las 9").
+
+New texts, for the landing:
+  es: "<project>: Ensayo «<title>» programado para <when>[ en <place>]"   (no title: "Ensayo programado para <when>")
+  de: "<project>: <title> <when> angesetzt[, Ort: <place>]"                (no title: "Probe …")
+  ru: "<project>: Репетиция «<title>» назначена <when>[, место: <place>]"  (no title: "Репетиция назначена <when>")

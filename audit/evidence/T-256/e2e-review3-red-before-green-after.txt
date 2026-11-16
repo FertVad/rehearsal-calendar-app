@@ -1,0 +1,84 @@
+T-256, review 3: the screen edits left without a flow in review 2, each now on
+screen in a flow, red on the old words in one run naming every wrong one.
+
+Red: src/i18n/translations put back as at 3b16cd5
+  (git restore --source=3b16cd5 -- src/i18n/translations), the flows and the
+  e2e mechanisms as on HEAD; one run of each flow (npm run e2e -- <flow>).
+Green: the same flows on HEAD's translations.
+The line quoted is the flow's own console line, from its maestro.log in
+e2e/out/artifacts/<run>/<flow>/logs.
+
+--- flow 92 (new): empty planner and calendar refusals, ru/en/es -----------
+red   [Failed] Empty planner and calendar refusals read right (2m 55s)
+      (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+      92 not as a native speaker writes it: "ru: the empty planner, свободны все
+      участники | ru: Не удалось записать репетиций в календарь: 1 | en: that event
+      is still in the calendar | es: Un evento no se pudo eliminar y sigue en el
+      calendario | "
+green [Passed] Empty planner and calendar refusals read right (3m 22s)
+      92 not as a native speaker writes it: ""
+
+--- flow 93 (new): sign-in failures, en/ru -------------------------------------
+red   [Failed] Sign-in failures read right (2m 13s)
+      93 not as a native speaker writes it: "en: Emails cannot be sent right now |
+      ru: Нет связи с сервером, its full stop | ru: Что-то пошло не так, its full
+      stop | "
+green [Passed] Sign-in failures read right (2m 38s)
+      server.log: answered POST /api/auth/password-reset/request with 503
+      EMAIL_UNAVAILABLE, not handled; dropped the request POST /api/auth/login (x2);
+      answered POST /api/auth/login with 400, not handled
+
+--- flow 94 (new): Spanish buttons read right and fit --------------------------
+red   [Failed] Spanish buttons read right and fit (4m 41s)
+      94 not as a native speaker writes it: "es: Abrir configuración, not Abrir
+      ajustes | es: Reenviar código, not Enviar el código otra vez | es: Reenviar
+      códigos, not Enviar los códigos otra vez | "
+green [Passed] Spanish buttons read right and fit (5m 1s)
+      94-push-denied-es, 94-resend-code-es, 94-resend-codes-es: no text cut there
+
+--- flow 95 (new): German admin rights and busy people -------------------------
+red   [Failed] German admin rights and busy people read right (2m 32s)
+      95 not as a native speaker writes it: "de: Adminrechte entziehen, not
+      Administratorrechte entfernen | de: Adminrechte entziehen?, its title | de:
+      Adminrechte entziehen?, its message | de: nicht mehr dafür eingeteilt, not
+      aus der Besetzung genommen | de: und 1 weitere Person | de: vor 3 Tagen,
+      not vor 3 Tg. | "
+green [Passed] German admin rights and busy people read right (2m 23s)
+      95 not as a native speaker writes it: ""
+      95-remove-admin-item-de: no text cut there
+
+--- flow 87 (extended: the past day's delete alert, de) -------------------------
+red   [Failed] Planner and the calendar's top in German (2m 28s)
+      87 not as a native speaker writes it: "de: Finde die beste Zeit für eine
+      Probe, not Probezeit | de: Du bist nicht eingeteilt, not in der Besetzung |
+      de: Was möchtest du tun?, not Neue Aktion | de: Belegte Zeit, not
+      Beschäftigte Zeit | de: am Folgetag, not Folgetag | de: Ausgewählte Tage, not
+      Daten | de: Einträge für diesen Tag löschen, not Daten | de: Einträge
+      löschen?, not Daten löschen? | de: the delete alert, its message | "
+green [Passed] Planner and the calendar's top in German (3m 15s)
+
+--- flow 89 (extended: the past day's delete alert, es; the old German title) --
+red   [Failed] Names and counts read right (6m 8s)
+      89 not as a native speaker writes it: "es: No estás en este ensayo, not en el
+      reparto | es: Lo han visto, not Vistos | es: 1 participante recibirá una
+      notificación, not Los participantes (1) | es: cuando buscan un horario, not
+      al buscar un hueco | es: Eliminar las marcas de este día, not datos de esta
+      fecha | es: ¿Eliminar las marcas?, not ¿Eliminar datos? | es: the delete
+      alert, its message | es: Admin principal, not Propietario | es: No
+      disponibles, not Ocupados | de: Adminrechte geben, not Administratorrechte |
+      de: Adminrechte geben?, its title | de: Adminrechte geben?, its message | de:
+      „…“ (…) löschen?, the verb last | de: 1 Teilnehmer wird benachrichtigt, not
+      Teilnehmer (1) | ru: Отменить, not Отмена | ru: Уведомление получит 1
+      участник, not Участники (1) | ru: Накладка в расписании | "
+      (the run's teardown was cut by the 10-minute limit of the command after
+      the flow had failed; the next run cleared what it left, docs/e2e.md)
+green [Passed] Names and counts read right (6m 38s)
+
+--- found on the way -----------------------------------------------------------
+95-two-busy-de (24-hour clock, as a German phone): the form's busy line reads
+"Wasser: 10:00–14:00 beschäftigt und 1 weitere Per…". The row is one line by
+design (ParticipantPicker, numberOfLines 1; the whole list is in the
+participants' sheet); the old "und 1 weitere" fits with a surname of six
+letters and is cut with a longer one. Not a button, tab, chip or heading: the
+edit stays, the flow reads the words whole and does not check the cut. A
+question to the owner: a shorter German form ("und noch 1"?) for the line.

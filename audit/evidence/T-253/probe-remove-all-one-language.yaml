@@ -1,0 +1,71 @@
+# One language of probe-remove-all-alert-languages.yaml. Starts and ends on
+# the profile's first screen.
+appId: ${APP_ID}
+---
+- scrollUntilVisible:
+    element:
+      id: profile-language
+    direction: UP
+- tapOn:
+    id: profile-language
+- extendedWaitUntil:
+    visible:
+      id: language-${L}
+    timeout: 5000
+- tapOn:
+    id: language-${L}
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-calendar-sync
+- extendedWaitUntil:
+    visible: ".*Apple Calendar.*"
+    timeout: 15000
+- runFlow:
+    when:
+      notVisible:
+        id: calendar-sync-run
+    commands:
+      - tapOn: ".*Apple Calendar.*"
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-run
+    timeout: 10000
+- tapOn:
+    id: calendar-sync-run
+- extendedWaitUntil:
+    visible: ${SYNC_DONE}
+    timeout: 30000
+- tapOn: "OK"
+- waitForAnimationToEnd
+- tapOn: ".*${REMOVE}.*"
+- waitForAnimationToEnd
+- takeScreenshot: T-253-probe-question-${L}
+- tapOn:
+    point: "50%, 55%"
+- extendedWaitUntil:
+    visible: ${REMOVED}
+    timeout: 8000
+    optional: true
+- takeScreenshot: T-253-probe-after-tap-${L}
+- runFlow:
+    when:
+      visible: ${REMOVED}
+    commands:
+      - evalScript: "${output.hit = output.hit + L + ' '}"
+      - tapOn: "OK"
+# The question still up: the tap missed both buttons.
+- runFlow:
+    when:
+      visible: "Cancel|Отмена|Cancelar|Abbrechen"
+    commands:
+      - evalScript: "${output.hit = output.hit + '(' + L + ': question still up) '}"
+      - tapOn: "Cancel|Отмена|Cancelar|Abbrechen"
+- waitForAnimationToEnd
+- tapOn:
+    id: header-back
+- waitForAnimationToEnd

@@ -10,6 +10,13 @@
 # without its line, as if nobody were; now an error says so, and Try again
 # asks with "Participants (1)". The sheet closes, and neither the project's
 # page nor the calendar shows it.
+#
+# And the words read as a native speaker's (T-256): a save says "Rehearsal
+# saved", no "successfully"; the roster unread says "who will be notified",
+# not "who will be told it is cancelled", British; the question counts as
+# English does, "1 participant will be notified", not "Participants (1)". The
+# flow goes on whatever the words, and fails at the end naming every one that
+# was wrong.
 appId: ${APP_ID}
 name: An admin edits and deletes from the details
 tags:
@@ -17,6 +24,7 @@ tags:
   - calendar
   - projects
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -88,8 +96,13 @@ tags:
 - tapOn:
     id: rehearsal-submit
 - extendedWaitUntil:
-    visible: "Rehearsal updated successfully"
+    visible: "Rehearsal (updated successfully|saved)"
     timeout: 15000
+- runFlow:
+    when:
+      notVisible: "Rehearsal saved"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Rehearsal saved, no successfully | '}"
 - tapOn: "OK"
 # The read failed at once: the old sheet said "not available" then.
 - extendedWaitUntil:
@@ -135,7 +148,7 @@ tags:
 - tapOn:
     id: rehearsal-submit
 - extendedWaitUntil:
-    visible: "Rehearsal updated successfully"
+    visible: "Rehearsal (updated successfully|saved)"
     timeout: 15000
 - tapOn: "OK"
 - extendedWaitUntil:
@@ -198,19 +211,34 @@ tags:
 - tapOn:
     id: rehearsal-details-delete
 - extendedWaitUntil:
-    visible: "Could not find out who will be told it is cancelled.*"
+    visible: "Could not find out who will be .*"
     timeout: 10000
-- assertNotVisible: "Delete “Ghost watch”.*"
+- runFlow:
+    when:
+      notVisible: "Could not find out who will be notified\\..*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: who will be notified, not told it is cancelled | '}"
+- assertNotVisible: "Delete “Ghost watch.*"
 - takeScreenshot: 52-roster-not-read
 - runScript:
     file: ../scripts/release-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
 - tapOn: "Try again"
+# The date in brackets: its own commas ran into the title's (T-261).
+# Its name, typed „Ghost watch ‚Actors’ Act‘“, is set in English quotes once,
+# the inner ones as English nests them: a closing ‘ before the closing “ once
+# made that “ an opening one (review), and the apostrophe of Actors’ closed the
+# inner pair, so it read “Ghost watch ‘Actors’ Act‘” (review, round 2).
 - extendedWaitUntil:
-    visible: "Delete “Ghost watch”, .*, 7:00.PM\\?"
+    visible: "Delete “Ghost watch ‘Actors’ Act’” \\(.*, 7:00.PM\\)\\?"
     timeout: 10000
-- assertVisible: "Participants \\(1\\) will be notified"
+- assertVisible: "(1 participant|Participants \\(1\\)) will be notified"
+- runFlow:
+    when:
+      notVisible: "1 participant will be notified"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: 1 participant will be notified, not Participants (1) | '}"
 - takeScreenshot: 52-delete-confirmation
 # The alert's, beside its Cancel: the sheet's own Delete is below it too.
 - tapOn:
@@ -237,3 +265,13 @@ tags:
 - waitForAnimationToEnd
 - assertNotVisible: ".*Ghost watch.*"
 - takeScreenshot: 52-calendar-without-it
+
+- evalScript: "${console.log('52 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

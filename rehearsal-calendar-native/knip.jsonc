@@ -77,19 +77,28 @@
     // gives a "redundant entry" hint). Helpers such as demoDates.mjs are checked
     // through their imports. public/ is static files; migrations/ is SQL run by
     // scripts/migrate.js.
+    //
+    // `knip --production` (npm run check:dead runs it too) counts only what the
+    // entries marked `!` reach. Two of the scripts are such entries though no
+    // request reaches them: migrate.js is `npm run migrate`, which brings the
+    // production schema up (database/migrations/, database/schema/); seed-demo.mjs
+    // writes the demo account in production (its header; demoDates.mjs is its
+    // helper). scripts/test.mjs runs the tests (`npm test`): not production code,
+    // so the last `project` line leaves it out of the production check only.
     "server": {
       "entry": [
         "server.js!",
         "app.js!",
-        "scripts/migrate.js",
+        "scripts/migrate.js!",
         "scripts/r0-postgres.mjs",
-        "scripts/seed-demo.mjs",
+        "scripts/seed-demo.mjs!",
         "__tests__/**/*.{js,mjs}"
       ],
       "project": [
         "**/*.{js,mjs}!",
         "!public/**",
-        "!migrations/**"
+        "!migrations/**",
+        "!scripts/test.mjs!"
       ],
       "ignoreDependencies": [
         // Comes with jest (jest-runtime depends on it); every server test

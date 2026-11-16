@@ -34,10 +34,18 @@ async function http(path, options = {}) {
   const response = await fetch(base + path, {
     ...options,
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-    signal: AbortSignal.timeout(2000),
   });
   return { status: response.status, body: await response.json() };
 }
+
+const stall = (ms) => { const until = Date.now() + ms; while (Date.now() < until) { /* the event loop is busy */ } };
+
+// T-260: these tests check statuses and bodies, not deadlines, so a request
+// waits as long as Jest lets the test run; a slow machine is not a failure.
+test('a request is answered by status and body even when the machine stalls', async () => {
+  database.get.mockImplementationOnce(async () => { stall(2100); return { token_version: 1, timezone: 'UTC' }; });
+  expect(await http('/api/native/projects')).toEqual({ status: 200, body: expect.anything() });
+});
 
 test('a failed auth read returns generic 500 without a write, and the next request recovers', async () => {
   database.get.mockRejectedValueOnce(Object.assign(new Error('PRIVATE_DATABASE_VALUE'), { code: '42P01' }));

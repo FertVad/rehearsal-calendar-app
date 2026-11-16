@@ -14,7 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../constants/colors';
 import type { TimeRange } from '../utils/availability';
-import { formatTimeRange } from '../utils/clockFormat';
+import { busySpanText } from '../utils/conflictDetection';
 import { useI18n } from '../../contexts/I18nContext';
 import type { Translations } from '../../i18n/translations';
 import { AppModal } from './AppModal';
@@ -165,8 +165,11 @@ export function ParticipantPicker({
           <Text style={styles.rowValue} numberOfLines={1}>{value}</Text>
           {!disabled && <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />}
         </View>
+        {/* Two lines: by full name "Beschäftigt: Wang Wasser (10:00–14:00)
+            und 1 weiterer" is wider than the row, and one line cut its count
+            (T-261, flow 95). */}
         {conflict ? (
-          <Text testID="participants-conflict" style={styles.conflict} numberOfLines={1}>
+          <Text testID="participants-conflict" style={styles.conflict} numberOfLines={2}>
             {conflict}
           </Text>
         ) : null}
@@ -320,10 +323,7 @@ function Checkbox({ checked }: { checked: boolean | 'mixed' }) {
 export function busyText(ranges: TimeRange[] | undefined, t: Translations, locale: string, uses24: boolean): string | undefined {
   const busy = (ranges ?? []).filter(r => r.type === 'busy');
   if (busy.length === 0) return undefined;
-  if (busy.length === 1 && busy[0].start === '00:00' && (busy[0].end === '23:59' || busy[0].end === '24:00')) {
-    return t.rehearsals.wholeDay;
-  }
-  return busy.map(r => formatTimeRange(r.start, r.end, locale, uses24)).join(', ');
+  return busy.map(r => busySpanText(r, t, locale, uses24)).join(', ');
 }
 
 const styles = StyleSheet.create({

@@ -26,8 +26,8 @@ it('gives notifications as examples, not the form’s buttons', () => {
   const view = openStep();
   expect(view.queryByText('Add Rehearsal')).toBeNull();
   expect(view.queryByText('Save Changes')).toBeNull();
-  expect(view.getByText('You were added to a rehearsal')).toBeTruthy();
-  expect(view.getByText('A rehearsal’s time changed')).toBeTruthy();
+  expect(view.getByText('You Were Added to a Rehearsal')).toBeTruthy();
+  expect(view.getByText('Rehearsal Time Changed')).toBeTruthy();
 });
 
 it('draws them as a list, without a button’s frame', () => {
@@ -42,7 +42,7 @@ it('draws them as a list, without a button’s frame', () => {
 it('says them in Russian to a Russian app', () => {
   mockLanguage.current = 'ru';
   const view = openStep();
-  expect(view.getByText('Вас добавили в репетицию')).toBeTruthy();
+  expect(view.getByText('Вас позвали на репетицию')).toBeTruthy();
   expect(view.getByText('Время репетиции изменилось')).toBeTruthy();
   mockLanguage.current = 'en';
 });

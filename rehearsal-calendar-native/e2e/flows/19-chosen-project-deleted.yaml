@@ -3,12 +3,19 @@
 # becomes his chosen project. He deletes it. The old app kept the chosen
 # project as a copy of the object, and the form opened on the deleted Estate;
 # now the choice is read from the list as it is, and it falls to the Mill.
+#
+# And the deletion reads as a native speaker's (T-256): the question says the
+# member list goes with the project, not "members ... will be permanently
+# deleted", as if the people were; the notice after it is "Project deleted",
+# no "successfully". The flow goes on whatever the words, and fails at the end
+# naming every one that was wrong.
 appId: ${APP_ID}
 name: Chosen project deleted
 tags:
   - projects
   - rehearsals
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -49,12 +56,22 @@ tags:
 - extendedWaitUntil:
     visible: "Delete Project?"
     timeout: 10000
+- runFlow:
+    when:
+      notVisible: ".*All rehearsals, the member list, and other project data will be permanently deleted\\..*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: the member list, not the members, deleted | '}"
 - tapOn:
     text: "Delete Project"
     below: "Delete Project\\?"
 - extendedWaitUntil:
-    visible: "Project successfully deleted"
+    visible: "Project (successfully )?deleted"
     timeout: 15000
+- runFlow:
+    when:
+      notVisible: "Project deleted"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Project deleted, no successfully | '}"
 - tapOn: "OK"
 - tapOn:
     id: tab-create
@@ -71,3 +88,13 @@ tags:
     id: rehearsal-project
     text: ".*Pishchik Estate.*"
 - takeScreenshot: 19-form-on-a-project-that-exists
+
+- evalScript: "${console.log('19 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

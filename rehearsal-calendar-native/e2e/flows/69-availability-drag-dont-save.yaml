@@ -1,5 +1,5 @@
 # The availability editor pulled down by its handle with the day changed asks
-# as its arrow does, and "Don't Save" puts the day back and collapses it: the
+# as its arrow does, and "Don’t Save" puts the day back and collapses it: the
 # screen stays (T-030; owner, 04.11.2026). The swipe had closed the whole
 # screen.
 #
@@ -18,9 +18,9 @@ tags:
     id: mode-free
 - runFlow: ../subflows/availability-pull-editor-down.yaml
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
-- tapOn: "Don't Save"
+- tapOn: "Don’t Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-save

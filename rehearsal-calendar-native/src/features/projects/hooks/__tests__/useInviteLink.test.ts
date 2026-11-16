@@ -60,8 +60,8 @@ describe('useInviteLink Hook', () => {
 
       // The sheet gets the localized message, the project name and the link
       expect(shareSpy).toHaveBeenCalledWith({
-        message: `Присоединяйся к проекту "${PROJECT}" в приложении Rehearsly:\n\n${mockInviteUrl}`,
-        title: `Приглашение в проект ${PROJECT}`,
+        message: `Присоединяйтесь к проекту «${PROJECT}» в приложении Rehearsly:\n\n${mockInviteUrl}`,
+        title: `Приглашение в проект «${PROJECT}»`,
       });
 
       // No alert on the happy path — the sheet is the whole feedback
@@ -189,8 +189,8 @@ describe('useInviteLink Hook', () => {
       expect(shareSpy).toHaveBeenCalledTimes(2);
       // Each call carries its own project name, not the first one's
       expect(shareSpy).toHaveBeenNthCalledWith(2, {
-        message: `Присоединяйся к проекту "Лебединое озеро" в приложении Rehearsly:\n\nhttps://rehearsly.me/invite/def456`,
-        title: 'Приглашение в проект Лебединое озеро',
+        message: `Присоединяйтесь к проекту «Лебединое озеро» в приложении Rehearsly:\n\nhttps://rehearsly.me/invite/def456`,
+        title: 'Приглашение в проект «Лебединое озеро»',
       });
     });
   });
@@ -234,8 +234,8 @@ describe('useInviteLink Hook', () => {
       });
 
       expect(shareSpy).toHaveBeenCalledWith({
-        message: `Присоединяйся к проекту "${PROJECT}" в приложении Rehearsly:\n\n`,
-        title: `Приглашение в проект ${PROJECT}`,
+        message: `Присоединяйтесь к проекту «${PROJECT}» в приложении Rehearsly:\n\n`,
+        title: `Приглашение в проект «${PROJECT}»`,
       });
     });
   });

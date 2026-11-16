@@ -1,0 +1,31 @@
+T-250 — flow 89 (names and counts in a sentence), red on the old words, green after.
+
+Kabanikha (account in Spanish) plans tomorrow 10:00 over Tikhon's busy hours,
+switches to Russian, opens Tikhon's row in «Гроза» (remove, make admin — both
+cancelled), plans the same in Russian, deletes her account with her two
+projects. Each text is checked where it shows; the flow fails at the end
+naming every wrong one.
+
+All translations put back as they were before T-250
+(git restore --source=8110068 -- src/i18n/translations), flow 89 as in 6a158c7:
+
+$ npm run e2e -- e2e/flows/89-names-and-counts-read-right.yaml
+
+[Failed] Names and counts read right (3m 15s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+maestro.log (e2e/out/artifacts/2026-11-12_195111):
+JsConsole: 89 not as a native speaker writes it: "es: the conflict | ru: removing a member | ru: making an admin | ru: the conflict | ru: the account deleted | ru: the projects deleted with the account | "
+
+That is: "Тихон Кабанов está ocupado/a a esa hora"; «Вы уверены, что хотите
+удалить Тихон Кабанов из проекта?»; «…назначить Тихон Кабанов
+администратором проекта?»; «Тихон Кабанов занят(а) в это время»; «Аккаунт
+успешно удален»; «Будут удалены 2 проекта, где вы единственный администратор.»
+
+Then git restore --source=HEAD -- src/i18n/translations.
+
+On HEAD:
+$ npm run e2e -- e2e/flows/89-names-and-counts-read-right.yaml
+[Passed] Names and counts read right (4m 12s)
+1/1 Flow Passed in 4m 13s

@@ -8,6 +8,7 @@ name: Invite link during onboarding
 tags:
   - invite
   - auth
+  - onboarding
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -26,8 +27,13 @@ tags:
     id: onboarding-skip
 - tapOn:
     id: onboarding-skip
-# The confirmation is the system's alert, which carries no testID.
-- tapOn: "Yes"
+# The confirmation is the system's alert, which carries no testID. It asks
+# nothing, so its one button is "OK", not "Yes" (T-261).
+- extendedWaitUntil:
+    visible: "Settings Are in Your Profile"
+    timeout: 10000
+- assertNotVisible: "Yes"
+- tapOn: "OK"
 - extendedWaitUntil:
     visible:
       id: join-project-name

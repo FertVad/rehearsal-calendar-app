@@ -1,0 +1,34 @@
+T-257: flow 23's German part (the picker in German), red on the old code, green on the fix.
+
+Why a probe and not flow 23 whole: run at 22:46 Tel Aviv time, flow 23 failed
+at step 59, before any step of T-257 - the planner's week read "Nov 14 – Nov 19"
+(late in the evening the planner starts the week tomorrow), the seed's
+WEEK_CHOSEN_LABEL said "Nov 13 – Nov 19". T-257 changes nothing there
+(timezones.ts and the two pickers only). So the part T-257 added was run in
+probe-23-german-part.yaml: the same sign-in, Tokyo chosen as flow 23 chooses
+it, then T-257's steps word for word. The probe was put in e2e/flows only for
+these runs.
+
+Green, on 335a632 (the fix):
+$ npm run e2e -- e2e/flows/zz-probe-t257.yaml
+[Passed] T-257 probe - the picker in German (2m 11s)
+1/1 Flow Passed in 2m 11s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Red, on the old code:
+$ git restore --source=3b16cd5 -- src/shared/constants/timezones.ts \
+    src/features/profile/screens/ProfileScreen.tsx \
+    src/features/projects/screens/CreateProjectScreen.tsx
+$ npm run e2e -- e2e/flows/zz-probe-t257.yaml
+[Failed] T-257 probe - the picker in German (1m 54s) (Assertion is false: ".*Tokio \(UTC\+9\).*", id: profile-timezone is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+$ git restore --source=HEAD -- (the same files)
+
+The old profile in German read "Tokyo (UTC+9)": English, as every city in
+German and Spanish did.
+
+The first green try failed on the flow's own step, not the app: it asked for
+"Tokio (UTC+9)" in the open list, where Tokyo is below the screen; the screen
+showed the list in German ("Mexiko-Stadt (UTC-6)", "Bogotá (UTC-5)") and the
+profile "Tokio (UTC+9)". The step now asks for Mexiko-Stadt, at the top.

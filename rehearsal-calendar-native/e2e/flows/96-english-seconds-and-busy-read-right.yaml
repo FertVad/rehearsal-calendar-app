@@ -1,0 +1,230 @@
+# English as the native speaker of T-256 wrote it, where the words come from a
+# function and a number or a list chooses them:
+# - a save over two busy people warns "Busy at this time: Bob Acres, Lucius
+#   OTrigger", not "Bob Acres, Lucius OTrigger are busy at this time" — a list
+#   of names before "are" read as a run-on (en, rehearsals.busyAtThisTime);
+# - the button after codes are sent counts down "You can ask for a new code
+#   in 59 seconds" — "1 second" at the last — not "in 59 s" (auth.resendIn);
+# - codes asked for again within their minute: "Wait 58 seconds and try
+#   again.", not "Wait 58 s and try again." (auth.rateLimited). The server
+#   refuses a second code to the same person within a minute (issueCode,
+#   RATE_LIMITED with retryAfter) — one request, not the server's limit on
+#   /api/auth/*, so no other flow is touched;
+# - the line under the form's participants names the first one busy in full,
+#   says "all day" for a whole day, and counts the rest after the name: "Busy:
+#   Bob Acres (all day) and 1 more", not "Acres is busy 12:00 AM–11:59 PM and
+#   1 more" (T-261), one line, uncut.
+#
+# Lydia's account speaks English. Bob Acres and Lucius OTrigger, of her «The
+# Rivals», are busy tomorrow: Acres all day, OTrigger 10:00-14:00. She plans tomorrow at 10:00 from the
+# planner, saves, and declines the warning; opens the address change from her
+# profile and asks for codes, leaves it, opens it again and asks again at
+# once. Nothing is saved or changed. Each text is checked where it shows and
+# the flow goes on, so a run on the old words names every one; it fails at
+# the end if any was wrong.
+appId: ${APP_ID}
+name: English seconds and busy people read right
+tags:
+  - language
+  - planner
+  - rehearsals
+  - participants
+  - profile
+  - auth
+env:
+  NEW_EMAIL: lydia.absolute@e2e.test
+---
+- evalScript: ${output.wrong = ''}
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${LYDIA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# Tomorrow at 10:00 from the planner: Acres and OTrigger busy.
+- tapOn:
+    id: tab-planner
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-add-${TOMORROW_DAY}-10:00
+      SEE: "Add Rehearsal"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: participants-conflict
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 96-busy-line-en
+# The line under the participants (T-261): a label, his full name, "all day"
+# for a day he is busy whole, and how many more. It said "Acres is busy
+# 12:00 AM–11:59 PM and 1 more": the surname alone, the clock for the whole
+# day, and "and 1 more" after the time, as if another span.
+- runFlow:
+    when:
+      notVisible:
+        id: participants-conflict
+        text: "Busy: Bob Acres \\(all day\\) and 1 more"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Busy: Bob Acres (all day) and 1 more | '}"
+- runFlow:
+    when:
+      notVisible:
+        id: participants-row
+        text: "Participants, 3 of 3, Busy: Bob Acres \\(all day\\) and 1 more"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: the participants row says it to VoiceOver too | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 96-busy-line-en
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'en: the busy line ' + output.cut + ' | ' : '')}"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-submit
+      SEE: ".*Schedule Conflict"
+      WAIT_MS: "10000"
+- takeScreenshot: 96-two-busy-en
+- runFlow:
+    when:
+      notVisible: "Busy at this time: (Bob Acres, Lucius OTrigger|Lucius OTrigger, Bob Acres)\\n\\n[\\s\\S]*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Busy at this time: …, not … are busy at this time | '}"
+# The alert's Cancel, not the form's close, which is labelled Cancel too.
+- tapOn:
+    text: "Cancel"
+    below: "Create Anyway"
+- extendedWaitUntil:
+    notVisible: ".*Schedule Conflict"
+    timeout: 10000
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Don’t Save"
+    commands:
+      - tapOn: "Don’t Save"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000
+
+# Codes for a new address: the button counts the minute down.
+- tapOn:
+    id: tab-profile
+- tapOn:
+    id: profile-edit
+- tapOn:
+    id: profile-change-email
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: change-new-email
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${NEW_EMAIL}
+      - assertVisible:
+          id: change-new-email
+          text: ${NEW_EMAIL}
+- tapOn:
+    id: change-password
+- inputText: ${PASSWORD}
+- assertVisible:
+    id: change-password
+    text: ${'•'.repeat(PASSWORD.length)}
+# hideKeyboard finds no dismiss action here; a tap off the fields closes it.
+- tapOn:
+    id: change-subtitle
+- tapOn:
+    id: change-send
+- extendedWaitUntil:
+    visible:
+      id: change-new-code
+    timeout: 30000
+- tapOn:
+    id: change-subtitle
+- extendedWaitUntil:
+    visible: "You can ask for a new code in .*"
+    timeout: 10000
+- takeScreenshot: 96-resend-in-en
+- runFlow:
+    when:
+      notVisible: "You can ask for a new code in ([0-9]+ seconds|1 second)"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: in N seconds, not in N s | '}"
+
+# Left and opened again: asked again within the minute, the server refuses.
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    visible:
+      id: profile-change-email
+    timeout: 10000
+- tapOn:
+    id: profile-change-email
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: change-new-email
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${NEW_EMAIL}
+      - assertVisible:
+          id: change-new-email
+          text: ${NEW_EMAIL}
+- tapOn:
+    id: change-password
+- inputText: ${PASSWORD}
+- assertVisible:
+    id: change-password
+    text: ${'•'.repeat(PASSWORD.length)}
+- tapOn:
+    id: change-subtitle
+- tapOn:
+    id: change-send
+- extendedWaitUntil:
+    visible: "Wait [0-9]+ .*"
+    timeout: 20000
+- takeScreenshot: 96-rate-limited-en
+- runFlow:
+    when:
+      notVisible: "Wait ([0-9]+ seconds|1 second) and try again\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Wait N seconds and try again, not Wait N s | '}"
+- assertNotVisible:
+    id: change-new-code
+
+- evalScript: "${console.log('96 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

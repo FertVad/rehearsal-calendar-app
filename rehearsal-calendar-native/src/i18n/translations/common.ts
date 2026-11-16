@@ -23,7 +23,9 @@ export interface CommonTranslations {
   from: string;
   to: string;
   done: string;
-  yes: string;
+  /** The one button of a notice that asks nothing, as iOS has it: "Да" and
+   *  "Ja" answered a question nobody asked (onboarding's Skip, T-261). */
+  ok: string;
   /** Leaving a sheet with unsaved changes: the destructive choice (useLeaveGuard). */
   dontSave: string;
   /** Its title where there is no action sheet (Android). */
@@ -34,6 +36,12 @@ export interface NavTranslations {
   calendar: string;
   projects: string;
   addRehearsal: string;
+  /**
+   * The Planner tab's label and its screen's large title: "Planner" in every
+   * language, as "Smart Planner" is — the owner's decision (11.11.2026, T-249).
+   * T-032 had translated it on a review's word; do not translate it again
+   * (navPlanner.test).
+   */
   planner: string;
   profile: string;
 }
@@ -60,26 +68,28 @@ export interface DaysTranslations {
 export const ru = {
   common: {
     save: 'Сохранить',
-    cancel: 'Отмена',
+    cancel: 'Отменить',
     retry: 'Повторить',
     back: 'Назад',
     delete: 'Удалить',
     close: 'Закрыть',
     today: 'Сегодня',
-    loading: 'Загрузка...',
+    loading: 'Загрузка…',
     error: 'Ошибка',
     noConnection: 'Нет соединения. Проверьте интернет и попробуйте ещё раз.',
     serverUnavailable: 'Сервер недоступен. Попробуйте позже.',
-    success: 'Успех',
+    success: 'Готово',
     deselect: 'Снять выбор',
     saved: 'Сохранено',
     selectPeriod: 'Выберите период',
     invalidDateRange: 'Выберите корректные даты начала и окончания.',
-    dateRangeTooLong: (maxDays: number) => `Выберите период не длиннее ${maxDays} дней, включая первый и последний день.`,
-    from: 'От:',
-    to: 'До:',
+    // "не длиннее 31 дня", "не длиннее 90 дней": the genitive, singular after 1.
+    dateRangeTooLong: (maxDays: number) =>
+      `Выберите период не длиннее ${maxDays} ${maxDays % 10 === 1 && maxDays % 100 !== 11 ? 'дня' : 'дней'}, включая первый и последний.`,
+    from: 'С:',
+    to: 'По:',
     done: 'Готово',
-    yes: 'Да',
+    ok: 'ОК',
     dontSave: 'Не сохранять',
     unsavedChanges: 'Изменения не сохранены',
   },
@@ -87,11 +97,11 @@ export const ru = {
     calendar: 'Календарь',
     projects: 'Проекты',
     addRehearsal: '',
-    planner: 'Планер',
+    planner: 'Planner',
     profile: 'Профиль',
   },
   actionSheet: {
-    title: 'Новое действие',
+    title: 'Добавить',
     createRehearsal: 'Создать репетицию',
     markBusy: 'Отметить занятость',
     createProject: 'Создать проект',
@@ -113,27 +123,27 @@ export const en = {
   common: {
     save: 'Save',
     cancel: 'Cancel',
-    retry: 'Try again',
+    retry: 'Try Again',
     back: 'Back',
     delete: 'Delete',
     close: 'Close',
     today: 'Today',
-    loading: 'Loading...',
+    loading: 'Loading…',
     error: 'Error',
-    noConnection: 'No connection. Check the internet and try again.',
+    noConnection: 'Could not connect. Check your internet connection and try again.',
     serverUnavailable: 'The server is unavailable. Try again later.',
-    success: 'Success',
+    success: 'Done',
     deselect: 'Deselect',
     saved: 'Saved',
-    selectPeriod: 'Select Period',
+    selectPeriod: 'Select Dates',
     invalidDateRange: 'Choose valid start and end dates.',
-    dateRangeTooLong: (maxDays: number) => `Choose a range of up to ${maxDays} days, including the first and last day.`,
+    dateRangeTooLong: (maxDays: number) => `Choose a range of up to ${maxDays} ${maxDays === 1 ? 'day' : 'days'}, including the first and last day.`,
     from: 'From:',
     to: 'To:',
     done: 'Done',
-    yes: 'Yes',
-    dontSave: "Don't Save",
-    unsavedChanges: 'Unsaved changes',
+    ok: 'OK',
+    dontSave: 'Don’t Save',
+    unsavedChanges: 'Unsaved Changes',
   },
   nav: {
     calendar: 'Calendar',
@@ -143,7 +153,7 @@ export const en = {
     profile: 'Profile',
   },
   actionSheet: {
-    title: 'New Action',
+    title: 'Quick Actions',
     createRehearsal: 'Create Rehearsal',
     markBusy: 'Mark Busy',
     createProject: 'Create Project',
@@ -170,11 +180,11 @@ export const es = {
     delete: 'Eliminar',
     close: 'Cerrar',
     today: 'Hoy',
-    loading: 'Cargando...',
+    loading: 'Cargando…',
     error: 'Error',
-    noConnection: 'Sin conexión. Revisa internet e inténtalo de nuevo.',
+    noConnection: 'Sin conexión. Comprueba que tienes internet e inténtalo de nuevo.',
     serverUnavailable: 'El servidor no está disponible. Inténtalo más tarde.',
-    success: 'Éxito',
+    success: 'Listo',
     deselect: 'Quitar selección',
     saved: 'Guardado',
     selectPeriod: 'Seleccionar período',
@@ -182,8 +192,8 @@ export const es = {
     dateRangeTooLong: (maxDays: number) => `Elige un período de hasta ${maxDays} días, incluidos el primero y el último.`,
     from: 'Desde:',
     to: 'Hasta:',
-    done: 'Listo',
-    yes: 'Sí',
+    done: 'OK',
+    ok: 'OK',
     dontSave: 'No guardar',
     unsavedChanges: 'Cambios sin guardar',
   },
@@ -191,13 +201,13 @@ export const es = {
     calendar: 'Calendario',
     projects: 'Proyectos',
     addRehearsal: '',
-    planner: 'Planificador',
+    planner: 'Planner',
     profile: 'Perfil',
   },
   actionSheet: {
     title: 'Nueva acción',
     createRehearsal: 'Crear ensayo',
-    markBusy: 'Marcar ocupado',
+    markBusy: 'Marcar horas ocupadas',
     createProject: 'Crear proyecto',
   },
   days: {
@@ -222,32 +232,32 @@ export const de = {
     delete: 'Löschen',
     close: 'Schließen',
     today: 'Heute',
-    loading: 'Wird geladen...',
+    loading: 'Wird geladen …',
     error: 'Fehler',
-    noConnection: 'Keine Verbindung. Prüfe das Internet und versuche es erneut.',
+    noConnection: 'Keine Verbindung. Prüfe deine Internetverbindung und versuche es erneut.',
     serverUnavailable: 'Der Server ist nicht erreichbar. Versuche es später erneut.',
-    success: 'Erfolg',
+    success: 'Erledigt',
     deselect: 'Auswahl aufheben',
     saved: 'Gespeichert',
     selectPeriod: 'Zeitraum auswählen',
-    invalidDateRange: 'Wähle gültige Start- und Enddaten.',
-    dateRangeTooLong: (maxDays: number) => `Wähle einen Zeitraum von höchstens ${maxDays} Tagen, einschließlich des ersten und letzten Tages.`,
+    invalidDateRange: 'Wähle ein gültiges Start- und Enddatum.',
+    dateRangeTooLong: (maxDays: number) => `Wähle einen Zeitraum von höchstens ${maxDays} ${maxDays === 1 ? 'Tag' : 'Tagen'}, einschließlich des ersten und letzten Tages.`,
     from: 'Von:',
     to: 'Bis:',
     done: 'Fertig',
-    yes: 'Ja',
-    dontSave: 'Nicht sichern',
-    unsavedChanges: 'Nicht gesicherte Änderungen',
+    ok: 'OK',
+    dontSave: 'Nicht speichern',
+    unsavedChanges: 'Ungespeicherte Änderungen',
   },
   nav: {
     calendar: 'Kalender',
     projects: 'Projekte',
     addRehearsal: '',
-    planner: 'Planer',
+    planner: 'Planner',
     profile: 'Profil',
   },
   actionSheet: {
-    title: 'Neue Aktion',
+    title: 'Was möchtest du tun?',
     createRehearsal: 'Probe erstellen',
     markBusy: 'Als beschäftigt markieren',
     createProject: 'Projekt erstellen',

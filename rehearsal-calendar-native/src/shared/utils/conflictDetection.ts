@@ -2,6 +2,7 @@ import { TimeRange } from './availability';
 import { ProjectMember } from '../types';
 import type { Translations } from '../../i18n/translations';
 import { clockRangeMinutes, minuteRangesOverlap } from './time';
+import { formatTimeRange } from './clockFormat';
 
 export interface ConflictInfo {
   hasConflicts: boolean;
@@ -75,12 +76,35 @@ export function formatConflictMessage(conflictInfo: ConflictInfo, t: Translation
   }
 
   const memberNames = conflictInfo.busyMembers
-    .map(({ member }) => {
-      const firstName = member.firstName || t.projects.member;
-      const lastName = member.lastName || '';
-      return `${firstName} ${lastName}`.trim();
-    })
+    .map(({ member }) => memberFullName(member, t))
     .join(', ');
 
   return t.rehearsals.busyAtThisTime(memberNames, conflictInfo.busyMembers.length);
+}
+
+/** Someone busy, by full name, as the warning on save and the Planner name them. */
+function memberFullName(member: ProjectMember, t: Translations): string {
+  return `${member.firstName || t.projects.member} ${member.lastName || ''}`.trim();
+}
+
+/**
+ * One busy span in words: its times, or the whole day for 00:00–23:59. The
+ * participants sheet and the line under the form's participants both say it
+ * so; the line showed "12:00 AM–11:59 PM" for someone busy all day (T-261).
+ */
+export function busySpanText(range: TimeRange, t: Translations, locale: string, uses24: boolean): string {
+  if (range.start === '00:00' && (range.end === '23:59' || range.end === '24:00')) return t.rehearsals.wholeDay;
+  return formatTimeRange(range.start, range.end, locale, uses24);
+}
+
+/**
+ * The line under the form's participants: the first one busy, by full name,
+ * with the span that clashes, and how many more — "Busy: Maya Lopez (6:00
+ * PM–9:00 PM) and 2 more". Only the surname was given (T-261).
+ */
+export function busyLine(conflictInfo: ConflictInfo, t: Translations, locale: string, uses24: boolean): string | undefined {
+  const [first, ...rest] = conflictInfo.busyMembers;
+  if (!first) return undefined;
+  const line = t.rehearsals.busyAt(memberFullName(first.member, t), busySpanText(first.conflictingSlots[0], t, locale, uses24));
+  return rest.length ? `${line} ${t.rehearsals.andMore(rest.length)}` : line;
 }

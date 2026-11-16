@@ -31,7 +31,7 @@ tags:
 # The row reads its texts joined: the title, the time, the place, the project
 # and the mark.
 - extendedWaitUntil:
-    visible: "(?s).*Ball rehearsal.*Estate Ball.*You are not in the cast.*"
+    visible: "(?s).*Ball rehearsal.*Estate Ball.*Not on this rehearsal.*"
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 78-all-projects-not-in-cast
@@ -48,12 +48,12 @@ tags:
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "(?s).*Ball rehearsal.*You are not in the cast.*"
+      TAP: "(?s).*Ball rehearsal.*Not on this rehearsal.*"
       SEE: "Leonid Gaev.*"
       WAIT_MS: "15000"
 - assertVisible:
     id: rehearsal-details-not-on-roster
-    text: "You are not in the cast"
+    text: "Not on this rehearsal"
 - assertNotVisible:
     id: own-seen-toggle
 - takeScreenshot: 78-details-not-in-cast

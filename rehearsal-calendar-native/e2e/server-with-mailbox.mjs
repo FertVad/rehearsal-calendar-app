@@ -68,6 +68,13 @@
  * took. A silent connection is closed after HOLD_WINDOW_MS, if the app has not
  * given up on it first.
  *
+ * With `&fail=<status>` the request is not handled: it is answered at once with
+ * that status and `{ error, code }` from `&error=` and `&code=` (either may be
+ * left out) — an answer the server gives in a state the stand cannot reach:
+ * its mail provider down, `503` with `EMAIL_UNAVAILABLE` as passwordReset.js
+ * says it (flow 93), or a refusal the app has no words of its own for, a `400`
+ * with no code, as a proxy in front of the server gives one (flow 93, T-256).
+ *
  * With `&once=1` only the next matching request is held, and the ones after it
  * go through: a read on a slow connection and the change after it on a good
  * one (flow 36). A request held `before` says how the server answered it on
@@ -83,11 +90,28 @@
  *                                                  "New member" about that
  *                                                  project, sent as the join
  *                                                  sends it (flow 61)
+ *   GET /notify?to=<address>&type=admin_appointed&project=<name>&member=<who>
+ *                                                  "New administrator" about
+ *                                                  that project, as a role
+ *                                                  given tells the others who
+ *                                                  run it (flow 88)
  *   GET /notify?to=<address>&type=rehearsal_updated&rehearsal=<title>&change=<key>
  *   GET /notify?to=<address>&type=member_response&rehearsal=<title>&member=<who>
  *                                                  that rehearsal changed, or
  *                                                  answered, sent as an edit
  *                                                  and a "yes" send it (flow 62)
+ *   GET /notify?to=<address>&type=rehearsal_created&rehearsal=<title>
+ *   GET /notify?to=<address>&type=added_to_rehearsal&rehearsal=<title>
+ *   GET /notify?to=<address>&type=rehearsal_deleted&rehearsal=<title>
+ *                                                  a new rehearsal, one they
+ *                                                  were put on, or one
+ *                                                  cancelled, in their
+ *                                                  language (flow 86)
+ *   GET /notify?to=<address>&type=role_changed&project=<name>&role=<r>
+ *   GET /notify?to=<address>&type=member_removed&project=<name>
+ *                                                  the notice of a role given
+ *                                                  or of being removed, and
+ *                                                  nothing more (flow 86)
  *
  * It measures an icon on a screenshot a flow took, which Maestro cannot: a
  * button that is only an icon is one element, the size of its target (ink.mjs):
@@ -138,7 +162,10 @@ import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
-import { notifyMemberJoined, notifyMemberResponse, notifyRehearsalUpdated } from '../server/services/notifications/pushNotificationService.js';
+import {
+  notifyAddedToRehearsal, notifyAdminAppointed, notifyMemberJoined, notifyMemberRemoved, notifyMemberResponse, notifyRehearsalCreated,
+  notifyRehearsalDeleted, notifyRehearsalUpdated, notifyRoleChanged,
+} from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
 import { ellipses, inkBox } from './ink.mjs';
 
@@ -323,6 +350,12 @@ function holdAnswer(request, response, handle) {
     console.log(`[e2e] dropped the request ${request.method} ${pathname}: its connection closed, no answer`);
     request.socket.destroy();
   };
+  if (hold.fail) {
+    console.log(`[e2e] answered ${request.method} ${pathname} with ${hold.fail.status}${hold.fail.body.code ? ` ${hold.fail.body.code}` : ''}, not handled`);
+    request.resume();
+    response.writeHead(hold.fail.status, { 'Content-Type': 'application/json' });
+    return response.end(JSON.stringify(hold.fail.body));
+  }
   if (hold.drop && !hold.before) return drop();
   if (hold.lose) return loseAnswer(request, response, handle);
   if (hold.open) return holdOpen(request, response, hold);
@@ -406,10 +439,21 @@ http.createServer((request, response) => {
     const drop = url.searchParams.get('drop') === '1';
     const lose = url.searchParams.get('lose') === '1';
     const dead = url.searchParams.get('dead') === '1';
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, dead, until: Date.now() + HOLD_WINDOW_MS });
+    const failStatus = Number(url.searchParams.get('fail'));
+    const fail = failStatus >= 400 && failStatus <= 599
+      ? {
+          status: failStatus,
+          body: Object.fromEntries(['error', 'code']
+            .filter((key) => url.searchParams.get(key))
+            .map((key) => [key, url.searchParams.get(key)])),
+        }
+      : null;
+    if (url.searchParams.has('fail') && !fail) return answer(400, { error: 'fail is a status from 400 to 599' });
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, dead, fail, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
-  if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {
+  const told = url.searchParams.get('type');
+  if (request.method === 'GET' && url.pathname === '/notify' && ['member_joined', 'admin_appointed', 'role_changed', 'member_removed'].includes(told)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const projectName = url.searchParams.get('project') || '';
     const member = url.searchParams.get('member') || 'Somebody';
@@ -418,15 +462,22 @@ http.createServer((request, response) => {
       if (!user) return answer(404, { error: `no account ${to}` });
       const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
       if (!project) return answer(404, { error: `no project ${projectName}` });
-      // As the join tells them (inviteRedemption.js), the server's own words and data.
-      await notifyMemberJoined(project.name, member, [user.id], project.id);
-      console.log(`[e2e] told ${to} that ${member} joined ${project.name}`);
+      // As the join, a role given (to them, or to another, told to those who
+      // run the project) and a removal tell them (inviteRedemption.js,
+      // routes/native/members.js), the server's own words and data. Only the
+      // notice: the role and the membership stay as they are.
+      if (told === 'member_joined') await notifyMemberJoined(project.name, member, [user.id], project.id);
+      else if (told === 'admin_appointed') await notifyAdminAppointed(project.name, member, [user.id], project.id);
+      else if (told === 'role_changed') await notifyRoleChanged(project.name, user.id, url.searchParams.get('role') || 'admin');
+      else await notifyMemberRemoved(project.name, user.id);
+      console.log(`[e2e] told ${to} of ${told} in ${project.name}`);
       return answer(200, { recorded: 1 });
     })().catch((error) => answer(500, { error: String(error) }));
     return;
   }
   const about = url.searchParams.get('type');
-  if (request.method === 'GET' && url.pathname === '/notify' && (about === 'rehearsal_updated' || about === 'member_response')) {
+  if (request.method === 'GET' && url.pathname === '/notify'
+    && ['rehearsal_updated', 'member_response', 'rehearsal_created', 'added_to_rehearsal', 'rehearsal_deleted'].includes(about)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const title = url.searchParams.get('rehearsal') || '';
     (async () => {
@@ -435,10 +486,18 @@ http.createServer((request, response) => {
       const rehearsal = await db.get('SELECT * FROM native_rehearsals WHERE title = $1', [title]);
       if (!rehearsal) return answer(404, { error: `no rehearsal ${title}` });
       const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [rehearsal.project_id]);
-      // As an edit and a "yes" tell them (routes/native/rehearsals.js), the
-      // server's own words, on the reader's clock.
+      // As an edit, a "yes", a new rehearsal and a cast that grew tell them
+      // (routes/native/rehearsals.js), the server's own words, on the reader's
+      // clock and in the reader's language.
       if (about === 'rehearsal_updated') {
         await notifyRehearsalUpdated(rehearsal, project.name, [{ user_id: user.id }], [url.searchParams.get('change') || 'location']);
+      } else if (about === 'rehearsal_created') {
+        await notifyRehearsalCreated(rehearsal, project.name, [{ user_id: user.id }]);
+      } else if (about === 'added_to_rehearsal') {
+        await notifyAddedToRehearsal(rehearsal, project.name, [{ user_id: user.id }]);
+      } else if (about === 'rehearsal_deleted') {
+        // Only the notice: the rehearsal stays.
+        await notifyRehearsalDeleted(rehearsal, project.name, [{ user_id: user.id }]);
       } else {
         await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
       }

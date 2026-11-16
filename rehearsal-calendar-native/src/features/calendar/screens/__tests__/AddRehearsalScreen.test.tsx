@@ -250,11 +250,33 @@ describe('The participants row (T-010)', () => {
     await settle();
 
     expect(screen.getByTestId('participants-row').props.accessibilityLabel)
-      .toBe('Participants, 3 of 3, Name7 busy 11:00–14:00');
+      .toBe('Participants, 3 of 3, Busy: Name7 (11:00–14:00)');
     // The sheet: their busy time beside them, nobody else's.
     fireEvent.press(screen.getByTestId('participants-row'));
     expect(screen.getByTestId('participant-7').props.accessibilityLabel).toBe('Name7, 11:00–14:00');
     expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Name3');
+  });
+
+  // The line said only the surname, and the clock for someone busy all day:
+  // "Lopez is busy 12:00 AM–11:59 PM". It names them in full, as the Planner
+  // and the warning on save do, and says "all day" as the sheet does (T-261).
+  it('names the first one busy in full, all day as the sheet says it, and how many more', async () => {
+    getMembers.mockImplementation(async () => ({ data: { members: [
+      { userId: '3', firstName: 'Maya', lastName: 'Lopez', role: 'member', status: 'active' },
+      { userId: '7', firstName: 'Anna', lastName: 'Smith', role: 'member', status: 'active' },
+      { userId: '9', firstName: 'Boris', lastName: '', role: 'member', status: 'active' },
+    ] } }));
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue({ data: { availability: [
+      { userId: '3', dates: [{ date: '2026-11-10', timeRanges: [{ start: '00:00', end: '23:59', type: 'busy' }] }] },
+      { userId: '7', dates: [{ date: '2026-11-10', timeRanges: [{ start: '11:00', end: '14:00', type: 'busy' }] }] },
+      { userId: '9', dates: [{ date: '2026-11-10', timeRanges: [{ start: '09:00', end: '12:00', type: 'busy' }] }] },
+    ] } });
+    const screen = await open();
+    await settle();
+
+    expect(screen.getByTestId('participants-conflict').props.children).toBe('Busy: Maya Lopez (all day) and 2 more');
+    fireEvent.press(screen.getByTestId('participants-row'));
+    expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Maya Lopez, all day');
   });
 
   // T-017 review r1: the phone's 12/24 hours changed while the form is open.
@@ -270,7 +292,7 @@ describe('The participants row (T-010)', () => {
       act(() => __changeCalendars([{ uses24hourClock: false }]));
 
       expect(screen.getByText(/^10:00\sAM$/)).toBeTruthy();
-      expect(screen.getByTestId('participants-conflict').props.children).toMatch(/^Name7 busy 11:00\sAM–2:00\sPM$/);
+      expect(screen.getByTestId('participants-conflict').props.children).toMatch(/^Busy: Name7 \(11:00\sAM–2:00\sPM\)$/);
       fireEvent.press(screen.getByTestId('participants-row'));
       expect(screen.getByTestId('participant-7').props.accessibilityLabel).toMatch(/^Name7, 11:00\sAM–2:00\sPM$/);
     } finally {
@@ -379,7 +401,7 @@ describe('Recommended time (T-238)', () => {
     });
 
     expect(shown(screen, 'rehearsal-end-time')).toBe('16:00');
-    expect(screen.getByTestId('participants-conflict').props.children).toBe('Name9 busy 14:00–17:00');
+    expect(screen.getByTestId('participants-conflict').props.children).toBe('Busy: Name9 (14:00–17:00)');
   });
 
   // T-238 review: the start's picker confirmed as it was, or the day shown

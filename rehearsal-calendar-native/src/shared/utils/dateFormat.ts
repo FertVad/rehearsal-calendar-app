@@ -41,8 +41,6 @@ const FORMATS = {
 
 export type DateFormatName = keyof typeof FORMATS;
 
-export const DATE_FORMATS = Object.keys(FORMATS) as DateFormatName[];
-
 /** A calendar date, 'YYYY-MM-DD', or a Date read by its local fields. */
 export type CalendarDate = string | Date;
 

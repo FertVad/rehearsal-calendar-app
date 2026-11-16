@@ -9,7 +9,7 @@
  */
 import { act, renderHook } from '@testing-library/react-native';
 import { AppState } from 'react-native';
-import { localDate, useNow, useToday } from '../useClock';
+import { useNow, useToday } from '../useClock';
 
 afterEach(() => {
   jest.useRealTimers();
@@ -22,7 +22,9 @@ it('names the local date, not the UTC one (review CC01)', () => {
   // the format.
   const offset = new Date(2026, 8, 11, 12).getTimezoneOffset();
   const now = offset <= 0 ? new Date(2026, 8, 11, 0, 30) : new Date(2026, 8, 11, 23, 30);
-  expect(localDate(now)).toBe('2026-09-11');
+  jest.useFakeTimers({ now });
+  const { result } = renderHook(() => useToday());
+  expect(result.current).toBe('2026-09-11');
 });
 
 it('turns to the next day at local midnight, with the screen still open', () => {

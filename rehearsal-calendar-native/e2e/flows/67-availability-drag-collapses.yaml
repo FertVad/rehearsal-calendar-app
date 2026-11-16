@@ -19,7 +19,7 @@ tags:
     notVisible:
       id: availability-save
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 - assertVisible:
     id: availability-legend
 - assertVisible:

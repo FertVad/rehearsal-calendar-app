@@ -159,7 +159,12 @@ describe('a tapped push, with a modal screen open (T-007)', () => {
   });
 });
 
-describe('"New member" opens its project on the members (T-023)', () => {
+// "New administrator" the same way: it carried only the project's name, and
+// neither the push nor the card opened anything (T-252).
+describe.each([
+  ['member_joined', '"New member" (T-023)', 'New member', 'Nina Petrova joined Hamlet'],
+  ['admin_appointed', '"New administrator" (T-252)', 'New administrator', 'Nina Petrova is now an administrator of Hamlet'],
+])('%s: %s opens its project on the members', (type, _name, title, body) => {
   const membersOpened = (projectId: string) => ({
     screen: 'Projects',
     params: { screen: 'ProjectDetail', params: { projectId, section: 'members' }, initial: false },
@@ -177,7 +182,7 @@ describe('"New member" opens its project on the members (T-023)', () => {
     mockList.mockResolvedValueOnce({
       data: {
         notifications: [{
-          id: 6, type: 'member_joined', title: 'New member', body: 'Nina Petrova joined Hamlet', data,
+          id: 6, type, title, body, data,
           ...related, read: false, createdAt: new Date().toISOString(),
         }],
         unreadCount: 1,
@@ -186,19 +191,19 @@ describe('"New member" opens its project on the members (T-023)', () => {
     });
     const view = render(<NotificationsScreen />);
     await act(async () => { mockFocus.run?.(); });
-    await act(async () => { fireEvent.press(await view.findByText('Nina Petrova joined Hamlet')); });
+    await act(async () => { fireEvent.press(await view.findByText(body)); });
   };
 
   it('from a tapped push, over a modal', async () => {
     open('MainTabs', 'CreateProject');
-    await tap({ type: 'member_joined', projectName: 'Hamlet', projectId: 3 });
+    await tap({ type, projectName: 'Hamlet', projectId: 3 });
 
     expect(stack()).toEqual(['MainTabs']);
     expect(top().params).toEqual(membersOpened('3'));
   });
 
   it('from the inbox', async () => {
-    await inboxWith({ type: 'member_joined', projectName: 'Hamlet', projectId: 3 }, { relatedType: 'project', relatedId: 3 });
+    await inboxWith({ type, projectName: 'Hamlet', projectId: 3 }, { relatedType: 'project', relatedId: 3 });
 
     expect(stack()).toEqual(['MainTabs']);
     expect(top().params).toEqual(membersOpened('3'));
@@ -206,10 +211,10 @@ describe('"New member" opens its project on the members (T-023)', () => {
 
   it('one sent before it carried the project opens nothing, and breaks nothing', async () => {
     open('MainTabs', 'CreateProject');
-    await tap({ type: 'member_joined', projectName: 'Hamlet' });
+    await tap({ type, projectName: 'Hamlet' });
     expect(stack()).toEqual(['MainTabs', 'CreateProject']);
 
-    await inboxWith({ type: 'member_joined', projectName: 'Hamlet' }, { relatedType: null, relatedId: null });
+    await inboxWith({ type, projectName: 'Hamlet' }, { relatedType: null, relatedId: null });
     expect(stack()).toEqual(['MainTabs', 'Notifications']);
   });
 });

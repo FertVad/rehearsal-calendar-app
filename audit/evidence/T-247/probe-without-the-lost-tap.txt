@@ -1,0 +1,24 @@
+T-247: flow 73 "Seen told once" with the tap the simulator lost on d74e9d2 left out
+(probe-without-the-lost-tap.yaml, run as e2e/flows/73-probe-no-tap.yaml on 90d3edb,
+11.11.2026 19:56; npm run e2e -- e2e/flows/73-probe-no-tap.yaml)
+
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] Seen told once, the lost tap left out (1m 53s) (Assertion is false: id: seen-toggle, enabled, Right of ".*Letter scene.*", not selected is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The red run of d74e9d2 (T-246-2026-11-11T12-47-29-913Z, Maestro 2026-11-11_140329):
+[Failed] Seen told once (1m 57s) (Assertion is false: id: seen-toggle, enabled, Right of ".*Letter scene.*", not selected is visible)
+
+The same assertion, at the same step: with the tap taken or not, the screen is
+the same. Maestro's log of the probe (artifacts 2026-11-11_195650):
+
+19:58:37.738 Tap on id: seen-toggle, Right of ".*Letter scene.*" RUNNING   (seen)
+19:58:40.204 Tap on id: seen-toggle, Right of ".*Letter scene.*" RUNNING   (unseen)
+19:58:42.286 Tap on id: seen-toggle, Right of ".*Letter scene.*" RUNNING   (seen)
+19:59:23.996 Assert that id: seen-toggle, enabled, Right of ".*Letter scene.*", not selected is visible RUNNING
+19:59:34.206 CommandFailed: Assertion is false: id: seen-toggle, enabled, Right of ".*Letter scene.*", not selected is visible

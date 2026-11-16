@@ -6,7 +6,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { DATE_FORMATS, DateFormatName, formatDate, formatDateRange } from '../dateFormat';
+import { DateFormatName, formatDate, formatDateRange } from '../dateFormat';
 
 // Thursday, 29 October 2026.
 const DAY = '2026-10-29';
@@ -41,14 +41,11 @@ const EXPECTED: Record<DateFormatName, Record<'ru' | 'en' | 'es' | 'de', string>
   },
 };
 
-describe.each(DATE_FORMATS)('%s', (format) => {
+// EXPECTED is a Record over DateFormatName: a format missing here does not compile.
+describe.each(Object.keys(EXPECTED) as DateFormatName[])('%s', (format) => {
   it.each(['ru', 'en', 'es', 'de'] as const)('in %s', (language) => {
     expect(formatDate(DAY, format, language)).toBe(EXPECTED[format][language]);
   });
-});
-
-it('every format is checked here', () => {
-  expect(Object.keys(EXPECTED).sort()).toEqual([...DATE_FORMATS].sort());
 });
 
 it('reads a Date by its local fields, as a string by its calendar date', () => {

@@ -1,0 +1,87 @@
+T-248 — red before: the new expectations against the old server/i18n/pushNotifications.js
+(base 8ee76cf; only the test file changed)
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText.integration.test.js
+
+FAIL __tests__/integration/rehearsalNoticeText.integration.test.js
+  Each reader is told when, on their own clock and in their own language
+    ✕ a new rehearsal (129 ms)
+    ✓ a changed rehearsal, with what changed (3 ms)
+    ✓ a response names the rehearsal and when it is (3 ms)
+    ✕ further out, the date (5 ms)
+  Put on or taken off a rehearsal (T-233)
+    ✕ whoever is added is told which one, when and where, and a tap opens it (8 ms)
+    ✓ whoever is taken off is told so, and a tap does not try to open it (5 ms)
+  Spanish and German say a rehearsal is set for a day, in their own word order (T-248)
+    ✕ a new rehearsal tomorrow (6 ms)
+    ✕ a new rehearsal today (2 ms)
+    ✕ a new rehearsal further out, on its date (4 ms)
+    ✕ added to one, with and without a place (5 ms)
+    ✕ added to one on its date, with a place (5 ms)
+    ✕ added to one today (4 ms)
+  Any title reads correctly, whatever its gender (T-248)
+    ✕ a feminine title in Spanish, a masculine one in Russian (5 ms)
+    ✕ added to one with a neuter title in Russian (3 ms)
+    ✕ with no title, the word "rehearsal" alone (4 ms)
+  "New member"
+    ✓ carries its project, so a tap can open it (2 ms)
+
+Selected failures (expected vs received):
+
+  a new rehearsal (ru)
+    Expected: "Hamlet: Репетиция «Full dress» назначена завтра в 22:00"
+    Received: "Hamlet: Full dress назначена завтра в 22:00"
+
+  further out, the date (ru)
+    Expected pattern: /^Hamlet: Репетиция «Full dress» назначена вт, 6 окт\.? в 22:00$/
+    Received string:  "Hamlet: Full dress назначена вт, 6 окт. в 22:00"
+
+  added (ru, with place)
+    Expected: "Hamlet: Репетиция «Full dress» назначена завтра в 22:00, место: Main stage"
+    Received: "Hamlet: Full dress назначена завтра в 22:00, место: Main stage"
+
+  es, new, tomorrow
+    Expected: "Hamlet: Ensayo «Full dress» programado para mañana a las 21:00"
+    Received: "Hamlet: Full dress programado mañana a las 21:00"
+
+  es, new, today
+    Expected: "Hamlet: Ensayo «Full dress» programado para hoy a las 21:00"
+    Received: "Hamlet: Full dress programado hoy a las 21:00"
+
+  es, new, on its date
+    Expected: "Hamlet: Ensayo «Full dress» programado para el mar, 6 oct a las 21:00"
+    Received: "Hamlet: Full dress programado el mar, 6 oct a las 21:00"
+
+  es, added, with place
+    Expected: "Hamlet: Ensayo «Full dress» programado para mañana a las 21:00 en Main stage"
+    Received: "Hamlet: Full dress programado mañana a las 21:00 en Main stage"
+
+  es, added on its date, with place
+    Expected: "Hamlet: Ensayo «Full dress» programado para el mar, 6 oct a las 21:00 en Main stage"
+    Received: "Hamlet: Full dress programado el mar, 6 oct a las 21:00 en Main stage"
+
+  (the remaining failures — German "angesetzt <when>" instead of "<when> angesetzt",
+   "Escena del balcón programado", "Прогон назначена", "Чтение назначена" — fail on the
+   same old templates; the Spanish assertion stops each of the mixed es/de tests first)
+
+Test Suites: 1 failed, 1 total
+Tests:       12 failed, 4 passed, 16 total
+
+What the old templates (base 8ee76cf) render for the cases the Spanish assertion
+hid — a throwaway script that imports `git show 8ee76cf:…/pushNotifications.js`:
+
+revision 8ee76cf
+de newRehearsal: Hamlet: Full dress angesetzt morgen um 21:00
+de newRehearsal: Hamlet: Full dress angesetzt heute um 21:00
+de addedToRehearsal: Hamlet: Full dress angesetzt am Di., 6. Okt. um 21:00, Ort: Main stage
+de addedToRehearsal: Hamlet: Full dress angesetzt morgen um 21:00
+es newRehearsal: Hamlet: Escena del balcón programado mañana a las 21:00
+es newRehearsal: Hamlet: Ensayo programado mañana a las 21:00
+ru newRehearsal: Гамлет: Прогон назначена завтра в 22:00
+ru addedToRehearsal: Гамлет: Чтение назначена завтра в 22:00, место: Зал 2
+ru newRehearsal: Hamlet: Репетиция назначена завтра в 22:00
+
+Every one but the last differs from what the new test expects
+("… morgen um 21:00 angesetzt", "Ensayo «Escena del balcón» programado para …",
+"Репетиция «Прогон» назначена …"); the last — no title — was already right in
+Russian and is kept as is.

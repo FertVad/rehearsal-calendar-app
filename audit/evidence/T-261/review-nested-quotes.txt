@@ -1,0 +1,37 @@
+T-261 review: a name already nested right („Durchlauf ‚Die Möwe‘“) lost its
+outer pair - the “ after the closing ‘ was read as an opening mark.
+Fix: 65a95cb (shared/quoteName.cjs) - a mark right after another goes that
+one's way; only a mark at the start or after a space, bracket or dash opens.
+
+== Jest, client (src/i18n/__tests__/secondReading.test.ts), before the fix ==
+FAIL src/i18n/__tests__/secondReading.test.ts
+  ● T-261: a name typed in quotes is not quoted twice › a name already nested right keeps its quotes, in every language
+    Expected: "„Durchlauf ‚Die Möwe‘“"
+    Received: "„‚Durchlauf ‚Die Möwe‘‚“"
+Tests:       1 failed, 1589 passed, 1590 total
+
+== Jest, server (rehearsalNoticeText.integration.test.js -t "nested right"), before the fix ==
+  ● A name in quotes, rights taken away, Spanish project notices (T-261) › a project named with quotes nested right keeps them
+      Array [
+    -   "El proyecto «Durchlauf “Die Möwe”» ha sido eliminado",
+    -   "Das Projekt „Durchlauf ‚Die Möwe‘“ wurde gelöscht",
+    -   "Проект «Durchlauf „Die Möwe“» удалён",
+    +   "El proyecto «“Durchlauf “Die Möwe”“» ha sido eliminado",
+    +   "Das Projekt „‚Durchlauf ‚Die Möwe‘‚“ wurde gelöscht",
+    +   "Проект «„Durchlauf „Die Möwe“„» удалён",
+        "The project „Durchlauf ‚Die Möwe‘“ has been deleted",
+      ]
+Tests:       1 failed, 47 skipped, 48 total
+
+== Jest after the fix ==
+client: Test Suites: 150 passed, 150 total; Tests: 1590 passed, 1590 total
+server: rehearsalNoticeText.integration.test.js - Tests: 48 passed, 48 total
+
+== e2e 52 (seed: "Ghost watch" renamed „Ghost watch ‚Act I‘“), on the old
+   quoteName.cjs (git restore --source=2a99e44 -- shared/quoteName.cjs) ==
+[Failed] An admin edits and deletes from the details (3m 31s) (Assertion is false: "Delete “Ghost watch ‘Act I’” \(.*, 7:00.PM\)\?" is visible)
+1/1 Flow Failed
+
+== e2e 52 on the fix (git restore --source=HEAD -- shared/quoteName.cjs) ==
+[Passed] An admin edits and deletes from the details (3m 27s)
+1/1 Flow Passed in 3m 28s

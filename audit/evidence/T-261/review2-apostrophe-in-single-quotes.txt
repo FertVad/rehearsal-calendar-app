@@ -1,0 +1,47 @@
+T-261 review, round 2: an apostrophe ’ inside German single quotes ‚…‘ was
+read as the mark closing them. marksOf counted the single marks open but not
+which one: ‚ is closed by ‘, ‘ by ’. Now a stack of open single marks; a
+closing one that does not close the top one is an apostrophe.
+
+Fix 7ab587d (shared/quoteName.cjs), tests in the same commit; e2e in 32c131c.
+
+== Jest, frontend, on the old quoteName.cjs (80195c5), before the fix
+$ npx jest --selectProjects frontend src/i18n/__tests__/secondReading.test.ts -t "apostrophe inside"
+  ● T-261: a name typed in quotes is not quoted twice › an apostrophe inside German single quotes stays an apostrophe
+    Expected: "„Actors’ Studio“"
+    Received: "„‚Actors‘ Studio‘“"
+    > 146 |     expect(quoteName('‚Actors’ Studio‘', 'de')).toBe('„Actors’ Studio“');
+Tests:       1 failed, 1590 skipped, 1591 total
+
+== Jest, server, on the old quoteName.cjs, before the fix
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText.integration.test.js -t "apostrophe inside"
+    - Expected  - 3
+    + Received  + 3
+      Array [
+    -   "El proyecto «Actors’ Studio» ha sido eliminado",
+    -   "Das Projekt „Actors’ Studio“ wurde gelöscht",
+    -   "Проект «Actors’ Studio» удалён",
+    +   "El proyecto «“Actors” Studio‘» ha sido eliminado",
+    +   "Das Projekt „‚Actors‘ Studio‘“ wurde gelöscht",
+    +   "Проект «„Actors“ Studio‘» удалён",
+        "The project ‚Actors’ Studio‘ has been deleted",
+      ]
+Tests:       1 failed, 48 skipped, 49 total
+
+== After the fix
+server rehearsalNoticeText.integration.test.js: Tests: 49 passed, 49 total
+frontend (whole project ran): Test Suites: 150 passed, 150 total; Tests: 1591 passed, 1591 total
+
+== e2e 52 (seed: rehearsal „Ghost watch ‚Actors’ Act‘“), quoteName.cjs restored from 80195c5
+$ git restore --source=80195c5 -- shared/quoteName.cjs
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[Failed] An admin edits and deletes from the details (3m 26s) (Assertion is false: "Delete “Ghost watch ‘Actors’ Act’” \(.*, 7:00.PM\)\?" is visible)
+1/1 Flow Failed
+(A first attempt was cut at 10 minutes by the command's limit while the app
+was rebuilt; the run above is the second.)
+
+== e2e 52 on the fix
+$ git restore --source=HEAD -- shared/quoteName.cjs
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[Passed] An admin edits and deletes from the details (3m 15s)
+1/1 Flow Passed in 3m 15s

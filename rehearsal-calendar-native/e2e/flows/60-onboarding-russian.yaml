@@ -11,6 +11,20 @@
 # "No calendars found" and "Setting up calendar sync…" are not here: the
 # simulator always has its calendar, and the choice is saved on the phone at
 # once. Jest says them in Russian and German (CalendarSyncScreen.test.tsx).
+#
+# And her steps read as a native speaker's (T-256): access is asked with «Разрешить доступ», as iOS's own window says it, not
+# «Предоставить»; the example push is «Вас позвали на репетицию», as the real
+# one, not «добавили в репетицию»; the text promises an «уведомление», not a
+# «сообщение», and guesses no one's gender («узнать последним»). Then two more
+# newcomers walk the same steps, no other flow does in their languages: Adela
+# in Spanish, whose last step puts its places in «», not “”; Kattrin in German,
+# whose titles and button are "Deine Verfügbarkeit", "Apple Kalender", "Wo ist
+# was?", "Verfügbarkeit", each whole. The flow goes on whatever the words, and
+# fails at the end naming every one that was wrong.
+#
+# The second reading (T-261): the last step joins a project "by invitation" in
+# all three, and all three leave by Skip, whose window answers nothing and so
+# has one "OK" — «ОК» in Russian, as iOS — not «Да», "Sí", "Ja".
 appId: ${APP_ID}
 name: Onboarding in Russian, the greeting on one line
 tags:
@@ -18,6 +32,7 @@ tags:
   - language
   - calendar
 ---
+- evalScript: ${output.wrong = ''}
 - launchApp:
     clearState: true
     clearKeychain: true
@@ -49,8 +64,13 @@ tags:
       SEE: "Ваша занятость"
       WAIT_MS: 10000
 - assertVisible: "Это можно сделать потом: Профиль → .*"
+- runFlow:
+    when:
+      notVisible: "Разрешить доступ"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Разрешить доступ, as iOS | '}"
 # Refused: the app says why it asks, in her language.
-- tapOn: "Предоставить доступ"
+- tapOn: "(Разрешить|Предоставить) доступ"
 - extendedWaitUntil:
     visible: "Don’t Allow|Don't Allow"
     timeout: 10000
@@ -58,7 +78,7 @@ tags:
 - extendedWaitUntil:
     visible: "Требуется разрешение"
     timeout: 10000
-- assertVisible: "Для использования этой функции необходим доступ к календарю"
+- assertVisible: "Для этого нужен доступ к календарю"
 - assertNotVisible: "Calendar access is required.*"
 - takeScreenshot: 60-onboarding-calendar-refused-ru
 - tapOn: "OK"
@@ -69,6 +89,17 @@ tags:
       SEE: "Не сейчас"
       WAIT_MS: 10000
 - assertVisible: "Уведомления"
+- takeScreenshot: 60-onboarding-notifications-ru
+- runFlow:
+    when:
+      notVisible: ".*Вас позвали на репетицию.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the example push, Вас позвали на репетицию | '}"
+- runFlow:
+    when:
+      notVisible: ".*Придёт уведомление, когда вас позовут на репетицию или изменят её время.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Придёт уведомление, no gender | '}"
 - assertVisible: "Назад"
 - assertVisible: "Включить"
 - assertVisible:
@@ -82,11 +113,230 @@ tags:
       WAIT_MS: 10000
 - assertVisible: ".*Создать проект.*"
 - takeScreenshot: 60-onboarding-what-where-ru
+# Where to join a project: «По приглашению», not «По коду: … «Присоединиться
+# по коду»», the code twice (T-258).
+- assertVisible: "«\\+» → «Создать проект»\\. По приглашению: «Проекты» → «Присоединиться по коду»"
+# She leaves by «Пропустить», not «Начать»: the window that says where the
+# settings are answers nothing, so its one button is «ОК», as in Russian iOS,
+# not «Да» (T-261).
+- assertVisible: "Начать"
+- tapOn:
+    id: onboarding-skip
+- extendedWaitUntil:
+    visible: "Настройки доступны в профиле"
+    timeout: 10000
+- assertVisible: ".*в разделе «Профиль» → «Настройки»\\."
+- takeScreenshot: 60-onboarding-skip-ru
+- assertNotVisible: "Да"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Начать"
+      TAP: "ОК"
       SEE: "Сегодня"
       WAIT_MS: 15000
 - assertVisible:
     id: calendar-today
+
+# Spanish (T-256): Adela, new, her account in Spanish, goes to the last step.
+# Its places are in «» as everywhere in Spanish, not “”.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: unset
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${ADELA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Empezar"
+      SEE: "Tu disponibilidad"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Configurar más tarde"
+      SEE: "Ahora no"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Ahora no"
+      SEE: "Dónde está cada cosa"
+      WAIT_MS: 10000
+- takeScreenshot: 60-onboarding-what-where-es
+# "Con una invitación", not "Con un código: … «Unirse con un código»", the
+# code twice (T-261).
+- runFlow:
+    when:
+      notVisible: "«\\+» → «Crear proyecto»\\. Con una invitación: «Proyectos» → «Unirse con un código»"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: a project, in «», Con una invitación | '}"
+- runFlow:
+    when:
+      notVisible: "«\\+» → «.*», en los proyectos que administras"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: a rehearsal, in «» | '}"
+- runFlow:
+    when:
+      notVisible: "«\\+» → «Marcar horas ocupadas»"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: availability, in «» | '}"
+- runFlow:
+    when:
+      notVisible: "«Smart Planner», debajo del calendario"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the planner, in «» | '}"
+# Skipped, the window's one button is "OK", not "Sí" (T-261).
+- tapOn:
+    id: onboarding-skip
+- extendedWaitUntil:
+    visible: "Ajustes disponibles en el perfil"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: OK after Omitir, not Sí | '}"
+      - tapOn: "Sí"
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: calendar-today
+    timeout: 15000
+
+# German (T-256): Kattrin, new, her account in German, to the last step. The
+# calendar's step is "Deine Verfügbarkeit", not "Deine Zeiten", and with the
+# calendar allowed its button is "Apple Kalender", not "Apple Calendar" (the
+# simulator has no Google account, so no "Google Kalender"); the last is "Wo ist
+# was?", not "Was ist wo", its availability "Verfügbarkeit" — each whole on the
+# shot (no-ellipsis). Nothing is picked or saved.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      calendar: allow
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${KATTRIN_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Loslegen"
+      SEE: "Später einrichten"
+      WAIT_MS: 10000
+- extendedWaitUntil:
+    visible: ".*Apple (Kalender|Calendar).*"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 60-onboarding-calendar-de
+- runFlow:
+    when:
+      notVisible: "Deine Verfügbarkeit"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Deine Verfügbarkeit, not Deine Zeiten | '}"
+- runFlow:
+    when:
+      notVisible: ".*Apple Kalender.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Apple Kalender, not Calendar | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-calendar-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Später einrichten"
+      SEE: "Jetzt nicht"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Jetzt nicht"
+      SEE: "(Wo ist was\\?|Was ist wo)"
+      WAIT_MS: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 60-onboarding-what-where-de
+- runFlow:
+    when:
+      notVisible: "Wo ist was\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Wo ist was?, not Was ist wo | '}"
+- runFlow:
+    when:
+      notVisible: "Verfügbarkeit"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Verfügbarkeit, not Zeiten | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-what-where-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+# "Per Einladung", not "Mit einem Code: … „Mit einem Code beitreten“" (T-261).
+- runFlow:
+    when:
+      notVisible: "„\\+“ → „Projekt erstellen“\\. Per Einladung: „Projekte“ → „Mit einem Code beitreten“"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Per Einladung, not the code twice | '}"
+# Skipped: the message ends with its full stop, and the one button is "OK",
+# not "Ja" — nothing was asked (T-261).
+- tapOn:
+    id: onboarding-skip
+- extendedWaitUntil:
+    visible: "Einstellungen im Profil verfügbar"
+    timeout: 10000
+- runFlow:
+    when:
+      notVisible: ".*unter Profil → Einstellungen ändern\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the skip message ends with a full stop | '}"
+- runFlow:
+    when:
+      notVisible: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: OK after Überspringen, not Ja | '}"
+      - tapOn: "Ja"
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: calendar-today
+    timeout: 15000
+
+- evalScript: "${console.log('60 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

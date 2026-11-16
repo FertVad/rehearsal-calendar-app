@@ -1,0 +1,29 @@
+T-257 review: flow 23 red on the supervisor's check, at its planner step - not on the German part.
+
+Red (supervisor's check on cdcf71f, run 2026-11-13_234752, the machine in Asia/Jerusalem):
+  [Failed] The profile's timezone, not the device's (1m 45s) (Assertion is false: "Nov 13 – Nov 19" is visible)
+  maestro.log: 23:50:42 Assert that "${WEEK_CHOSEN_LABEL}" is visible RUNNING
+               23:50:58 ... FAILED
+  The planner's screenshot (step-066) reads "Recommendations  Nov 14 – Nov 19",
+  its first day "Sat, Nov 14".
+
+Cause: the seed's WEEK_CHOSEN_LABEL is today to today+6 in Tel Aviv. The header
+names the days in its list (SmartPlannerScreen.tsx, "The dates beside
+Recommendations are the days in the list"), and the working day ends at 23:00
+with today starting from the next half-hour (slotGenerator.ts), so from about
+22:30 in Tel Aviv today has no slot and the list - and the header - begins with
+tomorrow. The app is right; the flow's expectation held only before ~22:30.
+Nothing in T-257's commits touches the planner or the seed.
+
+Fix: seed.mjs gives WEEK_CHOSEN_LABEL as "(?:<today>|<tomorrow>) – <today+6>".
+The bug the step guards (DF01: the week read as UTC midnights, a day early)
+shows the day before, which still does not match.
+
+Green after (this tree, npm run e2e -- e2e/flows/23-profile-timezone.yaml,
+started 23:55:25, the runner waited for midnight and reseeded for Nov 14):
+  [e2e] midnight in 89 s, before a flow could end: waiting for it
+  [e2e] the day turned (2026-11-13 → 2026-11-14): a new database, server and seed for it
+  [Passed] The profile's timezone, not the device's (2m 40s)
+  1/1 Flow Passed in 2m 41s
+The late-evening case itself (22:30-24:00 Tel Aviv) could not be run again
+before midnight; the pattern's tomorrow branch is what the red run showed.

@@ -7,8 +7,12 @@
  * one ten minutes ahead still said "in 1 hour". The words now come from the
  * start, in the reader's zone and language.
  */
-import { reminderWhen } from '../../services/notifications/reminderText.js';
+import * as reminderText from '../../services/notifications/reminderText.js';
 import { t } from '../../i18n/pushNotifications.js';
+
+const { reminderWhen } = reminderText;
+// Looked up when called, so that a missing export fails its own tests only.
+const untilTime = (...args) => reminderText.untilTime(...args);
 
 // Intl separates "7:00" from "PM" with a narrow no-break space.
 const plain = (text) => text.replace(/\s/g, ' ');
@@ -39,6 +43,51 @@ describe('Today and tomorrow are the reader\'s, not the server\'s', () => {
 
   it('in Spanish too', () => {
     expect(when('es', '2026-10-06T08:00:00Z', new Date('2026-10-05T06:00:00Z'), 'Europe/Madrid')).toBe('mañana a las 10:00');
+  });
+
+  // "el mar, 6 oct" read as "the sea"; a sentence spells the day and the
+  // month out, with no comma between them (T-256).
+  it('a Spanish date is written out: "el martes 6 de octubre"', () => {
+    expect(when('es', '2026-10-06T17:00:00Z', new Date('2026-10-01T06:00:00Z'), 'Europe/Madrid')).toBe('el martes 6 de octubre a las 19:00');
+    expect(when('es', '2026-03-02T17:00:00Z', new Date('2026-02-20T06:00:00Z'), 'Europe/Madrid')).toBe('el lunes 2 de marzo a las 18:00');
+    expect(when('es', '2026-10-06T17:00:00Z', new Date('2026-10-01T06:00:00Z'), 'Europe/Madrid', 'movedTo')).toBe('al martes 6 de octubre a las 19:00');
+  });
+});
+
+/**
+ * The end of a rehearsal past midnight is the next day's, and midnight is
+ * midnight (T-256). The day is the reader's: it is compared with the start's
+ * on the reader's clock.
+ */
+describe('Until when', () => {
+  const start = '2026-10-06T19:00:00Z';
+  const end = (locale, endsAt, zone) => plain(untilTime(locale, endsAt, start, zone));
+
+  it('the same day: the time alone', () => {
+    expect(end('en', '2026-10-06T21:30:00Z', 'Europe/London')).toBe('10:30 PM');
+    expect(end('es', '2026-10-06T21:30:00Z', 'Europe/Madrid')).toBe('las 23:30');
+  });
+
+  it('past midnight: the next day', () => {
+    expect(end('ru', '2026-10-06T23:00:00Z', 'Europe/Moscow')).toBe('2:00 следующего дня');
+    expect(end('en', '2026-10-07T00:00:00Z', 'Europe/London')).toBe('1:00 AM the next day');
+    expect(end('es', '2026-10-06T23:00:00Z', 'Europe/Madrid')).toBe('la 1:00 del día siguiente');
+    expect(end('de', '2026-10-06T23:00:00Z', 'Europe/Berlin')).toBe('1:00 am Folgetag');
+  });
+
+  it('midnight itself', () => {
+    expect(end('ru', '2026-10-06T21:00:00Z', 'Europe/Moscow')).toBe('полуночи');
+    expect(end('en', '2026-10-06T23:00:00Z', 'Europe/London')).toBe('midnight');
+    expect(end('es', '2026-10-06T22:00:00Z', 'Europe/Madrid')).toBe('la medianoche');
+    expect(end('de', '2026-10-06T22:00:00Z', 'Europe/Berlin')).toBe('Mitternacht');
+  });
+
+  it('a reader in UTC is told so', () => {
+    expect(end('ru', '2026-10-07T00:00:00Z', 'UTC')).toBe('полуночи по UTC');
+    expect(end('en', '2026-10-07T00:00:00Z', 'UTC')).toBe('midnight UTC');
+    expect(end('en', '2026-10-07T01:00:00Z', 'UTC')).toBe('1:00 AM UTC the next day');
+    expect(end('es', '2026-10-07T00:00:00Z', 'UTC')).toBe('la medianoche UTC');
+    expect(end('de', '2026-10-07T01:00:00Z', 'UTC')).toBe('1:00 UTC am Folgetag');
   });
 });
 

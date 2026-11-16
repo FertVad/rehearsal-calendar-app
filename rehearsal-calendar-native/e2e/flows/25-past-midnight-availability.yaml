@@ -18,19 +18,11 @@ tags:
     file: ../subflows/sign-in.yaml
     env:
       EMAIL: ${ZARECHNAYA_EMAIL}
-# The calendar first. iOS's "Save Password?" sheet can come later than the
-# sign-in waits for it, over the tab bar; it is let go here too.
+# The calendar first.
 - extendedWaitUntil:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -76,7 +68,7 @@ tags:
     notVisible:
       id: availability-legend
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -137,7 +129,7 @@ tags:
     notVisible:
       id: availability-legend
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 # A real change: busy all day. Let go of, the day asks as the editor's arrow
 # does (T-026, review); a tap outside the popover is its Cancel, and the
 # editor stays up with the change. Closed, the question's "Save" saves it.
@@ -169,17 +161,17 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: mode-busy
-      SEE: "You are unavailable on this day"
+      SEE: "You are busy all day"
       WAIT_MS: "5000"
 - tapOn:
     id: day-${EVENING_DAY}
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
 - tapOn:
     point: "50%, 8%"
 - extendedWaitUntil:
-    notVisible: "Don't Save"
+    notVisible: "Don’t Save"
     timeout: 5000
 - assertVisible:
     id: mode-busy
@@ -195,7 +187,7 @@ tags:
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
 - takeScreenshot: 25-close-asks
 - tapOn: "Save"
@@ -209,7 +201,7 @@ tags:
     timeout: 5000
 - tapOn:
     id: day-${EVENING_DAY}
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 - assertVisible:
     id: mode-busy
     selected: true
@@ -223,7 +215,7 @@ tags:
     notVisible:
       id: availability-legend
     timeout: 15000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"

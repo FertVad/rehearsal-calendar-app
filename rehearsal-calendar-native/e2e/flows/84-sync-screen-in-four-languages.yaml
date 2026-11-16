@@ -18,6 +18,23 @@
 # without regard to case, so the line is copied and compared in JavaScript.
 # Maestro reads a label whole even where the screen cuts it, so the title is
 # checked by its text and seen whole in the shots.
+#
+# And the words read as a native speaker's (T-250): the alert after a sync is
+# «Синхронизировано», "Sincronización completada", "Synchronisiert", not
+# «Успешно синхронизировано», "Sincronizado correctamente", "Erfolgreich
+# synchronisiert"; the line at the top agrees with no reader's gender, and a
+# person in German is "beschäftigt", not "belegt" like a room; the project's
+# button is "Share Link", not "Share the link". The flow waits for each alert
+# whatever it says, checks these words where they show and goes on, and fails
+# at the end naming every one that was wrong: a run on the old words names
+# them all, not the first alone.
+#
+# And as the native speakers of T-256 read them: the button is "Sync Now" and
+# the alert "Synced", no "successfully"; the Spanish promise says "nunca el
+# nombre de los eventos", not "nunca qué son los eventos" (word for word
+# "never what the events are"); the German one "Von dort übernimmt Rehearsly
+# nur, wann du beschäftigt bist", with a verb, and the line under it
+# "Synchronisiert: gerade eben" — "Synchronisiert gerade eben" is no German.
 appId: ${APP_ID}
 name: The sync screen's bar and last sync in four languages
 tags:
@@ -26,6 +43,7 @@ tags:
   - navigation
   - language
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -34,13 +52,6 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 
 # A long title: "‹ Back", not "‹ My Pr…".
 - runFlow:
@@ -53,10 +64,15 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Hamlet — Demo Theatre.*"
-      SEE: ".*Share the link.*"
+      SEE: ".*Share (the )?Link.*"
       WAIT_MS: "15000"
 - waitForAnimationToEnd
 - takeScreenshot: 84-project-long-title
+- runFlow:
+    when:
+      notVisible: ".*Share Link"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Share Link | '}"
 - assertVisible:
     id: header-title
     text: "Hamlet — Demo Theatre"
@@ -104,13 +120,23 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Apple Calendar.*"
-      SEE: ".*Synchronize.*"
+      SEE: ".*(Sync Now|Synchronize).*"
       WAIT_MS: "10000"
+- runFlow:
+    when:
+      notVisible: ".*Sync Now.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Sync Now, not Synchronize | '}"
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Synced successfully"
+    visible: "Synced( successfully)?"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Synced"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Synced, no successfully | '}"
 - tapOn: "OK"
 - extendedWaitUntil:
     visible:
@@ -167,8 +193,13 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Успешно синхронизировано"
+    visible: "(Успешно )?синхронизировано"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Синхронизировано"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the alert after a sync | '}"
 - tapOn: "OK"
 - waitForAnimationToEnd
 - takeScreenshot: 84-sync-ru
@@ -219,8 +250,13 @@ tags:
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Sincronizado correctamente"
+    visible: "(Sincronización completada|Sincronizado correctamente)"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Sincronización completada"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the alert after a sync | '}"
 - tapOn: "OK"
 - waitForAnimationToEnd
 - takeScreenshot: 84-sync-es
@@ -233,6 +269,16 @@ tags:
 - assertVisible:
     id: header-back
     text: ".*Perfil"
+- runFlow:
+    when:
+      notVisible: ".*solo llegan las horas que tienes ocupadas.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the hours you are busy | '}"
+- runFlow:
+    when:
+      notVisible: ".*nunca el nombre de los eventos.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: nunca el nombre de los eventos | '}"
 
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -266,22 +312,42 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: profile-calendar-sync
-      SEE: "Synchronisiert .*"
+      SEE: "Synchronisiert:? .*"
       WAIT_MS: "15000"
 - tapOn:
     id: calendar-sync-run
 - extendedWaitUntil:
-    visible: "Erfolgreich synchronisiert"
+    visible: "(Erfolgreich )?synchronisiert"
     timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Synchronisiert"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the alert after a sync | '}"
 - tapOn: "OK"
 - waitForAnimationToEnd
 - takeScreenshot: 84-sync-de
 - copyTextFrom:
     id: calendar-sync-status
-- assertTrue: ${maestro.copiedText == "Synchronisiert gerade eben"}
+- evalScript: "${output.wrong = output.wrong + (maestro.copiedText == 'Synchronisiert: gerade eben' ? '' : 'de: Synchronisiert: gerade eben, not ' + maestro.copiedText + ' | ')}"
 - assertVisible:
     id: header-title
     text: "Kalender-Sync"
 - assertVisible:
     id: header-back
     text: ".*Profil"
+- runFlow:
+    when:
+      notVisible: ".*Von dort übernimmt Rehearsly nur, wann du beschäftigt bist.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the hours you are busy, with a verb | '}"
+
+- evalScript: "${console.log('84 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

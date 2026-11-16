@@ -1,0 +1,30 @@
+$ cd rehearsal-calendar-native && npm run check:dead -- --production   (base 5d48592)
+
+> rehearsal-calendar-native@1.0.0 check:dead
+> knip --no-progress --production
+
+Unused files (10)
+server/database/migrations/artifacts.mjs
+server/database/migrations/cli.mjs
+server/database/migrations/core.mjs
+server/database/migrations/errors.mjs
+server/database/migrations/history.mjs
+server/database/migrations/sql.mjs
+server/database/schema/inspect.mjs
+server/database/schema/manifest.mjs
+server/scripts/demoDates.mjs
+server/scripts/test.mjs
+Unused exports (8)
+closeDatabase           function  server/database/db.js:276:17
+respondToRehearsal      function  server/services/rehearsals/rsvpService.js:18:23
+localDate                         src/shared/hooks/useClock.ts:26:14
+resetSessionForTests    function  src/shared/services/session.ts:138:17
+clearAllMappings        function  src/shared/utils/calendarMappings.ts:326:23
+DATE_FORMATS                      src/shared/utils/dateFormat.ts:44:14
+isStartOfDayInTimezone            src/shared/utils/time.ts:355:14
+isEndOfDayInTimezone              src/shared/utils/time.ts:370:14
+(exit code 1)
+
+Note: TimeSlotsEditor / ModeSelector do not appear here — they are reachable
+through `export * from './…'` in editor/index.ts although both have only a
+default export, which `export *` does not carry. The guard test covers that.

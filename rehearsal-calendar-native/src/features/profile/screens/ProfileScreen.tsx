@@ -32,7 +32,7 @@ import { privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
-import { getTimezonesWithDevice, getTimezoneLabel, searchTimezones } from '../../../shared/constants/timezones';
+import { getTimezonesWithDevice, getTimezoneLabel, sameTimezone, searchTimezones } from '../../../shared/constants/timezones';
 
 // Week start options
 const WEEK_START_OPTIONS = [
@@ -61,8 +61,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [bugReportVisible, setBugReportVisible] = useState(false);
   const [timezoneQuery, setTimezoneQuery] = useState('');
   const timezones = useMemo(
-    () => (timezoneModalVisible ? searchTimezones(getTimezonesWithDevice(), timezoneQuery) : []),
-    [timezoneModalVisible, timezoneQuery],
+    () => (timezoneModalVisible ? searchTimezones(getTimezonesWithDevice(language), timezoneQuery) : []),
+    [timezoneModalVisible, timezoneQuery, language],
   );
   // The sheets end above the home indicator, as the bottom bar does (T-009):
   // the last language and the last zone ran into it (T-024).
@@ -517,27 +517,22 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={<Text style={styles.searchEmpty}>{t.profile.timezoneNotFound}</Text>}
               keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.timezoneItem,
-                    user?.timezone === item.value && styles.timezoneItemSelected,
-                  ]}
-                  onPress={() => handleTimezoneSelect(item.value)}
-                >
-                  <Text
-                    style={[
-                      styles.timezoneLabel,
-                      user?.timezone === item.value && styles.timezoneLabelSelected,
-                    ]}
+              renderItem={({ item }) => {
+                const selected = sameTimezone(user?.timezone, item.value);
+                return (
+                  <TouchableOpacity
+                    style={[styles.timezoneItem, selected && styles.timezoneItemSelected]}
+                    onPress={() => handleTimezoneSelect(item.value)}
                   >
-                    {language === 'ru' ? item.labelRu : item.labelEn}
-                  </Text>
-                  {user?.timezone === item.value && (
-                    <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
-                  )}
-                </TouchableOpacity>
-              )}
+                    <Text style={[styles.timezoneLabel, selected && styles.timezoneLabelSelected]}>
+                      {item.label}
+                    </Text>
+                    {selected && (
+                      <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
               style={styles.timezoneList}
             />
           </View>

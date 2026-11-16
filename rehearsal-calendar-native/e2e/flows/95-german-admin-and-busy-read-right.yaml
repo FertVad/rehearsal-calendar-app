@@ -1,0 +1,226 @@
+# German as the native speaker of T-256 wrote it, where a project's owner
+# takes a role back, opens a rehearsal not hers, and plans over two busy
+# people:
+# - Wang's action in "Mitglied verwalten" is "Adminrechte entziehen", whole on
+#   the phone, not "Administratorrechte entfernen"; its alert asks
+#   "Adminrechte entziehen?" and "Möchtest du Wang Wasser wirklich die
+#   Adminrechte entziehen?";
+# - a rehearsal she may not see: "Diese Probe ist nicht verfügbar. Vielleicht
+#   wurde sie gelöscht oder du bist nicht mehr dafür eingeteilt.", not "…oder
+#   du wurdest aus der Besetzung genommen.";
+# - the form over two busy people: "Beschäftigt: Wang Wasser (10:00–14:00)
+#   und 1 weiterer" (T-261), as iOS
+#   counts people (Siri's "und %d weiterer"), masculine after "Teilnehmer"
+#   (T-258): "und 1 weitere Person" was cut on the phone, "…und 1 weitere
+#   Per…". The line has at most two lines (ParticipantPicker, numberOfLines
+#   2: by full name one line cut it, "…und 1 wei…", T-261), so it is read whole and looked for a cut on the shot itself — the "…" iOS
+#   draws (e2e/scripts/no-ellipsis.js) — since Maestro reads a label whole
+#   however much of it is drawn;
+# - a notice in her inbox three days old: "vor 3 Tagen", not "vor 3 Tg.".
+#
+# Shen Te's account speaks German. Wang is an admin of «Der gute Mensch»;
+# Wang and Yang Sun are busy tomorrow 10:00-14:00. She opens Wang's row and
+# leaves the alert; opens a link to Gaev's «Ball rehearsal», a project she is
+# not in — the server answers 404, as for one deleted; and plans tomorrow at
+# 10:00 from the planner, and leaves the form. Nothing is saved. Each text is
+# checked where it shows and the flow goes on, so a run on the old words names
+# every one; it fails at the end if any was wrong.
+appId: ${APP_ID}
+name: German admin rights and busy people read right
+tags:
+  - language
+  - projects
+  - participants
+  - rehearsals
+  - planner
+---
+- evalScript: ${output.wrong = ''}
+# On the 24-hour clock, as a German phone is: the busy line's times are
+# "10:00–14:00", not the simulator's "10:00 AM–2:00 PM" (flow 53).
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      AppleICUForce24HourTime: "<true/>"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${SHENTE_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# Wang's admin rights, taken back and left.
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Der gute Mensch.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Der gute Mensch.*"
+- extendedWaitUntil:
+    visible: ".*Link teilen"
+    timeout: 15000
+- scrollUntilVisible:
+    element: ".*Wang Wasser.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Wang Wasser.*"
+      SEE: "Mitglied verwalten"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 95-remove-admin-item-de
+- runFlow:
+    when:
+      notVisible: ".*Adminrechte entziehen"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Adminrechte entziehen, not Administratorrechte entfernen | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 95-remove-admin-item-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'de: ' + output.cut + ' | ' : '')}"
+- tapOn: ".*(Adminrechte entziehen|Administratorrechte entfernen)"
+- extendedWaitUntil:
+    visible: "(Adminrechte entziehen|Administratorrechte entfernen)\\?"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 95-remove-admin-alert-de
+- runFlow:
+    when:
+      notVisible: "Adminrechte entziehen\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Adminrechte entziehen?, its title | '}"
+- runFlow:
+    when:
+      notVisible: "Möchtest du Wang Wasser wirklich die Adminrechte entziehen\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Adminrechte entziehen?, its message | '}"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "(Adminrechte entziehen|Administratorrechte entfernen)\\?"
+    timeout: 10000
+- tapOn:
+    id: header-back
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Der gute Mensch.*"
+    timeout: 10000
+
+# A rehearsal of a project she is not in.
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://rehearsal/${BALL_REHEARSAL}
+- extendedWaitUntil:
+    visible: "Diese Probe ist nicht verfügbar\\..*"
+    timeout: 15000
+- takeScreenshot: 95-not-found-de
+- runFlow:
+    when:
+      notVisible: "Diese Probe ist nicht verfügbar\\. Vielleicht wurde sie gelöscht oder du bist nicht mehr dafür eingeteilt\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: nicht mehr dafür eingeteilt, not aus der Besetzung genommen | '}"
+- tapOn: "Schließen"
+- extendedWaitUntil:
+    notVisible: "Diese Probe ist nicht verfügbar\\..*"
+    timeout: 10000
+
+# Tomorrow at 10:00 from the planner: Wang and Yang Sun busy.
+- tapOn:
+    id: tab-planner
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-add-${TOMORROW_DAY}-10:00
+      SEE: "Probe hinzufügen"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: participants-conflict
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 95-two-busy-de
+# Whole and exact (T-258): "und 1 weiterer" holds "und 1 weitere" in it, so
+# the line is matched to its end; and looked for a cut on the shot. A label
+# first, the full name, the time in brackets, so "und 1 weiterer" follows a
+# name, not "beschäftigt" (T-261).
+- runFlow:
+    when:
+      notVisible:
+        id: participants-conflict
+        text: "Beschäftigt: Wang Wasser \\(10:00–14:00\\) und 1 weiterer"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Beschäftigt: Wang Wasser (10:00–14:00) und 1 weiterer | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 95-two-busy-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'de: the busy line ' + output.cut + ' | ' : '')}"
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Nicht speichern"
+    commands:
+      - tapOn: "Nicht speichern"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000
+
+# Her inbox: a notice three days old says "vor 3 Tagen", not "vor 3 Tg."
+# (T-256). The card is one element, its title, text and age read joined.
+- tapOn:
+    id: tab-calendar
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(Mitteilungen|Benachrichtigungen)"
+      SEE: "(?s).*Probenplan geändert.*"
+      WAIT_MS: "15000"
+- takeScreenshot: 95-inbox-age-de
+- runFlow:
+    when:
+      notVisible: "(?s).*Probenplan geändert.*vor 3 Tagen.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: vor 3 Tagen, not vor 3 Tg. | '}"
+
+- evalScript: "${console.log('95 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

@@ -58,9 +58,12 @@ export function openCalendar(navigation: Pick<AppNavigation, 'navigate'>) {
   }, { pop: true });
 }
 
-/** Where on its project a notification of this type opens: "New member" on the members (T-023). */
+/**
+ * Where on its project a notification of this type opens: "New member" (T-023)
+ * and "New administrator" (T-252) on the members.
+ */
 export function projectSectionOf(type: string): ProjectSection | undefined {
-  return type === 'member_joined' ? 'members' : undefined;
+  return type === 'member_joined' || type === 'admin_appointed' ? 'members' : undefined;
 }
 
 /**
@@ -258,8 +261,9 @@ export function useNotifications() {
           break;
 
         case 'member_joined':
+        case 'admin_appointed':
           // On its members. One sent before it carried the project's id opens
-          // nothing (T-023).
+          // nothing (T-023, T-252).
           if (projectId) openProject(navigation, projectId, projectSectionOf(type));
           break;
 

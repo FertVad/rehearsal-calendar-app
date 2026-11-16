@@ -10,7 +10,7 @@ import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
 import { recordNotifications, getUnreadCounts } from './notificationStore.js';
 import { t } from '../../i18n/pushNotifications.js';
-import { reminderWhen } from './reminderText.js';
+import { reminderWhen, untilTime } from './reminderText.js';
 
 const EXPO_CHUNK = 100;
 export const EXPO_TIMEOUT_MS = 10_000;
@@ -465,32 +465,50 @@ export async function notifyRehearsalCreated(rehearsal, projectName, members, op
 }
 
 /**
- * Notify members when a rehearsal is updated, saying when it now is (T-023).
- * @param {string[]} changeKeys - keys from translations.changes (e.g. ['datetime', 'location'])
+ * Notify members when a rehearsal is updated, saying when it now is (T-023)
+ * and what changed, in words (T-250): moved — to when; a new place — which;
+ * renamed. "Кордебалет, сегодня в 19:00 — дата/время" made the reader work
+ * out that the time was the new one; now it reads "Кордебалет — теперь
+ * сегодня в 19:00", as the landing page shows it. A longer or shorter
+ * rehearsal is not a moved one: 19:00–21:00 made 19:00–22:00 reads
+ * "Кордебалет, сегодня в 19:00 — теперь до 22:00", not "теперь сегодня в 19:00".
+ * An end past midnight is the next day's, said so; midnight is midnight (T-256).
+ * @param {string[]} changeKeys - what changed: 'datetime' (the start moved),
+ *   'end' (it ends at another time than the move alone would put it), 'location', 'title'
  */
 export async function notifyRehearsalUpdated(rehearsal, projectName, members, changeKeys, options) {
   const userIds = members.map(m => m.user_id);
-  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
+  const changed = Object.fromEntries((changeKeys || []).map((key) => [key, true]));
+  const endsAt = rehearsal.ends_at ?? rehearsal.endsAt;
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when, wordedAs, untilOf) => {
     const tr = t(locale, 'rehearsalUpdated');
-    const changesDict = t(locale, 'changes');
-    const changes = changeKeys && changeKeys.length > 0
-      ? changeKeys.map(k => changesDict[k] || k).join(', ')
-      : changesDict.default;
-    return { title: tr.title, body: tr.body({ projectName, rehearsalTitle: rehearsal.title, when, changes }) };
+    return {
+      title: tr.title,
+      body: tr.body({
+        projectName,
+        rehearsalTitle: rehearsal.title,
+        when,
+        movedTo: wordedAs('movedTo'),
+        movedFrom: wordedAs('movedFrom'),
+        until: changed.end && endsAt ? untilOf(endsAt) : null,
+        changed,
+        location: rehearsal.location,
+      }),
+    };
   }, { type: 'rehearsal_updated', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }, options);
 }
 
 /**
- * Notify members when a rehearsal is deleted
+ * Notify members when a rehearsal is deleted — which one: when it was, as
+ * every other notice about a rehearsal says it. "Гамлет: Репетиция отменена"
+ * left the reader of two untitled rehearsals guessing (T-256).
  */
-export async function notifyRehearsalDeleted(rehearsal, projectName, members) {
+export async function notifyRehearsalDeleted(rehearsal, projectName, members, options) {
   const userIds = members.map(m => m.user_id);
-  await sendLocalizedNotification(
-    userIds,
-    'rehearsalDeleted',
-    { projectName, rehearsalTitle: rehearsal.title },
-    { type: 'rehearsal_deleted', projectId: rehearsal.project_id }
-  );
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
+    const tr = t(locale, 'rehearsalDeleted');
+    return { title: tr.title, body: tr.body({ projectName, rehearsalTitle: rehearsal.title, when }) };
+  }, { type: 'rehearsal_deleted', projectId: rehearsal.project_id ?? rehearsal.projectId }, options);
 }
 
 /**
@@ -538,9 +556,6 @@ export async function notifyMemberResponse(rehearsal, projectName, responderName
 }
 
 /**
- * Notify user when invited to a project
- */
-/**
  * Tell the people responsible for a project that somebody has joined it.
  *
  * This used to tell the person who had just joined, who had tapped Join a
@@ -564,13 +579,17 @@ export async function notifyMemberJoined(projectName, memberName, recipientIds, 
  *
  * Administrators may appoint administrators here, so this is not something the
  * owner can assume they did themselves.
+ *
+ * The project's id goes with it, as with "New member": a tap opens the project
+ * on its members. With the name alone neither the push nor the inbox card
+ * opened anything (T-252).
  */
-export async function notifyAdminAppointed(projectName, memberName, recipientIds) {
+export async function notifyAdminAppointed(projectName, memberName, recipientIds, projectId) {
   await sendLocalizedNotification(
     recipientIds,
     'adminAppointed',
     { memberName, projectName },
-    { type: 'admin_appointed', projectName }
+    { type: 'admin_appointed', projectName, projectId }
   );
 }
 
@@ -581,11 +600,10 @@ export async function notifyRoleChanged(projectName, userId, newRole) {
   const locales = await getUserLocales([userId]);
   const locale = locales.get(userId) || 'en';
   const tr = t(locale, 'roleChanged');
-  const roleText = newRole === 'admin' ? tr.adminRole : tr.memberRole;
 
   await sendPushNotification([userId], {
     title: tr.title,
-    body: tr.body({ roleText, projectName }),
+    body: tr.body({ admin: newRole === 'admin', projectName }),
     data: { type: 'role_changed', projectName, newRole },
   });
 }
@@ -622,7 +640,10 @@ export async function notifyProjectDeleted(projectName, memberIds) {
  * as the reader's own clock shows it (reminderText.js), so two people in one
  * language but different zones read different times. The reminders, a new or
  * changed rehearsal and a response all say when this way (T-023).
- * `compose(locale, when)` gives the title and body; `options.now` is the moment
+ * `compose(locale, when, wordedAs, untilOf)` gives the title and body — `wordedAs`
+ * words the start another way (reminderWhen's `wording`), `untilOf` words an
+ * end on the reader's clock, the next day's or midnight as such (untilTime);
+ * `options.now` is the moment
  * it is sent at; the rest passes to sendPushNotification.
  */
 async function sendAboutRehearsal(rehearsal, userIds, compose, data, { now = new Date(), ...options } = {}) {
@@ -648,16 +669,21 @@ async function sendAboutRehearsal(rehearsal, userIds, compose, data, { now = new
   const startsAt = rehearsal.starts_at ?? rehearsal.startsAt;
   for (const { locale, timeZone, ids } of groups.values()) {
     const when = reminderWhen(locale, startsAt, now, timeZone);
-    merge(outcome, await sendPushNotification(ids, { ...compose(locale, when), data }, options));
+    const wordedAs = (wording) => reminderWhen(locale, startsAt, now, timeZone, wording);
+    const untilOf = (endsAt) => untilTime(locale, endsAt, startsAt, timeZone);
+    merge(outcome, await sendPushNotification(ids, { ...compose(locale, when, wordedAs, untilOf), data }, options));
   }
   return outcome;
 }
 
-/** A reminder: the time in the title, the rehearsal in the body. */
+/**
+ * A reminder: the time in the title, worded for a title — "Rehearsal Tomorrow
+ * at 7:00 PM" in English (T-256) — and the rehearsal in the body.
+ */
 function sendRehearsalReminder(rehearsal, projectName, userIds, key, data, options) {
-  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when, wordedAs) => {
     const tr = t(locale, key);
-    return { title: tr.title({ when }), body: tr.body({ projectName, rehearsalTitle: rehearsal.title }) };
+    return { title: tr.title({ when: wordedAs('titleWhen') }), body: tr.body({ projectName, rehearsalTitle: rehearsal.title }) };
   }, data, options);
 }
 

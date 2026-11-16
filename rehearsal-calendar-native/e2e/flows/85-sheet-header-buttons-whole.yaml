@@ -31,13 +31,6 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 
 # Russian: «Прогон всей программы». Maestro matches without regard to case, so
 # the longer one, «Генеральный прогон всей программы…», is kept out by name.
@@ -85,18 +78,18 @@ tags:
       TOP: "0.3"
       BOTTOM: "0.4"
 
-# The form from there: «Отмена» beside «Редактировать репетицию».
+# The form from there: «Отменить» beside «Изменить репетицию».
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: rehearsal-details-edit
-      SEE: "Редактировать репетицию"
+      SEE: "Изменить репетицию"
       WAIT_MS: "10000"
 - waitForAnimationToEnd
 - takeScreenshot: 85-form-ru
 - assertVisible:
     id: header-cancel
-    text: "Отмена"
+    text: "Отменить"
 - runScript:
     file: ../scripts/no-ellipsis.js
     env:
@@ -108,9 +101,9 @@ tags:
       BOTTOM: "0.16"
 # Nothing changed: Cancel leaves without asking, back to the sheet. By its
 # words: the sheet's own "header-cancel" is under the form.
-- tapOn: "Отмена"
+- tapOn: "Отменить"
 - extendedWaitUntil:
-    notVisible: "Редактировать репетицию"
+    notVisible: "Изменить репетицию"
     timeout: 10000
 - extendedWaitUntil:
     visible:

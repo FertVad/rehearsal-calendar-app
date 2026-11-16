@@ -270,6 +270,25 @@ describe('What the change announcement names', () => {
     expect(changes()).toEqual(['datetime']);
   });
 
+  // A rehearsal made an hour longer did not move. Both used to be one
+  // 'datetime', and the notice said "now today at 19:00" — the start it
+  // already had — and never the new end (T-250).
+  it('names the end, not a move, when only the end changed', async () => {
+    const res = await create();
+
+    await save(res.body.rehearsal.id, { endsAt: '2026-09-20T21:00:00.000Z' });
+
+    expect(changes()).toEqual(['end']);
+  });
+
+  it('names the start and the end when the start moved and the end stayed', async () => {
+    const res = await create();
+
+    await save(res.body.rehearsal.id, { startsAt: '2026-09-20T17:00:00.000Z' });
+
+    expect(changes()).toEqual(['datetime', 'end']);
+  });
+
   it('names only the place when only the place changed', async () => {
     const res = await create();
 
