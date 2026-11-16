@@ -19,6 +19,7 @@ import { securityHeaders } from './middleware/securityHeaders.js';
 import { limitOperationIp } from './middleware/operationIpRateLimit.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
+import { appVersion, requireAppBuild } from './middleware/appBuild.js';
 
 const IMPORT_SYNC_PATH = /^\/api(\/native)?\/availability\/imported\/sync$/;
 
@@ -94,6 +95,13 @@ export function createApp({ databaseRuntime } = {}) {
     res.setHeader('Cache-Control', 'no-store');
     res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'unavailable' });
   }));
+
+  // An app build older than MIN_IOS_BUILD is refused here, before the database
+  // is woken or a budget spent: an old phone left open must not keep Neon awake
+  // (T-265). The pages, invites, the admin, cron and the probes above are not
+  // the app's and are never refused.
+  app.use(['/api/native', '/api/auth'], requireAppBuild);
+  app.get('/api/native/app-version', appVersion);
 
   if (databaseRuntime) {
     const requireDatabase = asyncHandler(async (_req, res, next) => {
