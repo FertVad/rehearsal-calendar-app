@@ -26,20 +26,20 @@ const TEXT = {
   heading: {
     en: 'You’ve been invited to a project',
     ru: 'Вас пригласили в проект',
-    es: 'Te invitaron a un proyecto',
+    es: 'Tienes una invitación a un proyecto',
     de: 'Du wurdest zu einem Projekt eingeladen',
   },
   lead: {
-    en: 'Rehearsly is the rehearsal schedule that shows when the whole cast is free. Invitations open in the app.',
-    ru: 'Rehearsly — расписание репетиций, в котором видно, когда свободна вся команда. Приглашение открывается в приложении.',
-    es: 'Rehearsly es el calendario de ensayos que muestra cuándo está libre todo el elenco. La invitación se abre en la app.',
-    de: 'Rehearsly ist der Probenplan, der zeigt, wann das ganze Ensemble frei ist. Die Einladung öffnet sich in der App.',
+    en: 'Rehearsly is the rehearsal schedule that shows when everyone in the project is free. Invitations open in the app.',
+    ru: 'Rehearsly — расписание репетиций, в котором видно, когда свободны все участники проекта. Приглашение открывается в приложении.',
+    es: 'Rehearsly es el calendario de ensayos que muestra cuándo están libres todos los participantes. La invitación se abre en la app.',
+    de: 'Rehearsly ist der Probenplan, der zeigt, wann alle im Projekt Zeit haben. Die Einladung öffnet sich in der App.',
   },
   opening: {
     en: 'Opening Rehearsly…',
     ru: 'Открываем Rehearsly…',
     es: 'Abriendo Rehearsly…',
-    de: 'Rehearsly wird geöffnet …',
+    de: 'Rehearsly wird geöffnet …',
   },
   install: {
     en: 'Install Rehearsly from the App Store.',
@@ -74,7 +74,7 @@ const TEXT = {
   note: {
     en: 'Already have the app? Go straight to step 2. Installing it won’t open the invitation by itself, so do come back here.',
     ru: 'Rehearsly уже установлен? Сразу переходите ко второму шагу. После установки приглашение само не откроется — поэтому и нужно вернуться сюда.',
-    es: '¿Ya tienes la app? Pasa directo al paso 2. Al instalarla, la invitación no se abre sola: por eso hay que volver aquí.',
+    es: '¿Ya tienes la app? Pasa directamente al paso 2. Instalarla no abre la invitación: por eso hay que volver aquí.',
     de: 'App schon installiert? Dann direkt weiter mit Schritt 2. Nach der Installation öffnet sich die Einladung nicht von allein – komm deshalb hierher zurück.',
   },
 };

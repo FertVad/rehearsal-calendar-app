@@ -258,10 +258,10 @@ const SPOKEN = {
   es: {
     status: 'Abriendo Rehearsly…', install: 'Instala Rehearsly desde el App Store.', appStore: 'Abrir en el App Store',
     comeBack: 'Vuelve a esta página y toca «Abrir invitación».', open: 'Abrir invitación',
-    native: 'Abrir la app instalada', title: 'Te invitaron a un proyecto · Rehearsly',
+    native: 'Abrir la app instalada', title: 'Tienes una invitación a un proyecto · Rehearsly',
   },
   de: {
-    status: 'Rehearsly wird geöffnet …', install: 'Installiere Rehearsly aus dem App Store.', appStore: 'Im App Store öffnen',
+    status: 'Rehearsly wird geöffnet\u00A0…', install: 'Installiere Rehearsly aus dem App Store.', appStore: 'Im App Store öffnen',
     comeBack: 'Komm auf diese Seite zurück und tippe auf „Einladung öffnen“.', open: 'Einladung öffnen',
     native: 'Installierte App öffnen', title: 'Du wurdest zu einem Projekt eingeladen · Rehearsly',
   },
@@ -290,11 +290,11 @@ test('language order is ?lang=, then the remembered choice, then the browser; a 
   const heading = page => page.locator('h1').innerText();
   // ?lang= wins over a German browser.
   let { page } = await fixture(t, { locale: 'de-DE', query: '?lang=es' });
-  assert.equal(await heading(page), 'Te invitaron a un proyecto');
+  assert.equal(await heading(page), 'Tienes una invitación a un proyecto');
   // The key the landing page shares wins over the browser.
   await page.evaluate(() => localStorage.setItem('rehearsly-lang', 'ru'));
   await page.reload();
-  assert.equal(await heading(page), 'Te invitaron a un proyecto', '?lang= still wins over the remembered choice');
+  assert.equal(await heading(page), 'Tienes una invitación a un proyecto', '?lang= still wins over the remembered choice');
   await page.goto(page.url().replace('?lang=es', ''));
   assert.equal(await heading(page), 'Вас пригласили в проект');
   // A tap on a language button switches and is remembered.

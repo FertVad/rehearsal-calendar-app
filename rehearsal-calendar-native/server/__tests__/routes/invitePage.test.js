@@ -95,6 +95,28 @@ test('an untrusted code stays escaped data in the banner and the links', async (
   expect(html).toContain(`href="rehearsalapp://invite/${encodeURIComponent(code).replace(/'/g, '&#39;')}"`);
 });
 
+// The editors' reading of each language (T-267 review), on the terms the
+// native speakers set for the app (T-256): one Spanish for every country, no
+// "Ensemble" in German, a no-break space before the German ellipsis, and the
+// project's people named alike in all four. [lang, new wording, old wording].
+const EDITS = [
+  ['en', 'shows when everyone in the project is free', 'whole cast'],
+  ['ru', 'когда свободны все участники проекта', 'свободна вся команда'],
+  ['es', 'Tienes una invitación a un proyecto', 'Te invitaron'],
+  ['es', 'cuándo están libres todos los participantes', 'elenco'],
+  ['es', 'Pasa directamente al paso 2. Instalarla no abre la invitación', 'directo al paso'],
+  ['de', 'wann alle im Projekt Zeit haben', 'Ensemble'],
+  ['de', 'Rehearsly wird geöffnet …', 'Rehearsly wird geöffnet …'],
+];
+
+test.each(EDITS)('%s reads as its editor left it: "%s", not "%s"', async (lang, now, before) => {
+  const html = await page('ABCDEFGH');
+  const said = (html.match(new RegExp(`<[a-z0-9]+ [^>]*data-l="${lang}"[^>]*>[^<]*`, 'g')) || [])
+    .map(block => block.replace(/^<[^>]*>/, '')).join('\n');
+  expect(said).toContain(now);
+  expect(said).not.toContain(before);
+});
+
 test('the Expo development link is kept beside the installed app\'s', async () => {
   const html = await page('ABCDEFGH', '?expoHost=127.0.0.1%3A8081');
   expect(html).toMatch(/id="openButton"[^>]*href="exp:\/\/127\.0\.0\.1:8081\/--\/invite\/ABCDEFGH"|href="exp:\/\/127\.0\.0\.1:8081\/--\/invite\/ABCDEFGH"[^>]*id="openButton"/);
