@@ -127,6 +127,13 @@ function assertStrictPolicy(response) {
   }, 'The invite fix must not weaken or replace the global CSP');
 }
 
+// The landing's dark theme (T-267), with Rehearsly's own logo loaded from this origin.
+async function assertRehearslyStyle(page) {
+  assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(13, 17, 23)');
+  assert.equal(await page.locator('.brand__name').innerText(), 'Rehearsly');
+  assert.ok(await page.locator('.brand__mark').evaluate(image => image.complete && image.naturalWidth === 180));
+}
+
 async function assertCleanDocument(page) {
   assert.equal(await page.locator('[onclick], [onerror], [onload], [style], style, script:not([src])').count(), 0);
   assert.deepEqual(await page.evaluate(() => window.inviteCspViolations), []);
@@ -135,9 +142,9 @@ async function assertCleanDocument(page) {
 test('real invite route retains strict CSP, styling and the timed fallback', async t => {
   const { page, response } = await fixture(t);
   assertStrictPolicy(response);
+  await assertRehearslyStyle(page);
   assert.equal(await page.locator('body').evaluate(element => getComputedStyle(element).display), 'flex');
-  assert.match(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundImage), /linear-gradient/);
-  assert.equal(await page.locator('#openButton').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(255, 255, 255)');
+  assert.equal(await page.locator('#openButton').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(168, 85, 247)');
   assert.equal(await page.locator('#manual').isVisible(), false, 'Enhanced page initially offers the automatic attempt');
   assert.equal(await page.locator('#status').isVisible(), true);
   await page.clock.runFor(1999);
@@ -145,7 +152,7 @@ test('real invite route retains strict CSP, styling and the timed fallback', asy
   await page.clock.runFor(1001);
   assert.equal(await page.locator('#manual').isVisible(), true);
   assert.equal(await page.locator('#status').isVisible(), false);
-  assert.equal(await page.locator('#openButton').textContent(), 'Open App');
+  assert.equal(await page.locator('#openButton').innerText(), 'Open invitation');
   await assertCleanDocument(page);
   if (process.env.INVITE_BROWSER_SCREENSHOT) await page.screenshot({ path: process.env.INVITE_BROWSER_SCREENSHOT });
   for (const [asset, mime] of [['invite.js', /javascript/], ['invite.css', /text\/css/]]) {
@@ -181,8 +188,14 @@ for (const mode of ['disabled', 'unavailable']) {
     assert.equal(await page.locator('#manual').isVisible(), true);
     assert.equal(await page.locator('#status').isVisible(), false);
     assert.equal(await page.locator('#openButton').getAttribute('href'), 'rehearsalapp://invite/ABCDEFGH');
-    assert.equal(await page.locator('#openButton').textContent(), 'Open App');
-    assert.match(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundImage), /linear-gradient/);
+    assert.equal(await page.locator('#openButton').innerText(), 'Open invitation');
+    await assertRehearslyStyle(page);
+    // Without the script the page reads in English, with the way to the App Store.
+    assert.equal(await page.locator('h1').innerText(), 'You’ve been invited to a project');
+    assert.equal(await page.locator('[data-l]:not([data-l="en"]):visible').count(), 0);
+    assert.equal(await page.locator('#appStoreButton').isVisible(), true);
+    assert.equal(await page.locator('#appStoreButton').getAttribute('href'), 'https://apps.apple.com/app/id6830809401');
+    assert.equal(await page.locator('#langSwitch').isVisible(), false, 'No language buttons that cannot work');
     if (mode === 'unavailable') assert.deepEqual(blockedScripts, ['/invite-page/invite.js']);
   });
 }
@@ -236,17 +249,69 @@ test('malformed or repeated Expo host parameters cannot change the native fallba
   }
 });
 
-test('Russian browser language localizes the status, fallback and both manual links', async t => {
-  const { page } = await fixture(t, { locale: 'ru-RU', query: '?expoHost=127.0.0.1%3A8081' });
-  assert.equal(await page.locator('html').getAttribute('lang'), 'ru');
-  assert.equal(await page.locator('#statusText').textContent(), 'Открываем приложение...');
+const SPOKEN = {
+  ru: {
+    status: 'Открываем Rehearsly…', install: 'Установите Rehearsly из App Store.', appStore: 'Открыть в App Store',
+    comeBack: 'Вернитесь на эту страницу и нажмите «Открыть приглашение».', open: 'Открыть приглашение',
+    native: 'Открыть установленное приложение', title: 'Вас пригласили в проект · Rehearsly',
+  },
+  es: {
+    status: 'Abriendo Rehearsly…', install: 'Instala Rehearsly desde el App Store.', appStore: 'Abrir en el App Store',
+    comeBack: 'Vuelve a esta página y toca «Abrir invitación».', open: 'Abrir invitación',
+    native: 'Abrir la app instalada', title: 'Te invitaron a un proyecto · Rehearsly',
+  },
+  de: {
+    status: 'Rehearsly wird geöffnet …', install: 'Installiere Rehearsly aus dem App Store.', appStore: 'Im App Store öffnen',
+    comeBack: 'Komm auf diese Seite zurück und tippe auf „Einladung öffnen“.', open: 'Einladung öffnen',
+    native: 'Installierte App öffnen', title: 'Du wurdest zu einem Projekt eingeladen · Rehearsly',
+  },
+};
+
+for (const [lang, text] of Object.entries(SPOKEN)) {
+  test(`${lang} browser language shows the page in ${lang} alone: status, steps and every link`, async t => {
+    const { page } = await fixture(t, { locale: `${lang}-${lang.toUpperCase()}`, query: '?expoHost=127.0.0.1%3A8081' });
+    assert.equal(await page.locator('html').getAttribute('lang'), lang);
+    assert.equal(await page.title(), text.title);
+    assert.equal(await page.locator('#statusText').innerText(), text.status);
+    await page.clock.runFor(3000);
+    assert.equal(await page.locator('#manual').isVisible(), true);
+    assert.equal(await page.locator('#installText').innerText(), text.install);
+    assert.equal(await page.locator('#appStoreButton').innerText(), text.appStore);
+    assert.equal(await page.locator('#manualText').innerText(), text.comeBack);
+    assert.equal(await page.locator('#openButton').innerText(), text.open);
+    assert.equal(await page.locator('#nativeOpenButton').innerText(), text.native);
+    assert.equal(await page.locator(`[data-l]:not([data-l="${lang}"]):visible`).count(), 0);
+    assert.equal(await page.locator(`[data-lang="${lang}"]`).getAttribute('aria-pressed'), 'true');
+    await assertCleanDocument(page);
+  });
+}
+
+test('language order is ?lang=, then the remembered choice, then the browser; a choice is remembered', async t => {
+  const heading = page => page.locator('h1').innerText();
+  // ?lang= wins over a German browser.
+  let { page } = await fixture(t, { locale: 'de-DE', query: '?lang=es' });
+  assert.equal(await heading(page), 'Te invitaron a un proyecto');
+  // The key the landing page shares wins over the browser.
+  await page.evaluate(() => localStorage.setItem('rehearsly-lang', 'ru'));
+  await page.reload();
+  assert.equal(await heading(page), 'Te invitaron a un proyecto', '?lang= still wins over the remembered choice');
+  await page.goto(page.url().replace('?lang=es', ''));
+  assert.equal(await heading(page), 'Вас пригласили в проект');
+  // A tap on a language button switches and is remembered.
   await page.clock.runFor(3000);
-  assert.equal(await page.locator('#manual').isVisible(), true);
-  assert.equal(await page.locator('#manualText').textContent(), 'Приложение не открылось автоматически?');
-  assert.equal(await page.locator('#openButton').textContent(), 'Открыть приложение');
-  assert.equal(await page.locator('#nativeOpenButton').textContent(), 'Открыть установленное приложение');
-  assert.equal(await page.locator('#installText').textContent(), 'Если приложение не установлено, установите Rehearsly и вернитесь к этому приглашению.');
+  await page.locator('[data-lang="de"]').click();
+  assert.equal(await heading(page), 'Du wurdest zu einem Projekt eingeladen');
+  assert.equal(await page.evaluate(() => localStorage.getItem('rehearsly-lang')), 'de');
+  // An unknown language falls back to English.
+  ({ page } = await fixture(t, { locale: 'fr-FR' }));
+  assert.equal(await heading(page), 'You’ve been invited to a project');
   await assertCleanDocument(page);
+});
+
+test('the Smart App Banner carries this invitation\'s address', async t => {
+  const { page } = await fixture(t);
+  assert.equal(await page.locator('meta[name="apple-itunes-app"]').getAttribute('content'),
+    `app-id=6830809401, app-argument=${base}/invite/ABCDEFGH`);
 });
 
 test('visibility changes and page restoration cancel a pending second automatic scheme attempt', async t => {
