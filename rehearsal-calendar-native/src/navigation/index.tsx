@@ -361,8 +361,12 @@ export default function Navigation() {
 
   // The queued invite is opened only once the app stack — the one that has
   // JoinProject — is mounted: signed in and past onboarding. Until then the
-  // code waits, and is cleared only by the navigation that opens it.
-  const appStackMounted = isAuthenticated && !shouldShowOnboarding;
+  // code waits, and is cleared only by the navigation that opens it. Mounted
+  // means what the render below mounts: neither the update screen nor the
+  // spinner stands in its place. Counted as mounted under the update screen,
+  // the timer found no navigator, and once the screen came down nothing tried
+  // again: the invite was lost (T-265).
+  const appStackMounted = !updateRequired && !loading && isAuthenticated && !shouldShowOnboarding;
   useEffect(() => {
     if (!appStackMounted || !pendingInviteCode) return;
     const timer = setTimeout(() => {

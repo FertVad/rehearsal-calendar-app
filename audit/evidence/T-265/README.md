@@ -49,3 +49,30 @@ Screenshots from the passing run:
 - `97-update-required-on-launch.png` — on a cold launch, the same
 - `97-signed-in-after-the-update.png` — minimum lowered, next return: the
   calendar, still signed in
+
+## Review 1
+
+**An invite opened under the update screen was lost.** The root counted the
+app stack as mounted while the update screen stood in its place: the queued
+invite's timer found no navigator, and when the screen came down nothing tried
+again — the calendar opened instead of the invitation. "Mounted" is now what
+the render mounts: not under the update screen and not under the spinner
+(`src/navigation/index.tsx`).
+
+- Jest, `updateRequired.test.tsx`, new case "an invite opened while it is up
+  waits, and opens once it comes down" (the mocked container's ref is set while
+  mounted and empty once not, as the real one): on `index.tsx` of HEAD
+  `Tests: 1 failed, 7 passed, 8 total` (the new case: `JoinProject` never
+  navigated to); fixed: `8 passed`. All navigation suites: `48 passed`.
+- e2e, flow 97 extended (tag `invite`): with the update screen up, the
+  Twelfth Night invite link is opened; the screen stays; the minimum lowered,
+  the return opens the invitation.
+  - on `index.tsx` of HEAD: `[Failed] Update required, then not (2m 47s)
+    (Assertion is false: "Twelfth Night", id: join-project-name is visible)`
+  - fixed: `[Passed] Update required, then not (2m 12s)`
+  - `97-invite-after-the-update.png` — the invitation, opened after the update
+    screen came down.
+
+**The texts read language by language:** `proofreading.md`. No string changed;
+there it is also said how they were read (in this session, not by separate
+agents).

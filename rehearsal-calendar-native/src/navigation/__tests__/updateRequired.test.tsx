@@ -41,20 +41,32 @@ jest.mock('axios', () => {
   return { create: () => instance, post: jest.fn() };
 });
 
+// The container's ref is set while it is mounted and empty once it is not, as
+// the real one is.
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => {
+  const ReactActual = jest.requireActual('react');
   const { View } = jest.requireActual('react-native');
   return {
-    useNavigationContainerRef: () => ({ current: null }),
-    NavigationContainer: ({ children }: { children: React.ReactNode }) => <View testID="navigator">{children}</View>,
+    useNavigationContainerRef: () => ReactActual.useRef(null),
+    NavigationContainer: ReactActual.forwardRef(({ children }: { children: React.ReactNode }, ref: any) => {
+      ReactActual.useImperativeHandle(ref, () => ({ navigate: mockNavigate }));
+      return <View testID="navigator">{children}</View>;
+    }),
     useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
   };
 });
 jest.mock('@react-navigation/native-stack', () => ({ createNativeStackNavigator: () => ({ Navigator: () => null, Screen: () => null }) }));
 jest.mock('@react-navigation/bottom-tabs', () => ({ createBottomTabNavigator: () => ({ Navigator: () => null, Screen: () => null }) }));
+// A link opened while the app runs, as iOS hands it over.
+const mockLinkListeners: ((event: { url: string }) => void)[] = [];
 jest.mock('expo-linking', () => ({
   createURL: () => 'rehearsalapp://',
   getInitialURL: async () => null,
-  addEventListener: () => ({ remove: () => {} }),
+  addEventListener: (_type: string, listener: (event: { url: string }) => void) => {
+    mockLinkListeners.push(listener);
+    return { remove: () => { mockLinkListeners.splice(mockLinkListeners.indexOf(listener), 1); } };
+  },
 }));
 
 const mockAuth = { user: { id: 'u1', onboardingCompleted: true }, isAuthenticated: true, loading: false };
@@ -175,6 +187,26 @@ describe('the update screen (navigation/index.tsx)', () => {
     await waitFor(() => expect(screen.getByTestId('navigator')).toBeTruthy());
     expect(mockSent.map((config) => config.url)).toEqual(['/native/app-version']);
     expect(screen.queryByTestId('update-required')).toBeNull();
+  });
+
+  it('an invite opened while it is up waits, and opens once it comes down', async () => {
+    // The code was queued and the timer fired into a navigator the screen had
+    // taken down: nothing opened, and nothing tried again once it was back.
+    mockNavigate.mockClear();
+    mockAnswer = UPDATE_REQUIRED;
+    const screen = render(<Navigation />);
+    await waitFor(() => expect(screen.getByTestId('update-required')).toBeTruthy());
+
+    const code = '0123456789abcdef0123456789abcdef';
+    await act(async () => { mockLinkListeners.forEach((listener) => listener({ url: `rehearsalapp://invite/${code}` })); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 700)); });
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    mockAnswer = STILL_ANSWERED;
+    await act(async () => { await appState.__emit('background'); await appState.__emit('active'); });
+    await waitFor(() => expect(screen.getByTestId('navigator')).toBeTruthy());
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code }), { timeout: 1500 });
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 
   it('other refusals and no answer at all leave the app as it is', async () => {

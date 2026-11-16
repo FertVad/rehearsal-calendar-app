@@ -12,6 +12,7 @@ name: Update required, then not
 tags:
   - auth
   - update
+  - invite
 onFlowComplete:
   # A flow that fails half-way must not leave the minimum raised.
   - runScript:
@@ -56,7 +57,22 @@ onFlowComplete:
 - assertNotVisible:
     id: tab-calendar
 - takeScreenshot: 97-update-required-on-launch
-# The minimum lowered: the next return checks, and the app is back, signed in.
+# An invite link opened while the screen is up waits behind it: the screen
+# stays, nothing opens yet. Twelfth Night is Orsino's; the director is not in it.
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://invite/${TWELFTH_INVITE}
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: update-required
+- assertNotVisible:
+    id: join-project-name
+# The minimum lowered: the next return checks, the app is back, signed in, and
+# the invitation that waited opens. It was lost before: the link was taken as
+# opened into a navigator the update screen had taken down, and the calendar
+# came back instead.
 - runScript:
     file: ../scripts/require-update.js
     env:
@@ -65,6 +81,15 @@ onFlowComplete:
 - pressKey: Home
 - launchApp:
     stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 20000
+- assertNotVisible:
+    id: update-required
+- takeScreenshot: 97-invite-after-the-update
+- tapOn: "Cancel"
 - extendedWaitUntil:
     visible:
       id: tab-calendar
