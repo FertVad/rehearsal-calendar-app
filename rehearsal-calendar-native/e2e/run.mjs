@@ -59,7 +59,7 @@ import { fileURLToPath } from 'node:url';
 import { getText } from './http.mjs';
 import { mergeJunit } from './junit.mjs';
 import { LOCK, takeLock } from './lock.mjs';
-import { exitCode, flattenBatches, limitMs, nextStep } from './midnight.mjs';
+import { exitCode, flattenBatches, limitMs, nextStep, startClock } from './midnight.mjs';
 import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, requireInstalledAsLocked, splitFlows } from './native.mjs';
 import { localDate, seed } from './seed.mjs';
 
@@ -113,7 +113,7 @@ class EnvironmentError extends Error {}
 async function environment(work) {
   try { return await work(); } catch (error) { throw error instanceof EnvironmentError ? error : new EnvironmentError(error.message); }
 }
-/** The native build: the network failing pod install is the machine's; any other failure is the change's. */
+/** The native build: the network failing pod install, or a step out of its time, is the machine's; any other failure is the change's. */
 function nativeStep(work) {
   try { return work(); } catch (error) { throw error instanceof MachineError ? new EnvironmentError(error.message) : error; }
 }
@@ -594,7 +594,10 @@ async function main() {
     Release: releaseFlows.length ? nativeStep(() => releaseApp(udid, hash)) : null,
   };
 
-  step('starting a disposable PostgreSQL');
+  // The supervisor's limit on the flows starts here, and the runner's deadline
+  // with it: the project and the apps take what the network and the memory
+  // allow, each step bounded by itself (e2e/native.mjs).
+  const deadline = startClock(step, releaseFlows.length + debugFlows.length);
   const databaseUrl = await environment(startDatabase);
   assertLocalDatabase(databaseUrl);
 
@@ -641,9 +644,7 @@ async function main() {
   fs.mkdirSync(parts, { recursive: true });
   const reports = [];
   const earlierTaps = [];
-  // The supervisor's clock started with this process (e2e/midnight.mjs).
   const total = releaseFlows.length + debugFlows.length;
-  const deadline = performance.timeOrigin + limitMs(total);
   let left = total;
 
   async function runFlows(queue) {

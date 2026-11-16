@@ -63,12 +63,42 @@ test('the e2e limit grows with the flows: 34 that passed in 46 minutes are not c
   assert.ok(e2eLimitMs(60) > e2eLimitMs(34));
 });
 
+// What e2e/run.mjs prints when the iOS project and the apps are done (startClock, e2e/midnight.mjs).
+const PREPARED = 'echo "[e2e] starting a disposable PostgreSQL"';
+const HANGS = 'trap "exit 0" TERM; while :; do sleep 0.1; done';
+
 test('a check stopped by its limit says so, and is not passed off as a failed change', async () => {
-  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('e', 'trap "exit 0" TERM; while :; do sleep 0.1; done'), log: path.join(dir, 'e.log'), env, e2eLimit: 300 });
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('e', `${PREPARED}\n${HANGS}`), log: path.join(dir, 'e.log'), env, e2eLimit: 300 });
   const e2e = result.steps.find((step) => step.name === 'e2e');
   assert.equal(result.ok, false);
   assert.equal(e2e.timedOut, true);
+  assert.equal(e2e.environment, false);
   assert.match(e2e.tail, /не уложились в лимит/);
+});
+
+test("the flows' limit starts when the iOS project and the apps are done: a long pod install is not cut off by it", async () => {
+  // T-261, 15.11.2026: pod install took 1782 s and the 33 minutes for nine
+  // flows ran out before the first of them; only the machine sleeping kept
+  // the run from being called red. T-237's took 1463 s against 13 minutes.
+  const script = [
+    'echo "[e2e] generating the iOS project from app.json (expo prebuild, pod install, some 7 minutes) — its inputs changed"',
+    'sleep 1', PREPARED, 'echo "1/1 Flow Passed"',
+  ].join('\n');
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('f', script), log: path.join(dir, 'f.log'), env, e2eLimit: 300 });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(e2e.timedOut, false);
+  assert.equal(result.ok, true);
+});
+
+test("a preparation that outlasts its own allowance is the machine's, not the change's", async () => {
+  // The runner bounds pod install and the builds itself; this is the supervisor's backstop over them.
+  const script = `echo "[e2e] building the Debug app — from nothing it takes a while"\n${HANGS}`;
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('g', script), log: path.join(dir, 'g.log'), env, e2eLimit: 5000, e2ePrepare: 300 });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(result.ok, false);
+  assert.equal(e2e.timedOut, true);
+  assert.equal(e2e.environment, true);
+  assert.match(e2e.tail, /подготовка .*не уложилась/);
 });
 
 /** An app tree with flows and subflows that run each other the way the real ones do. */

@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { appStamp, builtFrom, checkReleaseBundle, inputsHash, installedMismatch, MachineError, RELEASE_FLOWS,
-  requireInstalledAsLocked, splitFlows } from '../native.mjs';
+  requireInstalledAsLocked, run, splitFlows } from '../native.mjs';
 
 const API = 'http://127.0.0.1:3001/api';
 
@@ -80,6 +80,17 @@ test('node_modules not installed from package-lock.json is refused, not stamped 
     'node_modules/expo-linear-gradient is installed and the lock does not have it',
   ]);
   assert.throws(() => requireInstalledAsLocked(root), (error) => error instanceof MachineError && /npm ci/.test(error.message));
+});
+
+test("a native step stopped by its own time limit is the machine's, not the change's", () => {
+  // T-261, 15.11.2026: pod install took 1782 s of its 1800, on Maven at
+  // 246 KB/s and 7.5 GB of swap. Out of time, it would have been the change's.
+  const { root } = tree();
+  const log = path.join(root, 'step.log');
+  assert.throws(() => run('sleep', ['5'], { cwd: root, env: process.env, log, timeout: 200 }), MachineError);
+  // A step that fails by itself is still the change's.
+  assert.throws(() => run('sh', ['-c', 'echo "error: Undefined symbol"; exit 65'], { cwd: root, env: process.env, log, timeout: 5000 }),
+    (error) => !(error instanceof MachineError) && /failed \(65\)/.test(error.message));
 });
 
 test('an app is used only when it was built from these inputs', () => {

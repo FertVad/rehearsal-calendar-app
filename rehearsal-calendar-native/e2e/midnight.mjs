@@ -12,10 +12,10 @@
  * share per flow (tools/autodev/lib/checks.mjs, e2eLimitMs), 12 min 30 s for
  * one flow. A one-flow run that waited up to 10 minutes after a 3 min 19 s
  * setup was stopped by it before Maestro started (review of T-226). So the
- * runner has the same deadline, and a wait it cannot end before it — the wait,
- * the new day's seed, a Maestro and the flows left, each as long as the
- * longest — is not begun: the run stops as not ready (75), which the
- * supervisor takes again after its pause, past midnight.
+ * runner has the same deadline, from the same line (startClock), and a wait it
+ * cannot end before it — the wait, the new day's seed, a Maestro and the flows
+ * left, each as long as the longest — is not begun: the run stops as not ready
+ * (75), which the supervisor takes again after its pause, past midnight.
  */
 
 import fs from 'node:fs';
@@ -38,9 +38,21 @@ export const FLOW_BOUND_MS = 5 * 60 * 1000;
 const LIMIT_SETUP_MS = 10 * 60 * 1000;
 const LIMIT_PER_FLOW_MS = 150 * 1000;
 
-/** How long the supervisor lets a run of `flowCount` flows take. */
+/** How long the supervisor lets a run of `flowCount` flows take, from startClock's line. */
 export function limitMs(flowCount) {
   return LIMIT_SETUP_MS + flowCount * LIMIT_PER_FLOW_MS;
+}
+
+/**
+ * Says the iOS project and the apps are done, the line the supervisor's limit
+ * starts at (E2E_LIMIT_FROM in tools/autodev/lib/checks.mjs), and gives the
+ * run's deadline from `now`. Both clocks counted from the start: on T-261's
+ * run (15.11.2026) a pod install of 1782 s took the nine flows' 33 minutes
+ * before the first of them.
+ */
+export function startClock(step, flowCount, now = Date.now()) {
+  step('starting a disposable PostgreSQL');
+  return now + limitMs(flowCount);
 }
 
 /** Until the machine's next midnight, in ms. */

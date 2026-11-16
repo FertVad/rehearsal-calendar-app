@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { e2eLimitMs, failedFlows, maestroRuns } from '../../../tools/autodev/lib/checks.mjs';
-import { exitCode, flattenBatches, limitMs, nextStep } from '../midnight.mjs';
+import { E2E_LIMIT_FROM, e2eLimitMs, failedFlows, maestroRuns } from '../../../tools/autodev/lib/checks.mjs';
+import { exitCode, flattenBatches, limitMs, nextStep, startClock } from '../midnight.mjs';
 
 const S = 1000;
 // Measured: a setup of 3 min 19 s (T-226 green) to 3 min 39 s (T-226 red),
@@ -19,7 +19,11 @@ const RESEED = 15 * S;
 const TEARDOWN = 11 * S;
 const midnight = new Date(2026, 10, 7).getTime();
 
-/** The run e2e/run.mjs makes of `flows` (their times), started at `start`, as nextStep leads it. */
+/**
+ * The run e2e/run.mjs makes of `flows` (their times), as nextStep leads it,
+ * from `start`: the line both clocks start at, the iOS project and the apps
+ * done (startClock).
+ */
 function play(start, flows) {
   const deadline = start + limitMs(flows.length);
   let now = start + SETUP;
@@ -38,6 +42,15 @@ function play(start, flows) {
 
 test('the runner\'s limit is the supervisor\'s', () => {
   for (const n of [1, 2, 7, 80]) assert.equal(limitMs(n), e2eLimitMs(n));
+});
+
+test('the runner\'s clock starts at the line the supervisor\'s does, the iOS project and the apps done', () => {
+  // T-261, 15.11.2026: both counted from the start, and a pod install of
+  // 1782 s took the nine flows' 33 minutes before the first of them.
+  const said = [];
+  const deadline = startClock((text) => said.push(`[e2e] ${text}`), 9, 1000);
+  assert.deepEqual(said, [E2E_LIMIT_FROM]);
+  assert.equal(deadline, 1000 + e2eLimitMs(9));
 });
 
 test('the review\'s path: one flow from 23:47 with a 3 min 19 s setup runs at once and ends in its limit', () => {

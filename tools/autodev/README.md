@@ -91,6 +91,15 @@ half per flow (`e2eLimitMs`). A fixed 45 minutes was outgrown on 26.10.2026 —
 sent to fix flows that passed. A check stopped by its limit says so in its
 tail and never counts as passed.
 
+**It starts when the iOS project and the apps are done** (`E2E_LIMIT_FROM`,
+the line e2e/run.mjs prints then). Making them takes what the network and the
+memory give — pod install alone 145 s to 1782 s — and counted in the flows'
+limit it ran the limit out before the first flow of T-237's run and of
+T-261's. Before that
+line the runner bounds its own steps and stops as not ready (75) when one runs
+out; the supervisor's six hours there are a backstop above them, and running
+out of them is the machine's (`environment`), not the change's.
+
 **Old e2e artifacts are removed before each run** (`pruneArtifacts`): the
 five newest Maestro runs stay, and those a red run kept in the last three
 days points at; kept red runs go after two weeks. On 27.10.2026 the

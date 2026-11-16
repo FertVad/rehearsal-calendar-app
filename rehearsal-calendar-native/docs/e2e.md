@@ -78,8 +78,17 @@ device log saying `ExpoCalendar.MissingCalendarPListValueException` and
 sign-in (`audit/evidence/T-227`).
 
 A task that changes `app.json`, `locales/`, `assets/` or the packages makes the
-next run generate the project and build Debug from it: some 7 minutes and a
-build that does not fit a single flow's limit the first time.
+next run generate the project and build Debug from it: pod install alone took
+145 s to 1782 s, by the network (React Native's tarballs come from Maven again
+for every new project) and the memory. So the supervisor's limit on the flows
+starts only when the project and the apps are done, at the line `startClock`
+prints (`E2E_LIMIT_FROM` in `tools/autodev/lib/checks.mjs`); counted from the
+start, it stopped T-261's run on 15.11.2026 before the first of nine flows.
+Before that line the runner bounds each step itself — the e2e lock 60 minutes,
+prebuild 10, pod install 60, a build 90 — and a step out of its time stops the
+run as not ready (75), not as the change's failure; the supervisor's own six
+hours there are a backstop above their sum, and running out of them counts as
+the machine's too.
 
 ## What it refuses
 
@@ -314,7 +323,8 @@ midnight — as many as fit at 5 minutes a flow (`FLOW_BOUND_MS` in
 `e2e/midnight.mjs`: the longest, flow 70, takes 3 min 20 s, and a Maestro 54 s
 to start) — and, when not one fits, waits for midnight. The wait is time the
 supervisor's limit does not give (a setup and 2.5 minutes a flow, 12.5 minutes
-for one; `e2eLimitMs`), so the runner keeps the same deadline from its start:
+for one; `e2eLimitMs`), so the runner keeps the same deadline from the same
+line, when the project and the apps are done (`startClock`):
 a wait it could not end in it — with the new day's seed, a Maestro and the
 flows left at the longest's time each — is not begun, and the run stops as not
 ready (75), to be taken again after midnight. `e2e/__tests__/midnight.test.mjs`

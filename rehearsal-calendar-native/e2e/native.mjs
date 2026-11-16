@@ -144,19 +144,27 @@ const read = (file) => { try { return fs.readFileSync(file, 'utf8').trim(); } ca
 export const appStamp = (app) => `${app}.inputs`;
 export const builtFrom = (app, hash) => Boolean(app) && fs.existsSync(app) && read(appStamp(app)) === hash;
 
-/** Something the machine could not do — the network for the Pods — rather than the change. */
+/** Something the machine could not do — the network for the Pods, a step in its time — rather than the change. */
 export class MachineError extends Error {}
 const NETWORK = /Could not resolve host|Failed to connect|Connection (?:refused|reset|timed out)|SSL_ERROR|curl: \(\d+\)|Couldn't connect to server/;
 
-function run(command, args, { cwd, env, log, timeout }) {
+/**
+ * A native step, its output in `log`. Out of its time it is the machine's, as
+ * the network failing it is: how long pod install and a build take is the
+ * network's and the memory's (T-261, 15.11.2026: pod install 1782 s of its
+ * 1800, on Maven at 246 KB/s and 7.5 GB of swap).
+ */
+export function run(command, args, { cwd, env, log, timeout }) {
   const out = fs.openSync(log, 'a');
   try {
     execFileSync(command, args, { cwd, env, stdio: ['ignore', out, out], timeout });
   } catch (error) {
     const text = read(log) ?? '';
     const errors = text.split('\n').filter((line) => /\berror\b|\[!\]/i.test(line)).slice(0, 8).map((line) => line.slice(0, 300));
-    const message = `${path.basename(command)} ${args[0]} failed (${error.status ?? error.signal}) — see ${log}\n${errors.join('\n')}`;
-    throw NETWORK.test(text) ? new MachineError(message) : new Error(message);
+    const outOfTime = error.code === 'ETIMEDOUT';
+    const why = outOfTime ? `out of its ${Math.round(timeout / 1000)} s` : error.status ?? error.signal;
+    const message = `${path.basename(command)} ${args[0]} failed (${why}) — see ${log}\n${errors.join('\n')}`;
+    throw outOfTime || NETWORK.test(text) ? new MachineError(message) : new Error(message);
   } finally {
     fs.closeSync(out);
   }
@@ -187,7 +195,9 @@ export function prepareProject({ hash, log, step, force = false, root = ROOT }) 
   run(process.execPath, [path.join(root, 'node_modules', 'expo', 'bin', 'cli'), ...PREBUILD], { cwd: NATIVE, env, log, timeout: 10 * 60 * 1000 });
   const prebuilt = Date.now();
   fs.writeFileSync(path.join(IOS, '.xcode.env.local'), xcodeEnvLocal(root));
-  run('pod', ['install'], { cwd: IOS, env, log, timeout: 30 * 60 * 1000 });
+  // 145 s to 1782 s, measured: React Native's tarballs come from Maven again
+  // for every new project, at whatever the network gives.
+  run('pod', ['install'], { cwd: IOS, env, log, timeout: 60 * 60 * 1000 });
   fs.writeFileSync(STAMP, `${hash}\n`);
   step(`  prebuild ${Math.round((prebuilt - started) / 1000)} s, pod install ${Math.round((Date.now() - prebuilt) / 1000)} s`);
   return true;

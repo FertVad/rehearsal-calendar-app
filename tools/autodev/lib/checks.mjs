@@ -27,10 +27,26 @@ const DRIVER_LOST = /DeviceUnreachableException/;
 const E2E_SETUP_MS = 10 * 60 * 1000;
 const E2E_PER_FLOW_MS = 150 * 1000;
 
-/** How long an e2e run of `flowCount` flows may take. */
+/** How long an e2e run of `flowCount` flows may take, from E2E_LIMIT_FROM. */
 export function e2eLimitMs(flowCount) {
   return E2E_SETUP_MS + flowCount * E2E_PER_FLOW_MS;
 }
+
+// Before its flows the runner makes the iOS project and the apps when what
+// they are made of changed, and that takes what the network and the memory
+// allow, not what the flows do: pod install alone took 145 s to 1782 s.
+// Counted in the flows' limit, it ran the limit out in T-237's pod install
+// (09.11.2026: 1463 s against 13 minutes) and before T-261's first flow
+// (15.11) — only the machine sleeping kept T-261's run from being called red.
+// So the limit starts at the line the runner prints when they are done
+// (startClock in e2e/midnight.mjs, which keeps its own deadline from it; the
+// midnight test holds the two the same). Before it the runner bounds each step
+// itself — the e2e lock 60 minutes (e2e/lock.mjs), prebuild 10, pod install
+// 60, a build 90 (e2e/native.mjs) — and stops as not ready when one runs out;
+// this is a backstop above their sum, and running out of it is the machine's
+// too.
+export const E2E_LIMIT_FROM = '[e2e] starting a disposable PostgreSQL';
+const E2E_PREPARE_MS = 6 * 60 * 60 * 1000;
 
 const FLOWS = 'e2e/flows';
 const APP = 'rehearsal-calendar-native/';
@@ -174,7 +190,12 @@ export function stopChecks(signal = 'SIGTERM') {
   for (const child of running) child.kill(signal);
 }
 
-function run(name, command, args, { cwd, env, log, timeoutMs }) {
+/**
+ * `restart` — `{ line, timeoutMs, before }`: when the output prints `line`, the
+ * limit starts again as `timeoutMs`, and running out of the first one is told
+ * as `before`. The step says whether the line came (`restarted`).
+ */
+function run(name, command, args, { cwd, env, log, timeoutMs, restart }) {
   return new Promise((resolve) => {
     const out = fs.createWriteStream(log, { flags: 'a' });
     out.write(`\n### ${new Date().toISOString()} ${name}: ${command} ${args.join(' ')}\n`);
@@ -182,6 +203,13 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     running.add(child);
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
+    // Stopped by its limit is neither passed — e2e/run.mjs tears down and may
+    // exit 0 — nor a failure of the change, and the tail says which it was.
+    let timedOut = false;
+    const stop = () => { timedOut = true; child.kill('SIGTERM'); };
+    let limitMs = timeoutMs;
+    let timer = setTimeout(stop, limitMs);
+    let restarted = false;
     const lines = [];
     // What failed, over the whole run: a Jest summary of three failures is
     // longer than the tail (T-202 was named after a fragment).
@@ -192,6 +220,14 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     const add = (line) => {
       lines.push(line);
       if (isFailureLine(line) && failures.length < 200) failures.push(line);
+      // Included, not equal: stdout and stderr share `partial`, and a piece of
+      // one can come before a line of the other.
+      if (restart && !restarted && !timedOut && line.includes(restart.line)) {
+        restarted = true;
+        clearTimeout(timer);
+        limitMs = restart.timeoutMs;
+        timer = setTimeout(stop, limitMs);
+      }
     };
     const keep = (chunk) => {
       out.write(chunk);
@@ -202,21 +238,19 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     };
     child.stdout.on('data', keep);
     child.stderr.on('data', keep);
-    // Stopped by its limit is neither passed — e2e/run.mjs tears down and may
-    // exit 0 — nor a failure of the change, and the tail says which it was.
-    let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, timeoutMs);
     child.on('close', (code, signal) => {
       running.delete(child);
       clearTimeout(timer);
       if (partial) add(partial);
       if (timedOut) {
-        const note = `[autodev] ${name}: не уложились в лимит ${Math.round(timeoutMs / 60000)} мин — остановлено по времени, это не результат проверки`;
+        const note = restart && !restarted
+          ? `[autodev] ${name}: ${restart.before}`
+          : `[autodev] ${name}: не уложились в лимит ${Math.round(limitMs / 60000)} мин — остановлено по времени, это не результат проверки`;
         add(note);
         out.write(`${note}\n`);
       }
       out.end();
-      resolve({ name, ok: code === 0 && !timedOut, code, signal, timedOut, tail: lines.slice(-TAIL_LINES).join('\n'), failures });
+      resolve({ name, ok: code === 0 && !timedOut, code, signal, timedOut, restarted, tail: lines.slice(-TAIL_LINES).join('\n'), failures });
     });
   });
 }
@@ -230,16 +264,26 @@ export function checksFor(changedFiles) {
 
 /**
  * One e2e run of `flows` (relative to the app; none — the whole set) in the
- * tree `root`, after old artifacts are cleared.
+ * tree `root`, after old artifacts are cleared. `limitMs` counts from
+ * E2E_LIMIT_FROM, `prepareMs` until it.
  */
-export async function runE2e({ root, node, log, env, flows = [], limitMs }) {
+export async function runE2e({ root, node, log, env, flows = [], limitMs, prepareMs = E2E_PREPARE_MS }) {
   const app = path.join(root, 'rehearsal-calendar-native');
   pruneArtifacts(path.join(app, 'e2e', 'out'));
   const all = flows.length ? flows : listFlows(app);
   const once = async (only, timeoutMs) => {
     const started = Date.now();
-    const step = await run('e2e', node, ['e2e/run.mjs', ...only], { cwd: app, env, log, timeoutMs });
-    step.environment = step.code === E2E_NOT_READY;
+    const step = await run('e2e', node, ['e2e/run.mjs', ...only], {
+      cwd: app, env, log, timeoutMs: prepareMs,
+      restart: {
+        line: E2E_LIMIT_FROM,
+        timeoutMs,
+        before: `подготовка (замок e2e, проект iOS, приложения) не уложилась в ${Math.round(prepareMs / 60000)} мин: остановлено по времени, дело в машине (сеть, память), а не в задаче`,
+      },
+    });
+    // Out of time before the flows' clock is the lock, the project and the
+    // apps: the machine's, the network's and the memory's, like 75.
+    step.environment = step.code === E2E_NOT_READY || (step.timedOut && !step.restarted);
     step.lost = [];
     // Maestro prints a flow that failed by an exception without its reason —
     // "[Failed] Sign in (13s)" — and T-120's 25 flows lost with the simulator
@@ -290,7 +334,7 @@ export async function runE2e({ root, node, log, env, flows = [], limitMs }) {
  * @param taskText the task's statement, for the flows it names
  * @returns {{ok: boolean, steps: {name, ok, code, tail, environment?, flows?}[]}}
  */
-export async function runChecks({ root, changedFiles, taskText, seedLines, node, log, env, e2eLimit }) {
+export async function runChecks({ root, changedFiles, taskText, seedLines, node, log, env, e2eLimit, e2ePrepare }) {
   const app = path.join(root, 'rehearsal-calendar-native');
   const want = checksFor(changedFiles);
   const steps = [];
@@ -312,7 +356,7 @@ export async function runChecks({ root, changedFiles, taskText, seedLines, node,
   }
   if (want.e2e) {
     const flows = e2eFlowsFor({ app, changedFiles, taskText, seedLines });
-    const step = await runE2e({ root, node, log, env, flows, limitMs: e2eLimit });
+    const step = await runE2e({ root, node, log, env, flows, limitMs: e2eLimit, prepareMs: e2ePrepare });
     steps.push(step);
     if (!step.ok) return { ok: false, steps };
   }
