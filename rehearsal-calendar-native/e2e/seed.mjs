@@ -806,8 +806,9 @@ export async function seed({ client, apiUrl, timezone }) {
     // Gertrude told of it, and edits the second from its details twice (52).
     // Made by Gaev, signed in already: the seed's twenty sign-ins are spent.
     // The first is named in German quotes nested right, which the question
-    // before deleting it keeps, set in English ones (T-261 review).
-    ghost: await rehearsal(courtId, '„Ghost watch ‚Act I‘“', 2, 19, 20, ['claudius', 'gertrude'], 'gaev'),
+    // before deleting it keeps, set in English ones (T-261 review), with an
+    // apostrophe inside the inner pair that stays one (T-261 review, round 2).
+    ghost: await rehearsal(courtId, '„Ghost watch ‚Actors’ Act‘“', 2, 19, 20, ['claudius', 'gertrude'], 'gaev'),
     mousetrap: await rehearsal(courtId, 'The Mousetrap', 3, 19, 20, ['claudius', 'gertrude'], 'gaev'),
     // Off the form's five-minute step, as a rehearsal made before it (54).
     storm: await rehearsal(learId, 'Storm scene', 1, [10, 7], 12, ['cordelia'], 'gaev'),

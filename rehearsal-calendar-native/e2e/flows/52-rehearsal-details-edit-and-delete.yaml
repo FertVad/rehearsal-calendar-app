@@ -226,11 +226,12 @@ tags:
       MAIL_URL: ${MAIL_URL}
 - tapOn: "Try again"
 # The date in brackets: its own commas ran into the title's (T-261).
-# Its name, typed „Ghost watch ‚Act I‘“, is set in English quotes once, the
-# inner ones as English nests them: a closing ‘ before the closing “ once made
-# that “ an opening one, and the name read “‘Ghost watch ‘Act I’‘” (review).
+# Its name, typed „Ghost watch ‚Actors’ Act‘“, is set in English quotes once,
+# the inner ones as English nests them: a closing ‘ before the closing “ once
+# made that “ an opening one (review), and the apostrophe of Actors’ closed the
+# inner pair, so it read “Ghost watch ‘Actors’ Act‘” (review, round 2).
 - extendedWaitUntil:
-    visible: "Delete “Ghost watch ‘Act I’” \\(.*, 7:00.PM\\)\\?"
+    visible: "Delete “Ghost watch ‘Actors’ Act’” \\(.*, 7:00.PM\\)\\?"
     timeout: 10000
 - assertVisible: "(1 participant|Participants \\(1\\)) will be notified"
 - runFlow:
