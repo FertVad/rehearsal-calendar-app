@@ -87,6 +87,23 @@ export function parseDecisions(markdown) {
   return decisions;
 }
 
+/**
+ * The number of a task's next review, 3 after reviews/T-261-r1.md and r2:
+ * every round the task has had, not the two a decision gives. "Продолжить"
+ * starts those two again and "на ревью" repeats the last, so a file named by
+ * them was written over — T-261's accepted third answer replaced its first,
+ * and 34 answers of 28 tasks went the same way (16.11.2026).
+ */
+export function nextReview(dir, id) {
+  let names;
+  try { names = fs.readdirSync(dir); } catch (error) {
+    if (error.code === 'ENOENT') return 1;
+    throw error;
+  }
+  const pattern = new RegExp(`^${id}-r(\\d+)\\.md$`);
+  return Math.max(0, ...names.map((name) => Number(pattern.exec(name)?.[1] ?? 0))) + 1;
+}
+
 /** One line appended to a task's report. */
 export function appendReport(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });

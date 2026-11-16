@@ -38,7 +38,7 @@ import { failedFlows, keepFailedFlows, runChecks, runE2e, SEED_FILE, stopChecks 
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
-import { appendReport, loadState, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
+import { appendReport, loadState, nextReview, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
 import { auditTasks, taskMarkdown } from './lib/audit.mjs';
 import { flakeTask, flakeTitle, nextFlakeId, queueFound } from './lib/flakes.mjs';
 import { NIGHT, fullE2eDue, regressionTask, regressionTitle } from './lib/nightly.mjs';
@@ -47,6 +47,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
 const DIR = path.join(REPO, 'AUTODEV');
 const STATE_DIR = path.join(DIR, '.state');
+const REVIEWS = path.join(DIR, 'reviews');
 const STATE = path.join(STATE_DIR, 'state.json');
 const LOGS = path.join(STATE_DIR, 'logs');
 const WORKTREE = path.resolve(REPO, '..', 'reh_app-auto');
@@ -193,7 +194,10 @@ function writeStatus(state, now) {
   }
   const full = state.fullE2eRunning;
   if (full) lines.push(`**Сейчас идёт ${full.kind} полный прогон e2e** на ${full.head.slice(0, 7)}, начат ${new Date(full.at).toLocaleString('ru-RU')}; задачи ждут его.`);
-  if (task) lines.push(`Сейчас: **${state.current}** ${tasksById[state.current]?.title ?? ''} — фаза ${task.phase}${task.round ? `, ревью круг ${task.round}` : ''}.`);
+  // The round as the task's notes and files count it (nextReview): the one
+  // under way or next, the one just accepted while it is pushed.
+  const round = task?.round ? nextReview(REVIEWS, state.current) - (task.phase === 'push' ? 1 : 0) : 0;
+  if (task) lines.push(`Сейчас: **${state.current}** ${tasksById[state.current]?.title ?? ''} — фаза ${task.phase}${round ? `, ревью круг ${round}` : ''}.`);
   else if (!paused) lines.push(now ?? 'Очередь пуста.');
   const last = state.fullE2e;
   lines.push('', last ? `Последний полный прогон e2e: ${last.kind}, ${new Date(last.at).toLocaleString('ru-RU')}, ${last.head.slice(0, 7)} — ${last.ok ? `зелёный (${last.flows})` : last.machine ? 'не состоялся по вине машины' : `красный, в очереди ${last.queued?.join(', ')}`}.`
@@ -681,11 +685,15 @@ async function fullE2e(state, queueEmpty) {
 
 async function review(state, task, t) {
   git(REVIEW_TREE, 'checkout', '--detach', '--quiet', t.head);
+  // `round` is which of the two rounds a decision gives this is; `no`, every
+  // round the task has had — the one people read and the answer's file name,
+  // so a continued task does not write over its first answers (nextReview).
   const round = t.round;
+  const no = nextReview(REVIEWS, task.id);
   const continuing = Boolean(t.reviewPending && t.codexThread);
   const prompt = continuing ? P.REVIEW_CONTINUE
     : P.review(task, { base: t.base, head: t.head, devReport: t.devReport ?? '', checks: t.checks, round, earlier: Boolean(t.codexThread) });
-  if (!continuing) note(task, `ревью: круг ${round}`);
+  if (!continuing) note(task, `ревью: круг ${no}`);
   const lastMessageFile = path.join(STATE_DIR, `${task.id}-codex-last.md`);
   const startedAt = Date.now();
   const run = await runCodex({
@@ -713,12 +721,12 @@ async function review(state, task, t) {
   }
   t.failures = 0;
   t.reviewPending = false;
-  const file = path.join(DIR, 'reviews', `${task.id}-r${round}.md`);
-  writeAtomic(file, run.text);
-  note(task, `ревью круг ${round}: ${verdict === 'accept' ? 'принято' : 'есть замечания'} — reviews/${path.basename(file)}`);
+  t.review = `${task.id}-r${no}.md`;
+  writeAtomic(path.join(REVIEWS, t.review), run.text);
+  note(task, `ревью круг ${no}: ${verdict === 'accept' ? 'принято' : 'есть замечания'} — reviews/${t.review}`);
   if (verdict === 'accept') { t.phase = 'push'; return; }
   if (round >= 2) {
-    return defer(state, task, t, `нет согласия с ревьюером после двух кругов — reviews/${task.id}-r${round}.md`,
+    return defer(state, task, t, `нет согласия с ревьюером после двух кругов — reviews/${t.review}`,
       { kind: 'fix-review', review: run.text });
   }
   t.round = 2;
@@ -738,7 +746,8 @@ function push(state, task, t) {
     // Nothing is lost: the commits are on the branch and the next push takes them.
     note(task, `готово, но push не прошёл: ${String(error.message).split('\n')[0]}`);
   }
-  appendReport(reportFile(task), `\n## Итог\n\n${t.devReport ?? ''}\n\nРевью: reviews/${task.id}-r${t.round}.md — принято.\n`);
+  // A task accepted before t.review was kept has its answer under the old name.
+  appendReport(reportFile(task), `\n## Итог\n\n${t.devReport ?? ''}\n\nРевью: reviews/${t.review ?? `${task.id}-r${t.round}.md`} — принято.\n`);
   t.phase = 'done';
   t.finishedAt = new Date().toISOString();
   state.current = null;
@@ -877,9 +886,9 @@ function toReview(state, task, t, named, resume, decided = null) {
  */
 function resumeDeferred(state, task, t, named, decided = null) {
   let resume = t.resume;
-  if (!resume && t.round) {
-    const file = path.join(DIR, 'reviews', `${task.id}-r${t.round}.md`);
-    if (fs.existsSync(file)) resume = { kind: 'fix-review', review: fs.readFileSync(file, 'utf8') };
+  const last = nextReview(REVIEWS, task.id) - 1;
+  if (!resume && t.round && last) {
+    resume = { kind: 'fix-review', review: fs.readFileSync(path.join(REVIEWS, `${task.id}-r${last}.md`), 'utf8') };
   }
   toReview(state, task, t, named, resume ?? { kind: 'develop' }, decided);
 }

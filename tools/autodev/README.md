@@ -14,7 +14,7 @@ and on to the next, without anyone relaying messages between them.
 | `TASKS.md` | The queue. `## T-001 Title`, then what to do. File order is work order. |
 | `STATUS.md` | What is happening now: the task and phase, a limit being waited out, a pause. |
 | `reports/T-001-<name>.md` | One per task: its timeline and, when done, the developer's report. |
-| `reviews/T-001-r1.md` | Astra's answer for each round. |
+| `reviews/T-001-r1.md` | Astra's answer for each round, numbered across all of the task's rounds: one continued after two goes on at `r3` (`nextReview`). Until 16.11.2026 the file was named by the two rounds a decision gives, so a continued task's answers were written over its first ones: the 34 so lost are in `reviews/overwritten/`, from Astra's logs. |
 | `DECISIONS.md` | For a paused task: `T-001: продолжить` (three more attempts / two more rounds) or `T-001: пропустить` (its commits leave `auto/main` and are kept on `auto/skipped/T-001`). |
 | `notes/T-001.md` | A note to the task's developer: added once to the next message it gets, then moved to `notes/delivered/`. |
 | `STOP` | While it exists, nothing new starts. |
