@@ -540,6 +540,7 @@ Running both is safe, and that is by design — see the claim below.
 fifteen minutes kept the Neon compute awake and ran through its allowance (see
 the workflow's header). Turning one back on is the owner's decision, and after
 R8 it needs migration 011 (`native_push_tickets`) applied first.
+On 2026-11-16 the owner kept them off until the first users are asked whether they want them, and the app does not promise them anywhere (T-266, `noReminderPromise.test.ts`).
 
 **The windows are deliberately wide** — 12–24h ahead for the day-before
 reminder, 0–1h for the hour-before — because no free scheduler is punctual.
