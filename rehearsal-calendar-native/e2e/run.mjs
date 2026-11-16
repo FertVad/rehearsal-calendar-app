@@ -636,8 +636,8 @@ async function main() {
   }
 
   // One folder for the run's artifacts, a flow's folder in it, as one Maestro
-  // made it: the supervisor keeps the newest folder of a red run
-  // (maestro-artifacts.txt) and from the reviewer's tree its failed flows'.
+  // made it: the supervisor moves a red run's failed flows' folders into the
+  // run it keeps (keepFailedFlows, maestro-artifacts.txt).
   const artifacts = path.join(OUT, 'artifacts', runStamp());
   const parts = path.join(OUT, 'junit-parts');
   fs.rmSync(parts, { recursive: true, force: true });

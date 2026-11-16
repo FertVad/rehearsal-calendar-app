@@ -34,7 +34,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
-import { failedFlows, maestroRuns, runChecks, runE2e, SEED_FILE, stopChecks } from './lib/checks.mjs';
+import { failedFlows, keepFailedFlows, runChecks, runE2e, SEED_FILE, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
@@ -539,8 +539,11 @@ async function check(state, task, t) {
  * under e2e/out (not in git) — before the rerun overwrites them. T-203's
  * developer could reach neither the supervisor's log, outside its tree, nor
  * the server log of the failed e2e run, gone with the rerun. `tree` is where
- * it ran: a full run in the reviewer's tree brings over the failed flows'
- * screenshots. The path, relative to the developer's tree.
+ * it ran. From either tree the failed flows' Maestro folders — screenshots and
+ * the device log — move in with it, and stay as long as it does (two weeks):
+ * the developer's own tree used to keep a pointer at the run instead, and the
+ * run went after three days, before T-255 was taken (keepFailedFlows). The
+ * path, relative to the developer's tree.
  */
 function keepFailedRun(name, checksLog, offset, run, tree = WORKTREE) {
   const rel = path.join('rehearsal-calendar-native', 'e2e', 'out', 'failed', `${name}-${new Date().toISOString().replace(/[:.]/g, '-')}`);
@@ -554,14 +557,7 @@ function keepFailedRun(name, checksLog, offset, run, tree = WORKTREE) {
       try { fs.copyFileSync(path.join(out, file), path.join(dir, file)); } catch { /* not written */ }
     }
     try {
-      const runs = maestroRuns(out);
-      if (runs.length && tree === WORKTREE) {
-        fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join('rehearsal-calendar-native', 'e2e', 'out', 'artifacts', runs.at(-1))}\n`);
-      } else if (runs.length) {
-        fs.mkdirSync(path.join(dir, 'artifacts'));
-        for (const flow of failedFlows(readText(path.join(out, 'junit.xml')))) {
-          try { fs.renameSync(path.join(out, 'artifacts', runs.at(-1), flow.name), path.join(dir, 'artifacts', flow.name)); } catch { /* none for it */ }
-        }
+      if (keepFailedFlows(out, path.join(dir, 'artifacts')).length) {
         fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join(rel, 'artifacts')}\n`);
       }
     } catch { /* none */ }

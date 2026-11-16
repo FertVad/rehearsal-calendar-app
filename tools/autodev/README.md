@@ -101,9 +101,13 @@ out; the supervisor's six hours there are a backstop above them, and running
 out of them is the machine's (`environment`), not the change's.
 
 **Old e2e artifacts are removed before each run** (`pruneArtifacts`): the
-five newest Maestro runs stay, and those a red run kept in the last three
-days points at; kept red runs go after two weeks. On 27.10.2026 the
-developer's tree held 207 runs, 34 GB, with 8 GB left on the disk.
+five newest Maestro runs stay. On 27.10.2026 the developer's tree held 207
+runs, 34 GB, with 8 GB left on the disk. A red run that is kept takes its
+failed flows' Maestro folders with it — the screenshots and the device log a
+lost tap is proved by, about 70 MB a flow (`keepFailedFlows`) — and goes after
+two weeks. From the developer's tree it used to point at the run's folder,
+kept three days: T-255, a flaky flow queued on 12.11.2026 behind the tasks
+people queued and taken on 15.11, found that log already gone.
 
 **Checks wait while the machine is short of memory.** At macOS memory
 pressure warning or worse (`kern.memorystatus_vm_pressure_level` ≥ 2) the

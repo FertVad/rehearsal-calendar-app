@@ -135,14 +135,13 @@ export function failedFlows(junitXml) {
   return failed;
 }
 
-// Maestro keeps every run's screenshots under e2e/out/artifacts, about 0.9 GB
-// for the whole set; by 27.10.2026 the developer's tree held 207 runs, 34 GB,
-// with 8 GB left on the disk. The newest are kept, and those a kept red run
-// (supervisor, keepFailedRun) still points at while it is recent. Kept red
-// runs go after two weeks: what a task proved is in audit/evidence.
+// Maestro keeps every run's screenshots and device logs under e2e/out/artifacts,
+// about 70 MB a flow; by 27.10.2026 the developer's tree held 207 runs, 34 GB,
+// with 8 GB left on the disk. The newest are kept. A kept red run (supervisor,
+// keepFailedRun) holds its failed flows' folders itself (keepFailedFlows) and
+// goes after two weeks: what a task proved is in audit/evidence.
 const KEEP_RUNS = 5;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const KEEP_POINTED_MS = 3 * DAY_MS;
 const KEEP_FAILED_MS = 14 * DAY_MS;
 
 /**
@@ -156,10 +155,35 @@ export function maestroRuns(out) {
   } catch { return []; }
 }
 
+/**
+ * Moves the Maestro folders of the flows the newest run under `out` (an app's
+ * e2e/out) failed — screenshots, maestro.log, and device-simulator.log, the one
+ * proof of a tap the simulator lost — into `into`, a kept red run's own folder,
+ * which lasts as long as the kept run does. The run's folder lasts only while it
+ * is one of the newest. A kept red run used to point at it instead, honoured for
+ * three days: T-255, queued on 12.11.2026 behind the tasks people queued and
+ * taken on 15.11, found the device log its rule asks for pruned. The flows
+ * moved, by name.
+ */
+export function keepFailedFlows(out, into) {
+  const runs = maestroRuns(out);
+  if (!runs.length) return [];
+  const moved = [];
+  for (const flow of failedFlows(readText(path.join(out, 'junit.xml')))) {
+    const from = path.join(out, 'artifacts', runs.at(-1), flow.name);
+    if (!fs.existsSync(from)) continue;
+    try {
+      fs.mkdirSync(into, { recursive: true });
+      fs.renameSync(from, path.join(into, flow.name));
+      moved.push(flow.name);
+    } catch { /* stays in the run's folder, as before */ }
+  }
+  return moved;
+}
+
 /** Removes old Maestro artifacts and kept red runs under `out` (an app's e2e/out); the paths removed, relative to it. */
 export function pruneArtifacts(out, now = Date.now()) {
   const removed = [];
-  const keep = new Set();
   let kept = [];
   try { kept = fs.readdirSync(path.join(out, 'failed')); } catch { /* none kept */ }
   for (const name of kept) {
@@ -169,12 +193,10 @@ export function pruneArtifacts(out, now = Date.now()) {
     if (age > KEEP_FAILED_MS) {
       fs.rmSync(dir, { recursive: true, force: true });
       removed.push(path.join('failed', name));
-    } else if (age <= KEEP_POINTED_MS) {
-      try { keep.add(path.basename(fs.readFileSync(path.join(dir, 'maestro-artifacts.txt'), 'utf8').trim())); } catch { /* none named */ }
     }
   }
   const runs = maestroRuns(out);
-  for (const run of runs.slice(-KEEP_RUNS)) keep.add(run);
+  const keep = new Set(runs.slice(-KEEP_RUNS));
   for (const run of runs.filter((name) => !keep.has(name))) {
     fs.rmSync(path.join(out, 'artifacts', run), { recursive: true, force: true });
     removed.push(path.join('artifacts', run));

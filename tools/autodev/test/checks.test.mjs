@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { e2eFlowsFor, e2eLimitMs, failedFlows, maestroRuns, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
+import { e2eFlowsFor, e2eLimitMs, failedFlows, keepFailedFlows, maestroRuns, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
 import { flakeTitle, isFailureLine } from '../lib/flakes.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-checks-'));
@@ -153,28 +153,60 @@ test('the flows a Maestro report failed, by file', () => {
   assert.deepEqual(failedFlows(''), []);
 });
 
-test('old Maestro artifacts go; the newest and those a recent red run points at stay', () => {
+test('old Maestro artifacts go and the newest five stay; kept red runs go after two weeks', () => {
   // 27.10.2026: 207 runs, 34 GB, 8 GB left on the disk.
   const out = path.join(dir, 'prune', 'e2e', 'out');
   const runs = ['2026-10-01_010000', '2026-10-02_010000', '2026-10-03_010000', '2026-10-04_010000',
     '2026-10-05_010000', '2026-10-06_010000', '2026-10-07_010000', '2026-10-08_010000'];
   for (const run of runs) fs.mkdirSync(path.join(out, 'artifacts', run, 'Inbox'), { recursive: true });
   const now = Date.now();
-  const kept = (name, days, run) => {
+  const kept = (name, days) => {
     const at = path.join(out, 'failed', name);
-    fs.mkdirSync(at, { recursive: true });
-    fs.writeFileSync(path.join(at, 'maestro-artifacts.txt'), `rehearsal-calendar-native/e2e/out/artifacts/${run}\n`);
+    fs.mkdirSync(path.join(at, 'artifacts', 'Inbox'), { recursive: true });
     const when = new Date(now - days * 24 * 60 * 60 * 1000);
     fs.utimesSync(at, when, when);
   };
-  kept('T-121-recent', 1, runs[0]);
-  kept('T-110-week', 7, runs[1]);
-  kept('T-108-old', 20, runs[2]);
+  kept('T-121-recent', 1);
+  kept('T-110-week', 7);
+  kept('T-108-old', 20);
   const removed = pruneArtifacts(out, now);
-  assert.deepEqual(fs.readdirSync(path.join(out, 'artifacts')).sort(), [runs[0], ...runs.slice(3)]);
+  assert.deepEqual(fs.readdirSync(path.join(out, 'artifacts')).sort(), runs.slice(3));
   assert.deepEqual(fs.readdirSync(path.join(out, 'failed')).sort(), ['T-110-week', 'T-121-recent']);
+  assert.ok(fs.existsSync(path.join(out, 'failed', 'T-110-week', 'artifacts', 'Inbox')));
   assert.ok(removed.includes(path.join('failed', 'T-108-old')));
   assert.deepEqual(pruneArtifacts(path.join(dir, 'prune', 'nothing-here'), now), []);
+});
+
+test('a kept red run holds its failed flows\' Maestro folders as long as it is kept: the device log outlives the queue', () => {
+  // T-255 (16.11.2026): flow 10 went red in T-250's checks on 12.11 and its
+  // task was taken on 15.11, behind the tasks people queued. The kept red run
+  // only pointed at the run's folder, honoured for three days, and the device
+  // log its rule asks for — a tap the simulator lost — had been pruned.
+  const out = path.join(dir, 'keep-red', 'e2e', 'out');
+  const red = '2026-11-12_210803';
+  const flow = 'Availability saves the day it changed';
+  fs.mkdirSync(path.join(out, 'artifacts', red, flow, 'logs'), { recursive: true });
+  fs.writeFileSync(path.join(out, 'artifacts', red, flow, 'logs', 'device-simulator.log'), 'we already have a service for senderID\n');
+  fs.mkdirSync(path.join(out, 'artifacts', red, 'Inbox'), { recursive: true });
+  fs.writeFileSync(path.join(out, 'junit.xml'), `<testsuite tests="2" failures="1">
+    <testcase name="Inbox" file="e2e/flows/05-inbox.yaml" status="SUCCESS"></testcase>
+    <testcase name="${flow}" file="e2e/flows/10-availability-days.yaml" status="ERROR"><failure>Element not found: Text matching regex: Mark Busy</failure></testcase>
+  </testsuite>`);
+  const kept = path.join(out, 'failed', 'T-250-2026-11-12T19-38-17-877Z');
+  fs.mkdirSync(kept, { recursive: true });
+  assert.deepEqual(keepFailedFlows(out, path.join(kept, 'artifacts')), [flow]);
+  for (const run of ['2026-11-13_010000', '2026-11-14_010000', '2026-11-15_010000', '2026-11-15_020000', '2026-11-16_010000']) {
+    fs.mkdirSync(path.join(out, 'artifacts', run), { recursive: true });
+  }
+  pruneArtifacts(out, Date.now() + 4 * 24 * 60 * 60 * 1000);
+  assert.equal(fs.readFileSync(path.join(kept, 'artifacts', flow, 'logs', 'device-simulator.log'), 'utf8'),
+    'we already have a service for senderID\n');
+  assert.deepEqual(fs.readdirSync(path.join(kept, 'artifacts')), [flow], 'only the failed flows, ~70 MB each, not the run');
+  assert.ok(!fs.existsSync(path.join(out, 'artifacts', red)));
+  // No Maestro run, nothing failed: nothing to keep, and no folder for it.
+  const none = path.join(dir, 'keep-red', 'none');
+  assert.deepEqual(keepFailedFlows(path.join(dir, 'keep-red', 'no-out'), none), []);
+  assert.ok(!fs.existsSync(none));
 });
 
 test('a flow failed by an exception says why, from the report', async () => {
