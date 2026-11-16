@@ -15,6 +15,7 @@ import {
 } from '../../../shared/utils/time';
 import { exportRehearsal } from '../../../shared/services/calendarSync';
 import { emitDataChanged } from '../../../shared/utils/dataChanged';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -34,12 +35,16 @@ interface UseAddRehearsalSubmitProps {
   participantsSettled: boolean;
   /** The project's members could not be loaded, and a retry for that. */
   membersFailed: boolean;
+  /** What the members load failed with, said through requestErrorMessage (T-228). */
+  membersError?: unknown;
   reloadMembers: () => void;
   members: ProjectMember[];
   memberAvailability: Record<string, { timeRanges: TimeRange[]; nextDayRanges?: TimeRange[] }>;
   /** The availability is for the day and people shown (useRehearsalAvailability). */
   availabilityReady: boolean;
   availabilityFailed: boolean;
+  /** What the availability load failed with (T-228). */
+  availabilityError?: unknown;
   reloadAvailability: () => void;
   resetForm: () => void;
   /** What the form holds, as it is sent (useAddRehearsalForm). */
@@ -61,11 +66,13 @@ export function useAddRehearsalSubmit({
   selectedMemberIds,
   participantsSettled,
   membersFailed,
+  membersError,
   reloadMembers,
   members,
   memberAvailability,
   availabilityReady,
   availabilityFailed,
+  availabilityError,
   reloadAvailability,
   resetForm,
   fields,
@@ -195,7 +202,7 @@ export function useAddRehearsalSubmit({
       Alert.alert(
         t.common.error,
         participantsLeft ? t.rehearsals.participantsLeft
-          : error.response?.data?.error || error.message || errorMessage
+          : requestErrorMessage(t, error, errorMessage)
       );
       return false;
     } finally {
@@ -220,10 +227,10 @@ export function useAddRehearsalSubmit({
     project: localSelectedProject ? undefined : t.rehearsals.projectNotSelected,
     end: emptyRange ? t.rehearsals.endTimeError : undefined,
     participants: !participantsSettled && membersFailed
-      ? { text: t.rehearsals.loadMembersError, failed: true, retry: reloadMembers }
+      ? { text: requestErrorMessage(t, membersError, t.rehearsals.loadMembersError), failed: true, retry: reloadMembers }
       : waitingForAvailability
         ? availabilityFailed
-          ? { text: t.rehearsals.loadAvailabilityError, failed: true, retry: reloadAvailability }
+          ? { text: requestErrorMessage(t, availabilityError, t.rehearsals.loadAvailabilityError), failed: true, retry: reloadAvailability }
           : { text: t.rehearsals.availabilityChecking, failed: false }
         : undefined,
   };

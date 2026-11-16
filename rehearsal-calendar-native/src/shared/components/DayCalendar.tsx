@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+// The month grid's own file: the library's entry file requires all its
+// calendars, lodash and moment with them (T-242, profileCalendar.tsx).
+import Calendar from 'react-native-calendars/src/calendar';
+import type { DateData } from 'react-native-calendars/src/types';
 import { Colors } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { useToday } from '../hooks/useClock';
 import { useWeekStart } from '../../hooks/useWeekStart';
-import { calendarTheme, monthTitle, pickedDay, profileDay, withToday } from './profileCalendar';
+import { calendarTheme, LocaleConfig, monthTitle, pickedDay, profileDay, withToday } from './profileCalendar';
 
 interface DayCalendarProps {
   /** The chosen day, 'YYYY-MM-DD'. */
@@ -26,8 +29,20 @@ interface DayCalendarProps {
   /** The first and last day it offers. */
   minDate?: string;
   maxDate?: string;
+  /**
+   * The month shown, 'YYYY-MM', held by the owner, whose own header names it
+   * and turns it: then the grid has no title and no arrows of its own — the
+   * calendar's card, where they would repeat its month (T-254). Without it the
+   * grid keeps its month itself, under its own title and arrows (the form).
+   */
+  month?: string;
+  /** The month the grid moved to by itself: a day of the next month tapped. */
+  onMonthChange?: (month: string) => void;
   testID?: string;
 }
+
+// The grid's own header with neither title nor arrows: the weekdays alone.
+const noTitle = () => null;
 
 /** 'YYYY-MM-DD' `days` days after `day`. */
 function addDays(day: string, days: number): string {
@@ -43,7 +58,7 @@ function addDays(day: string, days: number): string {
  * but for `allowedPast`.
  */
 export function DayCalendar({
-  value, onChange, allowedPast, pastOpen, dotted, minDate, maxDate, testID,
+  value, onChange, allowedPast, pastOpen, dotted, minDate, maxDate, month: ownersMonth, onMonthChange, testID,
 }: DayCalendarProps) {
   const { t, language } = useI18n();
   const weekStart = useWeekStart();
@@ -55,8 +70,9 @@ export function DayCalendar({
   // The month on screen, for the past days it shows: the library's `minDate`
   // would refuse the edited rehearsal's own day too, and leave the days before
   // it looking as if they took a tap.
-  const [month, setMonth] = useState(value.slice(0, 7));
-  useEffect(() => setMonth(value.slice(0, 7)), [value]);
+  const [ownMonth, setOwnMonth] = useState(value.slice(0, 7));
+  useEffect(() => setOwnMonth(value.slice(0, 7)), [value]);
+  const month = ownersMonth ?? ownMonth;
 
   const markedDates = useMemo(() => {
     const marked: { [key: string]: any } = {};
@@ -84,19 +100,26 @@ export function DayCalendar({
     [today, t.common.today, language]
   );
   const renderHeader = useMemo(() => monthTitle(language), [language]);
+  const held = ownersMonth !== undefined;
 
   return (
     <Calendar
       testID={testID}
-      initialDate={value}
+      // The library turns to `initialDate`'s month whenever it changes.
+      initialDate={held ? `${ownersMonth}-01` : value}
       firstDay={weekStart === 'monday' ? 1 : 0}
       onDayPress={(day: DateData) => onChange(day.dateString)}
-      onMonthChange={(day: DateData) => setMonth(day.dateString.slice(0, 7))}
+      onMonthChange={(day: DateData) => {
+        const shown = day.dateString.slice(0, 7);
+        if (!held) setOwnMonth(shown);
+        else if (shown !== ownersMonth) onMonthChange?.(shown);
+      }}
+      hideArrows={held}
       minDate={minDate}
       maxDate={maxDate}
       markingType={'period'}
       dayComponent={dayComponent}
-      renderHeader={renderHeader}
+      renderHeader={held ? noTitle : renderHeader}
       markedDates={markedDates}
       // On whatever it is put on.
       theme={{ ...calendarTheme, backgroundColor: 'transparent', calendarBackground: 'transparent' }}

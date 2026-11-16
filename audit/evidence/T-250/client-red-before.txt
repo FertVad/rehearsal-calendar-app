@@ -1,0 +1,26 @@
+T-250 review, findings 2-4 — Jest, red on the old words.
+
+Fix commit 819776d. The translations it changed put back as they were before
+it (git restore --source=HEAD~1 -- src/i18n/translations/projects.ts
+profile.ts notifications.ts availability.ts), the test as in 819776d:
+
+$ npx jest --selectProjects frontend src/i18n/__tests__/proofreading.test.ts
+
+    Expected: "Анна Смирнова больше не будет участником проекта."
+    Received: "Вы уверены, что хотите удалить Анна Смирнова из проекта?"
+    Expected: "Также удалён 1 проект, где вы были единственным администратором."
+    Received: "Будет удалён 1 проект, где вы единственный администратор."
+    Expected: "1 project where you were the only admin was deleted too."
+    Received: "1 project where you are the only admin will be deleted."
+    Expected: "Clear All"
+    Received: "Clear all"
+    Expected: "Show Older"
+    Received: "Show older"
+    Expected: "Cannot Save"
+    Received: "Cannot save"
+
+(The busy-person case passes there: it was fixed in 4c380ba, before HEAD~1;
+flow 89 shows it red on 8110068.)
+
+Then git restore --source=HEAD -- src/i18n/translations.
+On HEAD: npx jest --selectProjects frontend — 146 suites, 1416/1416 passed.

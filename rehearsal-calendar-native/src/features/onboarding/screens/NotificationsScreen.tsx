@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useOnboarding } from '../hooks/useOnboarding';

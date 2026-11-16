@@ -1,13 +1,9 @@
-import { Linking as NativeLinking, Platform } from 'react-native';
+import { Linking as NativeLinking } from 'react-native';
 import type { LinkingOptions } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
 import type { AppStackParamList } from './types';
 
 const prefix = Linking.createURL('/');
-
-const localhostPrefix = Platform.OS === 'android'
-  ? 'http://10.0.2.2:3001'
-  : 'http://localhost:3001';
 
 // The link the app was launched by belongs to the launch, not to a container.
 // Each stage has a container of its own, so the app's is mounted afresh at
@@ -28,13 +24,15 @@ export const linking: LinkingOptions<AppStackParamList> = {
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 150)),
     ]);
   },
+  // Only what opens the app. Universal links come from rehearsly.me alone
+  // (app.json associatedDomains); the dev server hands out rehearsalapp://
+  // links (server/routes/native/projectInvites.js), and e2e opens them so. The
+  // server's address before the domain move and the dev server's own opened
+  // nothing, and the old one showed in the bundle (T-242).
   prefixes: [
     prefix,
     'rehearsalapp://',
     'https://rehearsly.me',
-    // Kept so links handed out before the domain move still resolve
-    'https://server-fertvads-projects.vercel.app',
-    localhostPrefix
   ],
   config: {
     // Whatever a link opens lies over the calendar. The app stack's container

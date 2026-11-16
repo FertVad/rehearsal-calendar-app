@@ -1,0 +1,172 @@
+# T-231 — "Details and the card read one seen mark" (flow 40) flaked on 224a38a
+
+Red run: `rehearsal-calendar-native/e2e/out/failed/full-e2e-224a38a-2026-11-07T10-38-29-889Z/`,
+flow 40, `Assertion is false: id: login-submit is visible` (4m 57s).
+
+## What the red run shows
+
+The flow failed in `subflows/sign-in-form.yaml`, at its first step: waiting
+60 s for the sign-in screen after `launchApp`. None of flow 40's own steps ran.
+
+- **Screen at the failure** (`screenshots/step-010-assertCondition-login-submit.png`,
+  `screen-hierarchy/step-010-…json`): the dev client's red box "Could not
+  connect to development server", URL
+  `http://localhost:8081/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&lazy=true…`.
+  The app never got its JavaScript.
+- **Device log** (`logs/device-simulator.log`): at 11:35:31.7 the app asks
+  Metro for `/status` (answered); at 11:35:32.09 for the bundle (C2, connected
+  on `::1:8081` in 3 ms); at 11:36:32.43 `Task <…>.<1> finished with error
+  [-1001] … The request timed out` (iOS's 60 s), then C2 is cancelled.
+- **metro.log**: `iOS Bundled 96576ms index.ts (1 module)`: the same
+  cached, one-module bundle Metro serves in 150–700 ms all run long. It took
+  96 s and finished after the app had given up. Every other mid-run bundle in
+  all 37 kept red runs in `e2e/out/failed` took under 14 s. The only
+  longer ones are the first, cold bundle that the runner fetches itself
+  before the flows (70–220 s).
+- **Not the app, not the flow, not a lost tap.** The run's only tap taken again
+  (`09:29:04Z`, `login-submit`) was in flow 39, three minutes earlier. Flow
+  40 never reached `tap-and-see.yaml`. The red box exists only in a dev build.
+  No other kept run shows it.
+
+## Why Metro was that slow: the machine, from 11:08 to 11:37
+
+Every host-side process was slow in that window. The simulator's own daemons
+logged without a pause over 0.7 s (`log-gaps.mjs`):
+
+| What | In the window | Normally |
+|---|---|---|
+| Maestro `Apply configuration` (flow 40) | 36 s | < 1 s |
+| Maestro `clearAppState` (flow 40) | 73 s | a few s |
+| app install from Maestro (flow 38, 11:10:38 → 11:13:35 / 11:15:43) | 3–5 min | 4 s (11:34:43 → 11:34:47) |
+| flow 38's `launchApp` | 10 min, then `CommandFailed: null` | ~10 s |
+| flow 39, a sign-in and two taps | 10m 36s | ~1 min |
+| Metro, a cached bundle | 96 s | 0.2 s |
+
+After 11:37 the run went back to normal speed: flow 41 took 2m 11s, flow 42 1m 4s, and bundles 0.2–0.4 s.
+
+What ran then: `9d265da` on `claude/systematic-repair`, committed at 11:30:49,
+from another session, "Seen on a Release build on the simulator: black screen
+… before, the sign-in screen after". That means an iOS Release build, twice,
+and a simulator of its own, in the very window. No install of another build
+shows in the e2e simulator's log, so it was another device. No other job of
+that weight is known for that window. Host-side logs (`log show`, `sysctl
+vm.swapusage`, DerivedData) are closed to this session, so the attribution
+rests on the commit and the timings. The e2e lock (`/tmp/rehearsly-e2e.lock`)
+serialized e2e runs only. Nothing made such a job wait for a run, or a run
+for it.
+
+## Red before (`red-before.txt`)
+
+Load on demand cannot get a run as far as the failing step (T-203: full-core
+and two-core load stalled the toolchain before the flow). So
+`metro-stall.mjs` stalls only the process whose silence the failure shows.
+It runs `e2e/run.mjs` with flow 40, and at the app's first bundle request
+logged in metro.log it sends SIGSTOP to Metro's process group (from the lock
+file) for 75 s, then SIGCONT.
+
+On HEAD (`228c00a`), it gave the same failure at the same step:
+`[Failed] Details and the card read one seen mark (1m 52s) (Assertion is false: id: login-submit is visible)`, exit 1.
+Device log: the bundle request's connection on `::1:8081` lived from
+01:03:02.14 to 01:04:03.98 HST and was cancelled at iOS's 60 s. The screen at
+the failure was still the launch's black screen. Maestro's 60 s wait and
+iOS's 60 s timeout end within a second of each other, so whether the red box
+is up yet is a race. The original run, slower everywhere, caught the red box.
+
+## Red before and green after, with a job beside the run (review round 1)
+
+`red-before.txt` stalls Metro unconditionally, so it is red on any code, and
+a plain green run of flow 40 passed before the fix too. Neither shows the fix.
+So `job-beside-run.mjs` runs flow 40 and, once its flows start, starts a job
+beside it: `starve-metro.mjs`, a stand-in for the build, which stops the
+run's Metro for 75 s at the app's bundle request if an e2e run holds the lock.
+The same harness runs the job in two ways:
+
+- `direct`, as `npm run ios` ran expo before the fix (`expo run:ios`):
+  `beside-direct-red.txt`. The job stopped Metro at the bundle request, and the
+  run failed as the original did: `[Failed] Details and the card read one seen
+  mark (2m 9s) (Assertion is false: id: login-submit is visible)`, exit 1.
+- `locked`, through `e2e/hold-lock.mjs`, as `npm run ios` runs it now:
+  `beside-locked-green.txt`. The job logged `another e2e run (pid 81602) is
+  going; waiting for it`, flow 40 passed in 2m 5s, and then the job started
+  and found no Metro to starve.
+
+`npm run ios` itself is checked against a held lock in `lock.test.mjs` ("npm
+run ios waits for a live e2e run, then runs expo"): it really runs `npm run
+ios -- --help`, which waits for the run and prints expo's help only after the
+lock is released. On d878c4a's `package.json` that test times out because expo
+runs at once (`lock-tests.txt`).
+
+## The fix
+
+The cause is a job beside the run that the lock did not cover. Raising a
+wait or adding a retry was not the fix, and neither was reading the red box
+as the machine's (exit 75): the failure screen is a race (see above), and a
+time rule on Metro's log would judge a one-flow run before Metro reports.
+So the fix lets heavy jobs take the same lock:
+
+- `e2e/hold-lock.mjs <command> [args…]` waits for an e2e run that is going,
+  holds the lock while the job runs (its process group named in the lock), and
+  exits with the job's code. An e2e run started meanwhile waits for it, and its
+  log names the job. A holder killed outright leaves its job to the next run,
+  which stops it as it stops a dead run's server and Metro.
+- `npm run ios` and `npm run android` run expo through it (`package.json`), so
+  `npm run ios -- --configuration Release` takes the lock (review round 1).
+- The job runs through `e2e/watchdog.mjs` with a pipe from `hold-lock.mjs`,
+  like the server and Metro of a run. If the holder is killed outright, the
+  watchdog ends the job's group within 5 s, without `ps`. Where `ps` cannot
+  run, the next run's `clearLeftovers()` waits (up to 15 s) for a dead holder's
+  group to end before it takes the lock, and does not signal a group it cannot
+  identify. Before this, the next `takeLock` took the lock while the old job
+  ran on (review round 1). The job's stdin is not the terminal, so it runs
+  without keyboard input.
+- `e2e/lock.mjs` exports the lock's path (`LOCK`, which `run.mjs` and
+  `hold-lock.mjs` share) and keeps the holder's `what`.
+- The rule is in `CLAUDE.md` (End-to-End) and `docs/e2e.md` ("Heavy jobs beside a run").
+
+Tests (`e2e/__tests__/lock.test.mjs`, real processes; `lock-tests.txt`):
+a job waits for a live run, runs after it, and gives back its code; a run
+waits for a held job and names it; a dead holder's job is stopped by the next
+run; without `ps`, a dead holder's job that ignores SIGTERM has ended by the
+time the next run holds the lock; `npm run ios`/`android` go through
+`hold-lock.mjs`, and `npm run ios` waits for a held lock. On d878c4a's
+sources the last four fail. In this session `ps` is denied, so only the old,
+unchanged "what a dead run left running is stopped" test fails here, on bare
+`sleep` groups with no watchdog. It passes where `ps` runs, as on the supervisor.
+
+## Review round 2 (reviews/T-231-r2.md)
+
+- The watchdog exited with its command, which cancelled its delayed SIGKILL
+  of the group, so a build's children outlived a holder killed outright.
+  Now the command runs in a group of its own that the watchdog is not in.
+  The watchdog stops that whole group when the holder dies, a signal comes,
+  or the command exits, and exits only once `kill(-pgid, 0)` finds no one in
+  it. It needs no `ps`. The server and Metro of a run go the same way.
+- `clearLeftovers()` does not take the lock while a dead holder's group has a
+  member. After 15 s it fails, naming the group (exit 75 for a run). It also
+  waits for the group, not just its leader, where `ps` runs.
+- The holder's life reaches the watchdog on a pipe at fd 3. The command's
+  stdin is the terminal again, so `npm run ios -- --device` can ask for a device.
+- The fact behind the job: on 07.11 it was `xcodebuild` run by hand from an
+  interactive session (a Release build for a simulator, then `archive`), not
+  `npm run ios`. `docs/e2e.md` and `hold-lock.mjs` say so, with
+  `node e2e/hold-lock.mjs xcodebuild …` as the example.
+
+Red before and green after are in `round2-tests.txt`. On 8f47559 three new
+tests fail: the Node → sleep chain, a leftover group with its leader gone,
+and stdin reaching the job. With the round-2 fix they pass, and so does flow 40.
+
+`fake-ps/ps` is a stand-in for `ps -o lstart= -p <pid>`. It was written so
+lock.test.mjs's two `ps`-dependent tests could run in this session, where
+the real `ps` is denied. Making it executable and running it were denied
+too, so **it was never run and proves nothing**. Those two tests are left to
+the supervisor's `npm test`, where `ps` runs. The file is kept only because
+the session could not delete it.
+
+## The bug flow 40 guards (cause fix 22, DD01)
+
+`npm run e2e -- e2e/flows/40-details-seen-one-model.yaml` on the changed tree
+passed in 2m 2s (`green-flow-40.txt`). Details read "1/2" after the tap, her
+toggle is selected, and the card reads `1/2`, selected. The bug has not
+come back. On this round's tree flow 40 passed again, with the job waiting
+beside it (`beside-locked-green.txt`). On round 2's tree it passed
+in 1m 15s (`round2-tests.txt`), the server and Metro started through the new watchdog.

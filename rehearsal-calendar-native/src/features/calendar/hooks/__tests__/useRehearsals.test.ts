@@ -8,10 +8,10 @@
  * - Error handling
  * - Loading states
  */
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import { useRehearsals } from '../useRehearsals';
 import { rehearsalsAPI } from '../../../../shared/services/api';
-import { Project, Rehearsal } from '../../../../shared/types';
+import { Project } from '../../../../shared/types';
 import { formatDateToString, setProfileTimezone } from '../../../../shared/utils/time';
 
 // The profile's zone, as AuthContext sets it with the user.
@@ -350,7 +350,8 @@ describe('useRehearsals Hook', () => {
       });
 
       expect(result.current.loading).toBe(false);
-      expect(result.current.error).toBe('Network error');
+      // Still an error, in the app's words, not the error's own (T-228).
+      expect(result.current.error).toBe('Что-то пошло не так. Попробуйте ещё раз.');
       expect(result.current.rehearsals).toEqual([]);
       expect(consoleError).toHaveBeenCalledWith(
         '[ERROR] Failed to fetch rehearsals:',

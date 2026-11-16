@@ -1,0 +1,17 @@
+T-236 green after: flow 77 with the fix (Feud Street and Feud Ball owned by
+Capulet, on no rehearsal and with no busy time; the role taken by him).
+Started Mon Nov  9 11:04:59 IST 2026: the form opens on today 12:00-15:00 at
+this hour, the same window that met Gaev's 12:00-13:00 in the red run at 11:02.
+
+$ npm run e2e -- e2e/flows/77-rehearsal-form-projects-read-again.yaml
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+...
+[Passed] Rehearsal form, the projects read again (2m 24s)
+
+1/1 Flow Passed in 2m 25s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

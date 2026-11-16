@@ -16,7 +16,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rehearsal.app",
-      "buildNumber": "2",
+      "appleTeamId": "9N28BHP37Z",
+      "buildNumber": "5",
       "associatedDomains": ["applinks:rehearsly.me"],
       "config": {
         "googleSignIn": {
@@ -33,11 +34,11 @@
           }
         ],
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCalendarsUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.",
-        "NSCalendarsFullAccessUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.",
+        "NSCalendarsUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick, it reads only the hours you are busy, never what your events are called.",
+        "NSCalendarsFullAccessUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick, it reads only the hours you are busy, never what your events are called.",
         "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly adds your rehearsals to your calendar.",
-        "NSRemindersUsageDescription": "Rehearsly works only with your calendar and never asks for access to your reminders.",
-        "NSRemindersFullAccessUsageDescription": "Rehearsly works only with your calendar and never asks for access to your reminders."
+        "NSRemindersUsageDescription": "Rehearsly does not use your reminders.",
+        "NSRemindersFullAccessUsageDescription": "Rehearsly does not use your reminders."
       }
     },
     "locales": {
@@ -94,7 +95,9 @@
         }
       ],
       "expo-localization",
-      "expo-calendar"
+      "expo-calendar",
+      "./plugins/prebuilt-dsyms/withPrebuiltDsyms",
+      "./plugins/connection-renewal/withConnectionRenewal"
     ],
     "extra": {
       "eas": {

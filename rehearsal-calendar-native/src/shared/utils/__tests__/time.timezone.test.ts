@@ -12,8 +12,6 @@ import {
   isoToDateStringInTimezone,
   isoToTimeStringInTimezone,
   dateTimeToISOInTimezone,
-  isStartOfDayInTimezone,
-  isEndOfDayInTimezone,
 } from '../time';
 
 describe('Timezone Conversion Functions', () => {
@@ -96,28 +94,6 @@ describe('Timezone Conversion Functions', () => {
     it('should handle UTC timezone', () => {
       expect(dateTimeToISOInTimezone('2026-01-20', '15:00', 'UTC')).toBe('2026-01-20T15:00:00.000Z');
       expect(dateTimeToISOInTimezone('2026-01-20', '00:00', 'UTC')).toBe('2026-01-20T00:00:00.000Z');
-    });
-  });
-
-  describe('All-day event helpers', () => {
-    it('should detect start of day correctly', () => {
-      // Moscow timezone
-      expect(isStartOfDayInTimezone('2026-01-19T21:00:00.000Z', 'Europe/Moscow')).toBe(true); // 00:00 MSK
-      expect(isStartOfDayInTimezone('2026-01-20T15:00:00.000Z', 'Europe/Moscow')).toBe(false); // 18:00 MSK
-
-      // UTC timezone
-      expect(isStartOfDayInTimezone('2026-01-20T00:00:00.000Z', 'UTC')).toBe(true);
-      expect(isStartOfDayInTimezone('2026-01-20T00:01:00.000Z', 'UTC')).toBe(false);
-    });
-
-    it('should detect end of day correctly', () => {
-      // Moscow timezone
-      expect(isEndOfDayInTimezone('2026-01-20T20:59:00.000Z', 'Europe/Moscow')).toBe(true); // 23:59 MSK
-      expect(isEndOfDayInTimezone('2026-01-20T15:00:00.000Z', 'Europe/Moscow')).toBe(false); // 18:00 MSK
-
-      // UTC timezone
-      expect(isEndOfDayInTimezone('2026-01-20T23:59:00.000Z', 'UTC')).toBe(true);
-      expect(isEndOfDayInTimezone('2026-01-20T23:58:00.000Z', 'UTC')).toBe(false);
     });
   });
 

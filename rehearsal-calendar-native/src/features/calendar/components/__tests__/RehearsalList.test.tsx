@@ -171,7 +171,7 @@ describe('the row', () => {
 
   it('shows the phone’s calendar small after the time, in the second line’s colour', () => {
     const { UNSAFE_getAllByType } = list([upcoming[0]], true, { a1: true });
-    const icon = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons)
+    const icon = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default)
       .find((i: any) => i.props.name === 'calendar');
     expect(icon?.props.color).toBe(Colors.text.secondary);
     expect(icon?.props.size).toBeLessThanOrEqual(15);

@@ -20,6 +20,7 @@ export const getLocales = jest.fn(() => [{ languageTag: 'en-US', languageCode: '
 // As in the package: read again only when the calendar listener fires.
 export function useCalendars() {
   const [key, invalidate] = useReducer((k) => k + 1, 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` is what reads the calendars again: it moves when they are said to have changed
   const calendars = useMemo(() => getCalendars(), [key]);
   useEffect(() => {
     listeners.add(invalidate);

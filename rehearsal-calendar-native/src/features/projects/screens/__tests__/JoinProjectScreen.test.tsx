@@ -9,6 +9,8 @@ import { render, fireEvent, act } from '@testing-library/react-native';
 import { invitesAPI } from '../../../../shared/services/api';
 import { Colors } from '../../../../shared/constants/colors';
 import JoinProjectScreen from '../JoinProjectScreen';
+import { translations } from '../../../../i18n/translations';
+import { AxiosError } from 'axios';
 
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../../i18n/translations').translations.en, language: 'en' }),
@@ -48,6 +50,26 @@ it('shows a wrong code’s error under the field and keeps the code typed', asyn
   await settle();
   expect(invitesAPI.getInviteInfo).toHaveBeenCalledTimes(2);
   expect(screen.getByTestId('join-project-name')).toHaveTextContent('Hamlet');
+});
+
+// An invitation that could not be loaded says why, in the app's words: with
+// no answer, there is no connection; a 5xx, the server is unavailable. It
+// said "Could not load the invitation" for both (T-228).
+it.each([
+  ['no answer', () => new AxiosError('Network Error', 'ERR_NETWORK', undefined, {}), 'noConnection'],
+  ['a 5xx', () => new AxiosError('Request failed with status code 503', 'ERR_BAD_RESPONSE', undefined, {},
+    { status: 503, data: {}, statusText: '', headers: {}, config: {} as any }), 'serverUnavailable'],
+] as const)('says why an invitation did not load: %s (T-228)', async (_what, failure, said) => {
+  (invitesAPI.getInviteInfo as jest.Mock).mockRejectedValue(failure());
+  const screen = render(
+    <JoinProjectScreen route={{ key: 'j', name: 'JoinProject', params: {} } as any} navigation={navigation()} />
+  );
+
+  fireEvent.changeText(screen.getByTestId('join-code-input'), 'ABCD2345');
+  fireEvent.press(screen.getByTestId('join-code-submit'));
+  await settle();
+
+  expect(screen.getByTestId('join-code-error')).toHaveTextContent(translations.en.common[said]);
 });
 
 // A second link opened while the screen is still up (T-011 review): the screen

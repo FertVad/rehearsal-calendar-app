@@ -1,0 +1,33 @@
+T-233 — flow 79 on the OLD code: the fix's files put back as at 2d94078
+(git restore --source=2d94078 -- server/routes/native/rehearsals.js
+ server/services/rehearsals/rehearsalService.js
+ server/services/notifications/pushNotificationService.js
+ server/i18n/pushNotifications.js
+ src/shared/hooks/useNotifications.ts
+ src/features/notifications/screens/NotificationsScreen.tsx),
+seed, script and flow new.
+
+$ npm run e2e -- e2e/flows/79-added-to-rehearsal-told.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Added to a rehearsal, told (1m 27s) (Assertion is false: ".*You were added to a rehearsal.*Frederick Court: Wrestling match scheduled (tomorrow|on .*) at 4:00.PM at The lawn.*" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Rosalind's save put Orlando on "Wrestling match" (the script's PUT answered
+200), and his inbox stayed empty: the edit announced nothing to him.
+
+(An earlier red run, before the inbox wait accepted "Nothing yet", failed one
+step sooner on the same cause: "Mark all read" is visible — the inbox had
+nothing in it to mark.)

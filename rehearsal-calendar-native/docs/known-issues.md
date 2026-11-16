@@ -126,25 +126,26 @@ did it themselves.
 Left because it needs a string and a decision about who hears it, not because it
 is hard.
 
-### The lint has 322 warnings nobody has read
+### The lint has 595 warnings, none of them about hooks or unused code
 
-Turned back on 2026-09-05, after the config was migrated to ESLint 9. The one
-error is fixed; the warnings are untouched and unjudged, because clearing them
-in the same change would have buried the migration.
+`npm run lint` on 2026-11-10, after T-243: 0 errors, 595 warnings.
 
 | Rule | Count |
 |---|---|
-| `no-explicit-any` | 179 |
-| `no-unused-vars` | 61 |
+| `no-explicit-any` | 469 |
+| `no-non-null-assertion` | 80 |
 | `no-inline-styles` | 36 |
-| `no-non-null-assertion` | 27 |
-| `exhaustive-deps` | 16 |
-| `display-name` | 3 |
+| `display-name` | 10 |
+| `exhaustive-deps` | 0 — an error since T-243 |
+| `no-unused-vars` | 0 — an error since T-243 |
 
-The sixteen `exhaustive-deps` are the ones worth reading — a missing dependency
-is how a screen ends up showing something it fetched under different conditions,
-and this session has already spent time on two bugs of that shape. The rest is
-mostly noise from typing API responses as `any`.
+The two rules that point at defects were brought to zero and made errors, so
+they cannot pile up again: a missing dependency is how a screen ends up showing
+what it loaded under other conditions (CLAUDE.md 11), and a prop passed and
+never read can be the bug itself. Each place was read, not silenced wholesale —
+[audit/evidence/T-243/README.md](../../audit/evidence/T-243/README.md); an
+effect whose list is short on purpose says why beside it. The rest is mostly
+API responses typed as `any`.
 
 Nothing here blocks a release.
 

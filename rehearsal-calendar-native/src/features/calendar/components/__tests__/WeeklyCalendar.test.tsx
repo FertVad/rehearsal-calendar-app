@@ -19,7 +19,12 @@ jest.mock('../../../../hooks/useWeekStart', () => ({
   useWeekStart: () => 'monday',
 }));
 // The app's FlatList mock draws every item and holds no ref; this one also
-// takes the strip's scrolls, to see where they put it.
+// takes the strip's scrolls, to see where they put it. Like React Native's
+// VirtualizedList (0.81, _maybeScrollToInitialScrollIndex), it goes to its
+// `initialScrollIndex` itself, unanimated, the first time its content is laid
+// out - after the effects of its mount, and before its own
+// onContentSizeChange is called: a scroll asked for at the mount was
+// overridden by it (T-254, e2e 57 and 89).
 const mockScrolls = jest.fn();
 jest.mock('react-native', () => {
   const actual = jest.requireActual('react-native');
@@ -29,7 +34,16 @@ jest.mock('react-native', () => {
       scrollToOffset: (params: unknown) => mockScrolls(params),
       scrollToIndex: () => {},
     }));
-    return React.createElement(actual.FlatList, props);
+    const initialDone = React.useRef(false);
+    const onContentSizeChange = (width: number, height: number) => {
+      if (width > 0 && height > 0 && !initialDone.current && props.initialScrollIndex > 0) {
+        initialDone.current = true;
+        const { offset } = props.getItemLayout(props.data, props.initialScrollIndex);
+        mockScrolls({ offset, animated: false });
+      }
+      props.onContentSizeChange?.(width, height);
+    };
+    return React.createElement(actual.FlatList, { ...props, onContentSizeChange });
   });
   return { ...actual, FlatList };
 });
@@ -65,6 +79,17 @@ const stopOn = (screen: ReturnType<typeof render>, day: string) => {
   act(() => {
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: index * length, y: 0 } } });
   });
+};
+
+/**
+ * The strip's days laid out, as they are a moment after it is mounted: the
+ * list goes to its `initialScrollIndex` then (the mock above, as React
+ * Native's), and calls the strip's onContentSizeChange after.
+ */
+const layOut = (screen: ReturnType<typeof render>) => {
+  const list = screen.UNSAFE_getByType(FlatList);
+  const inner = list.children[0] as any;
+  act(() => inner.props.onContentSizeChange(list.props.data.length * 48, 72));
 };
 
 it('selects today when "Today" is pressed after another day was picked', () => {
@@ -338,7 +363,7 @@ describe('The day strip as a wheel', () => {
   // A tap, "Today" and the month chose their day at once: the list under the
   // strip showed the 13th while the frame still had the 10th (review, T-035).
   it('hands on a tapped day, "Today" and a month\'s day only where the strip stops on them', () => {
-    const { Calendar: MonthGrid } = require('react-native-calendars');
+    const MonthGrid = require('react-native-calendars/src/calendar').default;
     const onDaySelect = jest.fn();
     const onShowToday = jest.fn();
     const screen = render(
@@ -480,7 +505,7 @@ describe('The day strip as a wheel', () => {
  * middle. The name again closes it.
  */
 describe('The month', () => {
-  const { Calendar: MonthGrid } = require('react-native-calendars');
+  const MonthGrid = require('react-native-calendars/src/calendar').default;
   const scrolls = mockScrolls;
   beforeEach(() => scrolls.mockClear());
 
@@ -520,6 +545,7 @@ describe('The month', () => {
     act(() => screen.UNSAFE_getByType(MonthGrid).props.onDayPress({ dateString: '2030-01-24' }));
 
     expect(screen.UNSAFE_queryByType(MonthGrid)).toBeNull();
+    layOut(screen);
     const strip = screen.UNSAFE_getByType(FlatList);
     const { length } = strip.props.getItemLayout(strip.props.data, 0);
     const pad = StyleSheet.flatten(strip.props.contentContainerStyle).paddingHorizontal;
@@ -528,5 +554,207 @@ describe('The month', () => {
     stopOn(screen, '2030-01-24');
 
     expect(screen.getByTestId('selected').props.children).toBe('2030-01-24');
+  });
+});
+
+/**
+ * T-254 (owner, 12.11): the month is the strip opened out, not a second panel.
+ * It repeated the month and year in a header of its own under the card's, and
+ * the strip stayed under it, read as a seventh week whose columns were not the
+ * grid's. Open, there is no strip and one name, the card's, which follows the
+ * grid as its arrows or a swipe turn it, within the strip's year either side
+ * of today. "Today" keeps it open on today; a day picked folds it back.
+ */
+describe('The month opened out of the strip', () => {
+  const MonthGrid = require('react-native-calendars/src/calendar').default;
+  beforeEach(() => mockScrolls.mockClear());
+
+  const title = (screen: ReturnType<typeof render>) => screen.getByTestId('calendar-month');
+  /**
+   * A finger over the grid, as React Native's responder system takes it: the
+   * grid sees it go down; as it moves, the grid is asked whether it takes the
+   * touch from the day under it. If it does, the day's press is cancelled and
+   * the grid gets the release; if not, the day under the finger - when there
+   * is one and the finger ended within its press area - is pressed.
+   */
+  const swipe = (screen: ReturnType<typeof render>, dx: number, onDay?: string) => {
+    const pages = screen.getByTestId('calendar-month-pages');
+    const start = { nativeEvent: { pageX: 200, pageY: 300, touches: [{}] } };
+    const end = { nativeEvent: { pageX: 200 + dx, pageY: 305, touches: [] } };
+    act(() => {
+      pages.props.onTouchStart?.(start);
+      const taken = !!pages.props.onMoveShouldSetResponderCapture?.(end);
+      if (taken) {
+        pages.props.onResponderRelease?.(end);
+        return;
+      }
+      if (onDay) screen.UNSAFE_getByType(MonthGrid).props.onDayPress({ dateString: onDay });
+      pages.props.onTouchEnd?.(end);
+    });
+  };
+
+  it('has no strip under it, and names its month once', () => {
+    const screen = render(<Calendar />);
+    // The strip (`calendar-strip`; the app's FlatList mock keeps no testID).
+    expect(screen.UNSAFE_queryAllByType(FlatList)).toHaveLength(1);
+    expect(screen.queryByTestId('calendar-strip-frame')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('calendar-month'));
+
+    expect(screen.UNSAFE_queryAllByType(FlatList)).toHaveLength(0);
+    expect(screen.queryByTestId('calendar-strip-frame')).toBeNull();
+    expect(screen.queryAllByTestId(/^calendar-day-/)).toHaveLength(0);
+    expect(screen.getAllByText(/January 2030/)).toHaveLength(1);
+    expect(title(screen)).toHaveTextContent(/January 2030/);
+  });
+
+  it('turns by the header\'s arrows and by a swipe over it, the header naming the grid\'s month', () => {
+    const screen = render(<Calendar />);
+    fireEvent.press(screen.getByTestId('calendar-month'));
+
+    fireEvent.press(screen.getByLabelText('Next month'));
+    expect(title(screen)).toHaveTextContent(/February 2030/);
+    expect(screen.UNSAFE_getByType(MonthGrid).props.initialDate).toBe('2030-02-01');
+
+    // Left: the next month; right: the one before.
+    swipe(screen, -150);
+    expect(title(screen)).toHaveTextContent(/March 2030/);
+    swipe(screen, 150);
+    swipe(screen, 150);
+    expect(title(screen)).toHaveTextContent(/January 2030/);
+    expect(screen.UNSAFE_getByType(MonthGrid).props.initialDate).toBe('2030-01-01');
+
+    // A short touch or a mostly vertical one is no swipe: a tap on a day.
+    swipe(screen, 20);
+    expect(title(screen)).toHaveTextContent(/January 2030/);
+
+    fireEvent.press(screen.getByLabelText('Previous month'));
+    expect(title(screen)).toHaveTextContent(/December 2029/);
+    // Only one name all the while.
+    expect(screen.getAllByText(/December 2029/)).toHaveLength(1);
+  });
+
+  // Review of T-254: a swipe of 45 pt begun at a day's left edge ends still
+  // inside the day's press area; read only where it ended, the day was picked
+  // too and the grid folded on it instead of turning.
+  it('turns on a short swipe begun on a day, and does not pick the day', () => {
+    const screen = render(<Calendar />);
+    fireEvent.press(screen.getByTestId('calendar-month'));
+
+    swipe(screen, -45, '2030-01-15');
+
+    expect(screen.UNSAFE_queryByType(MonthGrid)).toBeTruthy();
+    expect(title(screen)).toHaveTextContent(/February 2030/);
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
+
+    // A tap that stays put is still the day's.
+    swipe(screen, 0, '2030-02-14');
+    expect(screen.UNSAFE_queryByType(MonthGrid)).toBeNull();
+  });
+
+  it('goes no further than the strip\'s days, a year either side of today', () => {
+    const screen = render(<Calendar />);
+    fireEvent.press(screen.getByTestId('calendar-month'));
+    const previous = () => screen.getByTestId('calendar-month-previous');
+    const next = () => screen.getByTestId('calendar-month-next');
+
+    // Today 2030-01-10: the strip from 2029-01-09.
+    for (let i = 0; i < 12; i++) fireEvent.press(previous());
+    expect(title(screen)).toHaveTextContent(/January 2029/);
+    expect(previous().props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(previous());
+    swipe(screen, 150);
+    expect(title(screen)).toHaveTextContent(/January 2029/);
+    expect(next().props.accessibilityState?.disabled).toBeFalsy();
+
+    // To 2031-01-11.
+    for (let i = 0; i < 30; i++) fireEvent.press(next());
+    expect(title(screen)).toHaveTextContent(/January 2031/);
+    expect(next().props.accessibilityState?.disabled).toBe(true);
+    swipe(screen, -150);
+    expect(title(screen)).toHaveTextContent(/January 2031/);
+  });
+
+  it('shows its arrows only while open, 44 pt, as the grid\'s arrows were coloured', () => {
+    const { calendarTheme } = require('../../../../shared/components/profileCalendar');
+    const screen = render(<Calendar />);
+    expect(screen.queryByTestId('calendar-month-next')).toBeNull();
+    fireEvent.press(screen.getByTestId('calendar-month'));
+
+    // Later entries win, as in React Native (the test mock's flatten does not).
+    const flatten = (style: unknown): Record<string, any> =>
+      Array.isArray(style) ? Object.assign({}, ...style.map(flatten)) : (style as Record<string, any>) ?? {};
+    for (const id of ['calendar-month-previous', 'calendar-month-next']) {
+      const arrow = screen.getByTestId(id);
+      const style = flatten(arrow.props.style);
+      expect(style.minWidth).toBeGreaterThanOrEqual(TouchTarget);
+      expect(style.minHeight).toBeGreaterThanOrEqual(TouchTarget);
+      expect(arrow.props.accessibilityRole).toBe('button');
+    }
+    const Ionicons = require('@expo/vector-icons/Ionicons').default;
+    const icons = screen.UNSAFE_getAllByType(Ionicons).filter((icon: any) => /^chevron-(back|forward)$/.test(icon.props.name));
+    expect(icons.map((icon: any) => icon.props.color)).toEqual([calendarTheme.arrowColor, calendarTheme.arrowColor]);
+  });
+
+  it('stays open on "Today", on today\'s month with today selected, and folds back to the strip on today', () => {
+    const screen = render(<Calendar />);
+    // Another day picked, then the month, turned on.
+    fireEvent.press(screen.getByTestId('pick'));
+    stopOn(screen, '2030-01-12');
+    fireEvent.press(screen.getByTestId('calendar-month'));
+    fireEvent.press(screen.getByLabelText('Next month'));
+    fireEvent.press(screen.getByLabelText('Next month'));
+    expect(title(screen)).toHaveTextContent(/March 2030/);
+
+    fireEvent.press(screen.getByText('Today'));
+
+    expect(screen.UNSAFE_getByType(MonthGrid)).toBeTruthy();
+    expect(screen.UNSAFE_queryAllByType(FlatList)).toHaveLength(0);
+    expect(title(screen)).toHaveTextContent(/January 2030/);
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
+    expect(screen.UNSAFE_getByType(MonthGrid).props.markedDates['2030-01-10'])
+      .toEqual(expect.objectContaining({ startingDay: true, today: true }));
+
+    fireEvent.press(screen.getByTestId('calendar-month'));
+    const strip = screen.UNSAFE_getByType(FlatList);
+    expect(strip.props.data[strip.props.initialScrollIndex].date).toBe('2030-01-10');
+    expect(screen.getByTestId('calendar-day-2030-01-10').props.accessibilityState?.selected).toBe(true);
+  });
+
+  it('folds back into the strip on a day picked in it, and hands the day on where the strip stops', () => {
+    const screen = render(<Calendar />);
+    fireEvent.press(screen.getByTestId('calendar-month'));
+    fireEvent.press(screen.getByLabelText('Next month'));
+
+    act(() => screen.UNSAFE_getByType(MonthGrid).props.onDayPress({ dateString: '2030-02-03' }));
+
+    expect(screen.UNSAFE_queryByType(MonthGrid)).toBeNull();
+    const strip = screen.UNSAFE_getByType(FlatList);
+    // Back at the day selected, then - once its days are laid out and the
+    // list has gone there itself - taken to the one picked.
+    expect(strip.props.data[strip.props.initialScrollIndex].date).toBe('2030-01-10');
+    layOut(screen);
+    const { length } = strip.props.getItemLayout(strip.props.data, 0);
+    const index = strip.props.data.findIndex((d: { date: string }) => d.date === '2030-02-03');
+    expect(mockScrolls).toHaveBeenLastCalledWith({ offset: index * length, animated: true });
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
+    stopOn(screen, '2030-02-03');
+    expect(screen.getByTestId('selected').props.children).toBe('2030-02-03');
+    // The header names the strip's month again.
+    expect(title(screen)).toHaveTextContent(/February 2030/);
+  });
+
+  it('folds back as it was when closed without a day', () => {
+    const screen = render(<Calendar />);
+    fireEvent.press(screen.getByTestId('calendar-month'));
+    fireEvent.press(screen.getByLabelText('Next month'));
+    fireEvent.press(screen.getByTestId('calendar-month'));
+
+    const strip = screen.UNSAFE_getByType(FlatList);
+    expect(strip.props.data[strip.props.initialScrollIndex].date).toBe('2030-01-10');
+    layOut(screen);
+    expect(mockScrolls).not.toHaveBeenCalledWith(expect.objectContaining({ animated: true }));
+    expect(title(screen)).toHaveTextContent(/January 2030/);
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
   });
 });

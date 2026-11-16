@@ -1,88 +1,508 @@
-# The planner's row of filters in Spanish, with dates of her own picked
-# (T-020 review): "La casa de Bernarda Alba ▾ · Período personalizado ▾ ·
-# Participantes: todos (1) ▾". The period and the people kept their whole
-# words: the project was left its chevron, and the row ran past the screen's
-# right edge. Each gives way now, and the three fit in the row.
+# The planner's filters, whole, in four languages and over long names (owner,
+# 09.11, board C; T-241). In one row of 44 pt (T-020) each had a third of it,
+# and all three were cut in every language: «Шоу-балет «…» · «Нед…» ·
+# «Участ…все (8)», "Pulse Dance Co…" · "W…" · "Partici…: all (8)", and in
+# Spanish even "Compañía…" · "Sem…".
 #
-# Bernarda Alba, whose profile speaks Spanish, in a project of her own (56).
-# Nothing is saved.
+# Now one under another: the project's name, wrapping before it is cut, its
+# chevron opening the choice; Week | Month | Dates, three equal segments,
+# the picked one in sight; the people by three faces, "+5" and "Todos los
+# participantes · 8", a row of their own. A slot's "+ Añadir" is a square
+# "+", read aloud as "Añadir ensayo" and its hours.
+#
+# Bianca Minola, whose account speaks Spanish, runs «Video musical "Fuego
+# lento"», eight in it, and «Musikvideo „Nachtschicht"», hers alone; she reads
+# the planner in Spanish, English, Russian and German. Maestro reads a label
+# whole even where the screen cuts it, so in each language the cut is looked
+# for on the shot itself — the "…" iOS draws in place of what does not fit
+# (e2e/scripts/no-ellipsis.js, ink.mjs) — and the words are checked by their
+# text, the sizes by Maestro. Nothing is saved; her language stays German.
+#
+# Miranda Milan is busy tomorrow 10:00-14:00, alone of the eight: that slot
+# names one person, "No disponible: Miranda Milan" and «Не может: Miranda
+# Milan», not "Ocupados"/«Заняты», plural for one (T-258). Checked where they
+# show, the flow going on; it fails at the end if either was wrong.
+#
+# And the words read as a native speaker's (T-256). The people the planner
+# weighs are called one thing on its screen: with nobody picked the row said
+# "Todos los miembros" over a sheet of "Todos los participantes" — now
+# participants, as the sheet says. A slot's "+" reads "Add rehearsal, 6:00 PM"
+# with a pause, and "Probe für 18:00 hinzufügen", the verb last; the German
+# third segment is "Tage", not "Daten" (data), and fits as the others do. With
+# nobody picked the German row says "Alle Teilnehmer", whole. The note over the
+# slots names who has marked nothing with one rule for one or many: "Quien no
+# marca nada cuenta como libre", «Без отметок участник считается свободным»,
+# "Wer nichts eingetragen hat, zählt als frei" — not "they". The sheet's button
+# is "OK" in Spanish. The flow goes on whatever the words, and fails at the end
+# naming every one that was wrong.
 appId: ${APP_ID}
-name: The planner's filters fit in Spanish
+name: The planner's filters fit in four languages
 tags:
   - planner
   - participants
   - language
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
-      EMAIL: ${BERNARDA_EMAIL}
+      EMAIL: ${BIANCA_EMAIL}
 - extendedWaitUntil:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
+
+# Spanish. The words drawn whole first, what was cut before the fix: the "…"
+# iOS draws for what does not fit, looked for on the shot between the status
+# bar and the tabs (e2e/scripts/no-ellipsis.js) — Maestro would read the label
+# whole all the same.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: tab-planner
-      SEE: "Semana.*"
+      SEE: "Recomendaciones"
       WAIT_MS: "10000"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP_ID: planner-period
-      SEE: "Elegir fechas"
-      WAIT_MS: "5000"
+      TAP_ID: planner-project
+      SEE: "Video musical “Fuego lento”"
+      WAIT_MS: "10000"
+- tapOn: "Video musical “Fuego lento”"
+- extendedWaitUntil:
+    visible: "\\d+ franjas?"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-es
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participantes, 8 de 8"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Añadir ensayo \\d.*"
+    timeout: 30000
+# The islanders have marked nothing: the note over the slots says how they
+# count, of one or of seven (T-256), not "Se cuentan como libres".
+- runFlow:
+    when:
+      notVisible: "(?s)Sin datos de disponibilidad: .*\\. Quien no marca nada cuenta como libre\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Quien no marca nada cuenta como libre, not Se cuentan como libres | '}"
+- assertVisible:
+    id: planner-project
+    text: "Proyecto, Video musical “Fuego lento”"
+# Three equal segments of the 393 pt of an iPhone 16: 393 - 2 × 16 - 2 × 2,
+# 119 each; the people's row the whole 361.
+- assertVisible:
+    id: planner-period-week
+    text: "Semana"
+    selected: true
+    width: 119
+    tolerance: 2
+- assertVisible:
+    id: planner-period-month
+    text: "Mes"
+    width: 119
+    tolerance: 2
+- assertVisible:
+    id: planner-period-custom
+    text: "Fechas"
+    width: 119
+    tolerance: 2
+- assertVisible:
+    id: participants-row
+    width: 361
+    tolerance: 2
+# The month, one tap.
+- tapOn:
+    id: planner-period-month
+- extendedWaitUntil:
+    visible:
+      id: planner-period-month
+      selected: true
+    timeout: 10000
+# The dates: their picker; its Cancel leaves the month (T-012).
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: planner-period-custom
       SEE: "Seleccionar período"
       WAIT_MS: "10000"
-# The week's seven days are picked already: "Listo" takes them.
-- tapOn: "Listo"
+- tapOn:
+    id: date-range-cancel
 - extendedWaitUntil:
     visible:
-      id: planner-period
-      text: "Período personalizado.*"
+      id: planner-period-month
+      selected: true
     timeout: 10000
-- waitForAnimationToEnd
-- takeScreenshot: 59-filters-spanish
-# The three have 393 - 2 × 16 - 2 × 12 - 26 = 311 pt of the row on the
-# iPhone 16, once the dots and the gaps are out (111, 99 and 103 here).
-# Maestro matches a size within a tolerance, 60 to 124 pt each: the project
-# is more than its chevron, and neither the period nor the people keep their
-# whole words.
 - assertVisible:
-    id: planner-filters
-    height: 44
-    tolerance: 1
-- assertVisible:
-    id: planner-project
-    width: 92
-    tolerance: 32
-- assertVisible:
-    id: planner-period
-    width: 92
-    tolerance: 32
-- assertVisible:
-    id: participants-row
-    width: 92
-    tolerance: 32
-# The people's, cut, still open their sheet.
+    id: planner-period-custom
+    selected: false
+- tapOn:
+    id: planner-period-week
+- extendedWaitUntil:
+    visible:
+      id: planner-period-week
+      selected: true
+    timeout: 10000
+# The people's row opens their sheet, everyone in it.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: participants-row
-      SEE: "Todos los participantes.*"
+      SEE: "Todos los participantes, 8 de 8"
       WAIT_MS: "5000"
-- takeScreenshot: 59-participants-spanish
+- takeScreenshot: 59-participants-es
+# The sheet's button is "OK", as iOS's own (T-256), not "Listo".
+- runFlow:
+    when:
+      notVisible:
+        id: participants-done
+        text: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: OK, not Listo, on the sheet | '}"
+# Nobody picked is everyone here, and the row says so in the sheet's word.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      SEE: "Todos los participantes, 0 de 8"
+      WAIT_MS: "5000"
 - tapOn:
     id: participants-done
+- extendedWaitUntil:
+    notVisible: "Todos los participantes, 0 de 8"
+    timeout: 10000
+- takeScreenshot: 59-nobody-picked-es
+- runFlow:
+    when:
+      notVisible:
+        id: participants-row
+        text: "Participantes, Todos los participantes"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Todos los participantes, not Todos los miembros, beside the sheet | '}"
+# Everyone picked again, as the rest of the flow reads it.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "Todos los participantes, 0 de 8"
+      WAIT_MS: "5000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      SEE: "Todos los participantes, 8 de 8"
+      WAIT_MS: "5000"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible: "Todos los participantes, 8 de 8"
+    timeout: 10000
+# Tomorrow's slot at 10:00, Miranda alone busy in it: "No disponible", one
+# person, not "Ocupados" nor "No disponibles" (T-258). The row is checked and
+# the flow goes on, so a run on the old words names Russian's too.
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- takeScreenshot: 59-one-busy-es
+- runFlow:
+    when:
+      notVisible:
+        id: planner-slot-${TOMORROW_DAY}
+        text: "No disponible: Miranda Milan"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: No disponible: Miranda Milan | '}"
+- scrollUntilVisible:
+    element:
+      id: planner-project
+    direction: UP
+    timeout: 60000
+
+# English.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Idioma, Español.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "English"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-en
+      SEE: "Profile, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Week"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible: "Add rehearsal,? \\d.*"
+    timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Add rehearsal, \\d.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Add rehearsal, its time after a comma | '}"
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-en
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-en
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+- assertVisible:
+    id: planner-project
+    text: "Project, Video musical “Fuego lento”"
+- assertVisible:
+    id: participants-row
+    text: "Participants, 8 of 8"
+- assertVisible:
+    id: planner-period-week
+    text: "Week"
+    selected: true
+- assertVisible:
+    id: planner-period-month
+    text: "Month"
+- assertVisible:
+    id: planner-period-custom
+    text: "Dates"
+
+# Russian.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Русский"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-ru
+      SEE: "Профиль, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Неделя"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible: "Добавить репетицию \\d.*"
+    timeout: 30000
+# One rule for one name or seven, «участник» (T-256): «они» agreed with none.
+- runFlow:
+    when:
+      notVisible: "(?s)Нет данных о занятости: .*\\. Без отметок участник считается свободным\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Без отметок участник считается свободным, not они | '}"
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-ru
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-ru
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+- assertVisible:
+    id: planner-project
+    text: "Проект, Video musical “Fuego lento”"
+- assertVisible:
+    id: participants-row
+    text: "Участники, 8 из 8"
+- assertVisible:
+    id: planner-period-week
+    text: "Неделя"
+    selected: true
+- assertVisible:
+    id: planner-period-month
+    text: "Месяц"
+- assertVisible:
+    id: planner-period-custom
+    text: "Даты"
+# The same slot in Russian: «Не может», one person, not «Заняты» (T-258).
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- takeScreenshot: 59-one-busy-ru
+- runFlow:
+    when:
+      notVisible:
+        id: planner-slot-${TOMORROW_DAY}
+        text: "Не может: Miranda Milan"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: Не может: Miranda Milan | '}"
+- scrollUntilVisible:
+    element:
+      id: planner-project
+    direction: UP
+    timeout: 60000
+
+# German, over the other long name.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Woche"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-project
+      SEE: "Musikvideo „Nachtschicht“"
+      WAIT_MS: "10000"
+- tapOn: "Musikvideo „Nachtschicht“"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Teilnehmer, 1 von 1"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Probe (für \\d.* hinzufügen|hinzufügen \\d.*)"
+    timeout: 30000
+- runFlow:
+    when:
+      notVisible: "Probe für \\d.* hinzufügen"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Probe für … hinzufügen, the verb last | '}"
+# She has marked nothing: "Wer nichts eingetragen hat", not "Sie zählen" (T-256).
+- runFlow:
+    when:
+      notVisible: "(?s)Keine Verfügbarkeit hinterlegt: .*\\. Wer nichts eingetragen hat, zählt als frei\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Wer nichts eingetragen hat, not Sie zählen | '}"
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-de
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+- assertVisible:
+    id: planner-project
+    text: "Projekt, Musikvideo „Nachtschicht“"
+- assertVisible:
+    id: planner-period-week
+    text: "Woche"
+    selected: true
+- assertVisible:
+    id: planner-period-month
+    text: "Monat"
+- assertVisible:
+    id: planner-period-custom
+    text: "(Tage|Daten)"
+- runFlow:
+    when:
+      notVisible:
+        id: planner-period-custom
+        text: "Tage"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Tage, not Daten | '}"
+# Nobody picked is everyone, said in the sheet's word: "Alle Teilnehmer", not
+# "Alle Mitglieder" (T-256), and whole in its row.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "Alle Teilnehmer, 1 von 1"
+      WAIT_MS: "5000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      SEE: "Alle Teilnehmer, 0 von 1"
+      WAIT_MS: "5000"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible: "Alle Teilnehmer, 0 von 1"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 59-nobody-picked-de
+- runFlow:
+    when:
+      notVisible:
+        id: participants-row
+        text: "Teilnehmer, Alle Teilnehmer"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Alle Teilnehmer, not Alle Mitglieder, beside the sheet | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-nobody-picked-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+
+- evalScript: "${console.log('59 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

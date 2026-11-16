@@ -52,6 +52,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     if (response?.type === 'success') {
       handleGoogleSignIn(response);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per answer from Google: the handler is this render's, and listed it would sign in again on every render (T-243)
   }, [response]);
 
   // An empty form is not sent: the button waits for both fields (T-015).

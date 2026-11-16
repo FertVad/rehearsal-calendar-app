@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
@@ -9,13 +9,24 @@ import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { projectsScreenStyles as styles } from '../styles';
 import type { ProjectsScreenNavigation } from '../../../navigation';
 
 export default function ProjectsScreen() {
   const navigation = useNavigation<ProjectsScreenNavigation>();
-  const { projects, setSelectedProject, loading, error } = useProjects();
+  const { projects, setSelectedProject, loading, error, refreshProjects } = useProjects();
   const { t } = useI18n();
+  // A role given or taken on another device, a project left there (T-229).
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshProjects({ quiet: true });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshProjects]);
   // Anyone can create a project: the paid tier was taken out of the app for
   // the App Store release — see docs/app-store-release.md
   // Joining is not creating, so it lives here on the projects screen rather
@@ -45,7 +56,14 @@ export default function ProjectsScreen() {
           />
         }
       />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        testID="projects-scroll"
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent.purple} />
+        }
+      >
 
         {/* Projects List */}
         {loading ? (
@@ -65,7 +83,7 @@ export default function ProjectsScreen() {
           </View>
         ) : error ? (
           <View style={styles.errorState}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{requestErrorMessage(t, error, t.auth.requestFailed)}</Text>
           </View>
         ) : projects.length === 0 ? (
           <View style={styles.emptyState}>

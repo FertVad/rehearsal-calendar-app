@@ -91,6 +91,9 @@ tags:
 - assertVisible:
     id: calendar-month-grid.day_${TODAY_DAY}
     text: ".*Today.*"
+# The month is the strip opened out: no strip under it (T-254).
+- assertNotVisible:
+    id: calendar-strip
 - takeScreenshot: 57-month-open
 - tapOn:
     id: calendar-month-grid.day_${FAR_DAY}

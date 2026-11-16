@@ -64,6 +64,9 @@ tags:
     timeout: 12000
     optional: true
 - assertNotVisible: "Could not mark as read"
+# The window's title too: a refusal's text is the server's own now (T-228),
+# not always "Could not mark as read".
+- assertNotVisible: "Error"
 - assertVisible:
     id: login-submit
 - takeScreenshot: 37-sign-in-untouched

@@ -12,17 +12,18 @@ import {
   Alert,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
 import type { AppStackParamList, AppNavigation } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { ParticipantPicker, busyText } from '../../../shared/components/ParticipantPicker';
 import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
-import { checkSchedulingConflicts } from '../../../shared/utils/conflictDetection';
+import { busyLine, checkSchedulingConflicts } from '../../../shared/utils/conflictDetection';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
 import { DayCalendar } from '../../../shared/components/DayCalendar';
@@ -40,7 +41,7 @@ import {
 } from '../hooks';
 import { formatDisplayDate } from '../utils/rehearsalFormatters';
 import { formatDateToString, formatDateToTimeString, parseDateString } from '../../../shared/utils/time';
-import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
+import { formatClock, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 
 type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
@@ -88,11 +89,13 @@ export default function AddRehearsalScreen() {
     selectedMemberIds: form.selectedMemberIds,
     participantsSettled: form.participantsSettled,
     membersFailed: membersLoad.failed,
+    membersError: membersLoad.error,
     reloadMembers: membersLoad.reload,
     members,
     memberAvailability,
     availabilityReady: availabilityLoad.ready,
     availabilityFailed: availabilityLoad.failed,
+    availabilityError: availabilityLoad.error,
     reloadAvailability: availabilityLoad.reload,
     resetForm: form.resetForm,
     fields: form.fields,
@@ -137,26 +140,23 @@ export default function AddRehearsalScreen() {
   })), [members, memberAvailability, t, language, uses24]);
   const conflict = useMemo(() => {
     if (!availabilityLoad.ready || form.selectedMemberIds.length === 0) return undefined;
-    const { busyMembers } = checkSchedulingConflicts(
+    return busyLine(checkSchedulingConflicts(
       members.filter(m => form.selectedMemberIds.includes(m.userId)),
       memberAvailability,
       formatDateToTimeString(form.startTime),
       formatDateToTimeString(form.endTime),
-    );
-    if (busyMembers.length === 0) return undefined;
-    const [{ member, conflictingSlots: [slot] }] = busyMembers;
-    const line = t.rehearsals.busyAt(member.lastName || member.firstName, formatTimeRange(slot.start, slot.end, getDateLocale(language), uses24));
-    return busyMembers.length > 1 ? `${line} ${t.rehearsals.andMore(busyMembers.length - 1)}` : line;
+    ), t, getDateLocale(language), uses24);
   }, [availabilityLoad.ready, members, form.selectedMemberIds, memberAvailability, form.startTime, form.endTime, t, language, uses24]);
 
   // A project whose members could not be loaded says so, with a way to try
   // again; until then nothing is saved (useAddRehearsalSubmit).
   useEffect(() => {
     if (!membersLoad.failed) return;
-    Alert.alert(t.common.error, t.rehearsals.loadMembersError, [
+    Alert.alert(t.common.error, requestErrorMessage(t, membersLoad.error, t.rehearsals.loadMembersError), [
       { text: t.common.cancel, style: 'cancel' },
       { text: t.common.retry, onPress: membersLoad.reload },
     ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per failure: `failed` goes off while each load (a retry, another project) is out and on again when it fails, with its `error` in the same render; `reload` is stable, and a new language is no new failure to alert (T-243)
   }, [membersLoad.failed]);
 
   return (

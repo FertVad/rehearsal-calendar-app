@@ -66,7 +66,7 @@ tags:
 - inputText: short1
 # The repeat is under the keyboard: a tap on a label puts it away first.
 - tapOn: "Last Name"
-- tapOn: "Repeat password"
+- tapOn: "Re-enter password"
 - inputText: other-password
 - tapOn: "Last Name"
 - tapOn: "your@email.com"
@@ -87,13 +87,13 @@ tags:
 - assertNotVisible: "Error"
 - assertNotVisible: "OK"
 - scrollUntilVisible:
-    element: "A first name is required; first and last name are at most 100 characters."
+    element: "First name is required\\. First and last names can each be up to 100 characters\\."
     direction: UP
     timeout: 10000
 - assertVisible: "Invalid email format"
 - takeScreenshot: 50-register-name-and-address
 - scrollUntilVisible:
-    element: "Password: at least 8 characters and at most 72 bytes — 72 Latin letters, fewer in other scripts."
+    element: "Password: at least 8 characters and at most 72 bytes — 72 letters A–Z, fewer with accents or other scripts\\."
     direction: DOWN
     timeout: 10000
 - assertVisible: "At least 8 characters"

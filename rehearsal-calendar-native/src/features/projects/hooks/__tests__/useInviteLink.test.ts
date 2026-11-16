@@ -13,6 +13,7 @@
  */
 import { renderHook, act } from '@testing-library/react-native';
 import { Alert, Share } from 'react-native';
+import { AxiosError } from 'axios';
 import { useInviteLink } from '../useInviteLink';
 import { invitesAPI } from '../../../../shared/services/api';
 
@@ -59,8 +60,8 @@ describe('useInviteLink Hook', () => {
 
       // The sheet gets the localized message, the project name and the link
       expect(shareSpy).toHaveBeenCalledWith({
-        message: `Присоединяйся к проекту "${PROJECT}" в приложении Rehearsly:\n\n${mockInviteUrl}`,
-        title: `Приглашение в проект ${PROJECT}`,
+        message: `Присоединяйтесь к проекту «${PROJECT}» в приложении Rehearsly:\n\n${mockInviteUrl}`,
+        title: `Приглашение в проект «${PROJECT}»`,
       });
 
       // No alert on the happy path — the sheet is the whole feedback
@@ -99,9 +100,11 @@ describe('useInviteLink Hook', () => {
   });
 
   describe('generateInviteLink - Error Handling', () => {
-    it('should show error alert on API failure', async () => {
+    // The owner's iPhone on LTE, 07.11: the request timed out, and the Russian
+    // window said axios's "Network Error" (T-228).
+    it("says there is no connection, in the app's language, when the request got no answer", async () => {
       (invitesAPI.createInvite as jest.Mock).mockRejectedValue(
-        new Error('Failed to create invite')
+        new AxiosError('Network Error', 'ERR_NETWORK', undefined, {})
       );
 
       const { result } = renderHook(() => useInviteLink());
@@ -110,7 +113,7 @@ describe('useInviteLink Hook', () => {
         await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Failed to create invite');
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Нет соединения. Проверьте интернет и попробуйте ещё раз.');
       expect(shareSpy).not.toHaveBeenCalled();
       expect(result.current.generatingInvite).toBe(false);
     });
@@ -145,6 +148,7 @@ describe('useInviteLink Hook', () => {
       );
     });
 
+    // Said, in the app's language: not the share sheet's own English (T-228).
     it('should surface a share sheet failure', async () => {
       (invitesAPI.createInvite as jest.Mock).mockResolvedValue({
         data: { inviteUrl: 'https://rehearsly.me/invite/abc123' },
@@ -157,7 +161,7 @@ describe('useInviteLink Hook', () => {
         await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Share unavailable');
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Не удалось создать ссылку-приглашение');
       expect(result.current.generatingInvite).toBe(false);
     });
   });
@@ -185,8 +189,8 @@ describe('useInviteLink Hook', () => {
       expect(shareSpy).toHaveBeenCalledTimes(2);
       // Each call carries its own project name, not the first one's
       expect(shareSpy).toHaveBeenNthCalledWith(2, {
-        message: `Присоединяйся к проекту "Лебединое озеро" в приложении Rehearsly:\n\nhttps://rehearsly.me/invite/def456`,
-        title: 'Приглашение в проект Лебединое озеро',
+        message: `Присоединяйтесь к проекту «Лебединое озеро» в приложении Rehearsly:\n\nhttps://rehearsly.me/invite/def456`,
+        title: 'Приглашение в проект «Лебединое озеро»',
       });
     });
   });
@@ -230,8 +234,8 @@ describe('useInviteLink Hook', () => {
       });
 
       expect(shareSpy).toHaveBeenCalledWith({
-        message: `Присоединяйся к проекту "${PROJECT}" в приложении Rehearsly:\n\n`,
-        title: `Приглашение в проект ${PROJECT}`,
+        message: `Присоединяйтесь к проекту «${PROJECT}» в приложении Rehearsly:\n\n`,
+        title: `Приглашение в проект «${PROJECT}»`,
       });
     });
   });

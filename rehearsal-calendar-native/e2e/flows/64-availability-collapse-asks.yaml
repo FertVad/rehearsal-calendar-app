@@ -2,7 +2,7 @@
 # closing the screen does (T-026; owner, 02.11.2026). The arrow and
 # "Deselect" put the editor away at once, its Save with it, and the change
 # stayed unsaved out of sight. Now: "Cancel" leaves the editor as it was;
-# "Don't Save" puts the day back as saved and collapses; "Save" saves and
+# "Don’t Save" puts the day back as saved and collapses; "Save" saves and
 # collapses, and the day is saved when the screen is opened again. Nothing
 # changed, it collapses without asking. The only day picked, tapped again,
 # collapses it too and asks the same.
@@ -55,7 +55,7 @@ tags:
 - tapOn:
     id: availability-collapse
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
 - takeScreenshot: 64-collapse-asks
 # iOS draws the sheet as a popover with no "Cancel" button: a tap outside it
@@ -63,7 +63,7 @@ tags:
 - tapOn:
     point: "50%, 8%"
 - extendedWaitUntil:
-    notVisible: "Don't Save"
+    notVisible: "Don’t Save"
     timeout: 5000
 - assertVisible:
     id: mode-free
@@ -71,13 +71,13 @@ tags:
 - assertVisible:
     id: availability-save
     enabled: true
-# "Don't Save": the day as it was, the editor down.
+# "Don’t Save": the day as it was, the editor down.
 - tapOn:
     id: availability-collapse
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
-- tapOn: "Don't Save"
+- tapOn: "Don’t Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-save
@@ -103,7 +103,7 @@ tags:
 - tapOn:
     id: availability-deselect
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
 # With the popover up the screen behind is out of reach: this "Save" is its.
 - tapOn: "Save"
@@ -116,7 +116,7 @@ tags:
     notVisible:
       id: availability-save
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 - assertVisible:
     id: day-${MARK_DAY}
     text: ".*, Free"
@@ -128,7 +128,7 @@ tags:
     notVisible:
       id: availability-legend
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -162,9 +162,9 @@ tags:
     notVisible:
       id: availability-save
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"
 # The day tapped again, its only one picked, puts the editor away too: with
-# it changed, the same question (review T-026); "Don't Save", the day as saved.
+# it changed, the same question (review T-026); "Don’t Save", the day as saved.
 - tapOn:
     id: day-${MARK_DAY}
 - extendedWaitUntil:
@@ -177,10 +177,10 @@ tags:
 - tapOn:
     id: day-${MARK_DAY}
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
 - takeScreenshot: 64-day-tapped-again-asks
-- tapOn: "Don't Save"
+- tapOn: "Don’t Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-save

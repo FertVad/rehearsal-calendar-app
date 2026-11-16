@@ -33,45 +33,62 @@ export const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingTop: Spacing.sm,
   },
-  filtersContainer: {
+  // The project, the period and the people, one under another (T-241).
+  filters: {
+    gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
-  // One row of 44 pt, the three filters in it (T-020).
-  filters: {
-    height: TouchTarget,
+  // The project: its name and a chevron after it, or its name alone.
+  project: {
+    minHeight: TouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
+  },
+  projectName: {
+    flexShrink: 1,
+    fontSize: 17,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.purple,
+  },
+  // Nothing to choose: a name, not something to tap.
+  projectNameOnly: {
+    color: Colors.text.primary,
+  },
+  // Week | Month | Dates, equal, the picked one lifted.
+  segments: {
+    flexDirection: 'row',
+    padding: 2,
     backgroundColor: Colors.glass.bg,
     borderRadius: BorderRadius.md,
   },
-  // Each of the three gives way, by its length, and its words end in "…". The
-  // period and the people did not: "Período personalizado · Participantes:
-  // todos (3)" took the row, the project was left its chevron, and the row ran
-  // off the screen's edge (T-020 review).
-  filter: {
-    height: TouchTarget,
-    flexDirection: 'row',
+  // 44 tall each, the finger's least (T-014).
+  segment: {
+    flex: 1,
+    minHeight: TouchTarget,
     alignItems: 'center',
-    gap: Spacing.xs,
-    flexShrink: 1,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.md - 2,
   },
-  filterText: {
-    fontSize: FontSize.md,
-    color: Colors.text.primary,
-    flexShrink: 1,
+  segmentSelected: {
+    backgroundColor: Colors.accent.purpleDarkAlpha30,
   },
-  filterDot: {
+  segmentText: {
     fontSize: FontSize.md,
-    color: Colors.text.tertiary,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+  segmentTextSelected: {
+    color: Colors.accent.purple,
+    fontWeight: FontWeight.semibold,
   },
   choice: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
-    marginTop: Spacing.sm,
     overflow: 'hidden',
   },
   option: {

@@ -1,0 +1,35 @@
+T-229, review 1 (Astra), green after, on 2c567dc.
+
+== Jest: npx jest --selectProjects frontend --testPathPatterns AddRehearsalScreen -t "read again while the form is open" --verbose
+    ✓ keeps the project picked in the form over the planner's, and creates it there (467 ms)
+    ✓ with the admin role taken off the project shown, Create is not offered and sends nothing (88 ms)
+    ✓ does not load the members again for the same project read anew (74 ms)
+The whole file: Tests: 30 passed, 30 total
+The whole frontend set: Tests: 1316 passed, 1316 total (AvailabilityQuietSave
+failed once in two full runs, on mockScrollToOffset; it does not use the
+form's hooks and passes on its own and in the other full run).
+npm run type-check: clean.
+
+== e2e: npm run e2e -- e2e/flows/77-rehearsal-form-projects-read-again.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Rehearsal form, the projects read again (2m 51s)
+
+1/1 Flow Passed in 2m 52s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Artifacts: e2e/out/artifacts/2026-11-07_163035.
+
+== The form's other flows, on 2c567dc, one run each:
+[Passed] Chosen project deleted (2m 39s)                          (19)
+[Passed] Project's card, and a new rehearsal from its page (2m 3s) (63)
+[Passed] From the planner to a rehearsal (2m 5s)                  (06)

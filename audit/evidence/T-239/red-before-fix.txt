@@ -1,0 +1,32 @@
+T-239 — red on the old code (2026-11-10)
+
+The fix's files put back as at 74b4376:
+  git restore --source=74b4376 -- src/i18n/translations/calendarSync.ts src/shared/utils/formatLastSync.ts \
+    src/shared/components/ScreenHeader.tsx src/features/availability/hooks/useAvailabilitySync.ts \
+    src/features/profile/screens/CalendarSyncSettingsScreen.tsx src/features/projects/screens/ProjectDetailScreen.tsx
+then `git restore --source=HEAD -- <same files>` (e4d354f).
+
+1. Jest, screenHeaders.test.tsx:
+    ✕ a pushed screen: "‹" with the name of the one under it, then the title
+      ✕ the name of the screen under it, where it fits
+      ✕ "Back" where the name does not
+      ✕ the chevron alone where neither does, still "Back" to VoiceOver
+      ✕ the words being measured are out of the accessibility tree
+  Tests:       5 failed, 19 passed, 24 total
+  (formatLastSync.test.ts: jest-formatLastSync-red.txt, 6 failed.)
+
+2. npm run e2e -- e2e/flows/84-sync-screen-in-four-languages.yaml
+  [e2e] seeding
+  [e2e] installing the Debug app and running the flows
+  [Failed] The sync screen's bar and last sync in four languages (2m 10s)
+    (Assertion is false: ".*Back", id: header-back is visible)
+  1/1 Flow Failed
+  Shot: before/84-project-long-title.png — "‹ My Pr…  Hamlet — Demo Thea…".
+
+3. The sync screen on the old code in four languages (a temporary flow, shots
+   only, not kept: the old screen has no ids for the line): before/before-sync-*.png
+   - en: "‹ Profile  Calendar Sync", "Synced Just now"
+   - ru: "‹ Проф…  Синхронизация с ка…", «Синхронизировано Только что»
+   - es: "Sincronización de cal…", "Sincronizado Ahora mismo"
+   - de: "Kalendersynchronisat…", "Synchronisiert Gerade eben"
+   The same flow 84 on the fix: e2e-84-green.txt, after/.

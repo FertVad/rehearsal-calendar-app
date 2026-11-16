@@ -12,10 +12,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Colors } from '../../constants/colors';
 
-jest.mock('react-native-calendars', () => ({
-  Calendar: jest.requireActual('react-native-calendars/src/calendar/index.js').default,
-  LocaleConfig: jest.requireActual('xdate'),
-}));
+jest.mock('react-native-calendars/src/calendar', () => jest.requireActual('react-native-calendars/src/calendar/index.js'));
 jest.mock('react-native-calendars/src/calendar/img/previous.png', () => 1);
 jest.mock('react-native-calendars/src/calendar/img/next.png', () => 2);
 jest.mock('react-native-swipe-gestures', () => {
@@ -123,7 +120,6 @@ it('the availability month: the days picked on purpleFill, today ringed', () => 
       year={2026}
       month={10}
       selectedDates={['2026-11-05']}
-      availability={{}}
       today="2026-11-02"
       onDayPress={jest.fn()}
       getDayStatus={() => 'none'}

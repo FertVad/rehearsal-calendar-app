@@ -8,6 +8,7 @@ import { formatTimeRange } from '../../../shared/utils/clockFormat';
 import { formatDate } from '../../../shared/utils/dateFormat';
 import { clockRangeEndDate, dateTimeToOffsetISOInTimezone } from '../../../shared/utils/time';
 import { useTimezone } from '../../../shared/hooks/useClock';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 
 import { logger } from '../../../shared/utils/logger';
 /**
@@ -196,7 +197,7 @@ export const useAvailabilitySave = () => {
       return true;
     } catch (err: any) {
       logger.error('Failed to save availability:', err);
-      setError(err.response?.data?.error || t.availability.saveError);
+      setError(requestErrorMessage(t, err, t.availability.saveError));
       return false;
     } finally {
       setSaving(false);

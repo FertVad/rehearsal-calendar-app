@@ -1,0 +1,36 @@
+T-251 review (Astra, P2): flow 86 now sends a "seen" (member_response) in its
+Spanish and German parts and reads "Ensayo visto ... ha visto" and
+"Probe gesehen ... hat ... gesehen" in the inbox.
+
+== Red on the old words ==
+
+server/i18n/pushNotifications.js and
+server/services/notifications/pushNotificationService.js put back as at bd4b8ac
+(git restore --source=bd4b8ac -- <both>); restored with
+git restore --source=HEAD afterwards. The Spanish part of flow 86 stops at
+its first T-251 line on the old words (see e2e-red-before.txt), so the two
+new "seen" steps ran alone, as two temporary flows (zz-tmp-86-es-seen.yaml,
+zz-tmp-86-de-seen.yaml: the send, sign-in, the inbox, the new assertion;
+deleted after).
+
+$ npm run e2e -- e2e/flows/zz-tmp-86-es-seen.yaml e2e/flows/zz-tmp-86-de-seen.yaml
+[Failed] 86 Spanish seen part (1m 51s) (No visible element found: ".*Ensayo visto.*Jacinta Labradora ha visto «Escena del balcón» \((mañana|el .*) a las 18:00\) en Fuenteovejuna.*")
+[Failed] 86 German seen part (1m 7s) (No visible element found: ".*Probe gesehen.*Marthe Schwerdtlein hat „Fechtszene“ \((morgen|am .*) um 18:00\) in Faust gesehen.*")
+2/2 Flows Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+On screen (screen hierarchy, artifacts 2026-11-12_055753):
+  Nueva respuesta, Jacinta Labradora ha respondido a «Escena del balcón» (mañana a las 18:00) en Fuenteovejuna, hace 1 min
+  Neue Antwort, Marthe Schwerdtlein hat auf „Fechtszene“ (morgen um 18:00) in Faust reagiert, gerade eben
+
+== Green on HEAD ==
+
+$ npm run e2e -- e2e/flows/zz-tmp-86-es-seen.yaml e2e/flows/zz-tmp-86-de-seen.yaml
+[Passed] 86 Spanish seen part (1m 3s)
+[Passed] 86 German seen part (40s)
+2/2 Flows Passed in 1m 44s
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[Passed] Rehearsal notices read right in Spanish, German and Russian (2m 23s)
+1/1 Flow Passed in 2m 23s
+[e2e] taps taken again (tap-and-see.yaml): 0

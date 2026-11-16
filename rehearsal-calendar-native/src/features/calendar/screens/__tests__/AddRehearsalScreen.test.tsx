@@ -11,15 +11,17 @@
  * API, navigation and contexts standing in.
  */
 import React from 'react';
-import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, act, within } from '@testing-library/react-native';
 import { ActionSheetIOS, Alert } from 'react-native';
+import { Colors } from '../../../../shared/constants/colors';
+import { AxiosError } from 'axios';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI, rehearsalsAPI } from '../../../../shared/services/api';
 import { setProfileTimezone } from '../../../../shared/utils/time';
 import AddRehearsalScreen from '../AddRehearsalScreen';
 import { PickerModal } from '../../../../shared/components/PickerModal';
 // The shared stand-in (jest.config.js): what the form gives the calendar.
-import { Calendar } from 'react-native-calendars';
+import Calendar from 'react-native-calendars/src/calendar';
 // @ts-expect-error the mock's own helper (src/__tests__/__mocks__/expo-localization.js)
 import { __changeCalendars } from 'expo-localization';
 
@@ -53,8 +55,11 @@ const projects = [
   { id: 'A', name: 'Project A', is_admin: true, timezone: 'UTC', created_at: '2026-01-01T00:00:00Z' },
   { id: 'B', name: 'Project B', is_admin: true, timezone: 'UTC', created_at: '2026-01-02T00:00:00Z' },
 ];
+// The list as ProjectContext holds it now: read again behind the form, it is
+// a new list of new objects (T-229).
+const mockList: { current: typeof projects } = { current: projects };
 jest.mock('../../../../contexts/ProjectContext', () => ({
-  useProjects: () => ({ projects, selectedProject: null, setSelectedProject: jest.fn() }),
+  useProjects: () => ({ projects: mockList.current, selectedProject: null, setSelectedProject: jest.fn() }),
 }));
 const mockUser: { id: string; timezone: string; weekStartDay?: string } = { id: 'me', timezone: 'UTC' };
 jest.mock('../../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: mockUser }) }));
@@ -105,6 +110,7 @@ beforeEach(() => {
   create.mockResolvedValue({ data: { rehearsal: { id: 'new' } } });
   update.mockResolvedValue({ data: { rehearsal: { id: 'r1' } } });
   routeParams = { projectId: 'A', prefilledDate: '2026-11-10', prefilledTime: '10:00' };
+  mockList.current = projects;
 });
 afterEach(() => {
   jest.useRealTimers();
@@ -189,6 +195,50 @@ describe('Picking the project (R9-01)', () => {
   });
 });
 
+// The projects are read again behind an open form — back to the app, a push
+// about a role, a 403 (T-229) — and the form is on what is chosen in it, with
+// the role as it is now (T-229 review).
+describe('The projects read again while the form is open (T-229 review)', () => {
+  const readAgain = async (screen: ReturnType<typeof render>, change: (p: typeof projects[number]) => object = () => ({})) => {
+    mockList.current = projects.map((p) => ({ ...p, ...change(p) }));
+    screen.rerender(<AddRehearsalScreen />);
+    await settle();
+    await settle();
+  };
+
+  it('keeps the project picked in the form over the planner\'s, and creates it there', async () => {
+    const screen = await open();
+    await pickProject(screen, 'Project A', 'Project B');
+
+    await readAgain(screen);
+    await submit(screen);
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0]).toBe('B');
+  });
+
+  it('with the admin role taken off the project shown, Create is not offered and sends nothing', async () => {
+    const screen = await open();
+    expect(offered(screen)).toBe(true);
+
+    await readAgain(screen, (p) => (p.id === 'A' ? { is_admin: false } : {}));
+
+    expect(offered(screen)).toBe(false);
+    expect(screen.getByTestId('rehearsal-project-error')).toBeTruthy();
+    await submit(screen);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('does not load the members again for the same project read anew', async () => {
+    const screen = await open();
+    const loads = getMembers.mock.calls.length;
+
+    await readAgain(screen);
+
+    expect(getMembers).toHaveBeenCalledTimes(loads);
+  });
+});
+
 describe('The participants row (T-010)', () => {
   const busyFor = (userId: string, start: string, end: string) => ({
     data: { availability: [{ userId, dates: [{ date: '2026-11-10', timeRanges: [{ start, end, type: 'busy' }] }] }] },
@@ -200,11 +250,33 @@ describe('The participants row (T-010)', () => {
     await settle();
 
     expect(screen.getByTestId('participants-row').props.accessibilityLabel)
-      .toBe('Participants, 3 of 3, Name7 busy 11:00–14:00');
+      .toBe('Participants, 3 of 3, Busy: Name7 (11:00–14:00)');
     // The sheet: their busy time beside them, nobody else's.
     fireEvent.press(screen.getByTestId('participants-row'));
     expect(screen.getByTestId('participant-7').props.accessibilityLabel).toBe('Name7, 11:00–14:00');
     expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Name3');
+  });
+
+  // The line said only the surname, and the clock for someone busy all day:
+  // "Lopez is busy 12:00 AM–11:59 PM". It names them in full, as the Planner
+  // and the warning on save do, and says "all day" as the sheet does (T-261).
+  it('names the first one busy in full, all day as the sheet says it, and how many more', async () => {
+    getMembers.mockImplementation(async () => ({ data: { members: [
+      { userId: '3', firstName: 'Maya', lastName: 'Lopez', role: 'member', status: 'active' },
+      { userId: '7', firstName: 'Anna', lastName: 'Smith', role: 'member', status: 'active' },
+      { userId: '9', firstName: 'Boris', lastName: '', role: 'member', status: 'active' },
+    ] } }));
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue({ data: { availability: [
+      { userId: '3', dates: [{ date: '2026-11-10', timeRanges: [{ start: '00:00', end: '23:59', type: 'busy' }] }] },
+      { userId: '7', dates: [{ date: '2026-11-10', timeRanges: [{ start: '11:00', end: '14:00', type: 'busy' }] }] },
+      { userId: '9', dates: [{ date: '2026-11-10', timeRanges: [{ start: '09:00', end: '12:00', type: 'busy' }] }] },
+    ] } });
+    const screen = await open();
+    await settle();
+
+    expect(screen.getByTestId('participants-conflict').props.children).toBe('Busy: Maya Lopez (all day) and 2 more');
+    fireEvent.press(screen.getByTestId('participants-row'));
+    expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Maya Lopez, all day');
   });
 
   // T-017 review r1: the phone's 12/24 hours changed while the form is open.
@@ -220,7 +292,7 @@ describe('The participants row (T-010)', () => {
       act(() => __changeCalendars([{ uses24hourClock: false }]));
 
       expect(screen.getByText(/^10:00\sAM$/)).toBeTruthy();
-      expect(screen.getByTestId('participants-conflict').props.children).toMatch(/^Name7 busy 11:00\sAM–2:00\sPM$/);
+      expect(screen.getByTestId('participants-conflict').props.children).toMatch(/^Busy: Name7 \(11:00\sAM–2:00\sPM\)$/);
       fireEvent.press(screen.getByTestId('participants-row'));
       expect(screen.getByTestId('participant-7').props.accessibilityLabel).toMatch(/^Name7, 11:00\sAM–2:00\sPM$/);
     } finally {
@@ -235,6 +307,144 @@ describe('The participants row (T-010)', () => {
 
     expect(screen.getByTestId('participants-row').props.accessibilityLabel).toBe('Participants, 3 of 3');
     expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+});
+
+// T-238 (owner, 09.11): the form offered 13:00–14:00 as free time, a tap made
+// it 13:00–16:00, and the same form then said someone was busy 14:00–17:00.
+// What is tapped is what is put in: the usual length on, but no further than
+// the free time goes.
+describe('Recommended time (T-238)', () => {
+  const busy = (ranges: Record<string, [string, string][]>) => ({
+    data: { availability: Object.entries(ranges).map(([userId, times]) => ({
+      userId,
+      dates: [{ date: '2026-11-10', timeRanges: times.map(([start, end]) => ({ start, end, type: 'busy' })) }],
+    })) },
+  });
+  const shown = (screen: ReturnType<typeof render>, testID: string) =>
+    within(screen.getByTestId(testID)).getByText(/^\d\d:\d\d$/).props.children;
+  // The style of the button a window is: the touchable around its text. Merged
+  // by hand: StyleSheet here is the test setup's stand-in.
+  const flat = (style: unknown): Record<string, unknown> =>
+    Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+  const windowStyle = (screen: ReturnType<typeof render>, label: RegExp) => {
+    let node: any = screen.getByText(label);
+    while (node && !flat(node.props.style).borderColor) node = node.parent;
+    return flat(node?.props.style);
+  };
+  const tapWindow = async (screen: ReturnType<typeof render>, label: RegExp) => {
+    fireEvent.press(screen.getByText(label));
+    await settle();
+  };
+
+  it('a window of 1 h with a usual 3 h: 13:00–14:00, and nobody is busy in it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+
+    await tapWindow(screen, /^13:00–14:00/);
+
+    expect(shown(screen, 'rehearsal-start-time')).toBe('13:00');
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('a window longer than the usual length: the usual length on (T-012)', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+
+    await tapWindow(screen, /^17:00–23:00/);
+
+    expect(shown(screen, 'rehearsal-start-time')).toBe('17:00');
+    expect(shown(screen, 'rehearsal-end-time')).toBe('20:00');
+  });
+
+  it('everyone free all day: no 09:00–23:00 to tap, a line that says so', async () => {
+    const screen = await open();
+    await settle();
+
+    expect(screen.queryByText(/^09:00–23:00/)).toBeNull();
+    expect(screen.getByText(t.rehearsals.everyoneFreeAllDay)).toBeTruthy();
+    // A line, not a button: the time is the form's own, the next whole hour.
+    expect(shown(screen, 'rehearsal-start-time')).toBe('10:00');
+  });
+
+  it('someone busy at 14:00: the windows before and after are green, the colour of free', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['14:00', '17:00']] }));
+    const screen = await open();
+
+    for (const label of [/^09:00–14:00/, /^17:00–23:00/]) {
+      const style = windowStyle(screen, label);
+      expect(style.borderColor).toBe(Colors.accent.green);
+      expect(style.backgroundColor).toBe(Colors.accent.greenAlpha15);
+    }
+  });
+
+  it('from a planner slot an hour before someone is busy: it ends when they are', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '9': [['14:00', '17:00']] }));
+    routeParams = { projectId: 'A', prefilledDate: '2026-11-10', prefilledTime: '13:00', prefilledFreeUntil: '14:00' };
+    const screen = await open();
+    await settle();
+
+    expect(shown(screen, 'rehearsal-start-time')).toBe('13:00');
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('lengthened by hand past the free time, it warns as before', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    act(() => {
+      const end = screen.UNSAFE_getAllByType(PickerModal).find((p) => p.props.title === t.rehearsals.selectEndTime)!;
+      end.props.onConfirm(new Date(2026, 10, 10, 16, 0));
+    });
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('16:00');
+    expect(screen.getByTestId('participants-conflict').props.children).toBe('Busy: Name9 (14:00–17:00)');
+  });
+
+  // T-238 review: the start's picker confirmed as it was, or the day shown
+  // tapped again, is no new start — the free time it came from still holds.
+  const confirmStart = (screen: ReturnType<typeof render>, hours: number, minutes = 0) => act(() => {
+    const start = screen.UNSAFE_getAllByType(PickerModal).find((p) => p.props.title === t.rehearsals.selectStartTime)!;
+    start.props.onConfirm(new Date(2026, 10, 10, hours, minutes));
+  });
+
+  it('the start confirmed unchanged keeps 13:00–14:00, with nobody busy in it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    confirmStart(screen, 13);
+    await settle();
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('the day shown tapped again keeps 13:00–14:00, with nobody busy in it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    fireEvent.press(screen.getByTestId('rehearsal-date'));
+    act(() => { screen.UNSAFE_getByType(Calendar).props.onDayPress({ dateString: '2026-11-10' }); });
+    await settle();
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('a start really moved is the person\'s own: the usual length on from it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    confirmStart(screen, 13, 30);
+    await settle();
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('16:30');
   });
 });
 
@@ -430,10 +640,11 @@ describe('Leaving with changes (T-013)', () => {
       leave();
       await choose(t.common.save);
 
-      await act(async () => { fail(new Error('offline')); });
+      await act(async () => { fail(new AxiosError('Network Error', 'ERR_NETWORK', undefined, {})); });
       await settle();
 
-      expect(Alert.alert).toHaveBeenCalledWith(t.common.error, 'offline');
+      // Said in the app's language, not axios's "Network Error" (T-228).
+      expect(Alert.alert).toHaveBeenCalledWith(t.common.error, t.common.noConnection);
       expect(closes()).toBe(0);
       type(screen, 'Room B');
       expect(location(screen)).toBe('Room B');

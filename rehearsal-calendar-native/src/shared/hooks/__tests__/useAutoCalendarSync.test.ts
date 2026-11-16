@@ -20,6 +20,8 @@ import { importCalendarEventsToAvailability, syncAllRehearsals } from '../../ser
 import { getAllMappings } from '../../utils/calendarMappings';
 import { getSyncSettings } from '../../utils/calendarStorage';
 import { projectsAPI, rehearsalsAPI } from '../../services/api';
+import { runCalendarSync } from '../../services/calendarSync';
+import { AxiosError } from 'axios';
 
 jest.mock('../../services/calendar', () => ({
   importCalendarEventsToAvailability: jest.fn().mockResolvedValue({ success: 0, failed: 0 }),
@@ -371,6 +373,22 @@ describe('One direction failing (EO02)', () => {
     });
 
     expect(syncAllRehearsals).toHaveBeenCalled();
+  });
+
+  it('keeps what the failed direction threw whole, not its message (T-228)', async () => {
+    // Its message was all the run kept, and for a request with no answer that
+    // is axios's "Network Error": the settings screen showed it as it was.
+    // The screen says it in the app's language (requestErrorMessage) — it
+    // needs the error for that.
+    const offline = new AxiosError('Network Error', 'ERR_NETWORK', undefined, {});
+    (importCalendarEventsToAvailability as jest.Mock).mockRejectedValueOnce(offline);
+
+    let result: any;
+    await act(async () => {
+      result = await runCalendarSync('manual');
+    });
+
+    expect(result.import).toEqual({ status: 'failed', error: offline });
   });
 
   it('mappings that could not be fetched fail the export, not the import', async () => {

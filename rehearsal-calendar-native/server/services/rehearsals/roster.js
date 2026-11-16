@@ -17,7 +17,10 @@
  *   anyone else is refused whole, before anything is written, never trimmed.
  * - Answering changes the answer, never the roster: only someone already on a
  *   rehearsal can answer it.
- * - A rehearsal is visible to an admin of its project and to the people on it.
+ * - A rehearsal is visible to an admin of its project and to the people on it —
+ *   one rule for a single rehearsal (viewerOf) and for the lists
+ *   (visibleRehearsals). Visible is not on it: an admin who sees a rehearsal
+ *   they are not on is still not on it.
  *
  * Nothing else in the server names the table; a test holds that.
  */
@@ -86,6 +89,38 @@ export async function viewerOf(conn, rehearsal, userId) {
   const isAdmin = isAdminRole(membership);
   if (!place && !isAdmin) return null;
   return { membership, isAdmin, place };
+}
+
+/**
+ * The rehearsals of these projects this person may see — the lists' side of
+ * viewerOf, one rule for "All projects" and for one project's filter (T-232):
+ * in a project they are an admin of, every rehearsal; in one they are a member
+ * of, only those they are on; in any other, none.
+ *
+ * Each row is the rehearsal with the project's name, `user_response` (their
+ * answer, null when not on it), `on_roster` (1 or 0) and `viewer_is_admin`.
+ * Seeing a rehearsal is not being on it: what puts someone on it is still the
+ * row in ROSTER, and the calendar export, the busy slots and the notices read
+ * that, not this.
+ */
+export async function visibleRehearsals(conn, projectIds, userId) {
+  if (projectIds.length === 0) return [];
+  const adminRoles = ADMIN_ROLES.map((role) => `'${role}'`).join(', ');
+  return conn.all(
+    `SELECT r.*, p.name AS project_name, mine.response AS user_response,
+            CASE WHEN mine.id IS NULL THEN 0 ELSE 1 END AS on_roster,
+            CASE WHEN viewer.role IN (${adminRoles}) THEN 1 ELSE 0 END
+              AS viewer_is_admin
+     FROM native_rehearsals r
+     JOIN native_projects p ON p.id = r.project_id
+     JOIN native_project_members viewer ON viewer.project_id = r.project_id
+       AND viewer.user_id = $1 AND viewer.status = 'active'
+     LEFT JOIN ${ROSTER} mine ON mine.rehearsal_id = r.id AND mine.user_id = $1
+     WHERE r.project_id IN (${placeholders(projectIds, 2)})
+       AND (mine.id IS NOT NULL OR viewer.role IN (${adminRoles}))
+     ORDER BY r.starts_at DESC`,
+    [userId, ...projectIds]
+  );
 }
 
 /**

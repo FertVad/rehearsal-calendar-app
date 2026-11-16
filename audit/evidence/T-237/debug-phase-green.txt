@@ -1,0 +1,30 @@
+T-237, after the fix: the phase also skips a build whose GCC_PREPROCESSOR_DEFINITIONS has DEBUG=1
+(the pods' own rule for embedding the Debug flavour). Release (no DEBUG=1, see
+e2e/.native/ios/Pods/Target Support Files/Pods-Rehearsly/Pods-Rehearsly.release.xcconfig:
+"GCC_PREPROCESSOR_DEFINITIONS = $(inherited) COCOAPODS=1") runs it as before.
+
+$ node --test rehearsal-calendar-native/plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs
+
+✔ the UUIDs of a thin and of a universal Mach-O, arch by arch (8.0585ms)
+✔ Release: the three dSYMs go beside the app's, each with the UUID of the framework the app embeds; the next build takes them from the cache (296.1205ms)
+✔ a dSYM that is not of the embedded framework fails the build, and is not put beside the app (204.314708ms)
+✔ a tarball whose sha256 is not the pinned one fails the build and is not cached (87.177709ms)
+✔ a React Native version with no pinned checksums fails the build — before any download (71.037708ms)
+✔ Maven without the tarball fails the build (77.134417ms)
+✔ a build that makes no dSYMs (Debug) gets none of these either, and downloads nothing (82.0835ms)
+✔ Debug that makes dSYMs (Expo's app target: dwarf-with-dsym, DEBUG=1) embeds the Debug React and Hermes: no release dSYMs, no download, no failure (75.8775ms)
+✔ Release keeps the phase whatever else GCC_PREPROCESSOR_DEFINITIONS holds, as long as it is not DEBUG=1 (178.494791ms)
+✔ an archive is checked framework by framework: each arch of each needs a dSYM with its UUID (17.026416ms)
+✔ the config plugin adds the phase to the app target once, with the frameworks as inputs and the dSYMs as outputs (303.513459ms)
+ℹ tests 11
+ℹ pass 11
+ℹ fail 0
+
+$ npm run e2e -- e2e/flows/01-login.yaml     (Debug app built from nothing with the phase)
+[e2e] the Debug app was built from these inputs: kept
+[e2e] installing the Debug app and running the flows
+[Passed] Sign in (1m 56s)
+1/1 Flow Passed in 1m 56s
+
+e2e/out/build.log, the phase in the Debug build:
+GCC_PREPROCESSOR_DEFINITIONS has DEBUG=1: the pods embed the Debug React and Hermes, and React Native publishes dSYMs of the Release ones only

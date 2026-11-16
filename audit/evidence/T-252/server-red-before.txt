@@ -1,0 +1,17 @@
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/adminAppointedNotice --silent
+# on auto/main 6e87de6, before the fix
+FAIL __tests__/integration/adminAppointedNotice.integration.test.js
+  ● the other admin's "New administrator" names the project, so the push and the card can open it
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: NaN
+
+      70 |   expect(row).toMatchObject({ type: 'admin_appointed', title: 'New administrator' });
+      71 |   // What the push carries.
+    > 72 |   expect(Number(row.data.projectId)).toBe(Number(testData.projectId));
+         |                                      ^
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total

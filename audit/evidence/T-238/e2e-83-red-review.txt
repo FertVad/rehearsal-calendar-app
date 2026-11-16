@@ -1,0 +1,15 @@
+T-238 review (P2), e2e red: flow 83 with the new step (the start's wheel
+confirmed unchanged), run with useAddRehearsalForm.ts restored from 576cd39
+(before the fix).
+
+$ npm run e2e -- e2e/flows/83-free-time-ends-the-rehearsal.yaml
+...
+[Failed] Free time tapped ends the rehearsal where it ends (1m 43s) (Assertion is false: "(.*[^0-9])?2:00.PM.*", id: rehearsal-end-time is visible)
+
+1/1 Flow Failed
+
+Screenshots taken before the failure: 83-planner-free-hour, 83-form-from-planner,
+83-form-free-hour — so the steps up to the 1:00 PM window passed, and the
+failing assertion is the end after "Done" on the start's wheel.
+Failure screenshot (step-113): Start 1:00 PM, End 4:00 PM, and under
+Participants "Florence busy 2:00 PM–5:00 PM" — the reviewer's reproduction.

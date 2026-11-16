@@ -1,0 +1,54 @@
+T-261 — e2e, red on the base app code, green on the fix.
+
+Red: the flows and seed of 5930a23, with the app files the fix changed set back
+to the base 97c9a65:
+  git restore --source=97c9a65 -- locales/ru.json src/i18n/translations \
+    src/features/calendar/screens/AddRehearsalScreen.tsx src/features/onboarding/hooks/useOnboarding.ts \
+    src/shared/components/ParticipantPicker.tsx src/shared/utils/conflictDetection.ts
+then restored with git restore --source=HEAD.
+
+Green: on the fix (d88851a + 5930a23), with one exception noted below:
+locales/ru.json was kept at the base for the green runs too.
+
+Why ru.json: it is a native input, and a change to it makes the runner prebuild
+the iOS project again; pod install then downloads react-native-artifacts
+(78.5 MB) at ~90 KB/s on this machine — about 15 minutes, past the 10-minute
+limit of one command, which was killed twice in pod install (exit 143). With
+ru.json at the base the Debug app already built was kept. ru.json changes only
+the Russian NSReminders* prompt, which no flow shows; Jest checks it
+(secondReading.test.ts). The supervisor's run builds with it.
+
+== Red (base app code) ==
+96  [Failed] English seconds and busy people read right
+    96 not as a native speaker writes it: "en: Busy: Bob Acres (all day) and 1 more |
+    en: the participants row says it to VoiceOver too | "
+60  [Failed] Onboarding in Russian (Assertion is false: "Да" is not visible)
+09-invite-during-onboarding  [Failed] (Assertion is false: "Yes" is not visible)
+09-onboarding  [Failed] (Assertion is false: "“\+” → “Create Project”\. Invited\? “Projects” → “Join with a Code”" is visible)
+52  [Failed] (Assertion is false: "Delete “Ghost watch” \(.*, 7:00.PM\)\?" is visible)
+51  [Failed] (Assertion is false: "Delete “Court scene” \(.*, 3:00.PM\)\?" is visible)
+95  [Failed] 95 not as a native speaker writes it: "de: Beschäftigt: Wang Wasser (10:00–14:00) und 1 weiterer | "
+07  [Failed] (Assertion is false: "Participants, 2 of 2, Busy: Grigory Smirnov \(10:00.AM–2:00.PM\)", id: participants-row ... is visible)
+89  the run was cut at 10 minutes (setup + a 7-minute flow) before its verdict;
+    its maestro.log shows both new checks recording a wrong word:
+      Run flow when "¿Eliminar «Сцена с Тихоном» \(.*\)\?" is not visible COMPLETED
+      Run flow when "Удалить «Сцена с Тихоном» \(.*\)\?" is not visible COMPLETED
+
+== Green (fix) ==
+96  [Passed] English seconds and busy people read right (2m 25s)
+60  [Passed] Onboarding in Russian, the greeting on one line (3m 36s)
+09-invite-during-onboarding  [Passed] (1m 19s)
+09-onboarding  [Passed] Onboarding to the end, nothing granted (1m 46s)
+52  [Passed] An admin edits and deletes from the details (3m 32s)
+51  [Passed] An admin swipes a rehearsal away, an actor has no swipe (1m 35s)
+07  [Passed] Planner follows the project (1m 49s)
+95  first [Failed]: "de: the busy line 95-two-busy-de: text cut, "…" at 346,432 pt"
+    — by full name the line was "Beschäftigt: Wang Wasser (10:00–14:00) und
+    1 wei…" on one line. Fixed in 5930a23: the line may take two lines
+    (ParticipantPicker numberOfLines 2). Then:
+    [Passed] German admin rights and busy people read right (2m 53s)
+89  the command was cut at 10 minutes again, after the flow's end; maestro.log:
+      Run flow when "¿Eliminar «Сцена с Тихоном» \(.*\)\?" is not visible SKIPPED
+      Run flow when "Удалить «Сцена с Тихоном» \(.*\)\?" is not visible SKIPPED
+      JsConsole: 89 not as a native speaker writes it: ""
+      Run flow when ${output.wrong != ''} is true SKIPPED   (the flow's last step)

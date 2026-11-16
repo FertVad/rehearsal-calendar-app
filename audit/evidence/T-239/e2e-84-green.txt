@@ -1,0 +1,17 @@
+T-239 — npm run e2e -- e2e/flows/84-sync-screen-in-four-languages.yaml, on the fix (2026-11-10)
+
+[e2e] the Debug app was built from these inputs: kept
+[e2e] seeding
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+[Passed] The sync screen's bar and last sync in four languages (3m 8s)
+
+1/1 Flow Passed in 3m 8s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Shots (iPhone 16, 393 pt): after/84-project-long-title.png ("‹ Back  Hamlet — Demo Thea…"),
+after/84-sync-{en,ru,es,de}.png: the title whole («Синхронизация», "Calendar Sync",
+«Sincronización», "Kalender-Sync"), "‹" with the profile's name whole, and the line
+"Synced just now" / «Синхронизировано только что» / "Sincronizado ahora mismo" /
+"Synchronisiert gerade eben".

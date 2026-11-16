@@ -1,0 +1,38 @@
+T-232 — flow 78 on the old code (red before)
+Flow committed in 2c2c1b7. The fix's files put back as they were on 528d75a:
+
+$ git restore --source=528d75a -- server/services/rehearsals/rehearsalService.js server/services/rehearsals/roster.js \
+    src/features/calendar/components/RehearsalCard.tsx src/features/calendar/screens/RehearsalDetailsScreen.tsx \
+    src/features/calendar/styles/calendarScreenStyles.ts src/i18n/translations/calendar.ts \
+    src/shared/types/index.ts src/shared/services/calendarSync.ts
+$ npm run e2e -- e2e/flows/78-admin-sees-rehearsal-not-on.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] An admin sees a rehearsal they are not on, marked so (1m 34s) (Assertion is false: "(?s).*Ball rehearsal.*Estate Ball.*You are not in the cast.*" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ git restore --source=HEAD -- <the same files>
+
+What the screen held at the failed step (screen-hierarchy of
+e2e/out/artifacts/2026-11-08_040612, step-069), the texts other than the day strip:
+
+  ", All Projects, "            <- the filter: every project
+  "Upcoming Events"
+  "Nothing scheduled yet"       <- Olga, the admin of Estate Ball, has no rehearsal there:
+                                   "Ball rehearsal" (Gaev's alone, in two days) is missing
+  "Calendar, tab, 1 of 5" ...
+
+The same rehearsal is in her project's own filter and opens by link (flow 42):
+the two modes chose by different rules.

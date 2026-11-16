@@ -1,0 +1,45 @@
+T-256 — Jest on the old screen strings (src/i18n/translations and profileCalendar.tsx
+restored from 3b16cd5), the tests of 6787278:
+  git restore --source=3b16cd5 -- src/i18n/translations src/shared/components/profileCalendar.tsx
+  npx jest --selectProjects frontend --silent src/i18n/__tests__/proofreading src/shared/components/__tests__/DayCalendar.locales
+  git restore --source=HEAD -- src/i18n/translations src/shared/components/profileCalendar.tsx
+
+  ● A number takes its noun's form (T-256) › English, Spanish and German: one and many
+  ● A number takes its noun's form (T-256) › one person or several, without a gender
+  ● A number takes its noun's form (T-256) › Russian: who will be told of a cancellation
+  ● A number takes its noun's form (T-256) › yesterday is yesterday
+  ● DayCalendar in every language › opens in es, its month in its words
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the availability editor's Busy Time
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the availability editor's End Time
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the availability editor's heading over the calendar
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the availability editor's Start Time
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the change of address's Current Password
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the change of address's New Email
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the code's Use Another Email
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the date picker's Select Dates
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the inbox's empty title
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the inbox's Mark All Read
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the invitation's Invite Code
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the onboarding's example push
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the onboarding's second example push
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the planner's empty title
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the profile's Change Email
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the profile's Start Week On
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the reset's New Password
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the sync screen's Calendar Access Required
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the sync screen's Remove Exported Rehearsals
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › the sync screen's Sync Now
+  ● English titles, buttons and labels in Title Case, as Apple writes them (T-256) › What’s Where: Finding a Time
+  ● Typography (T-256) › de: an ellipsis is one character, not three dots
+  ● Typography (T-256) › en: an ellipsis is one character, not three dots
+  ● Typography (T-256) › English apostrophes are typographic
+  ● Typography (T-256) › es: an ellipsis is one character, not three dots
+  ● Typography (T-256) › German puts a no-break space before its ellipsis
+  ● Typography (T-256) › ru: an ellipsis is one character, not three dots
+  ● Words around what the user typed (T-256) › a project's name in quotes after "project"
+  ● Words around what the user typed (T-256) › German puts the verb last
+  ● Words around what the user typed (T-256) › Spanish quotes are « » everywhere
+Tests:       35 failed, 10 passed, 45 total
+
+After `git restore --source=HEAD`: Tests: 45 passed, 45 total.
+Whole frontend project on 6787278: 1458 / 1458.

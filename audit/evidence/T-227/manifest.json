@@ -1,0 +1,68 @@
+{
+  "task": "T-227",
+  "runs": [
+    {
+      "name": "release-launch-red-before",
+      "what": "npm run e2e -- e2e/release/01-launch.yaml with app.json and locales/ as before 9d265da",
+      "when": "2026-11-09T06:53+02:00 (Mac's clock; the simulator's log stream printed 2026-11-08 18:54)",
+      "sourceCommit": "49b63786f7ab7055cdba6239ccfa5acdeb0131bb",
+      "sourceTree": "b3ad34fdb415b24e8fe58415b58e1405344a0fc1",
+      "changesFromSource": {
+        "command": "git restore --source=9d265da^ -- app.json locales/",
+        "cwd": "rehearsal-calendar-native",
+        "blobs": {
+          "rehearsal-calendar-native/app.json": "bf948e451a9a1e7361235af01d447af4c5857a1b",
+          "rehearsal-calendar-native/locales": "8945d1cc1c180cabe8c8c45e3d4567ea649135cf"
+        },
+        "undone": "git restore --source=HEAD -- app.json locales/; git status empty"
+      },
+      "nativeInputs": "36e7db90e882",
+      "result": "red: black screen; MissingCalendarPListValueException, Cannot find native module 'ExpoPushTokenManager'",
+      "files": {
+        "release-red-before.txt": "23eb11cf0218c194856aef3ef7c2631110fc1c75db756f6c060c2e6af58caa82",
+        "release-red-before.png": "b44fa282f575f5b85e5198b95dbc3c756cf7075573278309109851b81a9235c7",
+        "release-red-before-device.log": "6dc97852a10932a68f52f53febee1b3f59cee7cb332c2af718e045a2da85d78b"
+      }
+    },
+    {
+      "name": "release-launch-green-after",
+      "what": "npm run e2e -- e2e/release/01-launch.yaml on the committed tip, unchanged",
+      "when": "2026-11-09T06:27+02:00 (Mac's clock), before the red run",
+      "sourceCommit": "49b63786f7ab7055cdba6239ccfa5acdeb0131bb",
+      "sourceTree": "b3ad34fdb415b24e8fe58415b58e1405344a0fc1",
+      "changesFromSource": null,
+      "blobs": {
+        "rehearsal-calendar-native/app.json": "8e18b3820bcf4e9c7a76aa4a0f9e5fde2e3135d4",
+        "rehearsal-calendar-native/locales": "c79900df3e8ecc6e704234d0fb3710086ddd47bf"
+      },
+      "nativeInputs": "66d6c3728e4a",
+      "result": "green: the sign-in screen",
+      "files": {
+        "release-green-after.txt": "66a4cc95e7afbe463b37a7a27657c9d124a2604d2079d628f764642c6e6c9198",
+        "release-green-after.png": "876a96b5fde253f2f2b020409c95eaff70ee8a2991a04b60fd161fa7a52bbd58"
+      }
+    },
+    {
+      "name": "node-modules-check",
+      "what": "node --test e2e/__tests__/native.test.mjs; installedMismatch() on this tree",
+      "when": "2026-11-08",
+      "sourceCommit": "7edb740be8c81a5c54e9af32e39c0547e4b7bd6b",
+      "sourceTree": "103537b9489ea3820b1017b9cb2dba3d6d192e0d",
+      "red": {
+        "changesFromSource": "git restore --source=202bca1 -- e2e/native.mjs",
+        "sha256": { "rehearsal-calendar-native/e2e/native.mjs": "6fe6107ad64a734745a26c2302f5138cb870ec7484e6152d36a51bf8b6f46617" },
+        "result": "fail 1 (no installedMismatch export)"
+      },
+      "green": { "result": "pass 6, fail 0" },
+      "changedFiles": {
+        "rehearsal-calendar-native/e2e/native.mjs": "d9325a7034dc3c904255e281c89aa99ae13d6d168bb618b9eb39298d507c97fb",
+        "rehearsal-calendar-native/e2e/run.mjs": "83421efeb0622e32c284341f8a2ee7f19bd77adc02688ddb4e728b75cfffc9e9",
+        "rehearsal-calendar-native/e2e/__tests__/native.test.mjs": "7ae2134c2b54ed746f8feaf42014cbac335a2211871b6ae722beb84d43e95474"
+      },
+      "files": {
+        "node-modules-check.txt": "dd7b85638320777ae7def8eaaea777067baef1af3129253af26e78451cff02d6"
+      }
+    }
+  ],
+  "note": "Both Release runs were made with npm run e2e directly, not through node e2e/hold-lock.mjs: run.mjs takes the same e2e lock itself, so under hold-lock it waits for its own parent (release-green-after.txt)."
+}

@@ -1,0 +1,88 @@
+T-251: server/__tests__/integration/rehearsalNoticeText.integration.test.js
+on the old words (server/i18n/pushNotifications.js and pushNotificationService.js
+as at bd4b8ac), the new tests in place.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText.integration.test.js
+
+FAIL __tests__/integration/rehearsalNoticeText.integration.test.js
+  Each reader is told when, on their own clock and in their own language
+    ✓ a new rehearsal
+    ✓ a changed rehearsal, with what changed
+    ✕ a "seen" names the rehearsal and when it is
+    ✓ further out, the date
+  ...
+  No word agrees with a title, a member or a reader the server cannot know (T-251)
+    ✕ a cancelled rehearsal agrees with "rehearsal", not with its title
+    ✓ a cancelled rehearsal with no title
+    ✕ a woman and a man who join read the same
+    ✕ a woman and a man who have seen a rehearsal read the same, in the app's word
+    ✕ a role given reads right in Russian, and agrees with no reader in Spanish and German
+    ✕ someone removed from a project, in Spanish, is no participle
+  No words for a notice nobody sends (T-251)
+    ✕ "invited you to the project" is gone in every language
+
+  ● a "seen" names the rehearsal and when it is
+    Expected: "Ophelia Bright в курсе: «Full dress» (завтра в 22:00), Hamlet"
+    Received: "Ophelia Bright откликнулся на «Full dress» (завтра в 22:00) в проекте Hamlet"
+
+  ● a cancelled rehearsal agrees with "rehearsal", not with its title
+    -   "body": "Гамлет: Репетиция «Прогон» отменена",
+    +   "body": "Гамлет: Прогон отменена",
+
+  ● a woman and a man who join read the same
+    Expected: "Офелия Полониева теперь в проекте Гамлет"
+    Received: "Офелия Полониева присоединился к проекту Гамлет"
+
+  ● a woman and a man who have seen a rehearsal read the same, in the app's word
+    -   "body": "Виола Себастьянова в курсе: «Сцена с письмом» (завтра в 12:00), Иллирия",
+    -   "title": "Репетиция просмотрена",
+    +   "body": "Виола Себастьянова откликнулся на «Сцена с письмом» (завтра в 12:00) в проекте Иллирия",
+    +   "title": "Новый отклик",
+
+  ● a role given reads right in Russian, and agrees with no reader in Spanish and German
+    Expected: "Теперь вы администратор проекта Hamlet"
+    Received: "Вы теперь администратором проекта Hamlet"
+
+  ● someone removed from a project, in Spanish, is no participle
+    -   "body": "Ya no formas parte del proyecto Hamlet",
+    -   "title": "Ya no estás en el proyecto",
+    +   "body": "Has sido eliminado del proyecto Hamlet",
+    +   "title": "Eliminado del proyecto",
+
+  ● "invited you to the project" is gone in every language
+    (t(locale, 'projectInvite') was the old "пригласил вас" block)
+
+Each test stops at its first failing line, so the lines after it were seen
+red as the words were put right step by step.
+
+== After the Russian words only were changed ==
+    Expected: "Ophelia Bright has seen “Full dress” (tomorrow at 3:00 PM) in Hamlet"
+    Received: "Ophelia Bright responded to “Full dress” (tomorrow at 3:00 PM) in Hamlet"
+    -   "body": "Hamlet: Ensayo «Escena del balcón» cancelado",
+    +   "body": "Hamlet: Escena del balcón cancelado",
+    -   "body": "Виола Себастьянова ha visto «Сцена с письмом» (mañana a las 11:00) en Иллирия",
+    -   "title": "Ensayo visto",
+    +   "body": "Виола Себастьянова ha respondido a «Сцена с письмом» (mañana a las 11:00) en Иллирия",
+    +   "title": "Nueva respuesta",
+    Expected: "Теперь вы администратор проекта Hamlet"
+    Received: "Вы теперь администратором проекта Hamlet"
+    -   "body": "Ya no formas parte del proyecto Hamlet",
+    +   "body": "Has sido eliminado del proyecto Hamlet",
+    Received: {"body": [Function body], "title": "Приглашение в проект"}
+
+== After English and Spanish "seen", Spanish "cancelado" and the Russian role ==
+    -   "body": "Виола Себастьянова hat „Сцена с письмом“ (morgen um 11:00) in Иллирия gesehen",
+    -   "title": "Probe gesehen",
+    +   "body": "Виола Себастьянова hat auf „Сцена с письмом“ (morgen um 11:00) in Иллирия reagiert",
+    +   "title": "Neue Antwort",
+    Expected: "Ahora administras Hamlet"
+    Received: "Ahora eres administrador en Hamlet"
+
+== With everything but the German role ==
+    ✕ a role given reads right in Russian, and agrees with no reader in Spanish and German
+    Expected: "Du verwaltest jetzt Hamlet"
+    Received: "Du bist jetzt Administrator in Hamlet"
+    Tests:       1 failed, 22 passed, 23 total
+
+("a cancelled rehearsal with no title" passed on the old words too: it guards
+the untitled case, "Гамлет: Репетиция отменена", which the change keeps.)

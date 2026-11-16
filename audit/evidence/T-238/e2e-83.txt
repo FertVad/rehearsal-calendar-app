@@ -1,0 +1,23 @@
+T-238 — e2e flow 83 (e2e/flows/83-free-time-ends-the-rehearsal.yaml), seed: Much Ado
+(Beatrice owner; tomorrow Benedick busy 09:00-13:00, Claudio 14:00-17:00).
+
+RED — app code of 3411ea6 (git restore --source=3411ea6 -- <the nine src files of c27c469>),
+flow and seed as committed:
+  npm run e2e -- e2e/flows/83-free-time-ends-the-rehearsal.yaml
+  [Failed] Free time tapped ends the rehearsal where it ends (1m 38s)
+    (Assertion is false: "(.*[^0-9])?2:00.PM.*", id: rehearsal-end-time is visible)
+  1/1 Flow Failed
+  Artifacts: e2e/out/artifacts/2026-11-10_082641
+  An earlier red run (2026-11-10_081957), before the participants row's wait
+  allowed a suffix, stopped one step sooner; its screenshot shows the defect
+  itself: from the planner's 1:00 PM slot the form held 1:00 PM-4:00 PM,
+  "Florence busy 2:00 PM-5:00 PM" under Participants, both windows yellow.
+
+GREEN — git restore --source=HEAD -- src:
+  [Passed] Free time tapped ends the rehearsal where it ends (1m 34s)
+  1/1 Flow Passed in 1m 34s
+  taps taken again (tap-and-see.yaml): 0
+  Artifacts: e2e/out/artifacts/2026-11-10_083258
+  83-form-from-planner.png: 1:00 PM-2:00 PM, no busy line, both windows green.
+  83-form-free-all-day.png: Beatrice alone, "Everyone is free all day" in place
+  of the windows, no 9:00 AM-11:00 PM.

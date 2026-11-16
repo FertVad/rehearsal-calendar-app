@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { e2eFlowsFor, e2eLimitMs, failedFlows, maestroRuns, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
+import { e2eFlowsFor, e2eLimitMs, failedFlows, keepFailedFlows, maestroRuns, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
+import { flakeTitle, isFailureLine } from '../lib/flakes.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-checks-'));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -62,12 +63,42 @@ test('the e2e limit grows with the flows: 34 that passed in 46 minutes are not c
   assert.ok(e2eLimitMs(60) > e2eLimitMs(34));
 });
 
+// What e2e/run.mjs prints when the iOS project and the apps are done (startClock, e2e/midnight.mjs).
+const PREPARED = 'echo "[e2e] starting a disposable PostgreSQL"';
+const HANGS = 'trap "exit 0" TERM; while :; do sleep 0.1; done';
+
 test('a check stopped by its limit says so, and is not passed off as a failed change', async () => {
-  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('e', 'trap "exit 0" TERM; while :; do sleep 0.1; done'), log: path.join(dir, 'e.log'), env, e2eLimit: 300 });
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('e', `${PREPARED}\n${HANGS}`), log: path.join(dir, 'e.log'), env, e2eLimit: 300 });
   const e2e = result.steps.find((step) => step.name === 'e2e');
   assert.equal(result.ok, false);
   assert.equal(e2e.timedOut, true);
+  assert.equal(e2e.environment, false);
   assert.match(e2e.tail, /не уложились в лимит/);
+});
+
+test("the flows' limit starts when the iOS project and the apps are done: a long pod install is not cut off by it", async () => {
+  // T-261, 15.11.2026: pod install took 1782 s and the 33 minutes for nine
+  // flows ran out before the first of them; only the machine sleeping kept
+  // the run from being called red. T-237's took 1463 s against 13 minutes.
+  const script = [
+    'echo "[e2e] generating the iOS project from app.json (expo prebuild, pod install, some 7 minutes) — its inputs changed"',
+    'sleep 1', PREPARED, 'echo "1/1 Flow Passed"',
+  ].join('\n');
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('f', script), log: path.join(dir, 'f.log'), env, e2eLimit: 300 });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(e2e.timedOut, false);
+  assert.equal(result.ok, true);
+});
+
+test("a preparation that outlasts its own allowance is the machine's, not the change's", async () => {
+  // The runner bounds pod install and the builds itself; this is the supervisor's backstop over them.
+  const script = `echo "[e2e] building the Debug app — from nothing it takes a while"\n${HANGS}`;
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('g', script), log: path.join(dir, 'g.log'), env, e2eLimit: 5000, e2ePrepare: 300 });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(result.ok, false);
+  assert.equal(e2e.timedOut, true);
+  assert.equal(e2e.environment, true);
+  assert.match(e2e.tail, /подготовка .*не уложилась/);
 });
 
 /** An app tree with flows and subflows that run each other the way the real ones do. */
@@ -122,28 +153,60 @@ test('the flows a Maestro report failed, by file', () => {
   assert.deepEqual(failedFlows(''), []);
 });
 
-test('old Maestro artifacts go; the newest and those a recent red run points at stay', () => {
+test('old Maestro artifacts go and the newest five stay; kept red runs go after two weeks', () => {
   // 27.10.2026: 207 runs, 34 GB, 8 GB left on the disk.
   const out = path.join(dir, 'prune', 'e2e', 'out');
   const runs = ['2026-10-01_010000', '2026-10-02_010000', '2026-10-03_010000', '2026-10-04_010000',
     '2026-10-05_010000', '2026-10-06_010000', '2026-10-07_010000', '2026-10-08_010000'];
   for (const run of runs) fs.mkdirSync(path.join(out, 'artifacts', run, 'Inbox'), { recursive: true });
   const now = Date.now();
-  const kept = (name, days, run) => {
+  const kept = (name, days) => {
     const at = path.join(out, 'failed', name);
-    fs.mkdirSync(at, { recursive: true });
-    fs.writeFileSync(path.join(at, 'maestro-artifacts.txt'), `rehearsal-calendar-native/e2e/out/artifacts/${run}\n`);
+    fs.mkdirSync(path.join(at, 'artifacts', 'Inbox'), { recursive: true });
     const when = new Date(now - days * 24 * 60 * 60 * 1000);
     fs.utimesSync(at, when, when);
   };
-  kept('T-121-recent', 1, runs[0]);
-  kept('T-110-week', 7, runs[1]);
-  kept('T-108-old', 20, runs[2]);
+  kept('T-121-recent', 1);
+  kept('T-110-week', 7);
+  kept('T-108-old', 20);
   const removed = pruneArtifacts(out, now);
-  assert.deepEqual(fs.readdirSync(path.join(out, 'artifacts')).sort(), [runs[0], ...runs.slice(3)]);
+  assert.deepEqual(fs.readdirSync(path.join(out, 'artifacts')).sort(), runs.slice(3));
   assert.deepEqual(fs.readdirSync(path.join(out, 'failed')).sort(), ['T-110-week', 'T-121-recent']);
+  assert.ok(fs.existsSync(path.join(out, 'failed', 'T-110-week', 'artifacts', 'Inbox')));
   assert.ok(removed.includes(path.join('failed', 'T-108-old')));
   assert.deepEqual(pruneArtifacts(path.join(dir, 'prune', 'nothing-here'), now), []);
+});
+
+test('a kept red run holds its failed flows\' Maestro folders as long as it is kept: the device log outlives the queue', () => {
+  // T-255 (16.11.2026): flow 10 went red in T-250's checks on 12.11 and its
+  // task was taken on 15.11, behind the tasks people queued. The kept red run
+  // only pointed at the run's folder, honoured for three days, and the device
+  // log its rule asks for — a tap the simulator lost — had been pruned.
+  const out = path.join(dir, 'keep-red', 'e2e', 'out');
+  const red = '2026-11-12_210803';
+  const flow = 'Availability saves the day it changed';
+  fs.mkdirSync(path.join(out, 'artifacts', red, flow, 'logs'), { recursive: true });
+  fs.writeFileSync(path.join(out, 'artifacts', red, flow, 'logs', 'device-simulator.log'), 'we already have a service for senderID\n');
+  fs.mkdirSync(path.join(out, 'artifacts', red, 'Inbox'), { recursive: true });
+  fs.writeFileSync(path.join(out, 'junit.xml'), `<testsuite tests="2" failures="1">
+    <testcase name="Inbox" file="e2e/flows/05-inbox.yaml" status="SUCCESS"></testcase>
+    <testcase name="${flow}" file="e2e/flows/10-availability-days.yaml" status="ERROR"><failure>Element not found: Text matching regex: Mark Busy</failure></testcase>
+  </testsuite>`);
+  const kept = path.join(out, 'failed', 'T-250-2026-11-12T19-38-17-877Z');
+  fs.mkdirSync(kept, { recursive: true });
+  assert.deepEqual(keepFailedFlows(out, path.join(kept, 'artifacts')), [flow]);
+  for (const run of ['2026-11-13_010000', '2026-11-14_010000', '2026-11-15_010000', '2026-11-15_020000', '2026-11-16_010000']) {
+    fs.mkdirSync(path.join(out, 'artifacts', run), { recursive: true });
+  }
+  pruneArtifacts(out, Date.now() + 4 * 24 * 60 * 60 * 1000);
+  assert.equal(fs.readFileSync(path.join(kept, 'artifacts', flow, 'logs', 'device-simulator.log'), 'utf8'),
+    'we already have a service for senderID\n');
+  assert.deepEqual(fs.readdirSync(path.join(kept, 'artifacts')), [flow], 'only the failed flows, ~70 MB each, not the run');
+  assert.ok(!fs.existsSync(path.join(out, 'artifacts', red)));
+  // No Maestro run, nothing failed: nothing to keep, and no folder for it.
+  const none = path.join(dir, 'keep-red', 'none');
+  assert.deepEqual(keepFailedFlows(path.join(dir, 'keep-red', 'no-out'), none), []);
+  assert.ok(!fs.existsSync(none));
 });
 
 test('a flow failed by an exception says why, from the report', async () => {
@@ -169,16 +232,20 @@ function e2eRuns(name, first, later) {
   fs.mkdirSync(folder);
   fs.writeFileSync(path.join(folder, 'npm'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
   const report = (cases) => `<testsuite>${cases.map(([file, failure]) => `<testcase name="${file}" file="${file}" status="${failure ? 'ERROR' : 'SUCCESS'}">${failure ? `<failure>${failure}</failure>` : ''}</testcase>`).join('')}</testsuite>`;
+  // Maestro prints each failed flow as it goes, whatever failed it: "[Failed] Sign in (13s)".
+  const printed = (cases) => cases.filter(([, failure]) => failure).map(([file]) => `echo "[Failed] ${file} (1s)"`).join('\n');
   fs.writeFileSync(path.join(folder, 'node'), `#!/bin/sh
 shift
 echo "$*" >> calls.txt
 mkdir -p e2e/out
 if [ "$(wc -l < calls.txt)" -eq 1 ]; then
+${printed(first)}
 cat > e2e/out/junit.xml <<'XML'
 ${report(first)}
 XML
 exit 1
 fi
+${printed(later)}
 cat > e2e/out/junit.xml <<'XML'
 ${report(later)}
 XML
@@ -206,6 +273,22 @@ test('flows the Maestro driver never ran are run again, not called red', async (
   assert.deepEqual(e2e.flows, ['e2e/flows/01-login.yaml', 'e2e/flows/05-inbox.yaml', 'e2e/flows/30-sync.yaml']);
 });
 
+test('after the driver is lost, a flow is run again whatever Maestro called its failure', async () => {
+  // 11.11.2026, the control run on 3b38601: the driver went at 10:57, during
+  // flow 66; 20 of the 21 red flows said DeviceUnreachableException, and 70
+  // said "Unknown error" — its stopApp refused by the same lost device. All 21
+  // passed on their own, and were queued as flaky (T-246).
+  const app = appTree('lost-unknown');
+  const node = e2eRuns('lost-unknown', [['e2e/flows/01-login.yaml'], ['e2e/flows/05-inbox.yaml', LOST], ['e2e/flows/30-sync.yaml', 'Unknown error']],
+    [['e2e/flows/05-inbox.yaml'], ['e2e/flows/30-sync.yaml']]);
+  const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml', 'rehearsal-calendar-native/e2e/flows/30-sync.yaml'], node, log: path.join(dir, 'lost-unknown.log'), env });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(e2e.ok, true);
+  assert.deepEqual(fs.readFileSync(path.join(app, 'calls.txt'), 'utf8').trim().split('\n'),
+    ['e2e/flows/01-login.yaml e2e/flows/05-inbox.yaml e2e/flows/30-sync.yaml', 'e2e/flows/05-inbox.yaml e2e/flows/30-sync.yaml']);
+  assert.equal(e2e.driverLost, 2);
+});
+
 test('a flow that failed on its own is red, whatever the driver did after it', async () => {
   const app = appTree('lost-real');
   const node = e2eRuns('lost-real', [['e2e/flows/01-login.yaml', 'Assertion is false: "Calendar" is visible'], ['e2e/flows/05-inbox.yaml', LOST]], []);
@@ -215,15 +298,38 @@ test('a flow that failed on its own is red, whatever the driver did after it', a
   assert.equal(fs.readFileSync(path.join(app, 'calls.txt'), 'utf8').trim().split('\n').length, 1);
 });
 
-test('lost again on the second run is red, with both runs in what failed', async () => {
+test('lost again on the second run is red, and what failed says both runs lost it', async () => {
   const app = appTree('lost-twice');
   const node = e2eRuns('lost-twice', [['e2e/flows/01-login.yaml'], ['e2e/flows/05-inbox.yaml', LOST]], [['e2e/flows/05-inbox.yaml', LOST]]);
   const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml'], node, log: path.join(dir, 'lost-twice.log'), env });
   const e2e = result.steps.find((step) => step.name === 'e2e');
   assert.equal(e2e.ok, false);
   assert.equal(fs.readFileSync(path.join(app, 'calls.txt'), 'utf8').trim().split('\n').length, 2);
-  assert.equal(e2e.failures.filter((line) => line.includes('05-inbox.yaml — maestro.DeviceUnreachableException')).length, 2);
+  // The second run's loss flow by flow, the first one's in the note.
+  assert.equal(e2e.failures.filter((line) => line.includes('05-inbox.yaml — maestro.DeviceUnreachableException')).length, 1);
+  assert.ok(e2e.failures.some((line) => /^\[e2e\] драйвер Maestro.*1 сценари.*05-inbox\.yaml/.test(line)));
   assert.match(e2e.tail, /драйвер Maestro/);
+});
+
+test('after the lost flows ran again, what failed is the second run: a lost flow has no verdict', async () => {
+  // T-246's checks, 11.11.2026: the driver went during flow 54, and the 34
+  // flows from it on ran again; 33 passed and 73 failed. The flaky task queued
+  // from them, T-247, was named after flow 54, its "what failed" was 24 lost
+  // flows, and 73's own failure was cut off below them.
+  const app = appTree('lost-then-red');
+  const node = e2eRuns('lost-then-red',
+    [['e2e/flows/01-login.yaml'], ['e2e/flows/54-wheel.yaml', LOST], ['e2e/flows/73-seen.yaml', LOST]],
+    [['e2e/flows/54-wheel.yaml'], ['e2e/flows/73-seen.yaml', 'Assertion is true: id: seen-toggle is selected']]);
+  const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml'], node, log: path.join(dir, 'lost-then-red.log'), env });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(e2e.ok, false);
+  assert.equal(e2e.driverLost, 2);
+  assert.equal(flakeTitle([e2e]), 'Нестабильный тест: e2e/flows/73-seen.yaml');
+  assert.deepEqual(e2e.failures.filter(isFailureLine), [
+    '[Failed] e2e/flows/73-seen.yaml (1s)',
+    '[e2e] failed: e2e/flows/73-seen.yaml — Assertion is true: id: seen-toggle is selected',
+  ]);
+  assert.ok(e2e.failures.some((line) => /^\[e2e\] драйвер Maestro.*2 сценари.*54-wheel\.yaml/.test(line)), 'the run that lost them is said once, not flow by flow');
 });
 
 test('a folder beside the Maestro runs is not taken for the newest run', () => {

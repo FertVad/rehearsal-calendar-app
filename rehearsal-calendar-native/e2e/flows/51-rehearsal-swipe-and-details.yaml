@@ -40,13 +40,13 @@ tags:
 - tapOn:
     id: rehearsal-swipe-delete
 - extendedWaitUntil:
-    visible: "Delete “Court scene”, .*, 3:00.PM\\?"
+    visible: "Delete “Court scene” \\(.*, 3:00.PM\\)\\?"
     timeout: 10000
-- assertVisible: "Participants \\(2\\) will be notified"
+- assertVisible: "2 participants will be notified"
 - takeScreenshot: 51-delete-confirmation
 - tapOn:
     text: "Delete"
-    below: "Participants \\(2\\) will be notified"
+    below: "2 participants will be notified"
 - extendedWaitUntil:
     notVisible: ".*Court scene.*"
     timeout: 10000

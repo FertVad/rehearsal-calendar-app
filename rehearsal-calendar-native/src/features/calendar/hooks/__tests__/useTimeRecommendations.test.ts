@@ -30,7 +30,8 @@ describe('useTimeRecommendations - Smart Planner', () => {
   ];
 
   describe('Basic Time Slot Recommendations', () => {
-    it('should return full day when no one is busy', () => {
+    // T-238: 09:00–23:00 is the working day, not a window to tap.
+    it('says everyone is free all day, and offers no window, when no one is busy', () => {
       const memberAvailability = {
         'user-1': { timeRanges: [] },
         'user-2': { timeRanges: [] },
@@ -40,11 +41,20 @@ describe('useTimeRecommendations - Smart Planner', () => {
         useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
       );
 
-      expect(result.current).toHaveLength(1);
-      expect(result.current[0].startTime).toBe('09:00');
-      expect(result.current[0].endTime).toBe('23:00');
-      expect(result.current[0].duration).toBe(14);
-      expect(result.current[0].confidence).toBe('high');
+      expect(result.current).toEqual({ freeAllDay: true, windows: [] });
+    });
+
+    it('busy only outside the working day is free all day too', () => {
+      const memberAvailability = {
+        'user-1': { timeRanges: [{ start: '06:00', end: '08:00', type: 'busy' as const }] },
+        'user-2': { timeRanges: [{ start: '14:00', end: '23:00', type: 'available' as const }] },
+      };
+
+      const { result } = renderHook(() =>
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+      );
+
+      expect(result.current).toEqual({ freeAllDay: true, windows: [] });
     });
 
     it('should return empty array when everyone is busy all day', () => {
@@ -58,23 +68,23 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toEqual([]);
     });
 
-    it('should return empty array when no members selected', () => {
+    it('should return nothing when no members selected', () => {
       const memberAvailability = {};
 
       const { result } = renderHook(() =>
         useTimeRecommendations('2025-12-29', [], memberAvailability)
       );
 
-      expect(result.current).toEqual([]);
+      expect(result.current).toEqual({ freeAllDay: false, windows: [] });
     });
 
-    it('should return empty array when no date selected', () => {
+    it('should return nothing when no date selected', () => {
       const memberAvailability = {
         'user-1': { timeRanges: [] },
       };
@@ -83,7 +93,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
         useTimeRecommendations('', mockMembers, memberAvailability)
       );
 
-      expect(result.current).toEqual([]);
+      expect(result.current).toEqual({ freeAllDay: false, windows: [] });
     });
   });
 
@@ -99,14 +109,13 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toHaveLength(1);
       expect(result.current[0].startTime).toBe('09:00');
       expect(result.current[0].endTime).toBe('14:00');
       expect(result.current[0].duration).toBe(5);
-      expect(result.current[0].confidence).toBe('medium');
     });
 
     it('should find afternoon slot when morning is busy', () => {
@@ -120,14 +129,13 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toHaveLength(1);
       expect(result.current[0].startTime).toBe('12:00');
       expect(result.current[0].endTime).toBe('23:00');
       expect(result.current[0].duration).toBe(11);
-      expect(result.current[0].confidence).toBe('medium');
     });
 
     it('should find gap between two busy periods', () => {
@@ -142,14 +150,13 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toHaveLength(1);
       expect(result.current[0].startTime).toBe('11:00');
       expect(result.current[0].endTime).toBe('15:00');
       expect(result.current[0].duration).toBe(4);
-      expect(result.current[0].confidence).toBe('medium');
     });
 
     it('should find multiple free gaps', () => {
@@ -164,7 +171,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current.length).toBeGreaterThanOrEqual(2);
@@ -185,7 +192,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       // Should have morning (09:00-10:00) and afternoon (16:00-23:00) slots
@@ -207,7 +214,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       // Should have morning (09:00-10:00) and afternoon (16:00-23:00) slots
@@ -232,7 +239,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       // 09:45-10:00 is only 15 minutes, should be filtered out
@@ -251,7 +258,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toHaveLength(1);
@@ -269,7 +276,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toHaveLength(1);
@@ -289,7 +296,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toHaveLength(1);
@@ -306,7 +313,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current).toHaveLength(1);
@@ -314,54 +321,25 @@ describe('useTimeRecommendations - Smart Planner', () => {
       expect(result.current[0].endTime).toBe('23:00');
     });
 
-    it('should ignore slots outside workday hours', () => {
+    it('should ignore busy time outside workday hours', () => {
       const memberAvailability = {
         'user-1': {
           timeRanges: [
             { start: '06:00', end: '08:00', type: 'busy' as const },
+            { start: '20:00', end: '23:00', type: 'busy' as const },
           ],
         },
         'user-2': { timeRanges: [] },
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
-      // Should only show 09:00-23:00 (workday bounds, ignoring 06:00-08:00 which is before workday)
+      // 06:00-08:00 is before the working day: only 20:00 cuts it.
       expect(result.current).toHaveLength(1);
       expect(result.current[0].startTime).toBe('09:00');
-      expect(result.current[0].endTime).toBe('23:00');
-    });
-  });
-
-  describe('Confidence Scoring', () => {
-    it('should assign high confidence when no busy times and within working hours', () => {
-      const memberAvailability = {
-        'user-1': { timeRanges: [] },
-        'user-2': { timeRanges: [] },
-      };
-
-      const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
-      );
-
-      expect(result.current[0].confidence).toBe('high');
-    });
-
-    it('should assign medium confidence when busy times exist', () => {
-      const memberAvailability = {
-        'user-1': {
-          timeRanges: [{ start: '14:00', end: '23:00', type: 'busy' as const }],
-        },
-        'user-2': { timeRanges: [] },
-      };
-
-      const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
-      );
-
-      expect(result.current[0].confidence).toBe('medium');
+      expect(result.current[0].endTime).toBe('20:00');
     });
   });
 
@@ -375,7 +353,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       // Should exclude tentative time (14:00-23:00)
@@ -392,13 +370,11 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
-      // Should NOT exclude available time - full day free
-      expect(result.current).toHaveLength(1);
-      expect(result.current[0].startTime).toBe('09:00');
-      expect(result.current[0].endTime).toBe('23:00');
+      // Should NOT exclude available time - free all day, no window
+      expect(result.current).toEqual([]);
     });
   });
 
@@ -415,7 +391,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current.length).toBeGreaterThanOrEqual(2);
@@ -440,7 +416,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current[0].duration).toBe(11); // 12:00 to 23:00 = 11 hours
@@ -455,7 +431,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       };
 
       const { result } = renderHook(() =>
-        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability)
+        useTimeRecommendations('2025-12-29', mockMembers, memberAvailability).windows
       );
 
       expect(result.current[0].duration).toBe(11.5); // 11:30 to 23:00 = 11.5 hours
@@ -466,6 +442,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
     it('should recompute when members change', () => {
       const memberAvailability = {
         'user-1': { timeRanges: [] },
+        'user-2': { timeRanges: [{ start: '14:00', end: '23:00', type: 'busy' as const }] },
       };
 
       const { result, rerender } = renderHook(
@@ -474,14 +451,14 @@ describe('useTimeRecommendations - Smart Planner', () => {
         { initialProps: { members: [mockMembers[0]] } }
       );
 
-      // Initially one member
-      expect(result.current).toHaveLength(1);
+      // Initially one member, free all day
+      expect(result.current.freeAllDay).toBe(true);
 
-      // Add second member
+      // Add second member, busy from 14:00
       rerender({ members: mockMembers });
 
-      // Should recompute
-      expect(result.current).toHaveLength(1);
+      expect(result.current.freeAllDay).toBe(false);
+      expect(result.current.windows.map(w => w.endTime)).toEqual(['14:00']);
     });
 
     it('should recompute when availability changes', () => {
@@ -498,9 +475,8 @@ describe('useTimeRecommendations - Smart Planner', () => {
         }
       );
 
-      // Initially no busy times - full day available
-      expect(result.current[0].startTime).toBe('09:00');
-      expect(result.current[0].endTime).toBe('23:00');
+      // Initially no busy times - free all day
+      expect(result.current.freeAllDay).toBe(true);
 
       // Add busy time
       rerender({
@@ -513,7 +489,7 @@ describe('useTimeRecommendations - Smart Planner', () => {
       });
 
       // Should recompute with new busy time
-      expect(result.current[0].endTime).toBe('14:00');
+      expect(result.current.windows[0].endTime).toBe('14:00');
     });
 
     it('should recompute when date changes', () => {
@@ -528,13 +504,13 @@ describe('useTimeRecommendations - Smart Planner', () => {
         { initialProps: { date: '2025-12-29' } }
       );
 
-      expect(result.current).toHaveLength(1);
+      expect(result.current.freeAllDay).toBe(true);
 
-      // Change date
+      // Change date, and none
       rerender({ date: '2025-12-30' });
-
-      // Should recompute (though result might be same)
-      expect(result.current).toHaveLength(1);
+      expect(result.current.freeAllDay).toBe(true);
+      rerender({ date: '' });
+      expect(result.current.freeAllDay).toBe(false);
     });
   });
 });

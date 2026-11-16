@@ -1,0 +1,17 @@
+T-247 - e2e/subflows/tap-and-see.yaml with SELECTED and RIGHT_OF, checked on a
+tap whose first press leaves no result, made on purpose (check/1-selected-again.yaml):
+"Letter scene" unseen, tap-and-see asked for it unseen after the tap. The first
+tap marks it seen, as if lost; the subflow says so and taps once more, which
+takes the mark back. Then a tap asked for "seen", seen at once: no second.
+
+  cd rehearsal-calendar-native
+  npm run e2e -- ../audit/evidence/T-247/check/1-selected-again.yaml
+
+[Passed] T-247 check 1 - a toggle tapped again through tap-and-see (2m 8s)
+
+1/1 Flow Passed in 2m 8s
+
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-11T18:09:16.045Z  tapped "id seen-toggle right of .*Letter scene.*" again: no "id seen-toggle selected false" after the first tap
+
+One tap taken again, the first call's; the second call took one tap.

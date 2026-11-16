@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { parseTasks, parseDecisions, slugify, loadState, saveState } from '../lib/store.mjs';
+import { parseTasks, parseDecisions, slugify, loadState, saveState, nextReview } from '../lib/store.mjs';
 
 test('reads the queue in file order', () => {
   const tasks = parseTasks(`# Очередь
@@ -52,6 +52,20 @@ test('state survives a round trip, a missing file is empty, a corrupt one is an 
   assert.equal(loadState(file).tasks['T-001'].phase, 'review');
   fs.writeFileSync(file, '{ broken');
   assert.throws(() => loadState(file));
+});
+
+test('a task\'s reviews are numbered by every round it had, so a continued task does not write over its first answers', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-reviews-'));
+  assert.equal(nextReview(path.join(dir, 'none yet'), 'T-261'), 1);
+  for (const name of ['T-261-r1.md', 'T-261-r2.md', 'T-2610-r7.md', 'T-26-r9.md', 'T-261-r4.md.123.tmp', 'T-262-r1.txt']) {
+    fs.writeFileSync(path.join(dir, name), 'VERDICT: CHANGES');
+  }
+  // T-261 was set aside after two rounds and continued, which gives two more:
+  // its third answer is r3, where a second r1 wrote over the first (16.11.2026).
+  assert.equal(nextReview(dir, 'T-261'), 3);
+  assert.equal(nextReview(dir, 'T-262'), 1);
+  fs.writeFileSync(path.join(dir, 'T-261-r10.md'), 'VERDICT: ACCEPT');
+  assert.equal(nextReview(dir, 'T-261'), 11, 'by number, not by name');
 });
 
 test('decisions already applied are not read again', () => {

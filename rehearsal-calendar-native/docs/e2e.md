@@ -6,16 +6,89 @@ flows and takes it down.
 
 ```bash
 cd rehearsal-calendar-native
-npm run e2e                       # every flow in e2e/flows, then teardown
+npm run e2e                       # e2e/flows on Debug, e2e/release on Release, then teardown
 npm run e2e -- e2e/flows/01-login.yaml
+npm run e2e -- e2e/release/01-launch.yaml   # only the Release launch check
 npm run e2e:up                    # stay up for Maestro MCP / Studio; Ctrl-C ends it
-npm run e2e -- --build            # rebuild the app (after native changes)
+npm run e2e -- --build            # generate the iOS project and build anew anyway
 ```
 
-Needs: Docker Desktop with a local `postgres:15` image, Xcode, Maestro in
-`~/.maestro/bin` (2.11.0), Node 22. The first run builds the Debug app into
-`e2e/.build` (about 4 GB, ten minutes); later runs reuse it. Logs, the seed,
-JUnit and screenshots go to `e2e/out`.
+Needs: Docker Desktop with a local `postgres:15` image, Xcode, CocoaPods,
+Maestro in `~/.maestro/bin` (2.11.0), Node 22. Logs, the seed, JUnit and
+screenshots go to `e2e/out`.
+
+## What the app is built from
+
+The app under test is built from an iOS project `expo prebuild` makes of this
+tree's `app.json` — as the App Store build is made — never from `ios/`, which
+is not in git and in the main checkout is the project releases are built from
+(`e2e/native.mjs`, T-227).
+
+- **The project.** `e2e/.native` is a project root of its own: copies of
+  `app.json` and `package.json`, links to `assets/`, `locales/` and
+  `node_modules/`; prebuild reads nothing else of the tree (no `.env`).
+  `expo prebuild --platform ios --clean`, then `pod install`, give
+  `e2e/.native/ios`. Both run again whenever their inputs changed: `app.json`,
+  `package.json`, `package-lock.json`, `node_modules/.package-lock.json`,
+  `locales/`, `assets/` and the recipe itself. Their hash stamps the project
+  (`inputs.sha256`) and every app built from it (`Rehearsly.app.inputs`); a
+  project or app with another stamp is not used — `E2E_APP`, the main tree's
+  app the supervisor names, only when its stamp is this tree's. Measured on the
+  8 GB Mac: the hash 40 ms, prebuild 6 s, `pod install` 7 minutes — so the
+  project is made only when the inputs change, not on every run.
+- **The packages.** Prebuild runs with `--no-install` on the tree's
+  `node_modules`, and autolinking links what is there, so before anything is
+  hashed or built `node_modules` is checked against `package-lock.json`
+  (`installedMismatch`, about 0.4 s): every locked package installed at its
+  version (an optional one may be missing — another platform's), and nothing at
+  the top of `node_modules` the lock does not have (a native module a commit
+  removed). Otherwise the run stops with 75 — the machine's install, not the
+  change — and says to run `npm ci`. The supervisor's `node_modules` is not
+  reinstalled when a commit changes the lock.
+- **Debug**, for `e2e/flows`: built into `e2e/.build` when the project's inputs
+  changed and kept until they change again; its JS comes from Metro.
+- **Release**, for `e2e/release`: built on every run that has a Release flow —
+  the full run, or one named (`npm run e2e -- e2e/release/01-launch.yaml`) —
+  since its JS is inside it. The build phase bundles from the tree (the
+  project's `.xcode.env.local` sets `PROJECT_ROOT`), with `REHEARSLY_E2E=1`, the
+  local address and `EXPO_NO_DOTENV=1`. Before it is installed the JS Metro
+  wrote is checked: `envApiUrl` and `PRODUCTION_API_URL` written in as the local
+  server, no `process.env.EXPO_PUBLIC_API_URL` left to read at run time, no
+  `.env` module; and the Hermes bytecode the app runs carries the local address
+  and no `rehearsly.me/api`. The Release flows run first, the app's device log
+  streamed to `e2e/out/release-device.log`; a failed start prints its errors
+  (`MissingCalendarPListValueException`, `Cannot find native module …`).
+- **Builds.** Before the database, the server, Metro and the simulator start,
+  under the e2e lock (T-231). `-jobs 4` on 8 GB (eight compilers of React
+  Native's C++ fit worse), `ONLY_ACTIVE_ARCH=YES` (Release builds x86_64 too
+  otherwise). React Native's codegen rewrites its sources at the start of every
+  build, so all that includes them compiles again — about ten minutes here, and
+  a build cut off began anew; `CLANG_ENABLE_COMPILE_CACHE=YES` (its cache in
+  `e2e/.build`) takes what is unchanged from earlier builds. A Release build
+  from nothing took three to four ten-minute tries, the last 5.5 minutes; with
+  the cache warm the Release check takes about ten minutes.
+
+What it caught: TestFlight 1.0.0 (1) opened on a black screen. T-040 had taken
+the `NSReminders*` keys out of `app.json`; expo-calendar calls `EXFatal`
+without them when its module is created, and in Release the other Expo
+modules were never registered (9d265da). With `app.json` and `locales/` as
+before 9d265da, `e2e/release/01-launch.yaml` fails on a black screen, the
+device log saying `ExpoCalendar.MissingCalendarPListValueException` and
+`Cannot find native module 'ExpoPushTokenManager'`; on the fix it reaches
+sign-in (`audit/evidence/T-227`).
+
+A task that changes `app.json`, `locales/`, `assets/` or the packages makes the
+next run generate the project and build Debug from it: pod install alone took
+145 s to 1782 s, by the network (React Native's tarballs come from Maven again
+for every new project) and the memory. So the supervisor's limit on the flows
+starts only when the project and the apps are done, at the line `startClock`
+prints (`E2E_LIMIT_FROM` in `tools/autodev/lib/checks.mjs`); counted from the
+start, it stopped T-261's run on 15.11.2026 before the first of nine flows.
+Before that line the runner bounds each step itself — the e2e lock 60 minutes,
+prebuild 10, pod install 60, a build 90 — and a step out of its time stops the
+run as not ready (75), not as the change's failure; the supervisor's own six
+hours there are a backstop above their sum, and running out of them counts as
+the machine's too.
 
 ## What it refuses
 
@@ -76,6 +149,60 @@ the system closes it when the run dies, SIGKILL included. That does not need
 lock could not identify a dead run's groups, and a run cut off by a tool's
 time limit left both on their ports (T-203, 2026-10-11).
 
+Without `ps` a live holder cannot be told by its start time either, so there
+a holder whose pid is alive — `kill(pid, 0)` answers, or refuses with EPERM —
+is waited for, not taken over. On 2026-11-12 a check in the sandbox called a
+live stand's holder dead while the stand was still building the app, took the
+lock, and started its server on 3001 first; the stand's server then died of
+EADDRINUSE. A dead holder whose pid another process got meanwhile is waited
+for up to the hour, which is slow but never two runs. And a run whose lock
+another run holds neither writes its groups over that run's nor removes the
+lock on its way out: `record` stops it instead (`e2e/__tests__/lock.test.mjs`).
+
+## Heavy jobs beside a run
+
+The lock serializes e2e runs, and a heavy job on the same Mac is not one
+unless it takes the lock too. On 2026-11-07 the full run of 224a38a went on
+while an interactive Claude session ran `xcodebuild` by hand: a Release build
+for a simulator of its own, then an `archive` (9d265da, committed 11:30:49,
+says so; `npm run ios` was not run, and nothing else of that weight is known
+to have run then). From 11:08 to 11:37 the machine was
+choked: an app install took 3-5 minutes instead of 4 s, Maestro's
+`clearAppState` 73 s, `Apply configuration` 36 s, and one flow's launch ten
+minutes before it failed. Flow 40 launched at 11:35:31; the app asked Metro
+for its bundle, Metro took 96 s over it (`iOS Bundled 96576ms index.ts (1
+module)`, every other mid-run bundle in 37 kept red runs under 14 s), and iOS
+gave up at 60 s (`NSURLErrorDomain -1001`). The dev client drew "Could not
+connect to development server" and the flow failed at `login-submit` before
+any step of its own (T-231, `audit/evidence/T-231`). No tap was lost:
+`tap-and-see.yaml` was never reached.
+
+So a heavy job goes under the lock. That case — `xcodebuild` called
+directly — goes through `e2e/hold-lock.mjs`:
+
+```bash
+node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release -sdk iphonesimulator ...
+node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release archive ...
+```
+
+`npm run ios` and `npm run android` take the lock themselves (`package.json`
+runs expo through `e2e/hold-lock.mjs`), so `npm run ios -- --configuration
+Release` does too.
+
+`hold-lock.mjs` waits for a run that is going, runs the job in a group of its
+own that the lock names, and exits with its code. An e2e run started
+meanwhile waits for the job, its log naming it, as for another run (up to an
+hour, then exit 75). The job runs through `watchdog.mjs`, as the server and
+Metro do: the command in a group of its own, the watchdog outside it, told of
+its holder's life by a pipe on fd 3. When the holder dies, killed outright
+too, or the command exits, the watchdog stops the command's whole group —
+whatever the command started included — within 5 s, without `ps`, and exits
+only once that group is empty. The next run waits for the watchdog's group to
+end; if anything of it is still running after 15 s, it does not take the lock
+and exits 75, naming the group. Where `ps` runs, it also stops the group
+itself. The job keeps the terminal as stdin, so `npm run ios -- --device`
+asks for a device and expo's keys work.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -109,6 +236,24 @@ that form. A flow that needs the 24-hour clock launches with `arguments: {
 AppleICUForce24HourTime: "<true/>" }` — the key Settings writes, read among the
 user defaults as a property list: `"YES"` is a string and is ignored (flow 53).
 
+AutoFill Passwords is off (`noPasswordOffer` in `run.mjs`): iOS offers no
+"Save Password?" sheet after a sign-in, and no flow waits for one.
+
+## A lost driver
+
+Maestro's iOS driver (2.11.0) is one long XCTest test. When its status-bar
+query meets a scene of InputUI, the keyboard's process, just as SpringBoard
+takes it down, XCTest fails with `kAXErrorInvalidUIElement` and the test ends,
+and with it the driver: every flow after that fails with
+`DeviceUnreachableException` (or "Unknown error", its first command failing
+with "Device became unreachable"), none of them having run. It was the
+password sheet going at flow 66 on 3b38601, and the keyboard going 4.5 s after
+it hid, with the sheet off, at flow 54 on d74e9d2 (T-246,
+`audit/evidence/T-246/`). It is a race inside Maestro's driver and no flow can
+take it out - not with waits and not with repeats. The supervisor runs every
+flow that failed after the first lost driver once more, on its own; those are
+not unstable flows. Turning the sheet off left it one cause fewer, not none.
+
 ## A lost tap
 
 The simulator loses about one tap in 250, and Maestro does not notice. For
@@ -129,7 +274,9 @@ profile tab after a restart (T-212), flow 25 at "Busy" in the availability
 editor, whose day then closed unasked with nothing changed (T-218), flow 49 at
 the registration form's first "Show password", so the second went to the same
 eye and the repeat stayed hidden (T-223), flow 59 at "Sign In", the form left
-filled in and the calendar never asked for (T-225).
+filled in and the calendar never asked for (T-225), flow 38 at the profile tab
+after a restart (T-234), flow 73 at a rehearsal's eye after the move, the mark
+never taken back and no request sent (T-247, `audit/evidence/T-247`).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
@@ -139,10 +286,13 @@ It is below the app, and cannot be made to happen on demand. The rule:
   (the wait the flow had anyway). It taps and waits; if `SEE` is not there it
   taps once more - never more - and waits again, and then `SEE` must come.
   No pause, no longer wait. A tap whose result is something leaving the
-  screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of the
-  "Save Password?" sheet at every sign-in (T-213); or `GONE_ID` (its id), for
+  screen gives `GONE` (the text that goes) instead of `SEE`: "Cancel" of an
+  invitation, `GONE: "Project Invitation"` (flow 43); or `GONE_ID` (its id), for
   a control whose label is in the screen's language: "Sign In"
-  (`login-submit`) at every sign-in (T-225).
+  (`login-submit`) at every sign-in (T-225). A toggle, whose label is the same
+  either way, gives `SELECTED` (`"true"` or `"false"`): the toggle tapped is
+  then so and enabled again; with `RIGHT_OF`, the text of its row, when every
+  row has one - a rehearsal's eye, `seen-toggle` (flow 73, T-247).
 - Only for a tap that may be taken twice: the second comes when the first left
   no trace on screen, but a first that landed late would be repeated.
 - Every second tap is printed at the end of the run - `[e2e] taps taken again
@@ -184,12 +334,48 @@ flow 42). Times are local to the machine,
 which is every profile's zone but Chebutykin's, whose are in his; the
 simulator's is another (see above).
 
+### A run past midnight
+
+The seed is made for one day, the machine's today, and the app's today turns
+at the machine's midnight. One Maestro over the whole set started at 23:09 ran
+every flow after 00:00 against yesterday's seed: `TODAY_DAY` was a day before
+the app's, and each flow about today failed at once — seven of them on
+T-225 (T-226). So `run.mjs` gives Maestro the flows in batches that end before
+midnight — as many as fit at 5 minutes a flow (`FLOW_BOUND_MS` in
+`e2e/midnight.mjs`: the longest, flow 70, takes 3 min 20 s, and a Maestro 54 s
+to start) — and, when not one fits, waits for midnight. The wait is time the
+supervisor's limit does not give (a setup and 2.5 minutes a flow, 12.5 minutes
+for one; `e2eLimitMs`), so the runner keeps the same deadline from the same
+line, when the project and the apps are done (`startClock`):
+a wait it could not end in it — with the new day's seed, a Maestro and the
+flows left at the longest's time each — is not begun, and the run stops as not
+ready (75), to be taken again after midnight. `e2e/__tests__/midnight.test.mjs`
+plays it for any start in the half hour before midnight. Before each batch
+it compares the day with the seed's; a day that turned gets a database of its
+own in the same container (`rehearsly_e2e_<YYYYMMDD>`), the server restarted
+on it and the seed made again, so the next flows get the new day's
+`${…_DAY}`, `${…_LABEL}` and ids. Far from midnight the whole set is one batch,
+one Maestro. The batches' reports are merged into `e2e/out/junit.xml`
+(`e2e/junit.mjs`), rewritten after each, and their screenshots go to one
+folder under `e2e/out/artifacts`, a flow's folder in it as from one Maestro —
+each batch's Maestro folder is emptied into it, where the supervisor takes a
+red run's failed flows from (`artifacts/<run>/<flow>`);
+`server.log` and `migrate.log` go on across the days, and `seed.json` is the
+last day's.
+
+To see it without waiting for the night, run with `TZ` of a zone where
+midnight is a few minutes off: the seed, the profiles and Maestro all take the
+runner's zone; the simulator keeps Honolulu.
+
 A flow that needs something changed behind the app's back while it runs — what
 another device would do — calls the local server from `e2e/scripts` with
 `runScript`; `${API_URL}` is its address (flow 10). A rehearsal moved
 by its admin elsewhere: `e2e/scripts/move-rehearsal.js` with `API_URL`,
 `EMAIL`, `PASSWORD`, `REHEARSAL` (an id, `${<KEY>_REHEARSAL}`) and `HOURS`
-saves it that many hours later, title and place as they were (flow 73). A code the server
+saves it that many hours later, title and place as they were (flow 73). A
+person put on a rehearsal there: `e2e/scripts/add-to-rehearsal.js` with the
+same and `MEMBER` (an address in its project) saves it as it is, its cast
+kept and the member added (flow 79). A code the server
 mailed is read the same way: `e2e/scripts/read-code.js` with `MAIL_URL`
 (`${MAIL_URL}`), `TO` and `NAME` puts it in `${output.<NAME>}` (flows 11, 12).
 
@@ -201,7 +387,13 @@ handled at once, only its answer waits, as on a slow network (flows 16–18,
 after which iOS may give up on the request; `MS` makes it longer, for an
 answer the flow releases later (below: when `DROP`, when `MS`). A hold
 lapses after a minute, so a flow that fails before its release does not slow
-the next. `BEFORE: "1"` holds the request itself instead: the server handles
+the next — and that minute counts from the hold, not from the request it
+catches: the hold goes on just before the step that asks, never before steps
+whose time the flow does not know. Flow 42 held the projects before its
+sign-in; the cold keyboard dropped the email, the typing went in again, the
+sign-in asked 68 s after the hold and got its answer at once (T-234). A hold
+on what a sign-in asks for goes between `sign-in-fill.yaml` and
+`sign-in-submit.yaml`, the two halves of `sign-in-form.yaml`. `BEFORE: "1"` holds the request itself instead: the server handles
 it only on release, so a change is still on its way and what is read meanwhile
 says what was true before it (flow 21). `OPEN: "1"` holds it so too, and keeps
 its connection open until release, three minutes at most: the answer begins at
@@ -223,6 +415,21 @@ closed on release (or when its `MS` lapses), never handed to the server: a
 request that fails late, after something else has landed, when the flow says
 (flow 36).
 `LOSE: "1"` hands the request to the server and closes its connection instead of the answer: the change is made, the app's request fails (flow 13).
+`DEAD: "1"` changes the network under the app at the matching request: its
+connection and every other one the app has open go silent — read, never
+answered, never closed — and a new connection is answered as usual; with
+`ONCE` the hold goes after that request. `server.log` names the connection
+each request on that path came on ("connection #3, which the network left
+behind", "connection #4, a live one"). The phone after LTE→5G (flow 82,
+T-240). The app's request fails when iOS gives up on the silence; on the
+simulator that came as a network error within the flow's wait.
+
+A request that got no answer (timeout, broken connection, offline) makes the
+app flush React Native's connection pool and send a read or a sign-in once
+more (`api.ts`, `plugins/connection-renewal`, T-240): a GET held with `DROP`
+is asked twice by the app, besides iOS's own repeat, so hold it without
+`ONCE` when it must fail. A change — POST, PUT, DELETE other than a sign-in
+— is not sent again, and `DROP`/`LOSE` with `ONCE` on one fails as before.
 
 When `DROP`, when `MS`. The app's ten seconds (`REQUEST_TIMEOUT_MS`) are not
 the app's: axios hands them to NSURLSession, and iOS gives up after ten seconds
@@ -244,6 +451,13 @@ one: a sign-out ends the tokens, and a change released after it is refused
 silence, or iOS may give up first and the failure is a timeout; bring the next controls
 into view before the tap.
 
+`FAIL` (a status from 400 to 599), with `CODE` and `ERROR`, answers the
+request at once with that status and `{ error, code }`, and the server never
+sees it: an answer the server gives in a state the stand cannot reach — its
+mail provider down is `FAIL: "503"`, `CODE: EMAIL_UNAVAILABLE`, as
+`passwordReset.js` answers then — or a refusal the app has no words of its own
+for, a 400 with no code (flow 93, T-256).
+
 `EXPECT` on `release-answers.js` is how many answers must have been held: a
 flow whose point is a late answer fails when there was none (flow 38).
 
@@ -257,15 +471,46 @@ defaults, which `Settings` reads) a device, the permission granted and a token
 made on the spot — Expo's servers are never asked, and the server's
 `EXPO_BASE_URL` is a closed local port, so nothing is sent to one. Without it
 the app is the simulator it is (flow 23). The app's own code has no hook for
-it (flow 38).
+it (flow 38). `rehearslyPushDevice: "denied"` plays a phone whose owner refused
+notifications in iOS's prompt: the permission denied, never asked again, and
+the profile offers the way to Settings (flow 94, T-256).
+
+The phone's calendar the same way: `e2e/device/expo-calendar.js` stands in for
+`expo-calendar`, the real module unless the launch gives
+`rehearslyCalendarRefusesWrite` or `rehearslyCalendarRefusesDelete`, each a
+text: an event whose title contains it is not written, or not removed, as iOS
+refuses with a read-only calendar. The simulator's calendar takes everything,
+and the sync counts a step failed only when EventKit threw — failures of the
+server's mappings are swallowed — so without it no flow could show what the
+sync says then (flow 92, T-256).
+
+A profile's zone where it is late evening now, from 22:45 to 23:44:
+`e2e/scripts/late-evening.js` with `API_URL`, `EMAIL` and `PASSWORD` saves it
+as the zone picker does and puts that zone's today in `${output.lateDay}`. The
+planner's working day ends at 23:00, so a period of that one day has no hour
+in it — the planner's empty state, which no week reaches (flow 92). Picked
+when the flow runs, not in the seed, which is an hour old by the end of a
+full run.
+
+A push itself can be delivered: `e2e/scripts/push.js` with `MAIL_URL`,
+`SIMULATOR`, `APP_ID`, `TYPE` (`role_changed`), `PROJECT` and `ROLE` hands the
+simulator what `notifyRoleChanged` sends, its data under `body` as Expo puts
+it for iOS, through `xcrun simctl push`; the app's received-push listener
+gets it as from a phone (flow 75). A role changed on another device:
+`e2e/scripts/set-role.js` with `API_URL`, `EMAIL` (the owner), `PASSWORD`,
+`PROJECT` (a name), `MEMBER` (an address) and `ROLE` (flows 75, 76, 77).
 
 An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 `MAIL_URL`, `EMAIL`, `COUNT` and `TITLE` records `COUNT` notifications through
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
 "`TITLE` `COUNT`" (flow 33). With `TYPE` it sends one as the server's own code
 sends it: `member_joined` with `PROJECT` and `MEMBER` (flow 61),
+`admin_appointed` with the same — "New administrator", told to those who run
+the project, the role left as it is (flow 88),
 `rehearsal_updated` with `REHEARSAL` (a title) and `CHANGE`, `member_response`
-with `REHEARSAL` and `MEMBER` (flow 62).
+with `REHEARSAL` and `MEMBER` (flow 62), `rehearsal_created` and
+`added_to_rehearsal` with `REHEARSAL` — a new rehearsal and one the reader was
+put on, in the reader's language (flow 86).
 
 How large an icon is drawn: a button that is only an icon is one element,
 44 a side, and Maestro sees nothing inside it. `e2e/scripts/icon-size.js` with
@@ -275,7 +520,10 @@ How large an icon is drawn: a button that is only an icon is one element,
 box (`e2e/ink.mjs`; flow 62, the inbox's 24-point icons). `e2e/scripts/no-ink.js`
 with the same `SHOT`, `COLOUR` and region fails when anything there is drawn in
 that colour: an icon that must be gone from inside a card (flow 63, the tick the
-projects list no longer draws).
+projects list no longer draws). `e2e/scripts/no-ellipsis.js` with `SHOT` and a
+region fails when a "…" is drawn there in place of text that did not fit; with
+`RECORD` (a name) it puts what it found in `${output.<RECORD>}` instead, for a
+flow that names every wrong word at its end (flows 87, 89, 94, 95; T-256).
 
 What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
 with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has
@@ -349,10 +597,11 @@ whether it has gone, which waited seven seconds every time.
   launch is slow, and text typed before it is up goes nowhere. The inputs do not
   report focus, so there is nothing else to wait on. It taps "Sign In"
   through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
-  left flow 59 on a filled-in form (T-225). It also dismisses iOS's
-  "Save Password?" sheet, which covers the screen and hides the whole app from
-  Maestro, through `tap-and-see.yaml` with `GONE: "Not Now"`: one lost tap on
-  it left flow 51 waiting under the sheet (T-213). A flow that acts before
+  left flow 59 on a filled-in form (T-225). iOS's "Save Password?" sheet
+  after a sign-in is off on the e2e simulator: the runner turns AutoFill
+  Passwords off at boot (`noPasswordOffer` in `e2e/run.mjs`), so no flow waits
+  for it or taps "Not Now" (T-213 did, T-246 took it out). Flow 01 sees that it
+  stays away. A flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
 - Maestro's `launchApp` grants the app every permission unless it is given
   `permissions:`, so the sign-in subflow's launch leaves calendar access

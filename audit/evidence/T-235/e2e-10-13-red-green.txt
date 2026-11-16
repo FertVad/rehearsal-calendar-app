@@ -1,0 +1,44 @@
+T-235: flows 10 and 13 red on the nightly full run of 5bf1875 (09.11.2026).
+
+Cause: e10457a (T-228, accepted) says a request with no answer in the app's
+language, "No connection. Check the internet and try again.", instead of
+axios's "Network Error" (flow 13) and instead of the save's fallback
+"Failed to save availability" (flow 10; requestErrorMessage gives the
+fallback only for failures that are not the network's). The red run's
+screenshots show the new text on screen. The flows still expected the old
+texts. Fix: the flows expect the new text; flow 13 also asserts no
+"Network Error". No app change, no timeout raised.
+
+1) Red before: old flows on HEAD 5bf1875
+
+$ npm run e2e -- e2e/flows/13-create-project-lost-answer.yaml
+[Failed] A create tapped again after its answer was lost makes one project (1m 36s) (Assertion is false: ".*Network Error.*" is visible)
+1/1 Flow Failed
+
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Failed] Availability saves the day it changed (3m 47s) (Assertion is false: "Failed to save availability", id: availability-save-error, Above id: availability-save is visible)
+1/1 Flow Failed
+
+2) The breaking commit: old flows, with the two error sites restored to
+   08e9f1e (parent of e10457a):
+   git restore --source=08e9f1e -- src/features/availability/hooks/useAvailabilitySave.ts src/features/projects/screens/CreateProjectScreen.tsx
+
+[Passed] Availability saves the day it changed (3m 49s)
+[Passed] A create tapped again after its answer was lost makes one project (1m 10s)
+2/2 Flows Passed in 4m 59s
+
+   (then git restore --source=HEAD -- the same files)
+
+3) Green after: updated flows on HEAD
+
+[Passed] Availability saves the day it changed (3m 36s)
+[Passed] A create tapped again after its answer was lost makes one project (1m 8s)
+2/2 Flows Passed in 4m 44s
+
+4) The updated flows are red on the code before T-228 (same restore as 2):
+
+[Failed] Availability saves the day it changed (3m 26s) (Assertion is false: "No connection\. Check the internet and try again\.", id: availability-save-error, Above id: availability-save is visible)
+[Failed] A create tapped again after its answer was lost makes one project (1m 5s) (Assertion is false: "No connection\. Check the internet and try again\." is visible)
+2/2 Flows Failed
+
+   (then git restore --source=HEAD -- the same files)

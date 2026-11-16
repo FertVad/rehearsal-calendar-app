@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
@@ -151,7 +152,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
       return true;
     } catch (error: any) {
       logger.error('Failed to set up calendar sync:', error);
-      Alert.alert(t.common.error, error.message || t.calendarSync.syncError);
+      Alert.alert(t.common.error, requestErrorMessage(t, error, t.calendarSync.syncError));
       return false;
     } finally {
       setIsSettingUp(false);

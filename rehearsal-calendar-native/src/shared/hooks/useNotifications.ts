@@ -45,9 +45,36 @@ export function openProject(
   }, { pop: true });
 }
 
-/** Where on its project a notification of this type opens: "New member" on the members (T-023). */
+/**
+ * Open the calendar from a notification: "you were taken off a rehearsal".
+ * The rehearsal is no longer theirs to open, and the calendar is where it has
+ * just disappeared from (T-233). `pop: true`, as above, closes a modal over
+ * the tabs instead of pushing a second MainTabs on top of it.
+ */
+export function openCalendar(navigation: Pick<AppNavigation, 'navigate'>) {
+  navigation.navigate('MainTabs', {
+    screen: 'Calendar',
+    params: { screen: 'CalendarMain' },
+  }, { pop: true });
+}
+
+/**
+ * Where on its project a notification of this type opens: "New member" (T-023)
+ * and "New administrator" (T-252) on the members.
+ */
 export function projectSectionOf(type: string): ProjectSection | undefined {
-  return type === 'member_joined' ? 'members' : undefined;
+  return type === 'member_joined' || type === 'admin_appointed' ? 'members' : undefined;
+}
+
+/**
+ * A push that changes what the person may do in a project: a role given or
+ * taken, a removal, a deletion. The list of projects — where the role is read
+ * from — is read again at once, received in the app or opened by a tap, so an
+ * admin's buttons come and go when the owner changes the role (T-229).
+ */
+const CHANGES_PROJECTS = new Set(['role_changed', 'member_removed', 'project_deleted']);
+function reloadProjectsFor(data: any) {
+  if (CHANGES_PROJECTS.has(data?.type)) emitDataChanged('projects');
 }
 /**
  * Hook for managing push notifications
@@ -96,6 +123,7 @@ export function useNotifications() {
         // app was restarted, even though its event had just been written to the
         // calendar.
         emitDataChanged('rehearsals');
+        reloadProjectsFor(notification.request.content.data);
       });
 
       // Listen for user interaction with notification
@@ -106,6 +134,7 @@ export function useNotifications() {
 
         // Navigate based on notification type
         handleNotificationNavigation(data);
+        reloadProjectsFor(data);
 
         if ((data as any)?.notificationId) markRead([Number((data as any).notificationId)]);
         else refresh();
@@ -131,6 +160,7 @@ export function useNotifications() {
 
             const data = response.notification.request.content.data as any;
             handleNotificationNavigation(data);
+            reloadProjectsFor(data);
             if (data?.notificationId) markRead([Number(data.notificationId)]);
             else refresh();
           })
@@ -174,6 +204,7 @@ export function useNotifications() {
         logger.debug('[useNotifications] Cleanup failed (expected on simulator):', error);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the listeners stay for the session: `handleNotificationNavigation` reads only `navigation`, whose `navigate` goes to the same navigator from any render, so the one they hold is never out of date (T-243)
   }, [user, refresh, markRead]);
 
   /**
@@ -224,9 +255,15 @@ export function useNotifications() {
           if (projectId) openProject(navigation, projectId);
           break;
 
+        case 'rehearsal_removed':
+          // Taken off it: the rehearsal is not theirs to open any more.
+          openCalendar(navigation);
+          break;
+
         case 'member_joined':
+        case 'admin_appointed':
           // On its members. One sent before it carried the project's id opens
-          // nothing (T-023).
+          // nothing (T-023, T-252).
           if (projectId) openProject(navigation, projectId, projectSectionOf(type));
           break;
 

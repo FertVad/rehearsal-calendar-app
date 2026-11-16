@@ -6,10 +6,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { AppModal } from '../../../shared/components/AppModal';
@@ -31,7 +32,7 @@ import { privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
-import { getTimezonesWithDevice, getTimezoneLabel, searchTimezones } from '../../../shared/constants/timezones';
+import { getTimezonesWithDevice, getTimezoneLabel, sameTimezone, searchTimezones } from '../../../shared/constants/timezones';
 
 // Week start options
 const WEEK_START_OPTIONS = [
@@ -60,8 +61,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [bugReportVisible, setBugReportVisible] = useState(false);
   const [timezoneQuery, setTimezoneQuery] = useState('');
   const timezones = useMemo(
-    () => (timezoneModalVisible ? searchTimezones(getTimezonesWithDevice(), timezoneQuery) : []),
-    [timezoneModalVisible, timezoneQuery],
+    () => (timezoneModalVisible ? searchTimezones(getTimezonesWithDevice(language), timezoneQuery) : []),
+    [timezoneModalVisible, timezoneQuery, language],
   );
   // The sheets end above the home indicator, as the bottom bar does (T-009):
   // the last language and the last zone ran into it (T-024).
@@ -125,7 +126,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.notificationError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.notificationError));
       // Revert state on error
       setNotificationsEnabled(before);
     }
@@ -153,7 +154,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       await updateUser({ locale: newLanguage });
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.languageError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.languageError));
     }
   };
 
@@ -167,7 +168,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       closeTimezones();
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.timezoneError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.timezoneError));
     }
   };
 
@@ -183,7 +184,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       setWeekStartModalVisible(false);
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.weekStartError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.weekStartError));
     }
   };
 
@@ -203,7 +204,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         deletedProjects > 0 ? t.profile.deleteAccountProjectsWarning(deletedProjects) : undefined
       );
     } catch (err: any) {
-      Alert.alert(t.profile.deleteAccountError, err.message);
+      Alert.alert(t.profile.deleteAccountError, requestErrorMessage(t, err, t.auth.requestFailed));
     } finally {
       setDeletingAccount(false);
       setDeleteAccountModalVisible(false);
@@ -376,7 +377,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
 
           {/* Calendar Sync */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>
+          <TouchableOpacity testID="profile-calendar-sync" style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                 <Ionicons name="sync" size={20} color={Colors.accent.purple} />
@@ -516,27 +517,22 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={<Text style={styles.searchEmpty}>{t.profile.timezoneNotFound}</Text>}
               keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.timezoneItem,
-                    user?.timezone === item.value && styles.timezoneItemSelected,
-                  ]}
-                  onPress={() => handleTimezoneSelect(item.value)}
-                >
-                  <Text
-                    style={[
-                      styles.timezoneLabel,
-                      user?.timezone === item.value && styles.timezoneLabelSelected,
-                    ]}
+              renderItem={({ item }) => {
+                const selected = sameTimezone(user?.timezone, item.value);
+                return (
+                  <TouchableOpacity
+                    style={[styles.timezoneItem, selected && styles.timezoneItemSelected]}
+                    onPress={() => handleTimezoneSelect(item.value)}
                   >
-                    {language === 'ru' ? item.labelRu : item.labelEn}
-                  </Text>
-                  {user?.timezone === item.value && (
-                    <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
-                  )}
-                </TouchableOpacity>
-              )}
+                    <Text style={[styles.timezoneLabel, selected && styles.timezoneLabelSelected]}>
+                      {item.label}
+                    </Text>
+                    {selected && (
+                      <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
               style={styles.timezoneList}
             />
           </View>

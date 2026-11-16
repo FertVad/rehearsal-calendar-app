@@ -2,11 +2,15 @@
 /**
  * The app end to end, on a simulator, against nothing real.
  *
- *   npm run e2e                  every flow in e2e/flows, then everything is taken down
- *   npm run e2e -- <flow.yaml>…  only those flows
+ *   npm run e2e                  every flow in e2e/flows on the Debug app and every
+ *                                flow in e2e/release on the Release app, then
+ *                                everything is taken down
+ *   npm run e2e -- <flow.yaml>…  only those flows; one in e2e/release builds and
+ *                                runs the Release app
  *   npm run e2e:up               stands it all up and keeps it up — for Maestro MCP
  *                                or Studio — until Ctrl-C
- *   --build                      rebuild the app even when a build is there
+ *   --build                      generate the iOS project and build the app anew
+ *                                even when they are there
  *
  * What it stands up, and what it refuses:
  *
@@ -27,8 +31,13 @@
  *   that the address the app reports on start is watched, and the run stops if
  *   it is ever another. Ports 3001, 3002 and 8081 must be free: a server or Metro
  *   already running there is not ours to reuse, and could be pointed anywhere.
- * - The app: a Debug build (Release talks to production) on a simulator of its
- *   own, "Rehearsly E2E", so no other simulator's data is touched.
+ * - The app: built from an iOS project `expo prebuild` makes of this tree's
+ *   app.json, in e2e/.native, never the tree's ios/ (e2e/native.mjs, T-227),
+ *   on a simulator of its own, "Rehearsly E2E", so no other simulator's data
+ *   is touched. A Debug build for the flows in e2e/flows, its JS from Metro; a
+ *   Release build, as the App Store gets it, for those in e2e/release — its JS
+ *   bundled with the same REHEARSLY_E2E and local address as Metro's, and
+ *   checked the same way before it is installed.
  *
  * Everything it writes goes to e2e/out: logs, the seed, JUnit, screenshots.
  *
@@ -48,21 +57,24 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getText } from './http.mjs';
-import { takeLock } from './lock.mjs';
-import { seed } from './seed.mjs';
+import { mergeJunit } from './junit.mjs';
+import { LOCK, takeLock } from './lock.mjs';
+import { exitCode, flattenBatches, limitMs, nextStep, startClock } from './midnight.mjs';
+import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, requireInstalledAsLocked, splitFlows } from './native.mjs';
+import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SERVER = path.join(ROOT, 'server');
 const E2E = path.join(ROOT, 'e2e');
 const OUT = path.join(E2E, 'out');
 const BUILD = path.join(E2E, '.build');
-// A worktree without the iOS Pods (the autodev supervisor's) uses an app built
-// elsewhere: E2E_APP names it. The JS comes from this tree's Metro either way.
+// A Debug app built elsewhere (the supervisor names the main tree's) is used
+// only when it was built from the inputs this tree has (e2e/native.mjs): an app
+// of another app.json is the stale build T-227 is about.
 const PREBUILT = process.env.E2E_APP || null;
-const APP = PREBUILT || path.join(BUILD, 'Build', 'Products', 'Debug-iphonesimulator', 'Rehearsly.app');
 // One run at a time on this machine: the simulator and ports 3001/8081 are
-// shared. It also names what each run started (lock.mjs).
-const LOCK = '/tmp/rehearsly-e2e.lock';
+// shared. It also names what each run started (lock.mjs), and a heavy job
+// held under it (hold-lock.mjs, T-231) is waited for as another run is.
 let lock = null;
 const pg = createRequire(path.join(SERVER, 'package.json'))('pg');
 
@@ -93,11 +105,17 @@ const forceBuild = argv.includes('--build');
 const flows = argv.filter((arg) => !arg.startsWith('--')).map((flow) => path.resolve(flow));
 
 const step = (text) => console.log(`[e2e] ${text}`);
+/** A batch of flows failed: the run ends 1 however it stops after (exitCode, e2e/midnight.mjs). */
+let flowsFailed = false;
 
 /** The machine is not ready: nothing the change under test did. Exit 75. */
 class EnvironmentError extends Error {}
 async function environment(work) {
   try { return await work(); } catch (error) { throw error instanceof EnvironmentError ? error : new EnvironmentError(error.message); }
+}
+/** The native build: the network failing pod install, or a step out of its time, is the machine's; any other failure is the change's. */
+function nativeStep(work) {
+  try { return work(); } catch (error) { throw error instanceof MachineError ? new EnvironmentError(error.message) : error; }
 }
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -118,19 +136,20 @@ for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
 
 /**
  * A long-running process in its own group, logged to e2e/out, stopped on
- * teardown — and through watchdog.mjs, which holds a pipe from this process
- * and takes the group down when it closes: a run killed outright takes its
- * server and Metro with it, in the developer's sandbox too.
+ * teardown — and through watchdog.mjs, which holds a pipe from this process on
+ * fd 3 and takes the command's whole group down when it closes: a run killed
+ * outright takes its server and Metro, and what they started, with it, in the
+ * developer's sandbox too. The watchdog exits once that group is empty.
  */
-function background(name, command, args, options) {
+function background(name, command, args, options, { append = false } = {}) {
   const logFile = path.join(OUT, `${name}.log`);
-  const log = fs.openSync(logFile, 'w');
+  const log = fs.openSync(logFile, append ? 'a' : 'w');
   const child = spawn(process.execPath, [path.join(E2E, 'watchdog.mjs'), command, ...args],
-    { ...options, detached: true, stdio: ['pipe', log, log] });
+    { ...options, detached: true, stdio: ['ignore', log, log, 'pipe'] });
   // Its own group outlives a run killed outright; the lock names it for the next.
   lock.record(name, child.pid);
   teardown.push(() => { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ } });
-  child.once('exit', (code) => { if (!tornDown) console.error(`[e2e] ${name} exited (${code}) — see ${logFile}`); });
+  child.once('exit', (code) => { if (!tornDown && !child.stopping) console.error(`[e2e] ${name} exited (${code}) — see ${logFile}`); });
   return child;
 }
 
@@ -148,7 +167,7 @@ function keepLogs(startedAt) {
     for (const run of fs.readdirSync(artifacts)) {
       const dir = path.join(artifacts, run);
       if (!fs.statSync(dir).isDirectory() || fs.statSync(dir).birthtimeMs < startedAt) continue;
-      for (const name of ['server.log', 'metro.log']) {
+      for (const name of ['server.log', 'metro.log', 'release-device.log']) {
         const log = path.join(OUT, name);
         if (fs.existsSync(log)) fs.copyFileSync(log, path.join(dir, name));
       }
@@ -328,6 +347,27 @@ function quietKeyboard(udid) {
 }
 
 /**
+ * iOS offers to keep the password after every sign-in: a "Save Password?"
+ * sheet over the whole screen, which hid the app from Maestro until a flow
+ * tapped "Not Now". With AutoFill Passwords off (Settings → Passwords) iOS
+ * offers nothing: one sheet and one tap fewer at every sign-in, and no waits
+ * for it in the flows. Kept across reboots.
+ *
+ * It does not keep Maestro's driver alive. The driver (Maestro 2.11.0) is one
+ * long XCTest test; its status-bar query can meet a scene of InputUI, the
+ * keyboard's process, as SpringBoard takes it down — the sheet's, or the
+ * keyboard's own seconds after it hid — and XCTest's kAXErrorInvalidUIElement
+ * ends the test, the driver with it, and every flow after it fails with
+ * DeviceUnreachableException. It ended under the sheet at flow 66 (3b38601) and
+ * under the keyboard at flow 54 with the sheet off (d74e9d2) (T-246,
+ * audit/evidence/T-246). That race is Maestro's and stays; the supervisor runs
+ * the flows lost after it once more.
+ */
+function noPasswordOffer(udid) {
+  simctl('spawn', udid, 'defaults', 'write', 'com.apple.WebUI', 'AutoFillPasswords', '-bool', 'false');
+}
+
+/**
  * The simulator's own zone, away from the machine's and so from everyone's
  * profile (seed.mjs). The app shows the zone the person chose, never the
  * device's (cause fix 14); with both the same, nothing on screen could tell
@@ -358,59 +398,77 @@ function simulator() {
 
 // ---- the run --------------------------------------------------------------
 
-async function main() {
-  fs.mkdirSync(OUT, { recursive: true });
-  await environment(async () => {
-    assert.ok(fs.existsSync(MAESTRO), `Maestro is not installed at ${MAESTRO}`);
-    if (PREBUILT) assert.ok(fs.existsSync(PREBUILT), `E2E_APP ${PREBUILT} does not exist`);
-    lock = await takeLock(LOCK, { log: step });
-    teardown.push(() => lock.release());
-    teardown.push(keepLogs(Date.now()));
-    await requireFree(API_PORT, 'server');
-    await requireFree(MAIL_PORT, 'mailbox');
-    await requireFree(METRO_PORT, 'Metro');
-  });
+// ---- a day's database, server and seed ------------------------------------
 
-  step('starting a disposable PostgreSQL');
-  const databaseUrl = await environment(startDatabase);
-  assertLocalDatabase(databaseUrl);
+/**
+ * What the flows are given is seeded for one day — the machine's today, the
+ * zone of everyone's profile (seed.mjs): TODAY_DAY, the rehearsals of today
+ * and tomorrow, the labels. A run that went on past midnight showed flows the
+ * app's new today against yesterday's seed, and every flow about today failed
+ * after 00:00 (T-226: the whole set started at 23:09). So the flows go to
+ * Maestro in batches that end before midnight, and before each batch a day
+ * that turned gets a day of its own: a new database in the same container, the
+ * server restarted on it, the seed made again. The flows find the world they
+ * were written for, as on a run started that morning.
+ *
+ * A batch is as many flows as fit before midnight at FLOW_BOUND_MS each
+ * (e2e/midnight.mjs). When not one fits, the run waits for midnight rather
+ * than start a flow the day would turn under — unless the wait would outlast
+ * the supervisor's limit; then it stops as not ready. Not one Maestro a flow
+ * all the time: each costs some 50 s to start, an hour on the whole set.
+ */
 
-  step('provisioning the canonical schema');
-  const migrateLog = fs.openSync(path.join(OUT, 'migrate.log'), 'w');
+const serverEnv = (databaseUrl) => ({
+  PATH: process.env.PATH,
+  HOME: os.homedir(),
+  NODE_ENV: 'development',
+  PORT: String(API_PORT),
+  HOST: API_HOST,
+  DATABASE_URL: databaseUrl,
+  JWT_SECRET: randomBytes(32).toString('base64'),
+  CRON_SECRET: randomBytes(32).toString('base64'),
+  BASE_URL: `http://${API_HOST}:${API_PORT}`,
+  EMAIL_TRANSPORT: 'capture-for-tests',
+  // A flow that plays a phone puts a push token on this server
+  // (e2e/device); a send to it must not reach Expo. Nothing listens here.
+  EXPO_BASE_URL: 'http://127.0.0.1:9',
+  MAIL_HOST: API_HOST,
+  MAIL_PORT: String(MAIL_PORT),
+});
+
+function migrate(databaseUrl, { append = false } = {}) {
+  const migrateLog = fs.openSync(path.join(OUT, 'migrate.log'), append ? 'a' : 'w');
   execFileSync(process.execPath, ['scripts/migrate.js', '--fresh'], {
     cwd: SERVER,
     env: { PATH: process.env.PATH, HOME: os.homedir(), DATABASE_URL: databaseUrl },
     stdio: ['ignore', migrateLog, migrateLog],
     timeout: 120000,
   });
+}
 
-  step('starting the local server');
-  // server.js through server-with-mailbox.mjs: the codes it mails stay in that
-  // process, and the flows read them from MAIL_URL.
-  background('server', process.execPath, [path.join(E2E, 'server-with-mailbox.mjs')], {
-    cwd: SERVER,
-    env: {
-      PATH: process.env.PATH,
-      HOME: os.homedir(),
-      NODE_ENV: 'development',
-      PORT: String(API_PORT),
-      HOST: API_HOST,
-      DATABASE_URL: databaseUrl,
-      JWT_SECRET: randomBytes(32).toString('base64'),
-      CRON_SECRET: randomBytes(32).toString('base64'),
-      BASE_URL: `http://${API_HOST}:${API_PORT}`,
-      EMAIL_TRANSPORT: 'capture-for-tests',
-      // A flow that plays a phone puts a push token on this server
-      // (e2e/device); a send to it must not reach Expo. Nothing listens here.
-      EXPO_BASE_URL: 'http://127.0.0.1:9',
-      MAIL_HOST: API_HOST,
-      MAIL_PORT: String(MAIL_PORT),
-    },
-  });
+/** server.js through server-with-mailbox.mjs: the codes it mails stay in that process, and the flows read them from MAIL_URL. */
+async function startServer(databaseUrl, { append = false } = {}) {
+  const server = background('server', process.execPath, [path.join(E2E, 'server-with-mailbox.mjs')],
+    { cwd: SERVER, env: serverEnv(databaseUrl) }, { append });
   await waitFor('the local server', async () => (await fetch(`${API_URL}/ready`)).ok, 30000);
   await waitFor('the mailbox', async () => (await fetch(`${MAIL_URL}/code?to=`)).status === 404, 10000);
+  return server;
+}
 
-  step('seeding');
+async function stopServer(server) {
+  if (server.exitCode === null && server.signalCode === null) {
+    server.stopping = true;
+    const exited = new Promise((resolve) => server.once('exit', resolve));
+    try { process.kill(-server.pid, 'SIGTERM'); } catch { /* already gone */ }
+    await exited;
+  }
+  await waitFor('the server\'s ports to close', async () =>
+    !(await inUse(API_PORT, API_HOST)) && !(await inUse(MAIL_PORT, API_HOST)), 10000);
+}
+
+/** The seed, made for the machine's today: `{ date, seeded }`, the date taken before it began. */
+async function seedDay(databaseUrl) {
+  const date = localDate(0);
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
   let seeded;
@@ -420,7 +478,256 @@ async function main() {
     await client.end();
   }
   fs.writeFileSync(path.join(OUT, 'seed.json'), JSON.stringify(seeded, null, 2));
+  return { date, seeded };
+}
 
+/** A database of its own for `date`, next to the first in the same container. */
+async function databaseFor(firstUrl, date) {
+  const name = `rehearsly_e2e_${date.replace(/-/g, '')}`;
+  const client = new pg.Client({ connectionString: firstUrl });
+  await client.connect();
+  try {
+    await client.query(`DROP DATABASE IF EXISTS ${name}`);
+    await client.query(`CREATE DATABASE ${name}`);
+  } finally {
+    await client.end();
+  }
+  const url = new URL(firstUrl);
+  url.pathname = `/${name}`;
+  assertLocalDatabase(url.href);
+  return url.href;
+}
+
+/** What a day's seed gives the flows, as Maestro's -e variables. */
+function variablesFor(seeded, udid) {
+  const variables = ['-e', `PASSWORD=${seeded.password}`, '-e', `APP_ID=${BUNDLE_ID}`,
+    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`, '-e', `SIMULATOR=${udid}`,
+    ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
+    ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
+    ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),
+    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`]),
+    ...Object.entries(seeded.labels).flatMap(([key, label]) => ['-e', `${key.toUpperCase()}_LABEL=${label}`]),
+    ...Object.entries(seeded.rehearsals).flatMap(([key, id]) => ['-e', `${key.toUpperCase()}_REHEARSAL=${id}`])];
+  return variables;
+}
+
+/** The flows to run, one file each, in the order Maestro ran the folder: by name. */
+function flowFiles(given) {
+  return given.flatMap((entry) => (fs.statSync(entry).isDirectory()
+    ? fs.readdirSync(entry).filter((name) => /\.ya?ml$/.test(name) && name !== 'config.yaml').sort().map((name) => path.join(entry, name))
+    : [entry]));
+}
+
+/** Maestro's name for a run's folder, which the supervisor's pruning looks for (YYYY-MM-DD_HHMMSS). */
+function runStamp(at = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}_${pad(at.getHours())}${pad(at.getMinutes())}${pad(at.getSeconds())}`;
+}
+
+// ---- the apps --------------------------------------------------------------
+
+/** The Debug app of this tree's native inputs (`hash`): one built from them, or built now. */
+function debugApp(udid, hash) {
+  if (PREBUILT && builtFrom(PREBUILT, hash)) {
+    step(`the Debug app: E2E_APP, built from these inputs (${PREBUILT})`);
+    return PREBUILT;
+  }
+  if (PREBUILT) step(`E2E_APP (${PREBUILT}) was not built from this tree's app.json and packages: not used`);
+  const app = appPath(BUILD, 'Debug');
+  if (!forceBuild && builtFrom(app, hash)) {
+    step('the Debug app was built from these inputs: kept');
+    return app;
+  }
+  step('building the Debug app — from nothing it takes a while');
+  return buildApp({ configuration: 'Debug', udid, build: BUILD, hash, log: path.join(OUT, 'build.log'),
+    env: { ...process.env, RCT_NO_LAUNCH_PACKAGER: '1' } });
+}
+
+/**
+ * The Release app, built now: its JS is in it, bundled by Metro with what the
+ * dev Metro of a run gets — REHEARSLY_E2E (metro.config.js), the local
+ * address, no .env file read at all (EXPO_NO_DOTENV) — and checked before it
+ * is installed (checkReleaseBundle).
+ */
+function releaseApp(udid, hash) {
+  step('building the Release app, its JS bundled for the local server');
+  const app = appPath(BUILD, 'Release');
+  const js = path.join(path.dirname(app), 'main.jsbundle');
+  const bytecode = path.join(app, 'main.jsbundle');
+  // A bundle of an earlier build is never the one checked.
+  for (const file of [js, bytecode]) fs.rmSync(file, { force: true });
+  const { CI: _ci, ...inherited } = process.env;
+  buildApp({ configuration: 'Release', udid, build: BUILD, hash, log: path.join(OUT, 'build-release.log'),
+    env: { ...inherited, RCT_NO_LAUNCH_PACKAGER: '1', EXPO_PUBLIC_API_URL: API_URL, EXPO_PUBLIC_E2E: '1',
+      REHEARSLY_E2E: '1', EXPO_NO_DOTENV: '1', EXPO_NO_TELEMETRY: '1' } });
+  step('checking the Release bundle talks to the local server');
+  checkReleaseBundle({ js: fs.readFileSync(js, 'utf8'), bytecode: fs.readFileSync(bytecode), apiUrl: API_URL });
+  return app;
+}
+
+/**
+ * What the app says on the device while the Release flows run, for the
+ * reason a launch failed: a native exception, a module JS could not find.
+ */
+function watchDevice(udid) {
+  const child = background('release-device', 'xcrun', ['simctl', 'spawn', udid, 'log', 'stream', '--style', 'compact',
+    '--level', 'debug', '--predicate', 'process == "Rehearsly"'], { cwd: ROOT });
+  return () => {
+    child.stopping = true;
+    try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ }
+    const log = path.join(OUT, 'release-device.log');
+    // Errors and faults only ("2026-11-08 00:34:51.437 E  Rehearsly[…] …"),
+    // each said once: the debug level has the ATS dictionary's NSException* keys.
+    const said = new Set();
+    const fatal = (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '').split('\n')
+      .filter((line) => /^\S+ \S+ [EF]\s/.test(line) && /Exception|Cannot find native module|EXFatal|RCTFatal|Fatal/i.test(line))
+      .filter((line) => { const what = line.replace(/^.*?\]\s*/, ''); return !said.has(what) && said.add(what); });
+    step(`the Release app's device log: ${fatal.length} error(s) of a failed start (${log})`);
+    for (const line of fatal.slice(0, 10)) step(`  ${line.slice(0, 300)}`);
+  };
+}
+
+async function main() {
+  fs.mkdirSync(OUT, { recursive: true });
+  const { debug: debugFlows, release: releaseFlows } = stayUp ? { debug: [], release: [] } : splitFlows(flows, flowFiles);
+  await environment(async () => {
+    assert.ok(fs.existsSync(MAESTRO), `Maestro is not installed at ${MAESTRO}`);
+    lock = await takeLock(LOCK, { log: step });
+    teardown.push(() => lock.release());
+    teardown.push(keepLogs(Date.now()));
+    await requireFree(API_PORT, 'server');
+    await requireFree(MAIL_PORT, 'mailbox');
+    await requireFree(METRO_PORT, 'Metro');
+  });
+
+  // The apps before anything else is up: a build is the heaviest thing this
+  // Mac does, and Metro, the simulator and the database would only crowd it
+  // (T-231). The iOS project is the one this tree's app.json makes.
+  const udid = await environment(simulator);
+  // The hash covers the lockfile, not what is installed: node_modules not
+  // installed from it would be built and stamped as this commit's.
+  nativeStep(() => requireInstalledAsLocked());
+  const hash = inputsHash();
+  step(`native inputs ${hash.slice(0, 12)} (app.json, locales, assets, packages)`);
+  nativeStep(() => prepareProject({ hash, log: path.join(OUT, 'prepare.log'), step, force: forceBuild }));
+  const apps = {
+    Debug: stayUp || debugFlows.length ? nativeStep(() => debugApp(udid, hash)) : null,
+    Release: releaseFlows.length ? nativeStep(() => releaseApp(udid, hash)) : null,
+  };
+
+  // The supervisor's limit on the flows starts here, and the runner's deadline
+  // with it: the project and the apps take what the network and the memory
+  // allow, each step bounded by itself (e2e/native.mjs).
+  const deadline = startClock(step, releaseFlows.length + debugFlows.length);
+  const databaseUrl = await environment(startDatabase);
+  assertLocalDatabase(databaseUrl);
+
+  step('provisioning the canonical schema');
+  migrate(databaseUrl);
+
+  step('starting the local server');
+  let server = await startServer(databaseUrl);
+
+  step('seeding');
+  let day = await seedDay(databaseUrl);
+
+  // The Release app carries its JS; Metro is for the Debug one.
+  if (apps.Debug) await startMetro();
+  await environment(() => {
+    step(`booting ${DEVICE.name} (${udid})`);
+    simctl('bootstatus', udid, '-b');
+    teardown.push(() => simctl('shutdown', udid));
+    if (pinLocale(udid)) {
+      step('switching it to English and rebooting');
+      simctl('shutdown', udid);
+      simctl('bootstatus', udid, '-b');
+    }
+    quietKeyboard(udid);
+    noPasswordOffer(udid);
+    pinZone(udid);
+    showSimulator(udid);
+  });
+
+  if (stayUp) {
+    simctl('install', udid, apps.Debug);
+    watchReportedAddress(udid);
+    step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);
+    step(`password for every account: ${day.seeded.password}. Ctrl-C takes it all down.`);
+    setInterval(() => {}, 1 << 30);
+    await new Promise(() => {});
+  }
+
+  // One folder for the run's artifacts, a flow's folder in it, as one Maestro
+  // made it: the supervisor moves a red run's failed flows' folders into the
+  // run it keeps (keepFailedFlows, maestro-artifacts.txt).
+  const artifacts = path.join(OUT, 'artifacts', runStamp());
+  const parts = path.join(OUT, 'junit-parts');
+  fs.rmSync(parts, { recursive: true, force: true });
+  fs.mkdirSync(parts, { recursive: true });
+  const reports = [];
+  const earlierTaps = [];
+  const total = releaseFlows.length + debugFlows.length;
+  let left = total;
+
+  async function runFlows(queue) {
+    for (let index = 0; index < queue.length;) {
+      if (localDate(0) !== day.date) {
+        step(`the day turned (${day.date} → ${localDate(0)}): a new database, server and seed for it`);
+        await stopServer(server);
+        earlierTaps.push(...tapsAgain());
+        const url = await databaseFor(databaseUrl, localDate(0));
+        migrate(url, { append: true });
+        server = await startServer(url, { append: true });
+        day = await seedDay(url);
+      }
+      const next = nextStep({ left, deadline });
+      if (next.stop) {
+        throw new EnvironmentError(`midnight in ${Math.ceil(next.stop / 1000)} s, before a flow could end, and a wait for it `
+          + `would outlast the supervisor's limit (${Math.round(limitMs(total) / 1000)} s for ${total} flows) — run it again after 00:00`);
+      }
+      if (next.wait) {
+        step(`midnight in ${Math.ceil(next.wait / 1000)} s, before a flow could end: waiting for it`);
+        await sleep(next.wait);
+        continue;
+      }
+      const batch = queue.slice(index, index + next.take);
+      index += batch.length;
+      left -= batch.length;
+      const report = path.join(parts, `${String(reports.length).padStart(3, '0')}.xml`);
+      let code = 0;
+      try {
+        execFileSync(MAESTRO, ['--device', udid, 'test', ...batch, '--format', 'junit', '--output', report,
+          '--test-output-dir', artifacts, ...variablesFor(day.seeded, udid)], { stdio: 'inherit', env: MAESTRO_ENV });
+      } catch (error) {
+        code = error.status ?? 1;
+        flowsFailed = true;
+        process.exitCode = 1;
+      }
+      flattenBatches(artifacts);
+      reports.push({ files: batch.map((flow) => path.relative(ROOT, flow)), xml: fs.existsSync(report) ? fs.readFileSync(report, 'utf8') : null, code });
+      // After every flow, so a run cut short still says what it ran.
+      fs.writeFileSync(path.join(OUT, 'junit.xml'), mergeJunit(reports));
+    }
+  }
+
+  // Release first: a few minutes, and a black screen there is the news.
+  if (releaseFlows.length) {
+    step('installing the Release app and running its flows');
+    simctl('install', udid, apps.Release);
+    const stopWatching = watchDevice(udid);
+    try { await runFlows(releaseFlows); } finally { stopWatching(); }
+  }
+  if (debugFlows.length) {
+    step('installing the Debug app and running the flows');
+    simctl('install', udid, apps.Debug);
+    watchReportedAddress(udid);
+    await runFlows(debugFlows);
+  }
+  reportTapsAgain(earlierTaps);
+}
+
+/** Metro for the Debug app, its bundle checked to talk to the local server only. */
+async function startMetro() {
   step('starting Metro, pointed at the local server');
   // Not CI mode: it turns the file watcher off, and an edit would never reach
   // the app. With no terminal attached Expo does not prompt anyway.
@@ -451,61 +758,12 @@ async function main() {
     throw error.code === 'DEADLINE' ? new EnvironmentError(error.message) : error;
   }
   checkBundle(bundle);
-  const udid = await environment(simulator);
-  await environment(() => {
-    step(`booting ${DEVICE.name} (${udid})`);
-    simctl('bootstatus', udid, '-b');
-    teardown.push(() => simctl('shutdown', udid));
-    if (pinLocale(udid)) {
-      step('switching it to English and rebooting');
-      simctl('shutdown', udid);
-      simctl('bootstatus', udid, '-b');
-    }
-    quietKeyboard(udid);
-    pinZone(udid);
-    showSimulator(udid);
-  });
+}
 
-  if (!PREBUILT && (forceBuild || !fs.existsSync(APP))) {
-    step('building the Debug app — the first build takes a while');
-    const buildLog = fs.openSync(path.join(OUT, 'build.log'), 'w');
-    execFileSync('xcodebuild', ['-workspace', 'ios/Rehearsly.xcworkspace', '-scheme', 'Rehearsly',
-      '-configuration', 'Debug', '-sdk', 'iphonesimulator', '-destination', `id=${udid}`,
-      '-derivedDataPath', BUILD, 'build'], {
-      cwd: ROOT,
-      env: { ...process.env, RCT_NO_LAUNCH_PACKAGER: '1' },
-      stdio: ['ignore', buildLog, buildLog],
-      timeout: 60 * 60 * 1000,
-    });
-  }
-  simctl('install', udid, APP);
-  watchReportedAddress(udid);
-
-  const variables = ['-e', `PASSWORD=${seeded.password}`, '-e', `APP_ID=${BUNDLE_ID}`,
-    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`, '-e', `SIMULATOR=${udid}`,
-    ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
-    ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
-    ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),
-    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`]),
-    ...Object.entries(seeded.labels).flatMap(([key, label]) => ['-e', `${key.toUpperCase()}_LABEL=${label}`]),
-    ...Object.entries(seeded.rehearsals).flatMap(([key, id]) => ['-e', `${key.toUpperCase()}_REHEARSAL=${id}`])];
-
-  if (stayUp) {
-    step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);
-    step(`password for every account: ${seeded.password}. Ctrl-C takes it all down.`);
-    setInterval(() => {}, 1 << 30);
-    await new Promise(() => {});
-  }
-
-  step('running the flows');
-  try {
-    execFileSync(MAESTRO, ['--device', udid, 'test', ...(flows.length ? flows : [path.join(E2E, 'flows')]),
-      '--format', 'junit', '--output', path.join(OUT, 'junit.xml'),
-      '--test-output-dir', path.join(OUT, 'artifacts'), ...variables], { stdio: 'inherit', env: MAESTRO_ENV });
-  } catch {
-    process.exitCode = 1;
-  }
-  reportTapsAgain();
+/** The taps the server running now was told of; it starts its log afresh (server-with-mailbox.mjs). */
+function tapsAgain() {
+  const log = path.join(OUT, 'taps-again.log');
+  return fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split('\n').filter(Boolean) : [];
 }
 
 /**
@@ -514,9 +772,8 @@ async function main() {
  * Maestro reports it done (docs/e2e.md, T-207). Printed every run, so how often
  * it happens stays in sight.
  */
-function reportTapsAgain() {
-  const log = path.join(OUT, 'taps-again.log');
-  const lines = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split('\n').filter(Boolean) : [];
+function reportTapsAgain(earlier = []) {
+  const lines = [...earlier, ...tapsAgain()];
   step(`taps taken again (tap-and-see.yaml): ${lines.length}`);
   for (const line of lines) step(`  ${line}`);
 }
@@ -524,7 +781,8 @@ function reportTapsAgain() {
 main()
   .catch((error) => {
     const machine = error instanceof EnvironmentError;
-    console.error(`[e2e] ${machine ? 'not ready, not the change: ' : ''}${error.message}`);
-    process.exitCode = machine ? 75 : 1;
+    const why = !machine ? '' : flowsFailed ? 'stopped, a flow had already failed (junit.xml): ' : 'not ready, not the change: ';
+    console.error(`[e2e] ${why}${error.message}`);
+    process.exitCode = exitCode({ failed: flowsFailed, error: machine ? 'machine' : 'error' });
   })
   .finally(tearDown);

@@ -118,10 +118,11 @@ describe('Auth Flow Integration', () => {
 
       const loginResponse = await authAPI.login('test@example.com', 'password123');
 
+      // Marked to be sent again when it gets no answer (T-240).
       expect(axios.post).toHaveBeenCalledWith('/auth/login', {
         email: 'test@example.com',
         password: 'password123',
-      });
+      }, { repeatable: true });
 
       expect(loginResponse.data.user).toEqual(mockUser);
 

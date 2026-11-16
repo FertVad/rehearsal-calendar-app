@@ -1,0 +1,49 @@
+T-233 — route test on the OLD code (server/routes/native/rehearsals.js and
+server/services/rehearsals/rehearsalService.js as at 2d94078), new tests in place.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/rehearsalNotifications.test.js
+
+FAIL __tests__/routes/rehearsalNotifications.test.js
+  Rehearsal notifications go to the roster
+    ✓ tells the people put on a new rehearsal (268 ms)
+    ✓ does not tell the author about the rehearsal they just scheduled (36 ms)
+    ✓ leaves out a project member who is not on it (30 ms)
+    ✓ tells the roster when the rehearsal changes (56 ms)
+    ✓ tells the roster when the rehearsal is cancelled (45 ms)
+  The person making the change is not told about it
+    ✓ leaves the editor out when a rehearsal is moved (51 ms)
+    ✓ leaves out whoever cancelled it (52 ms)
+    ✓ says nothing at all when the editor is the only one on it (38 ms)
+  What the change announcement names
+    ✓ names only the field that moved (47 ms)
+    ✓ names only the place when only the place changed (53 ms)
+    ✓ names both when both changed (41 ms)
+    ✓ stays quiet when the form comes back unchanged (39 ms)
+    ✓ does not tell the rest of the cast when only the roster changed (43 ms)
+  Those put on or taken off an existing rehearsal are told (T-233)
+    ✕ tells whoever was added, and only them, which rehearsal they are now on (45 ms)
+    ✕ tells whoever was taken off, and nobody else (43 ms)
+    ✓ says nothing about the cast when the cast is as it was (83 ms)
+    ✕ gives each person one notification for one save (42 ms)
+    ✓ tells the editor nothing when they put themselves on it or take themselves off (58 ms)
+  Moving a rehearsal after it has been announced
+    ✓ lets it be announced again on the new date (41 ms)
+    ✓ does not re-announce one that was merely renamed (39 ms)
+
+  ● ... › tells whoever was added, and only them, which rehearsal they are now on
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+    Expected number of calls: 1
+    Received number of calls: 0
+    > 341 |     expect(addedTo).toHaveBeenCalledTimes(1);
+
+  ● ... › tells whoever was taken off, and nobody else
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+    Expected number of calls: 1
+    Received number of calls: 0
+    > 355 |     expect(removedFrom).toHaveBeenCalledTimes(1);
+
+  ● ... › gives each person one notification for one save
+    TypeError: Cannot read properties of undefined (reading '2')
+    (notifyAddedToRehearsal was never called)
+
+Tests:       3 failed, 17 passed, 20 total

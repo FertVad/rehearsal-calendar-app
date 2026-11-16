@@ -17,4 +17,14 @@ tags:
 - extendedWaitUntil:
     visible: ".*Act I run-through.*Hamlet.*"
     timeout: 30000
+# No "Save Password?" sheet after it, on the e2e simulator: AutoFill Passwords
+# is off (noPasswordOffer in e2e/run.mjs), so no flow waits for the sheet or
+# taps it away, and this is where it would show if it came back (T-246). It
+# came some 0.3 s after the form went, so five seconds are long enough to see
+# it.
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- assertNotVisible: "Not Now"
 - takeScreenshot: 01-calendar-after-sign-in

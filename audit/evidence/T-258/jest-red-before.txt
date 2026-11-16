@@ -1,0 +1,30 @@
+T-258, Jest red before the fix: the new tests in src/i18n/__tests__/proofreading.test.ts
+run on the old strings (HEAD 6f5a58f translations).
+cd rehearsal-calendar-native && npx jest --selectProjects frontend src/i18n/__tests__/proofreading.test.ts
+
+  ● The planner's slot names its busy people by their number (T-258) › Russian and Spanish agree with one person and with two
+
+    TypeError: ru.smartPlanner.busyPrefix is not a function
+      at Object.<anonymous> (src/i18n/__tests__/proofreading.test.ts:31:28)
+
+  ● The planner's slot names its busy people by their number (T-258) › English and German have one word for any number
+
+    TypeError: en.smartPlanner.busyPrefix is not a function
+      at Object.<anonymous> (src/i18n/__tests__/proofreading.test.ts:38:28)
+
+  ● The onboarding says "по коду" once (T-258) › Russian joins a project "По приглашению"
+
+    Expected: "«+» → «Создать проект». По приглашению: «Проекты» → «Присоединиться по коду»"
+    Received: "«+» → «Создать проект». По коду: «Проекты» → «Присоединиться по коду»"
+      at Object.<anonymous> (src/i18n/__tests__/proofreading.test.ts:48:8)
+
+  ● German counts one more busy person as iOS does: "und 1 weiterer" (T-258) › one and more
+
+    Expected: "und 1 weiterer"
+    Received: "und 1 weitere"
+      at Object.<anonymous> (src/i18n/__tests__/proofreading.test.ts:56:38)
+
+Test Suites: 1 failed, 146 passed, 147 total
+Tests:       4 failed, 1463 passed, 1467 total
+
+(busyPrefix was the string 'Заняты' / 'Busy' / 'Ocupados' / 'Beschäftigt' for any number.)

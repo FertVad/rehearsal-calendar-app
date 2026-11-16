@@ -44,7 +44,6 @@ jest.mock('../../services/api', () => ({
     createOrUpdateConnection: jest.fn((...args: unknown[]) => mockRequest('connections:create')(...args)),
     createOrUpdateMapping: jest.fn((...args: unknown[]) => mockRequest('mappings:create')(...args)),
     deleteMappingByEvent: jest.fn((...args: unknown[]) => mockRequest('mappings:delete')(...args)),
-    deleteMappings: jest.fn((...args: unknown[]) => mockRequest('mappings:delete-all')(...args)),
   },
 }));
 
@@ -66,7 +65,6 @@ jest.mock('../../utils/calendarStorage', () => ({
   getEventMapping: jest.fn(() => Promise.resolve(null)),
   removeEventMapping: jest.fn(() => Promise.resolve()),
   getAllMappings: jest.fn(() => Promise.resolve({})),
-  clearAllMappings: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -74,7 +72,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(() => Promise.resolve()),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const calendarStorage = require('../../utils/calendarStorage');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));

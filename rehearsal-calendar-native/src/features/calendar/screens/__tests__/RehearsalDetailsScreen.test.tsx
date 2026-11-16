@@ -244,9 +244,9 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     await settle();
 
     const [title, message, buttons] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
-    expect(title).toBe('Delete “Act I run-through”, Thu, Jan 10, 18:00?');
+    expect(title).toBe('Delete “Act I run-through” (Thu, Jan 10, 18:00)?');
     // Everyone on it but whoever deletes it: the other actor.
-    expect(message).toBe('Participants (1) will be notified');
+    expect(message).toBe('1 participant will be notified');
     expect(buttons.map((b: any) => [b.text, b.style])).toEqual([['Cancel', 'cancel'], ['Delete', 'destructive']]);
   });
 
@@ -296,15 +296,15 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     const [title, message, buttons] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
     expect(title).toBe('Error');
     expect(message).toBe(translations.en.rehearsals.deleteNotifiedUnknown);
-    expect(buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Try again']);
+    expect(buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Try Again']);
     expect(buttons.some((b: any) => b.style === 'destructive')).toBe(false);
 
     await act(async () => { buttons[1].onPress(); });
     await settle();
 
     const [title2, message2] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
-    expect(title2).toBe('Delete “Act I run-through”, Thu, Jan 10, 18:00?');
-    expect(message2).toBe('Participants (1) will be notified');
+    expect(title2).toBe('Delete “Act I run-through” (Thu, Jan 10, 18:00)?');
+    expect(message2).toBe('1 participant will be notified');
   });
 
   it('keeps the details when a read again fails, and takes the next one (review)', async () => {
@@ -350,6 +350,20 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     await settle();
 
     expect(screen.getByText(translations.en.rehearsals.notFound)).toBeTruthy();
+  });
+
+  // Opened with no connection, it said "not found": a failed read kept as
+  // true could only say that (T-228, review 2).
+  it.each([
+    ['no connection', { isAxiosError: true, code: 'ERR_NETWORK', request: {} }, translations.en.common.noConnection],
+    ['the server down', { isAxiosError: true, response: { status: 503, data: {} } }, translations.en.common.serverUnavailable],
+  ])('says why it could not open with %s, not "not found" (T-228)', async (_, error, said) => {
+    answer('no');
+    (rehearsalsAPI.getById as jest.Mock).mockReset().mockRejectedValue(error);
+    const screen = await open();
+
+    expect(screen.getByText(said)).toBeTruthy();
+    expect(screen.queryByText(translations.en.rehearsals.notFound)).toBeNull();
   });
 
   it('gives an actor neither', async () => {

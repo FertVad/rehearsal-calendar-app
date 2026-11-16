@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { failureExcerpt, flakeName, flakeTask, insertAfter, insertBefore, nextFlakeId } from '../lib/flakes.mjs';
+import { failureExcerpt, flakeName, flakeTask, flakeTitle, isFoundTask, nextFlakeId, queueFound } from '../lib/flakes.mjs';
+import { regressionTitle } from '../lib/nightly.mjs';
 import { parseTasks } from '../lib/store.mjs';
 
 // The tails the checks really gave on 2026-10-10.
@@ -59,13 +60,14 @@ const QUEUE = `# Очередь
 Тело R3.
 `;
 
-test('a flaky test is queued right after the task it hit, with an id of its own', () => {
+test('a flaky test is queued with an id of its own and what failed', () => {
   const id = nextFlakeId(QUEUE);
   assert.equal(id, 'T-201');
   const block = flakeTask({ id, task: { id: 'T-109' }, head: '712995b7296e', steps: [{ name: 'tests', code: 1, tail: jest }],
     evidence: 'Логи красного прогона — rehearsal-calendar-native/e2e/out/failed/T-109-x/', when: '10.10.2026, 10:05' });
-  const queue = insertAfter(QUEUE, 'T-109', block);
-  assert.deepEqual(parseTasks(queue).map((task) => task.id), ['T-108', 'T-109', 'T-201', 'T-130']);
+  const waiting = parseTasks(QUEUE).filter((task) => task.id === 'T-130');
+  const queue = queueFound(QUEUE, waiting, block);
+  assert.deepEqual(parseTasks(queue).map((task) => task.id), ['T-108', 'T-109', 'T-130', 'T-201']);
   const flake = parseTasks(queue).find((task) => task.id === 'T-201');
   assert.match(flake.title, /^Нестабильный тест: Route authorization/);
   assert.match(flake.body, /712995b/);
@@ -75,10 +77,6 @@ test('a flaky test is queued right after the task it hit, with an id of its own'
   assert.equal(nextFlakeId(queue), 'T-202');
 });
 
-test('after the last task, a flaky test goes to the end', () => {
-  const queue = insertAfter(QUEUE, 'T-130', '## T-201 Нестабильный тест: x\n\nТело.\n');
-  assert.deepEqual(parseTasks(queue).map((task) => task.id), ['T-108', 'T-109', 'T-130', 'T-201']);
-});
 
 test('an e2e run that failed before any flow is named by what it said', () => {
   const tail = '[e2e] starting Metro, pointed at the local server\n[e2e] checking the bundle talks to the local server\n[e2e] fetch failed';
@@ -96,9 +94,49 @@ test('a flaky flow from the full run says where it came from and names its flows
   assert.match(task.body, /- e2e\/flows\/36-inbox-late-read\.yaml — Inbox late read after mark all/);
 });
 
-test('a task found between tasks goes before the first one not started', () => {
+// Owner, 07.11.2026: «обнаруженные баги поставь в очередь первыми». T-234, a
+// flaky flow found in T-229's checks, was queued right after T-229 and taken
+// at once, ahead of T-232 and T-233 — bugs he had found in the app.
+const WAITING = `# Очередь
+
+## T-229 Роль в проекте устаревает
+a
+
+## T-232 Админ видит в «Все проекты» все репетиции
+b
+
+## T-233 Добавленным в состав приходит уведомление
+c
+
+## T-231 Нестабильный тест: Details and the card read one seen mark
+d
+
+## T-230 Полный e2e красный: Switch accounts
+e
+
+## T-227 e2e собирает тот iOS-проект, что уйдёт в App Store
+f
+`;
+
+test('a task the supervisor found waits behind the tasks people queued, ahead of its own still waiting', () => {
+  const waiting = parseTasks(WAITING).filter((task) => task.id !== 'T-229');
+  const queue = queueFound(WAITING, waiting, '## T-234 Нестабильный тест: Details count\n\ng\n');
+  assert.deepEqual(parseTasks(queue).map((task) => task.id), ['T-229', 'T-232', 'T-233', 'T-234', 'T-231', 'T-230', 'T-227']);
+  assert.equal(parseTasks(queue).find((task) => task.id === 'T-233').body, 'c');
+});
+
+test('with none of its own waiting, a found task goes after every task people queued', () => {
   const queue = '# Очередь\n\n## T-120 Done one\n\nx\n\n## T-122 Next\n\ny\n';
-  const ids = parseTasks(insertBefore(queue, 'T-122', '## T-209 Red\n\nz\n')).map((task) => task.id);
-  assert.deepEqual(ids, ['T-120', 'T-209', 'T-122']);
+  const waiting = parseTasks(queue).filter((task) => task.id === 'T-122');
+  const ids = parseTasks(queueFound(queue, waiting, '## T-209 Полный e2e красный: x\n\nz\n')).map((task) => task.id);
+  assert.deepEqual(ids, ['T-120', 'T-122', 'T-209']);
+});
+
+test('the supervisor knows its own tasks by the titles it gives them', () => {
+  assert.equal(isFoundTask(flakeTitle([{ name: 'tests', tail: jest }])), true);
+  assert.equal(isFoundTask(regressionTitle([{ name: 'Switch accounts' }])), true);
+  assert.equal(isFoundTask(regressionTitle([])), true);
+  assert.equal(isFoundTask('Админ видит в «Все проекты» все репетиции своих проектов'), false);
+  assert.equal(isFoundTask('e2e собирает тот iOS-проект, что уйдёт в App Store'), false);
 });
 

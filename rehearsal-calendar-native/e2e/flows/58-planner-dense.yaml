@@ -1,11 +1,10 @@
 # The planner's list, denser (T-020; owner, 30.10.2026, on the UX audit of
 # 29.10): a day's header is 28 pt and a slot's row 52 (56 until T-026, owner
-# 02.11; "+ Add" in it stays 44). A day of one slot took 167 pt, and a week
-# four screens. The project, the period and the people
-# are one row of 44 pt, "Three Sisters ▾ · Week ▾ · Participants: all (3) ▾",
-# each opening its own choice: the three took 232 pt above the list, and the
-# first recommendation began at y=435 of the 852 (479 in the audit, before the
-# participants were one row; audit/evidence/T-020).
+# 02.11; its "+" in it 44 a side). A day of one slot took 167 pt, and a week
+# four screens. The project, the period and the people were one row of 44 pt
+# (T-020), and cut in it in every language; they are one under another now:
+# the project's name, Week | Month | Dates, the people by their faces (owner,
+# 09.11; T-241, flow 59).
 #
 # The planner is a tab's first screen, with the large title "Planner" the other
 # tabs have and the row right under it; it had a "←" back to the calendar and
@@ -62,11 +61,7 @@ tags:
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 58-planner-first-screen
-# Maestro matches an element's size: 28 and 52 pt, the row 44.
-- assertVisible:
-    id: planner-filters
-    height: 44
-    tolerance: 1
+# Maestro matches an element's size: 28 and 52 pt.
 - assertVisible:
     id: planner-day-${TOMORROW_DAY}
     height: 28
@@ -75,38 +70,34 @@ tags:
     id: planner-row-${TOMORROW_DAY}-09:00
     height: 52
     tolerance: 1
-# The period: its three, and the one picked names it in the row.
-- runFlow:
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP_ID: planner-period
-      SEE: "Select Dates"
-      WAIT_MS: "5000"
+# The period: its three segments in sight, the picked one selected, a tap each.
 - assertVisible:
     id: planner-period-week
     selected: true
+- assertVisible:
+    id: planner-period-custom
+    text: "Dates"
 - takeScreenshot: 58-period-choice
 - tapOn:
     id: planner-period-month
 - extendedWaitUntil:
     visible:
-      id: planner-period
-      text: "Month.*"
+      id: planner-period-month
+      selected: true
     timeout: 10000
-- assertNotVisible:
+- assertVisible:
     id: planner-period-week
+    selected: false
 - extendedWaitUntil:
     visible:
       id: planner-slot-${TOMORROW_DAY}
     timeout: 30000
 - tapOn:
-    id: planner-period
-- tapOn:
     id: planner-period-week
 - extendedWaitUntil:
     visible:
-      id: planner-period
-      text: "Week.*"
+      id: planner-period-week
+      selected: true
     timeout: 10000
 # The project: the director's projects, and the one picked stays.
 - runFlow:

@@ -1,0 +1,18 @@
+{
+  "task": "T-229",
+  "base": "228c00a",
+  "sourceCommit": "e595b6a177bd1c6363892b9b05982209cd0d3cf6",
+  "sourceTree": "e33d739b25b143621644f6e3e8267ec719e7017c",
+  "changedAppFiles": {
+    "rehearsal-calendar-native/src/contexts/ProjectContext.tsx": "564d65aefddf181b21f53ad4906df3b45e1d8ab16ac5b50e54093efc0914a4b9",
+    "rehearsal-calendar-native/src/features/projects/screens/ProjectsScreen.tsx": "4e50af0d4d39d6092271a9a41e5babebb13152f508b2e759d00db342b00a7db9",
+    "rehearsal-calendar-native/src/shared/hooks/useNotifications.ts": "55c800b51140849cc590469beaa0f0314ae0fae26cf533c82b32eea819d79371",
+    "rehearsal-calendar-native/src/shared/services/api.ts": "b15457160b2bd7c587c46593b82b30b671ba2271be0275042d764f9e6b16335e",
+    "rehearsal-calendar-native/src/shared/utils/dataChanged.ts": "45184a8173f9bea68e6e7333db4faab93f931a5ba1b83bb1999b3f96ffc7377c"
+  },
+  "flows": {
+    "rehearsal-calendar-native/e2e/flows/75-role-given-by-push.yaml": "452321b0179e1882422fdfddaf783e9e0dbf91cde2c711c021c134135b29d375",
+    "rehearsal-calendar-native/e2e/flows/76-role-given-on-return.yaml": "5b33c99ee43e17e06911fded4d9ce8dd27267395ff3cb39e7ab5302e4cc1fdb3"
+  },
+  "logs": ["red-before.txt", "green-after.txt"]
+}

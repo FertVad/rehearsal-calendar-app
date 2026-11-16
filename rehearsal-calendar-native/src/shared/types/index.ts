@@ -40,6 +40,9 @@ export interface Rehearsal {
     actorNameSnapshot?: string[];
     createdAt?: string | Date;
     updatedAt?: string | Date;
+    /** False when the reader sees it (an admin of its project) without being
+     *  on it: nothing to mark, nothing to export (T-232). */
+    onRoster?: boolean;
     // RSVP data
     myResponse?: UserResponse;
     responseStats?: ResponseStats;

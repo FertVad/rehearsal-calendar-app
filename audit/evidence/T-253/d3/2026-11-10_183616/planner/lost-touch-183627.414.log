@@ -1,0 +1,154 @@
+# 2026-11-10_183616/planner/logs/device-simulator.log, lines 45-197: the touch at 274, 802 (18:36:27.414)
+45: }
+46: lift touch:{
+47:     1 = "<_XCSynthesizedPointerEvent: 0x107216840> {274, 802}";
+48: }
+49: 2026-11-10 06:36:27.410599-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Recap event action playback initiated
+50: 2026-11-10 18:36:27.414110+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:default] Connection added: IOHIDEventSystemConnection uuid:B27023E9-AE6F-4EC4-ADD4-DD5F64A77058 pid:99218 process:testmanagerd type:Simple entitlements:0x1c caller:HID: -[HIDEventSystemClient initWithType:andAttributes:] + 96 attributes:(null) state:0x0 events:0 mask:0x0 dropped:0 dropStatus:0 droppedMask:0x0 lastDroppedTime:NONE
+51: 2026-11-10 18:36:27.415171+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:connection] B27023E9-AE6F-4EC4-ADD4-DD5F64A77058: HIDVS ID:101ac320000aa create
+52: 2026-11-10 18:36:27.416301+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:default] Add filter:IOHIDServiceFilter uuid:C2A8DFB4-6A07-48BB-B950-14446150C06F name:com.apple.iokit.hid.IOHIDEventProcessorFilter  for service:0x101ac320000aa
+53: 2026-11-10 18:36:27.418182+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:default] Service added: IOHIDService name: id:0x101ac320000aa primaryUsagePage:0xd primaryUsage:0x4 transport:Recap locationID:recap-bus-0 reportInterval:0 batchInterval:0 events:0 mask:0x0 sensorcontrols:7
+54: 2026-11-10 18:36:27.419311+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:connection] 92631E7C-C4EA-4BF0-ADB4-4A60CB3F9450: iohideventsystem_client_dispatch_notification_results:0x10000004
+55: 2026-11-10 06:36:27.425257-1000  localhost testmanagerd[99218]: (Recap) [com.apple.recap:Playback] new virtual service <RCPVirtualHIDService: 0x103a20780> (recapulon) 0x0D/0x04: (Recap) touchscreen digitizer
+56: 2026-11-10 18:36:27.425707+0200  localhost backboardd[96859]: (BackBoardHIDEventFoundation) [com.apple.BackBoard:HID] unknown senderID: 0x101AC320000AA
+57: 2026-11-10 18:36:27.426317+0200  localhost backboardd[96859]: (BackBoardHIDEventFoundation) [com.apple.BackBoard:HID] cache sender info for senderID:101AC320000AA -- BKIOHIDService
+58: 2026-11-10 18:36:27.426447+0200  localhost backboardd[96859]: (BackBoardHIDEventFoundation) [com.apple.BackBoard:HID] we already have a service for senderID:101AC320000AA
+59: 2026-11-10 18:36:27.426519+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] digitizer attached (sender 101AC320000AA) service:<BKIOHIDService: 0x10dd22680; serviceStatus: matched; IOHIDService: IOHIDService name: id:0x101ac320000aa primaryUsagePage:0xd primaryUsage:0x4 transport:Recap locationID:recap-bus-0 reportInterval:0 batchInterval:0 events:1 mask:0x800 sensorcontrols:7; senderID: 0x101AC320000AA; displayUUID: 0x0; eventSource: builtin; primaryUsagePage: 0xD; primaryUsage: 0x4; authenticated: YES; builtIn: YES>
+60: 2026-11-10 18:36:27.428577+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] *** already have a main display digitizer
+61: 2026-11-10 18:36:27.428590+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] service 101AC320000AA setProperty:480 forKey:QuantizationDPI
+62: 2026-11-10 18:36:27.428751+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] service 101AC320000AA restore persistent props {
+63:     GraphicsOrientation = 1;
+64: }
+65: 2026-11-10 18:36:27.429232+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] init: <BKDirectTouchState: 0x1086bbc60; touchScreen; builtin; senderID: 0x101AC320000AA; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>
+66: 2026-11-10 18:36:27.429334+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] *** unknown digitizer <BKIOHIDService: 0x10dd22900; serviceStatus: <unknown>; IOHIDService: IOHIDService name: id:0x101ac320000aa primaryUsagePage:0xd primaryUsage:0x4 transport:Recap locationID:recap-bus-0 reportInterval:0 batchInterval:0 events:1 mask:0x800 sensorcontrols:7; senderID: 0x101AC320000AA; displayUUID: 0x0; eventSource: builtin; primaryUsagePage: 0xD; primaryUsage: 0x4; authenticated: YES; builtIn: YES> -- initializing now
+67: 2026-11-10 18:36:27.429357+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] service 101AC320000AA setProperty:480 forKey:QuantizationDPI
+68: 2026-11-10 18:36:27.429459+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] service 101AC320000AA restore persistent props {
+69:     GraphicsOrientation = 1;
+70: }
+71: 2026-11-10 18:36:27.429659+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] init: <BKDirectTouchState: 0x1086ba4c0; touchScreen; builtin; senderID: 0x101AC320000AA; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>
+72: 2026-11-10 18:36:27.429958+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] touch down without previous range event: 2
+73: 2026-11-10 18:36:27.430041+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] contact 2 presence: touching
+74: 2026-11-10 18:36:27.430084+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] Touch entered (insideExclusive) <BKSHitTestRegion: 0x1079666f0; {{0, 0}, {393, 852}}; exclusive: {{0, 0}, {393, 852}}>
+75: 2026-11-10 18:36:27.439469+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+76: 2026-11-10 18:36:27.439569+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+77: 2026-11-10 06:36:27.440216-1000  localhost AutomationModeUI[99251]: [com.apple.dt.AutomationModeUI:Default] Notifying delegate that user interaction (non-synthetic events) began.
+78: 2026-11-10 06:36:27.440265-1000  localhost AutomationModeUI[99251]: [com.apple.dt.AutomationModeUI:Default] User did become active, updating UI, fading overlay for main display
+79: 2026-11-10 18:36:27.441992+0200  localhost backboardd[96859]: (AttentionAwareness) [com.apple.AttentionAwareness:AttentionAwareness] 2138708.16668: notify client com.apple.siri.AttentionAwareness.Touch of <AWDigitizerButtonKeyboardAttentionEvent: 0x108748000> (timestamp: 2138708.15027 sender 4435868512 displayUUID (null) tagIndex 0 (tag not present in server))
+80: 2026-11-10 18:36:27.442346+0200  localhost backboardd[96859]: (AttentionAwareness) [com.apple.AttentionAwareness:AttentionAwareness] 2138708.16726: notify client com.apple.SpringBoard.HomeGrabberView-1 of <AWDigitizerButtonKeyboardAttentionEvent: 0x10874bd00> (timestamp: 2138708.15027 sender 4435868512 displayUUID (null) tagIndex 0 (tag not present in server))
+81: 2026-11-10 18:36:27.442479+0200  localhost backboardd[96859]: (AttentionAwareness) [com.apple.AttentionAwareness:AttentionAwareness] 2138708.16739: notify client com.apple.SpringBoard.HomeGrabberView-2 of <AWDigitizerButtonKeyboardAttentionEvent: 0x10874bdc0> (timestamp: 2138708.15027 sender 4435868512 displayUUID (null) tagIndex 0 (tag not present in server))
+82: 2026-11-10 18:36:27.442538+0200  localhost backboardd[96859]: (AttentionAwareness) [com.apple.AttentionAwareness:AttentionAwareness] 2138708.16745: notify client com.apple.SpringBoard.HomeGrabberView-3 of <AWDigitizerButtonKeyboardAttentionEvent: 0x108748480> (timestamp: 2138708.15027 sender 4435868512 displayUUID (null) tagIndex 0 (tag not present in server))
+83: 2026-11-10 18:36:27.442581+0200  localhost backboardd[96859]: (AttentionAwareness) [com.apple.AttentionAwareness:AttentionAwareness] 2138708.16750: notify client com.apple.SpringBoard.HomeGrabberView-4 of <AWDigitizerButtonKeyboardAttentionEvent: 0x10874a0c0> (timestamp: 2138708.15027 sender 4435868512 displayUUID (null) tagIndex 0 (tag not present in server))
+84: 2026-11-10 18:36:27.442616+0200  localhost backboardd[96859]: (AttentionAwareness) [com.apple.AttentionAwareness:AttentionAwareness] 2138708.16753: notify client com.apple.SpringBoard.HomeGrabberView-7 of <AWDigitizerButtonKeyboardAttentionEvent: 0x1087498c0> (timestamp: 2138708.15027 sender 4435868512 displayUUID (null) tagIndex 0 (tag not present in server))
+85: 2026-11-10 18:36:27.444709+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+86: 2026-11-10 06:36:27.447525-1000  localhost Rehearsly[4154]: (UIKitCore) [com.apple.KeyboardArbiter:Client] TX focusApplication (peekAppEvent) stealKB:Y scene:com.rehearsal.app-default
+87: 2026-11-10 06:36:27.448056-1000  localhost Rehearsly[4154]: (UIKitCore) [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x1061ee500; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+88: 2026-11-10 06:36:27.448153-1000  localhost Rehearsly[4154]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+89: 2026-11-10 06:36:27.448209-1000  localhost Rehearsly[4154]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <UIWindow: 0x1061bc400>; contextId: 0x7E45762D
+90: 2026-11-10 18:36:27.448337+0200  localhost SpringBoard[96838]: (KeyboardArbiter) [com.apple.KeyboardArbiter:Handle] RX com.rehearsal.app(4154) focusApplicationWithPID:4154 stealKeyboard:Y
+91:     context:<contextID:2118481453 sceneID:com.rehearsal.app-default>
+92: 2026-11-10 18:36:27.460894+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+93: 2026-11-10 18:36:27.464332+0200  localhost SpringBoard[96838]: (UIKitCore) [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x115cec600; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+94: 2026-11-10 18:36:27.464478+0200  localhost SpringBoard[96838]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+95: 2026-11-10 18:36:27.464509+0200  localhost SpringBoard[96838]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <_UISystemGestureWindow: 0x10465a800>; contextId: 0x155E262E
+96: 2026-11-10 18:36:27.469290+0200  localhost SpringBoard[96838]: (UIKitCore) Created Activity ID: 0xa787c87, Description: send gesture actions
+97: 2026-11-10 18:36:27.469698+0200  localhost SpringBoard[96838]: (SpringBoard) [com.apple.SpringBoard:InputUI] Focused scene identity did change to: (null)
+98: 2026-11-10 18:36:27.477740+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+99: 2026-11-10 18:36:27.493089+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+100: 2026-11-10 18:36:27.511172+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+101: 2026-11-10 18:36:27.527210+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+102: 2026-11-10 18:36:27.544307+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+103: 2026-11-10 06:36:27.544251-1000  localhost testmanagerd[99218]: (Recap) [com.apple.recap:Playback] sent analytics event
+104: 2026-11-10 18:36:27.544423+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+105: 2026-11-10 18:36:27.642920+0200  localhost backboardd[96859]: (AttentionAwareness) [com.apple.AttentionAwareness:AttentionAwareness] 2138708.36780: notify client com.apple.siri.AttentionAwareness.Touch of <AWAttentionLostEvent: 0x10874a2c0> (timestamp: 2138708.36778 attentionLostTimeout       0.10000 tagIndex 0 (tag not present in server))
+106: 2026-11-10 06:36:27.649564-1000  localhost testmanagerd[99218]: (Recap) [com.apple.recap:Playback] service canceled: (<RCPVirtualHIDService: 0x103a20780> (recapulon) 0x0D/0x04: (Recap) touchscreen digitizer)
+107: 2026-11-10 06:36:27.649794-1000  localhost testmanagerd[99218]: (IOKit) [com.apple.iohid:oversized] Released connection: B27023E9-AE6F-4EC4-ADD4-DD5F64A77058
+108: {
+109:     UUID = "B27023E9-AE6F-4EC4-ADD4-DD5F64A77058";
+110:     caller = "HID: -[HIDEventSystemClient initWithType:andAttributes:] + 96";
+111:     dispatchQueue = 1;
+112:     eventCount = 0;
+113:     eventMask = 0;
+114:     eventQueue =     {
+115:         active = 0;
+116:         droppedEvents = 0;
+117:         head = 0;
+118:         lastNotifyEventTimeStamp = 0;
+119:         lastNotifyTime = 0;
+120:         notificationCount = 0;
+121:         size = 32768;
+122:         suspended = 0;
+123:         tail = 0;
+124:     };
+125:     port = 25383;
+126:     resetCount = 0;
+127:     runloop = 0;
+128:     services =     (
+129:     );
+130:     virtualServices =     (
+131:         283314061574314
+132:     );
+133: }
+134: 2026-11-10 18:36:27.650046+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:default] Connection removed: IOHIDEventSystemConnection uuid:B27023E9-AE6F-4EC4-ADD4-DD5F64A77058 pid:99218 process:testmanagerd type:Simple entitlements:0x1c caller:HID: -[HIDEventSystemClient initWithType:andAttributes:] + 96 attributes:(null) state:0x3 events:0 mask:0x0 dropped:0 dropStatus:0 droppedMask:0x0 lastDroppedTime:NONE
+135: 2026-11-10 18:36:27.650292+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] digitizer detached (sender 101AC320000AA) builtIn:1
+136: 2026-11-10 18:36:27.650360+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] cancel -- digitizer did disappear:<BKDirectTouchState: 0x1086bbc60; touchScreen; builtin; senderID: 0x101AC320000AA; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>
+137: 2026-11-10 18:36:27.650331+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:connection] B27023E9-AE6F-4EC4-ADD4-DD5F64A77058: HIDVS ID:101ac320000aa iohideventsystem_client_dispatch_virtual_service_notification:10000003
+138: 2026-11-10 18:36:27.650595+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] invalidate: <BKDirectTouchState: 0x1086bbc60; touchScreen; builtin; senderID: 0x101AC320000AA; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>
+139: 2026-11-10 18:36:27.650750+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:connection] B27023E9-AE6F-4EC4-ADD4-DD5F64A77058: HIDVS ID:101ac320000aa iohideventsystem_client_dispatch_virtual_service_notification:10000003
+140: 2026-11-10 18:36:27.650888+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] digitizer detached (sender 101AC320000AA) builtIn:1
+141: 2026-11-10 18:36:27.650978+0200  localhost backboardd[96859]: (IOKit) [com.apple.iohid:default] Service removed: IOHIDService name: id:0x101ac320000aa primaryUsagePage:0xd primaryUsage:0x4 transport:Recap locationID:recap-bus-0 reportInterval:0 batchInterval:0 events:12 mask:0x801 sensorcontrols:7 {
+142:     Digitizer = 11;
+143:     NULL = 1;
+144: }
+145: 2026-11-10 18:36:27.651164+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] cancel -- digitizer did disappear:<BKDirectTouchState: 0x1086ba4c0; touchScreen; builtin; senderID: 0x101AC320000AA; contacts: contacts: [pathIndex: 2; touchIdentifier: 133; touching; locked; destinations: ((hitTest); contextID: 0x7E45762D; clientPort: 0x2374B; inheritedSceneHostSettings: <identifier: sceneID:com.rehearsal.app-default; touchBehavior: foreground>, (touchStream|filterDetachedTouches); contextID: 0x155E262E; clientPort: 0x5013)]; destinations: [<BKTouchDestination: 0x10dd08c00; (hitTest); contextID: 0x7E45762D; clientPort: 0x2374B; inheritedSceneHostSettings: <identifier: sceneID:com.rehearsal.app-default; touchBehavior: foreground>; externalReferences: 1>, <BKTouchDestination: 0x10dd0ab20; (hitTest); contextID: 0x9DCBFD0C; clientPort: 0x5013; externalReferences: 1>, <BKTouchDestination: 0x10dd09410; (hitTest); contextID: 0x8CD76AE7; clientPort: 0x5013; externalReferences: 1>]; latentSystemGestureDestinations: ()>
+146: 2026-11-10 18:36:27.651479+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] invalidate: <BKDirectTouchState: 0x1086ba4c0; touchScreen; builtin; senderID: 0x101AC320000AA; contacts: contacts: [pathIndex: 2; touchIdentifier: 133; touching; locked; destinations: ((hitTest); contextID: 0x7E45762D; clientPort: 0x2374B; inheritedSceneHostSettings: <identifier: sceneID:com.rehearsal.app-default; touchBehavior: foreground>, (touchStream|filterDetachedTouches); contextID: 0x155E262E; clientPort: 0x5013)]; destinations: [<BKTouchDestination: 0x10dd08c00; (hitTest); contextID: 0x7E45762D; clientPort: 0x2374B; inheritedSceneHostSettings: <identifier: sceneID:com.rehearsal.app-default; touchBehavior: foreground>; externalReferences: 1>, <BKTouchDestination: 0x10dd0ab20; (hitTest); contextID: 0x9DCBFD0C; clientPort: 0x5013; externalReferences: 1>, <BKTouchDestination: 0x10dd09410; (hitTest); contextID: 0x8CD76AE7; clientPort: 0x5013; externalReferences: 1>]; latentSystemGestureDestinations: ()>
+147: 2026-11-10 18:36:27.651704+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] canceling paths contacts: [pathIndex: 2; touchIdentifier: 133; touching; locked; destinations: ((hitTest); contextID: 0x7E45762D; clientPort: 0x2374B; inheritedSceneHostSettings: <identifier: sceneID:com.rehearsal.app-default; touchBehavior: foreground>, (touchStream|filterDetachedTouches); contextID: 0x155E262E; clientPort: 0x5013)] -- HID (ts:(null))
+148: 2026-11-10 18:36:27.651951+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] not removing destination (external): <BKTouchDestination: 0x10dd08c00; (hitTest); contextID: 0x7E45762D; clientPort: 0x2374B; inheritedSceneHostSettings: <identifier: sceneID:com.rehearsal.app-default; touchBehavior: foreground>; externalReferences: 1>
+149: 2026-11-10 18:36:27.652148+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] not removing destination (external): <BKTouchDestination: 0x10dd0ab20; (hitTest); contextID: 0x9DCBFD0C; clientPort: 0x5013; externalReferences: 1>
+150: 2026-11-10 18:36:27.652294+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] not removing destination (external): <BKTouchDestination: 0x10dd09410; (hitTest); contextID: 0x8CD76AE7; clientPort: 0x5013; externalReferences: 1>
+151: 2026-11-10 18:36:27.652404+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] not removing destination (external): <BKTouchDestination: 0x107961b30; (touchStream|filterDetachedTouches); contextID: 0x155E262E; clientPort: 0x5013; externalReferences: 1>
+152: 2026-11-10 18:36:27.652796+0200  localhost SpringBoard[96838]: (UIKitCore) [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x115cec600; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+153: 2026-11-10 18:36:27.650926+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] touchstats 101AC320000AA-<main> events starting 0.211429s ago: [averageProcessingTime (µs): 42.49]
+154: 2026-11-10 06:36:27.652965-1000  localhost Rehearsly[4154]: (UIKitCore) [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x1061ee500; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+155: 2026-11-10 18:36:27.653039+0200  localhost SpringBoard[96838]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+156: 2026-11-10 18:36:27.650383+0200  localhost backboardd[96859]: (BackBoardHIDEventFoundation) [com.apple.BackBoard:HID] purge sender info for senderID:101AC320000AA -- BKIOHIDService
+157: 2026-11-10 06:36:27.653173-1000  localhost Rehearsly[4154]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+158: 2026-11-10 18:36:27.653102+0200  localhost SpringBoard[96838]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <_UISystemGestureWindow: 0x10465a800>; contextId: 0x155E262E
+159: 2026-11-10 18:36:27.652664+0200  localhost backboardd[96859]: [com.apple.BackBoard:TouchEvents] touchstats 101AC320000AA-<main> events starting 0.222819s ago: [
+160:     down: 1,
+161:     up: 1,
+162:     rangeIn: 1,
+163:     rangeOut: 1,
+164:     soft cancel: 1,
+165:     pathsSeen: 2,
+166:     destinations: {
+167:         Rehearsly.4154 contextID 7E45762D: {
+168:             touchIDs: 85;
+169:         };
+170:     },
+171:     averageProcessingTime (µs): 9374.02
+172: ]
+173: 2026-11-10 06:36:27.653224-1000  localhost Rehearsly[4154]: (UIKitCore) [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <UIWindow: 0x1061bc400>; contextId: 0x7E45762D
+174: 2026-11-10 18:36:27.652817+0200  localhost backboardd[96859]: (HIDAnalytics) HIDAnalytics Unregister Send event com.apple.hid.queueUsage
+175: 2026-11-10 18:36:27.653358+0200  localhost backboardd[96859]: (HIDAnalytics) HIDAnalytics Unregister Send event com.apple.hid.analytics.service
+176: 2026-11-10 18:36:27.653574+0200  localhost backboardd[96859]: (HIDAnalytics) HIDAnalytics Unregister Send event com.apple.hid.analytics.service.dispatchEvent
+177: 2026-11-10 06:36:27.654525-1000  localhost Rehearsly[4154]: (UIKitCore) Created Activity ID: 0xa787299, Description: send gesture actions
+178: 2026-11-10 06:36:27.656523-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Handling kAXUserTestingNotification from AX element pid: 4154, elementOrHash.elementID: 0.1 (0x103a20690)
+179: 2026-11-10 06:36:27.656692-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Got user testing notification with payload {
+180:     event = TouchEventsCompleted;
+181: }
+182: 2026-11-10 06:36:27.656700-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Calling handler for AX notification kAXUserTestingNotification from AX element pid: 4154, elementOrHash.elementID: 0.1 with payload {
+183:     event = TouchEventsCompleted;
+184: }
+185: 2026-11-10 06:36:27.657906-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Event 
+186: <XCSynthesizedEventRecord 'Single-Finger Touch Action display 0'>
+187: Path 1:
+188: 	Touch down at 274.0, 802.0, offset=0.00s
+189: 	Touch up at 274.0, 802.0, offset=0.10s confirmed by TouchEventsCompleted.
+190: 2026-11-10 06:36:27.658621-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Handling kAXUserTestingNotification from AX element pid: 96838, elementOrHash.elementID: 0.1 (0x103a20690)
+191: 2026-11-10 06:36:27.658798-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Calling handler for AX notification kAXUserTestingNotification from AX element pid: 96838, elementOrHash.elementID: 0.1 with payload {
+192:     event = TouchEventsCompleted;
+193: }
+194: 2026-11-10 06:36:27.658824-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Got user testing notification with payload {
+195:     event = TouchEventsCompleted;
+196: }
+197: 2026-11-10 06:36:27.750054-1000  localhost testmanagerd[99218]: [com.apple.dt.xctest:Default] Recap event action playback completed

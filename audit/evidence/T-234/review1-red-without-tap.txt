@@ -1,0 +1,22 @@
+Flow 38 with its post-restart profile-tab tap skipped (the tap-and-see runFlow
+given `when: true: ${false}` for this run only, then removed):
+
+$ npm run e2e -- e2e/flows/38-switch-account-push-answer-late.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Switch accounts - a push registration answered late (2m 28s) (No visible element found: id: profile-notifications)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The same failure as the supervisor's red run: "No visible element found: id:
+profile-notifications".

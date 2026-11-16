@@ -5,6 +5,7 @@
  */
 import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import { AxiosError } from 'axios';
 import { useAddRehearsalSubmit } from '../useAddRehearsalSubmit';
 import { rehearsalsAPI } from '../../../../shared/services/api';
 import { checkSchedulingConflicts } from '../../../../shared/utils/conflictDetection';
@@ -57,6 +58,7 @@ describe('useAddRehearsalSubmit Hook', () => {
   const mockT = {
     common: {
       error: 'Error',
+      noConnection: 'No connection',
       cancel: 'Cancel',
     },
     rehearsals: {
@@ -446,9 +448,10 @@ describe('useAddRehearsalSubmit Hook', () => {
   });
 
   describe('Error Handling', () => {
+    // No answer: the connection, in the app's words, not axios's (T-228).
     it('should show error alert on creation failure', async () => {
       (rehearsalsAPI.create as jest.Mock).mockRejectedValue(
-        new Error('Network error')
+        new AxiosError('Network Error', 'ERR_NETWORK', undefined, {})
       );
 
       const { result } = renderHook(() =>
@@ -461,7 +464,7 @@ describe('useAddRehearsalSubmit Hook', () => {
 
       expect(Alert.alert).toHaveBeenCalledWith(
         'Error',
-        'Network error'
+        'No connection'
       );
       expect(result.current.loading).toBe(false);
     });
@@ -508,7 +511,7 @@ describe('useAddRehearsalSubmit Hook', () => {
 
       expect(Alert.alert).toHaveBeenCalledWith(
         'Error',
-        'Update failed'
+        'Failed to update'
       );
     });
   });
@@ -681,6 +684,40 @@ describe('useAddRehearsalSubmit Hook', () => {
       expect(participants).toMatchObject({ text: 'Could not check', failed: true });
       participants!.retry!();
       expect(reloadAvailability).toHaveBeenCalled();
+    });
+  });
+
+  // Under the participants, a failed load said its fixed words: no connection
+  // and the server down alike (T-228, review 2). Said from the error now; the
+  // form still saves nothing, and still offers to try again.
+  describe('A failed load under the participants says why (T-228)', () => {
+    const { en } = jest.requireActual('../../../../i18n/translations');
+    const offline = { isAxiosError: true, code: 'ERR_NETWORK', request: {} };
+    const serverDown = { isAxiosError: true, response: { status: 503, data: {} } };
+
+    it.each([
+      ['no connection', offline, en.common.noConnection],
+      ['the server down', serverDown, en.common.serverUnavailable],
+    ])('the members, with %s', (_, error, said) => {
+      const reloadMembers = jest.fn();
+      const props: any = { ...defaultProps, t: en, participantsSettled: false, membersFailed: true, membersError: error, reloadMembers };
+      const { result } = renderHook(() => useAddRehearsalSubmit(props));
+
+      expect(result.current.issues.participants).toMatchObject({ text: said, failed: true });
+      expect(result.current.canSubmit()).toBe(false);
+      result.current.issues.participants!.retry!();
+      expect(reloadMembers).toHaveBeenCalled();
+    });
+
+    it.each([
+      ['no connection', offline, en.common.noConnection],
+      ['the server down', serverDown, en.common.serverUnavailable],
+    ])('the availability, with %s', (_, error, said) => {
+      const props: any = { ...defaultProps, t: en, selectedMemberIds: ['user1'], availabilityReady: false, availabilityFailed: true, availabilityError: error };
+      const { result } = renderHook(() => useAddRehearsalSubmit(props));
+
+      expect(result.current.issues.participants).toMatchObject({ text: said, failed: true });
+      expect(result.current.canSubmit()).toBe(false);
     });
   });
 });

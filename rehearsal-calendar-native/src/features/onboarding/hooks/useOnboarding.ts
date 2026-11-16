@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { hapticSuccess } from '../../../shared/utils/haptics';
 
 import { logger } from '../../../shared/utils/logger';
@@ -33,14 +34,14 @@ export function useOnboarding() {
       t.onboarding.skipMessage,
       [
         {
-          text: t.common.yes,
+          text: t.common.ok,
           onPress: async () => {
             try {
               await completeOnboarding();
             } catch (error) {
               Alert.alert(
                 t.common.error,
-                error instanceof Error ? error.message : String(error),
+                requestErrorMessage(t, error, t.profile.updateError),
               );
             }
           },

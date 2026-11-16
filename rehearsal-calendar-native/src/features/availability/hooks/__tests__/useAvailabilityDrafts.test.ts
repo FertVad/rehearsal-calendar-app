@@ -104,7 +104,6 @@ describe('What leaving would lose: a day saying something else than the server (
     const { result } = renderHook(() => {
       const data = useAvailabilityData();
       const editor = useAvailabilityEditor({
-        availability: data.availability,
         setAvailability: data.setAvailability,
         markChanged: data.markChanged,
         markSettled: data.markSettled,

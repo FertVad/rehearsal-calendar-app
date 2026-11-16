@@ -36,7 +36,7 @@ export function useWeekStart(): WeekStartDay {
         if (cached === 'monday' || cached === 'sunday') {
           setWeekStart(cached);
         }
-      } catch (error) {
+      } catch {
         // Ignore errors, use default 'monday'
       }
     };

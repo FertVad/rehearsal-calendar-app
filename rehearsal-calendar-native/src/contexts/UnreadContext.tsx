@@ -12,6 +12,13 @@ import { currentSession, isCurrentSession } from '../shared/services/session';
 // a shared key was read by the next account before anything wiped it (NI03).
 const storedCountKey = (userId: string | number) => `unread-count:${userId}`;
 
+/**
+ * What a change answers: `true` when the server took it, or the error it
+ * failed with. A bare `false` lost the error, and the inbox said "Could not
+ * delete" alike with no connection and with the server down (T-228).
+ */
+export type ChangeAnswer = true | { failed: unknown };
+
 interface UnreadContextValue {
   unreadCount: number;
   /** Ask the server again — after a push arrives, or the app comes forward. */
@@ -19,15 +26,15 @@ interface UnreadContextValue {
   /**
    * Marks these read; an empty list marks nothing. Every change answers whether
    * the server took it, so a screen that showed it at once can take it back
-   * (cause fix 21: NI02). False only while the session that asked lasts: after
-   * a sign-out there is nobody to take it back for.
+   * (cause fix 21: NI02). A failure only while the session that asked lasts:
+   * after a sign-out there is nobody to take it back for.
    */
-  markRead: (ids: number[]) => Promise<boolean>;
+  markRead: (ids: number[]) => Promise<ChangeAnswer>;
   /** The whole inbox, asked for by name — the loaded page and the rest (NI06). */
-  markAllRead: () => Promise<boolean>;
+  markAllRead: () => Promise<ChangeAnswer>;
   /** Deleting an unread one lowers the count, so it goes through here too. */
-  remove: (id: number) => Promise<boolean>;
-  removeAll: () => Promise<boolean>;
+  remove: (id: number) => Promise<ChangeAnswer>;
+  removeAll: () => Promise<ChangeAnswer>;
 }
 
 const UnreadContext = createContext<UnreadContextValue | undefined>(undefined);
@@ -107,7 +114,7 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
   // the session that asked has ended is nobody's to hear: its "could not" went
   // up over the next person's screen.
   const change = useCallback(
-    async (what: string, send: () => Promise<{ data?: { unreadCount?: number } }>) => {
+    async (what: string, send: () => Promise<{ data?: { unreadCount?: number } }>): Promise<ChangeAnswer> => {
       const asked = currentSession();
       try {
         await order.write(async (answer) => {
@@ -117,7 +124,7 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
         return true;
       } catch (error) {
         logger.warn(`[Unread] Could not ${what}:`, error);
-        return !isCurrentSession(asked);
+        return isCurrentSession(asked) ? { failed: error } : true;
       }
     },
     [order, remember]

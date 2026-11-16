@@ -38,7 +38,6 @@ describe('useAvailabilitySave Hook', () => {
   };
 
   const mockSetSaving = jest.fn();
-  const mockSetHasChanges = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();

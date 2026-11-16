@@ -8,7 +8,7 @@
 # offered.
 # She has the keyboard up from typing the location: the button stays over the
 # keyboard. It was at the end of the form, and the keyboard covered it (T-009).
-# Closing the form with the location typed asks first, and "Don't Save" closes
+# Closing the form with the location typed asks first, and "Don’t Save" closes
 # it; the close button closed it at once and the typing was gone. Opened again
 # and left as it came, it closes without asking (T-013).
 appId: ${APP_ID}
@@ -90,10 +90,10 @@ tags:
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don’t Save"
     timeout: 5000
 - takeScreenshot: 20-close-asks
-- tapOn: "Don't Save"
+- tapOn: "Don’t Save"
 - extendedWaitUntil:
     notVisible:
       id: header-cancel
@@ -113,4 +113,4 @@ tags:
     notVisible:
       id: header-cancel
     timeout: 10000
-- assertNotVisible: "Don't Save"
+- assertNotVisible: "Don’t Save"

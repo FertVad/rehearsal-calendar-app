@@ -1,0 +1,83 @@
+T-228, review 2 — Jest, red before (08.11.2026)
+
+Sources restored from 543dd3c (the commit the review was on), the new tests kept:
+  git restore --source=543dd3c -- src/contexts/UnreadContext.tsx src/features/availability/hooks/useAvailabilityData.ts
+    src/features/availability/screens/AvailabilityScreen.tsx src/features/calendar/hooks/useAddRehearsalSubmit.ts
+    src/features/calendar/hooks/useRehearsalAvailability.ts src/features/calendar/hooks/useRehearsalMembers.ts
+    src/features/calendar/screens/AddRehearsalScreen.tsx src/features/calendar/screens/RehearsalDetailsScreen.tsx
+    src/features/notifications/screens/NotificationsScreen.tsx src/i18n/translations/availability.ts
+
+== 1. Static rule: npx jest --selectProjects frontend --runTestsByPath src/shared/utils/__tests__/errorWindowsSayNoMessage.test.ts
+
+FAIL frontend src/shared/utils/__tests__/errorWindowsSayNoMessage.test.ts
+  ✓ no error window or error state shows an error's .message (T-228)
+  ✓ no error window says a written-in text instead of the language's (T-228)
+  ✕ a failed request is kept as its error, not as true (T-228)
+  ✕ an error window says fixed words only for a known answer (T-228)
+  ✕ a failure flag beside fixed words is said through requestErrorMessage (T-228)
+  ✓ the server's own words reach a window only through requestErrorMessage (T-228)
+  ● a failed request is kept as its error, not as true (T-228)
+    + Array [
+    +   "features/availability/hooks/useAvailabilityData.ts:379 — a catch keeps the failure as true; keep the error, say it through requestErrorMessage",
+    +   "features/calendar/hooks/useRehearsalAvailability.ts:85 — a catch keeps the failure as true; keep the error, say it through requestErrorMessage",
+    +   "features/calendar/hooks/useRehearsalMembers.ts:40 — a catch keeps the failure as true; keep the error, say it through requestErrorMessage",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:103 — a catch keeps the failure as true; keep the error, say it through requestErrorMessage",
+    +   "features/notifications/screens/NotificationsScreen.tsx:115 — a catch keeps the failure as true; keep the error, say it through requestErrorMessage",
+    +   "features/notifications/screens/NotificationsScreen.tsx:142 — a catch keeps the failure as true; keep the error, say it through requestErrorMessage",
+    + ]
+  ● an error window says fixed words only for a known answer (T-228)
+    + Array [
+    +   "features/calendar/screens/AddRehearsalScreen.tsx:156 — error window says t.rehearsals.loadMembersError; use requestErrorMessage(t, error, t.rehearsals.loadMembersError)",
+    +   "features/notifications/screens/NotificationsScreen.tsx:193 — error window says t.notifications.markReadError; use requestErrorMessage(t, error, t.notifications.markReadError)",
+    +   "features/notifications/screens/NotificationsScreen.tsx:264 — error window says t.notifications.deleteError; use requestErrorMessage(t, error, t.notifications.deleteError)",
+    +   "features/notifications/screens/NotificationsScreen.tsx:282 — error window says t.notifications.deleteError; use requestErrorMessage(t, error, t.notifications.deleteError)",
+    + ]
+  ● a failure flag beside fixed words is said through requestErrorMessage (T-228)
+    + Array [
+    +   "features/calendar/hooks/useAddRehearsalSubmit.ts:224 — a failure says t.rehearsals.loadMembersError; use requestErrorMessage",
+    +   "features/calendar/hooks/useAddRehearsalSubmit.ts:227 — a failure says t.rehearsals.loadAvailabilityError; use requestErrorMessage",
+    + ]
+Tests:       3 failed, 3 passed, 6 total
+
+== 2. Behaviour: NotificationsScreenRequestErrors, RehearsalDetailsScreen, useRehearsalMembers,
+   useAddRehearsalSubmit, useAvailabilityOffline, UnreadContextMarkRead
+
+FAIL frontend src/contexts/__tests__/UnreadContextMarkRead.test.tsx
+    -   Object { "failed": [Error: offline], },
+    +   false,
+FAIL frontend src/features/calendar/hooks/__tests__/useRehearsalMembers.test.ts
+    Expected: "No connection. Check the internet and try again."
+    Received: "Failed to load project members"
+    Expected: "The server is unavailable. Try again later."
+    Received: "Failed to load project members"
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilityOffline.test.ts
+    Expected: "Нет соединения. Проверьте интернет и попробуйте ещё раз."
+    Received: ""
+    Expected: "Сервер недоступен. Попробуйте позже."
+    Received: ""
+FAIL frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts
+    -   "text": "No connection. Check the internet and try again.",
+    +   "text": "Failed to load project members",
+    -   "text": "The server is unavailable. Try again later.",
+    +   "text": "Failed to load project members",
+    -   "text": "No connection. Check the internet and try again.",
+    +   "text": "Failed to load member availability",
+    -   "text": "The server is unavailable. Try again later.",
+    +   "text": "Failed to load member availability",
+FAIL frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx
+    Unable to find an element with text: No connection. Check the internet and try again.
+    Unable to find an element with text: The server is unavailable. Try again later.
+FAIL frontend src/features/notifications/screens/__tests__/NotificationsScreenRequestErrors.test.tsx
+    Expected: "Error", "No connection. Check the internet and try again."   (delete)
+    Expected: "Error", "No connection. Check the internet and try again."   (clear all)
+    Received: "Clear notifications?", ...
+    Expected: "Error", "No connection. Check the internet and try again."   (mark all read)
+    Unable to find an element with text: No connection. Check the internet and try again.   (load)
+    (the same four for "The server is unavailable. Try again later.")
+Test Suites: 6 failed, 6 total
+Tests:       19 failed, 50 passed, 69 total
+
+== Green after (git restore --source=HEAD -- src)
+
+errorWindowsSayNoMessage.test.ts: Tests: 6 passed, 6 total
+the six behaviour suites:         Test Suites: 6 passed, 6 total; Tests: 69 passed, 69 total

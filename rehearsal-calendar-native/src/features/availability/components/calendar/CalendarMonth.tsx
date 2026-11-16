@@ -1,7 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
-import { AvailabilityData } from '../../types';
 import { getDaysInMonth, formatDate } from '../../utils';
 import { DAY_SIZE } from '../../constants';
 import { useI18n } from '../../../../contexts/I18nContext';
@@ -12,7 +11,6 @@ interface CalendarMonthProps {
   year: number;
   month: number;
   selectedDates: string[];
-  availability: AvailabilityData;
   today: string;
   onDayPress: (year: number, month: number, day: number) => void;
   getDayStatus: (date: string) => 'free' | 'busy' | 'partial' | 'none';
@@ -24,7 +22,6 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
   year,
   month,
   selectedDates,
-  availability,
   today,
   onDayPress,
   getDayStatus,

@@ -1,0 +1,96 @@
+T-231 review round 2 (Astra, reviews/T-231-r2.md): a dead holder's job goes as a
+whole group; the job keeps the terminal as stdin.
+cd rehearsal-calendar-native; the fix is the commit after 8f47559 ("a dead holder's job goes as a whole
+group"), the old code 8f47559
+(cherry-pick of 5503649, the commit the review read).
+
+== Red before: the new tests on 8f47559's watchdog.mjs, hold-lock.mjs, lock.mjs, run.mjs ==
+$ git restore --source=8f47559 -- e2e/hold-lock.mjs e2e/lock.mjs e2e/watchdog.mjs e2e/run.mjs
+$ node --test --test-timeout=60000 --test-name-pattern="own children|leader gone|reads the terminal" e2e/__tests__/lock.test.mjs
+✖ a heavy job's own children end before the next run takes the lock (15631.629ms)
+✖ the lock is not taken while a dead run's group has a member, its leader gone (15209.323417ms)
+✖ a heavy job reads the terminal: what is typed reaches it (393.999291ms)
+ℹ tests 3
+ℹ pass 0
+ℹ fail 3
+
+test at e2e/__tests__/lock.test.mjs:145:1
+✖ a heavy job's own children end before the next run takes the lock (15631.629ms)
+  AssertionError [ERR_ASSERTION]: the next run took the lock while the dead holder's job's child was running
+  true !== false
+
+test at e2e/__tests__/lock.test.mjs:162:1
+✖ the lock is not taken while a dead run's group has a member, its leader gone (15209.323417ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+    expected: /process group 42137\) is still running/
+
+test at e2e/__tests__/lock.test.mjs:178:1
+✖ a heavy job reads the terminal: what is typed reaches it (393.999291ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /got:device-2/. Input:
+  'got:\n'
+
+The first is the reviewer's chain, Node -> sleep: the holder SIGKILLed, the old
+watchdog SIGTERMed node and exited with it, and after 15 s takeLock took the
+lock with the sleep running. The second: the old clearLeftovers only warned.
+The third: `read` got EOF, the old watchdog gave the command no stdin.
+
+watchdog.test.mjs's new test is not in the red run: it starts the watchdog
+the new way (holder's pipe on fd 3, stdin 'ignore'), which the old watchdog
+does not read, so on the old code it says nothing about the chain.
+
+$ git restore --source=HEAD -- e2e/hold-lock.mjs e2e/lock.mjs e2e/watchdog.mjs e2e/run.mjs
+
+== Green after: the fix ==
+$ node --test --test-timeout=120000 e2e/__tests__/lock.test.mjs e2e/__tests__/watchdog.test.mjs
+✔ a free lock is taken, names its run, and is released (29.975625ms)
+✖ what a dead run left running is stopped before the lock is taken (15054.27425ms)
+✖ a pid that now belongs to another process is left alone (15155.434375ms)
+✔ a lock in the old form, a bare pid, is taken over once its run is gone (20.344042ms)
+✔ a heavy job waits for a live e2e run, then runs under the lock and gives back its code (10749.10425ms)
+✔ an e2e run waits for a heavy job under the lock, and names it (1596.230333ms)
+✔ a heavy job whose holder was killed outright is stopped by the next e2e run (580.101667ms)
+✔ a heavy job's own children end before the next run takes the lock (740.685958ms)
+✔ the lock is not taken while a dead run's group has a member, its leader gone (1053.709875ms)
+✔ a heavy job reads the terminal: what is typed reaches it (448.252084ms)
+✔ without ps, a dead holder's job ends before the next run takes the lock (5748.675375ms)
+✔ npm run ios and android build under the lock (1.851417ms)
+✔ npm run ios waits for a live e2e run, then runs expo (11444.370084ms)
+✔ a live run is waited for, not cleared (331.36075ms)
+✔ what a run started through the watchdog dies with the run, even on SIGKILL (439.298833ms)
+✔ while the run lives, the command keeps running (1393.561875ms)
+✔ the command's own children die with the run too, and the watchdog outlives them (590.895875ms)
+ℹ tests 17
+ℹ pass 15
+ℹ fail 2
+
+test at e2e/__tests__/lock.test.mjs:49:1
+✖ what a dead run left running is stopped before the lock is taken (15054.27425ms)
+  Error: the server a dead run left behind (process group 42293) is still running, so the lock is not taken; stop it (kill -KILL -42293) and start again; if that group is not the dead run's, remove …/dead.lock
+
+test at e2e/__tests__/lock.test.mjs:67:1
+✖ a pid that now belongs to another process is left alone (15155.434375ms)
+  Error: the server a dead run left behind (process group 42399) is still running, so the lock is not taken; stop it (kill -KILL -42399) and start again; if that group is not the dead run's, remove …/reused.lock
+
+These two old, unchanged tests depend on `ps`, which this session's sandbox
+denies (startedAt() returns ""): their groups are bare /bin/sleep with no
+watchdog, so without ps nothing can identify or end them. The first failed
+here before this change too (lock-tests.txt). The second used to pass here
+because the old clearLeftovers took the lock after 15 s with the group still
+running. That is exactly what round 2 asks it not to do: without ps it now
+refuses the lock. Where ps runs (the supervisor's npm test), the first group's
+start time matches and it is stopped, and the second's does not match and it
+is left alone, as before.
+
+== Flow 40 with the fix (server and Metro through the new watchdog) ==
+$ npm run e2e -- e2e/flows/40-details-seen-one-model.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Passed] Details and the card read one seen mark (1m 15s)
+1/1 Flow Passed in 1m 15s
+[e2e] taps taken again (tap-and-see.yaml): 0

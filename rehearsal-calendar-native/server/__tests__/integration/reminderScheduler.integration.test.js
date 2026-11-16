@@ -345,7 +345,7 @@ describe('Rehearsal reminders', () => {
       await run({ now: NOW });
 
       expect(titleFor(inJerusalem)).toBe('Репетиция сегодня в 22:00');
-      expect(titleFor(inNewYork)).toBe('Rehearsal today at 3:00 PM');
+      expect(titleFor(inNewYork)).toBe('Rehearsal Today at 3:00 PM');
       expect(inboxTitle(inJerusalem)).toBe('Репетиция сегодня в 22:00');
     });
 
@@ -372,7 +372,7 @@ describe('Rehearsal reminders', () => {
         from: new Date(NOW.getTime() + 12 * HOUR), to: new Date(NOW.getTime() + 24 * HOUR),
       }));
 
-      expect(titleFor(mover)).toBe('Rehearsal today at 9:30 PM UTC');
+      expect(titleFor(mover)).toBe('Rehearsal Today at 9:30 PM UTC');
     });
   });
 

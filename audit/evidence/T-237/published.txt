@@ -1,0 +1,40 @@
+T-237: are the dSYMs of the prebuilt frameworks published? Yes, all three, for React Native 0.81.5.
+
+Where the frameworks come from (node_modules/react-native/scripts/cocoapods/rncore.rb, rndependencies.rb,
+sdks/hermes-engine/hermes-utils.rb): Maven Central,
+https://repo1.maven.org/maven2/com/facebook/react/react-native-artifacts/<version>/react-native-artifacts-<version>-
+{reactnative-core,reactnative-dependencies,hermes-ios}-{debug,release}.tar.gz.
+The xcframeworks in those tarballs carry no dSYM (Pods/React-Core-prebuilt/React.xcframework/ios-arm64 has only
+React.framework).
+
+The directory listing of https://repo1.maven.org/maven2/com/facebook/react/react-native-artifacts/0.81.5/ (2026-11-09):
+react-native-artifacts-0.81.5-hermes-framework-dSYM-debug.tar.gz
+react-native-artifacts-0.81.5-hermes-framework-dSYM-release.tar.gz
+react-native-artifacts-0.81.5-hermes-ios-debug.tar.gz
+react-native-artifacts-0.81.5-hermes-ios-release.tar.gz
+react-native-artifacts-0.81.5-reactnative-core-dSYM-debug.tar.gz
+react-native-artifacts-0.81.5-reactnative-core-dSYM-release.tar.gz
+react-native-artifacts-0.81.5-reactnative-core-debug.tar.gz
+react-native-artifacts-0.81.5-reactnative-core-release.tar.gz
+react-native-artifacts-0.81.5-reactnative-dependencies-dSYM-debug.tar.gz
+react-native-artifacts-0.81.5-reactnative-dependencies-dSYM-release.tar.gz
+react-native-artifacts-0.81.5-reactnative-dependencies-debug.tar.gz
+react-native-artifacts-0.81.5-reactnative-dependencies-release.tar.gz
+react-native-artifacts-0.81.5.pom
+
+Downloaded release dSYM tarballs: size, sha256 (= Maven's .sha256 file; .sha1 also matched), now pinned in
+plugins/prebuilt-dsyms/checksums.json:
+hermes-framework-dSYM-release           289418521 B  d17fa15a5690a3d228df46c965eef7753c33904255c508f585ef122de3ceaa5a
+reactnative-core-dSYM-release           139478116 B  731a41c3a082220e9fd3c47c57b786a4fedccdbfa1149952e3450ef88d01a826
+reactnative-dependencies-dSYM-release    40660894 B  3a809bd1ea098823def1fe54a55c511e63d7c70ca90404c900e86efbbb935fff
+
+Layout: one folder per xcframework slice — core and dependencies: ios-arm64/, ios-arm64_x86_64-simulator/, …
+(<Name>.framework.dSYM in each); hermes: iphoneos/, iphonesimulator/, …
+
+UUIDs (device slice) — dSYM, the Release binary from the same version's tarball, Apple's mail for 1.0.0 (3):
+React                    dSYM 76FBCEE9-3517-30B3-9DC6-62C4E914E908  binary 76FBCEE9-3517-30B3-9DC6-62C4E914E908  Apple 76FBCEE9-3517-30B3-9DC6-62C4E914E908
+ReactNativeDependencies  dSYM B35F1182-B82E-3372-8A74-A4FE502C0906  (binary: see red-before/green-after)    Apple B35F1182-B82E-3372-8A74-A4FE502C0906
+hermes                   dSYM 80D5528F-2C78-3B90-B90F-747E89A9F880  binary 80D5528F-2C78-3B90-B90F-747E89A9F880  Apple 80D5528F-2C78-3B90-B90F-747E89A9F880
+Simulator slice of hermes: dSYM and Release binary both 47523131-… (x86_64), E968DCE3-… (arm64).
+
+So nothing has to be built from source, and the measurement the task asks for in that case was not needed.

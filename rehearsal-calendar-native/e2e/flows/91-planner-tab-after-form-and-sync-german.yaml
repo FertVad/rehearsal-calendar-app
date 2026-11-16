@@ -1,0 +1,203 @@
+# The planner's tab opens from the profile, in German, after the two ways the
+# landing's shots took back to it (T-253):
+# - the form of a new rehearsal over the profile scrolled to its end: people
+#   picked, a recommended time taken, the form scrolled, "Abbrechen" and
+#   "Nicht speichern";
+# - the profile's "Kalender-Sync": sync on, a sync, "Alle exportierten Proben
+#   entfernen" confirmed, its "removed" alert answered, sync off.
+# On 10.11 and 12.11 the shots' tap on "Planner" did nothing there. Each of
+# those taps was lost by the simulator, not refused by the app: in the shots'
+# own device-simulator.log every one has the T-207 signature - XCTest's
+# digitizer registered twice, "didn't see a previous touch down", the touch
+# cancelled while still down (audit/evidence/T-253, docs/e2e.md "A lost tap").
+# So the tab is tapped as every tap whose result is waited for: through
+# tap-and-see, once more if the first left no trace, and printed if it did.
+# Polly, whose account speaks German, takes both ways, each dialog answered by
+# its button.
+appId: ${APP_ID}
+name: The planner's tab after the form and after the sync, in German
+tags:
+  - planner
+  - profile
+  - navigation
+  - rehearsals
+  - calendar
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${POLLY_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# The profile, scrolled to its end.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Sprache, Deutsch.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-delete-account
+    direction: DOWN
+- waitForAnimationToEnd
+
+# The form over it: Polly's company, a recommended time, the form scrolled,
+# and out without saving.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Probe erstellen"
+      WAIT_MS: "5000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Probe erstellen"
+      SEE: "Probe hinzufügen"
+      WAIT_MS: "10000"
+- runFlow:
+    when:
+      notVisible: ".*Die Dreigroschenoper.*"
+    commands:
+      - tapOn:
+          id: rehearsal-project
+      - tapOn: ".*Die Dreigroschenoper.*"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: ".*Mackie Messer.*"
+      WAIT_MS: "10000"
+# The whole company comes picked; Jenny is taken off, Mackie stays.
+- tapOn: ".*Jenny Diver.*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-done
+      SEE: "Probe hinzufügen"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible: "Empfohlene Zeit"
+    timeout: 15000
+# Mackie is busy 12:00-14:00 today; past the evening there may be no time
+# left to recommend.
+- tapOn:
+    id: "recommendation-.*"
+    index: 0
+    optional: true
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 30%"
+    duration: 400
+- waitForAnimationToEnd
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    visible: "Nicht speichern"
+    timeout: 5000
+- tapOn: "Nicht speichern"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000
+- waitForAnimationToEnd
+- assertVisible:
+    id: tab-profile
+    text: "Profil, tab.*"
+    selected: true
+- takeScreenshot: 91-profile-after-form
+
+# The planner's tab.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Woche"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: planner-filters
+- takeScreenshot: 91-after-planner-tap-1
+
+# Back to the profile, and its "Kalender-Sync".
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Kalender-Sync.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-calendar-sync
+      SEE: ".*Apple Calendar.*"
+      WAIT_MS: "15000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Apple Calendar.*"
+      SEE: ".*Synchronisieren.*"
+      WAIT_MS: "10000"
+- tapOn:
+    id: calendar-sync-run
+- extendedWaitUntil:
+    visible: "(Erfolgreich )?[Ss]ynchronisiert"
+    timeout: 30000
+- tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-status
+    timeout: 10000
+- scrollUntilVisible:
+    element: ".*Alle exportierten Proben entfernen.*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Alle exportierten Proben entfernen.*"
+- extendedWaitUntil:
+    visible: "Alle Proben aus dem Kalender entfernen?"
+    timeout: 5000
+- waitForAnimationToEnd
+# The question's two buttons stand one over the other, its "remove" first;
+# while it is up, the screen's own button of the same words is behind it.
+- takeScreenshot: 91-remove-all-question
+- tapOn: "Alle exportierten Proben entfernen"
+# The removal says it is done, and waits for its "OK".
+- extendedWaitUntil:
+    visible: "Alle Proben aus dem Kalender entfernt"
+    timeout: 15000
+- tapOn: "OK"
+- extendedWaitUntil:
+    notVisible: "Alle Proben aus dem Kalender entfernt"
+    timeout: 5000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-sync-toggle
+      GONE_ID: calendar-sync-run
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 91-sync-off
+
+# The planner's tab, from the sync screen.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Woche"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: planner-filters
+- takeScreenshot: 91-after-planner-tap-2

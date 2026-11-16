@@ -88,7 +88,8 @@ export function createEntrypointFixture({ databaseUrl, environment = {}, explici
   for (const directory of ['config', 'constants', 'database', 'i18n', 'middleware', 'routes', 'services', 'utils', 'migrations', 'public']) {
     copyTree(path.join(sourceServer, directory), path.join(server, directory), directory === 'public');
   }
-  copyTree(path.join(sourceServer, '..', 'shared', 'contracts'), path.join(root, 'shared', 'contracts'));
+  // What the server imports from beside it: the contracts, and quoteName.cjs (T-261).
+  copyTree(path.join(sourceServer, '..', 'shared'), path.join(root, 'shared'));
   symlinkSync(path.join(sourceServer, 'node_modules'), path.join(server, 'node_modules'));
 
   const values = {

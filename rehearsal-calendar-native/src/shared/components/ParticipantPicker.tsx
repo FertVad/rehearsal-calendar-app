@@ -10,15 +10,16 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../constants/colors';
 import type { TimeRange } from '../utils/availability';
-import { formatTimeRange } from '../utils/clockFormat';
+import { busySpanText } from '../utils/conflictDetection';
 import { useI18n } from '../../contexts/I18nContext';
 import type { Translations } from '../../i18n/translations';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
+import { UserAvatar } from './UserAvatar';
 
 export interface PickerPerson {
   id: string;
@@ -38,14 +39,24 @@ interface ParticipantPickerProps {
   /** A second line under the row, for someone picked who is busy then. */
   conflict?: string;
   /**
-   * One filter in a row of them, "Participants: all (4) ▾", instead of a row
-   * of its own (the planner, T-020). The same sheet opens.
+   * The people by their faces, "(A)(B)(C)+5 All participants · 8 ›": the
+   * planner, under its period (T-241). The same sheet opens.
    */
-  chip?: boolean;
+  faces?: boolean;
 }
 
 /** Past this many people the sheet gets a search field. */
 export const SEARCH_OVER = 12;
+
+/** Faces shown in the stack before "+N". */
+const FACES = 3;
+const FACE_SIZE = 28;
+
+/** "Olga Stage" as the avatar takes it: initials of the first and last word. */
+function nameParts(name: string): { firstName: string; lastName?: string } {
+  const words = name.trim().split(/\s+/);
+  return { firstName: words[0] ?? '', lastName: words.length > 1 ? words[words.length - 1] : undefined };
+}
 
 /**
  * Who takes part: one row that says how many are picked, and a sheet to pick
@@ -65,7 +76,7 @@ export function ParticipantPicker({
   loading = false,
   noneLabel,
   conflict,
-  chip = false,
+  faces = false,
 }: ParticipantPickerProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -81,9 +92,8 @@ export function ParticipantPicker({
         ? noneLabel
         : t.rehearsals.participantsCount(picked, people.length);
   const disabled = loading || people.length === 0;
-  // Everyone, or nobody where that means everyone: "all (4)".
+  // Everyone, or nobody where that means everyone: "All participants · 4".
   const everyone = !disabled && (picked === people.length || (picked === 0 && !!noneLabel));
-  const chipText = `${t.rehearsals.participants}: ${everyone ? t.rehearsals.participantsAll(people.length) : value}`;
 
   const sheet = (
     <ParticipantSheet
@@ -96,21 +106,43 @@ export function ParticipantPicker({
     />
   );
 
-  if (chip) {
+  if (faces) {
+    // The ones picked, everyone where that is everyone; three faces, then "+N".
+    const shown = everyone ? people : people.filter(p => selectedIds.includes(p.id));
+    const more = shown.length - FACES;
+    // Its own row, the whole width: in a row of three it was cut in the middle
+    // in every language, "Partici…: all (8)" (owner, 09.11; T-241). The words
+    // wrap rather than end in "…".
+    const facesText = disabled ? value : everyone
+      ? t.rehearsals.participantsEveryone(people.length)
+      : t.rehearsals.participantsCount(picked, people.length);
     return (
       <>
         <TouchableOpacity
           testID="participants-row"
-          style={styles.chip}
+          style={styles.faces}
           onPress={() => setOpen(true)}
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={[t.rehearsals.participants, value].join(', ')}
           accessibilityState={{ disabled }}
         >
-          {/* Cut in the middle: the count, at its end, stays. */}
-          <Text style={styles.chipText} numberOfLines={1} ellipsizeMode="middle">{chipText}</Text>
-          {!disabled && <Ionicons name="chevron-down" size={14} color={Colors.text.secondary} />}
+          {shown.length > 0 && (
+            <View testID="participants-faces" style={styles.faceStack}>
+              {shown.slice(0, FACES).map((person, index) => (
+                <View key={person.id} style={index > 0 && styles.faceOverlap}>
+                  <UserAvatar {...nameParts(person.name)} size={FACE_SIZE} />
+                </View>
+              ))}
+              {more > 0 && (
+                <View style={[styles.faceOverlap, styles.faceMore]}>
+                  <Text style={styles.faceMoreText}>{`+${more}`}</Text>
+                </View>
+              )}
+            </View>
+          )}
+          <Text style={styles.facesText}>{facesText}</Text>
+          {!disabled && <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />}
         </TouchableOpacity>
         {sheet}
       </>
@@ -133,8 +165,11 @@ export function ParticipantPicker({
           <Text style={styles.rowValue} numberOfLines={1}>{value}</Text>
           {!disabled && <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />}
         </View>
+        {/* Two lines: by full name "Beschäftigt: Wang Wasser (10:00–14:00)
+            und 1 weiterer" is wider than the row, and one line cut its count
+            (T-261, flow 95). */}
         {conflict ? (
-          <Text testID="participants-conflict" style={styles.conflict} numberOfLines={1}>
+          <Text testID="participants-conflict" style={styles.conflict} numberOfLines={2}>
             {conflict}
           </Text>
         ) : null}
@@ -288,10 +323,7 @@ function Checkbox({ checked }: { checked: boolean | 'mixed' }) {
 export function busyText(ranges: TimeRange[] | undefined, t: Translations, locale: string, uses24: boolean): string | undefined {
   const busy = (ranges ?? []).filter(r => r.type === 'busy');
   if (busy.length === 0) return undefined;
-  if (busy.length === 1 && busy[0].start === '00:00' && (busy[0].end === '23:59' || busy[0].end === '24:00')) {
-    return t.rehearsals.wholeDay;
-  }
-  return busy.map(r => formatTimeRange(r.start, r.end, locale, uses24)).join(', ');
+  return busy.map(r => busySpanText(r, t, locale, uses24)).join(', ');
 }
 
 const styles = StyleSheet.create({
@@ -320,17 +352,43 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     flexShrink: 1,
   },
-  chip: {
-    height: TouchTarget,
+  faces: {
+    minHeight: TouchTarget + Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    flexShrink: 1,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.md,
   },
-  chipText: {
+  faceStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  faceOverlap: {
+    // A little over each other, both initials still whole.
+    marginLeft: -Spacing.xs,
+  },
+  faceMore: {
+    width: FACE_SIZE,
+    height: FACE_SIZE,
+    borderRadius: FACE_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.bg.tertiary,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  faceMoreText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+  },
+  facesText: {
+    flex: 1,
     fontSize: FontSize.md,
     color: Colors.text.primary,
-    flexShrink: 1,
   },
   conflict: {
     marginTop: 2,

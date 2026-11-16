@@ -3,7 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
-import { currentSession, isCurrentSession, reportSessionExpired, SessionEndedError, SessionStamp } from './session';
+import { emitDataChanged } from '../utils/dataChanged';
+import { gotNoAnswer } from '../utils/noAnswer';
+import { currentSession,isCurrentSession, reportSessionExpired, SessionEndedError, SessionStamp } from './session';
+import { renewConnections } from './connections';
 
 /**
  * API Configuration
@@ -100,6 +103,8 @@ const REQUEST_TIMEOUT_MS = 10000;
 const EMAIL_SEND_TIMEOUT_MS = 8000;
 const sendsEmails = (count: number) => ({ timeout: REQUEST_TIMEOUT_MS + count * EMAIL_SEND_TIMEOUT_MS });
 
+const PROJECTS_LIST = '/native/projects';
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -117,6 +122,19 @@ const api = axios.create({
 // the next person's pair, so a token read while the session lasts is its own.
 const inSession = (session?: SessionStamp) =>
   session === undefined ? undefined : ({ session } as Record<string, unknown>);
+
+/**
+ * A request that may be sent again when it got no answer (T-240): a read, or
+ * one marked `repeatable` — a sign-in, whose repeat signs in again and
+ * changes nothing else. A change is not: its first try may have reached the
+ * server, and a create is repeated by the person, under its idempotency key.
+ */
+const REPEATABLE = { repeatable: true } as Record<string, unknown>;
+
+const isRepeatable = (config: any) => {
+  const method = String(config?.method ?? 'get').toLowerCase();
+  return method === 'get' || method === 'head' || config?.repeatable === true;
+};
 
 api.interceptors.request.use(
   async (config) => {
@@ -163,6 +181,10 @@ async function refreshSession(): Promise<string> {
     response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken }, { timeout: REQUEST_TIMEOUT_MS });
   } catch (error: any) {
     if (refusesSession(error?.response?.status) && isCurrentSession(session)) reportSessionExpired();
+    // Not sent again: the server rotates the pair, and a refresh it handled
+    // whose answer was lost spent the token. The connection it took is
+    // suspect all the same (see the response interceptor).
+    if (gotNoAnswer(error)) await renewConnections();
     throw error;
   }
   if (!isCurrentSession(session)) throw new SessionEndedError();
@@ -212,6 +234,33 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
+    // "Not allowed" to someone signed in: the role the app went by may be
+    // stale — taken away on another device — so the projects, where it is read
+    // from, are read again and the buttons it showed go (T-229). Not for the
+    // list itself, which would ask again after every refusal.
+    if (status === 403 && sentWith && isCurrentSession(originalRequest.session)
+        && !(originalRequest.method === 'get' && url === PROJECTS_LIST)) {
+      emitDataChanged('projects');
+    }
+
+    // No answer: the connection the request took may be one the network left
+    // behind, and iOS would hand the next request the same one (T-240). The
+    // pool is flushed, so whatever goes next — this request again, or the
+    // person's next tap — goes down a new connection; a request that may be
+    // repeated is sent again once, now. One that is not fails as before.
+    // Flushed after every attempt with no answer, the repeat's too: only the
+    // sending again is limited to once, or a repeat that also got none would
+    // leave its connection for the person's next tap.
+    if (gotNoAnswer(error) && originalRequest) {
+      await renewConnections();
+      if (!originalRequest._renewed && isRepeatable(originalRequest)
+          && isCurrentSession(originalRequest.session)) {
+        originalRequest._renewed = true;
+        logger.warn(`No answer to ${originalRequest.method?.toUpperCase()} ${url}; sending it again on a new connection`);
+        return api(originalRequest);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -230,8 +279,10 @@ export const authAPI = {
   resendVerification: (email: string, password: string) =>
     api.post('/auth/verify-email/resend', { email, password }, sendsEmails(1)),
 
+  // A sign-in is sent again when it got no answer (T-240): a repeat issues
+  // another session and changes nothing else.
   login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }),
+    api.post('/auth/login', { email, password }, REPEATABLE),
 
   // A forgotten password, with a code emailed to the address (R3). The request
   // answers alike with and without an account; the confirmation answers with
@@ -273,12 +324,13 @@ export const authAPI = {
 
   logout: () => api.post('/auth/logout'),
 
-  // OAuth Authentication
+  // OAuth Authentication. Repeatable as login is: the provider's token is
+  // checked again and a session issued again.
   loginWithGoogle: (idToken: string) =>
-    api.post('/auth/google', { idToken }),
+    api.post('/auth/google', { idToken }, REPEATABLE),
 
   loginWithApple: (idToken: string, user?: any) =>
-    api.post('/auth/apple', { idToken, user }),
+    api.post('/auth/apple', { idToken, user }, REPEATABLE),
 
   // Auth Provider Management
   getAuthProviders: () =>
@@ -308,7 +360,7 @@ export const authAPI = {
 export const projectsAPI = {
   // Get all projects for authenticated user
   getUserProjects: () =>
-    api.get('/native/projects'),
+    api.get(PROJECTS_LIST),
 
   // Get single project
   getProject: (projectId: string) =>
@@ -503,9 +555,6 @@ export const calendarSyncAPI = {
   // them are its own (ES02).
   deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string, deviceCalendarIds: string[], session?: SessionStamp) =>
     api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`, { ...inSession(session), data: { deviceCalendarIds } }),
-
-  deleteMappings: (eventType: 'rehearsal' | 'availability', deviceCalendarIds: string[], session?: SessionStamp) =>
-    api.delete('/native/calendar-sync/mappings', { ...inSession(session), data: { eventType, deviceCalendarIds } }),
 };
 
 // Notifications API (the inbox — what was sent, and what is still unread)

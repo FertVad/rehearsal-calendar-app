@@ -1,0 +1,27 @@
+T-232 — flow 78 on the fixed code (green after)
+
+$ npm run e2e -- e2e/flows/78-admin-sees-rehearsal-not-on.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] An admin sees a rehearsal they are not on, marked so (1m 40s)
+
+1/1 Flow Passed in 1m 40s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshots (e2e/out/artifacts/2026-11-08_041230/<flow>/takeScreenshot/):
+- 78-all-projects-not-in-cast.png: "All Projects"; under Upcoming Events the row
+  "TUE 10 · Ball rehearsal · 12:00 PM–1:00 PM · Main hall · ● Estate Ball · You are
+  not in the cast", no eye at its right, the admin's count "0/1" alone there.
+- 78-details-not-in-cast.png: the details of "Ball rehearsal", a row "You are not in
+  the cast" under the place; participants: Leonid Gaev only, no row of Olga's to
+  mark; the admin's badge 0/1, Edit and Delete as an admin's.

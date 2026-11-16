@@ -28,15 +28,14 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
-- tapOn:
-    id: tab-profile
+# The tab is there before the app takes taps: a tap can go unanswered, so it
+# is tapped until the profile is on screen (14.11, the tab stayed on Calendar).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element: ".*Calendar Sync.*"
     direction: DOWN
@@ -51,7 +50,7 @@ tags:
 # only the hours come in, never what the events are, as onboarding promises.
 - assertVisible:
     id: calendar-sync-explanation
-    text: ".*only the hours you are busy come back from it, never what the events are.*"
+    text: ".*only the hours you are busy come back from it — never the details of your events.*"
 # No access: the screen says so and offers it; there is nothing to switch.
 - assertVisible: "Grant Access"
 - assertNotVisible:
@@ -78,7 +77,7 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: header-back
-      SEE: ".*Week starts on.*"
+      SEE: ".*Start Week On.*"
       WAIT_MS: 10000
 - assertNotVisible: "Calendar access required"
 # The phone gives the access; the session stays, so no sign-in.
@@ -89,15 +88,13 @@ tags:
     visible:
       id: tab-profile
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
-- tapOn:
-    id: tab-profile
+# Just launched: the same unanswered tap as above, on the same tab.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element: ".*Calendar Sync.*"
     direction: DOWN
@@ -120,6 +117,6 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: header-back
-      SEE: ".*Week starts on.*"
+      SEE: ".*Start Week On.*"
       WAIT_MS: 10000
 - assertNotVisible: "Auto Sync"

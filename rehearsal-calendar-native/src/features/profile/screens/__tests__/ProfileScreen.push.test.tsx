@@ -17,7 +17,7 @@
  */
 import React from 'react';
 import { Alert, AppState } from 'react-native';
-import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 import ProfileScreen from '../ProfileScreen';
 import { translations } from '../../../../i18n/translations';

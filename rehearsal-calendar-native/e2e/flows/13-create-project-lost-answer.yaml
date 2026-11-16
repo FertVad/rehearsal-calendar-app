@@ -6,11 +6,16 @@
 # answers with the project it made:
 # reopened, the app lists Dunsinane once. Each tap used to make a project of
 # its own, and he found two.
+#
+# No answer reads as a native speaker writes it (T-256): "Could not connect.
+# Check your internet connection and try again.", not "No connection. Check
+# the internet" — said here, the flow goes on, and fails at the end if not.
 appId: ${APP_ID}
 name: A create tapped again after its answer was lost makes one project
 tags:
   - projects
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
@@ -34,9 +39,17 @@ tags:
       LOSE: "1"
       ONCE: "1"
 - tapOn: "Create"
+# No answer is said in the app's language, not axios's "Network Error"
+# (T-228, requestErrorMessage).
 - extendedWaitUntil:
-    visible: ".*Network Error.*"
+    visible: "(Could not connect|No connection)\\. Check .* and try again\\."
     timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Could not connect\\. Check your internet connection and try again\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Could not connect, not Check the internet | '}"
+- assertNotVisible: ".*Network Error.*"
 - takeScreenshot: 13-lost-answer
 - tapOn: "OK"
 - tapOn: "Create"
@@ -66,3 +79,13 @@ tags:
     id: project-card
     index: 1
 - takeScreenshot: 13-one-project
+
+- evalScript: "${console.log('13 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

@@ -6,7 +6,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { useAddRehearsalForm } from '../useAddRehearsalForm';
-import { rehearsalsAPI, projectsAPI } from '../../../../shared/services/api';
+import { rehearsalsAPI } from '../../../../shared/services/api';
 import { Project } from '../../../../shared/types';
 
 // Mock dependencies
@@ -199,11 +199,34 @@ describe('useAddRehearsalForm Hook', () => {
       expect(Alert.alert).toHaveBeenCalled();
       expect(mockGoBack).toHaveBeenCalled();
     });
+
+    // Offline, the closing form says so — in the app's language — rather
+    // than "could not load the rehearsal" (T-228).
+    it('says there is no connection when the rehearsal could not be asked for (T-228)', async () => {
+      const t = jest.requireActual('../../../../i18n/translations').ru;
+      const { AxiosError } = jest.requireActual('axios');
+      (rehearsalsAPI.getById as jest.Mock).mockRejectedValue(new AxiosError('Network Error', 'ERR_NETWORK', undefined, {}));
+      jest.spyOn(require('@react-navigation/native'), 'useNavigation').mockReturnValue({ goBack: jest.fn(), navigate: jest.fn() });
+
+      renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects,
+          selectedProject: null,
+          setSelectedProject: mockSetSelectedProject,
+          routeParams: { rehearsalId: 'r1', projectId: '1' },
+        })
+      );
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith(t.common.error, t.common.noConnection);
+    });
   });
 
   describe('Prefill from Route Params', () => {
     it('should prefill project from projectId param', () => {
-      const { result } = renderHook(() =>
+      renderHook(() =>
         useAddRehearsalForm({
           projects: mockProjects,
           selectedProject: null,

@@ -1,0 +1,61 @@
+T-260 review round 1 (Astra, P2): errorHttp.test.js gave every request
+AbortSignal.timeout(2000), though its tests check statuses and bodies, not a
+deadline. Same mechanism as the Expo shape tests: a slow machine (Jest workers,
+swap) delays the in-process server's answer past 2 s, well inside Jest's 5 s
+test timeout, and the abort timer fires first.
+
+New test: the auth read (database.get) keeps the event loop busy for 2100 ms,
+as a stalled machine would; the answer is then a plain 200.
+
+--- red before: old helper with AbortSignal.timeout(2000) ---
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/errorHttp.test.js
+
+FAIL __tests__/errorHttp.test.js (5.295 s)
+  ✕ a request is answered by status and body even when the machine stalls (2243 ms)
+  ✓ a failed auth read returns generic 500 without a write, and the next request recovers (92 ms)
+  ✓ malformed JSON keeps its parser status without echoing request data (21 ms)
+  ✓ oversized JSON keeps its parser status without echoing request data (13 ms)
+  ... (8 availability/bulk cases ✓)
+
+  ● a request is answered by status and body even when the machine stalls
+
+    TimeoutError: The operation was aborted due to timeout
+
+Tests:       1 failed, 11 passed, 12 total
+
+--- green after: the helper has no deadline of its own; Jest's test timeout bounds it ---
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/errorHttp.test.js --verbose
+
+  ✓ a request is answered by status and body even when the machine stalls (2240 ms)
+  ✓ a failed auth read returns generic 500 without a write, and the next request recovers (63 ms)
+  ✓ malformed JSON keeps its parser status without echoing request data (19 ms)
+  ✓ oversized JSON keeps its parser status without echoing request data (14 ms)
+  ... (8 availability/bulk cases ✓)
+Tests:       12 passed, 12 total
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/errorHttp.test.js __tests__/services/expoTransport.test.js
+Test Suites: 2 passed, 2 total
+Tests:       28 passed, 28 total
+
+--- other deadlines in server tests, reviewed ---
+Fixed (deadline shorter than the test's own budget, test is not about a deadline):
+  - services/expoTransport.test.js  timeoutMs: 300  (commit 63f3da2)
+  - errorHttp.test.js               AbortSignal.timeout(2000)  (this round)
+Left as they are, they test the deadline itself:
+  - integration/reminderScheduler.integration.test.js:599  timeoutMs: 300 against a silent server
+  - browser/ownedFixture.test.mjs:53  timeoutMs: 50 against a close() that never ends
+  - postgres/r8Reminders.mjs:183  timeoutMs: 1000 against a silent server
+Left as they are, the deadline is the test's own bound, not shorter than it:
+  - seedDemo.test.js:58  10 s guard on a child that must exit (the test fails
+    either way if it does not)
+  - startup/entrypointFixture.mjs  start/request/close 6/6/2 s inside a 30 s
+    test timeout, budget enforced by startup/fixtureBudget.test.js; 14 s for
+    the stalled-handshake request
+  - browser/*.mjs (node:test, Playwright)  page.setDefaultTimeout(5000) and
+    cleanup 1000/5000 ms within 5-30 s per-test timeouts
+  - postgres/*.mjs PG-check harnesses  request timeouts 3-20 s, no Jest timeout
+    below them
+
+Full server run: 77 of 78 suites pass; startup/runtimeStartup.test.js fails in
+this sandbox (the spawned entrypoint child reports import-failed), a file this
+change does not touch.

@@ -1,0 +1,510 @@
+# A new rehearsal and being put on one read right in Spanish, German and
+# Russian (T-248). Native speakers found the server's words wrong: Spanish
+# "Escena del balcón programado mañana" (scheduled tomorrow, not for
+# tomorrow, and the participle agreeing with a feminine title as if it were
+# masculine), German "Fechtszene angesetzt morgen um 18:00" (the participle
+# goes last), Russian "Прогон назначена" (a masculine title, a feminine
+# participle). The inbox shows the server's body as it is.
+#
+# Each reader is told of her rehearsal tomorrow at 18:00 as a save tells them,
+# by the server's own notifyRehearsalCreated and notifyAddedToRehearsal, in
+# her account's language (the seed: Laurencia es, Gretchen de, Katerina ru),
+# and reads both in her inbox. By the time this runs "tomorrow" may be a date.
+#
+# And nothing agrees with what the server cannot know (T-251): a cancelled
+# rehearsal agrees with "rehearsal", not with its title ("Прогон отменена",
+# "Escena del balcón cancelado"); a woman who joins or marks a rehearsal seen
+# is no "присоединился", "откликнулся", and a "seen" reads seen in every
+# language ("в курсе", "ha visto", "gesehen"), not "responded"; a woman reading of her own new role or
+# removal is no "administrador", "eliminado", "Administrator"; and "Вы теперь
+# администратором" had no verb. Each is sent by the server's own function
+# before the two above, so they are below them in the inbox, and only the
+# notice is sent: the rehearsal, the role and the membership stay as they are.
+#
+# And every card says all of it (T-252): the inbox cut title and text at the
+# second line, "… programado para mañana a las 1…", "en Fuenteo…", and a tap
+# opens the rehearsal, not the text. Maestro reads a label whole however much
+# of it is drawn, so the "…" is looked for on each shot (no-ellipsis.js), over
+# the cards' text, right of their icons. The longest the server sends comes
+# last, on top: Spanish, "added", on a date and with a long place.
+#
+# And a move says where to (T-250), as the landing page says it: "Escena del
+# balcón, pasa a mañana a las 18:00", "Fechtszene – verlegt auf morgen,
+# 18:00", "Прогон — теперь завтра в 18:00" — not "…, mañana a las 18:00 —
+# fecha/hora". Sent first, so it is the lowest card. And a longer rehearsal is
+# no moved one: only its end changed, "Сцена на бульваре, завтра в 19:00 —
+# теперь до 22:00", not "— теперь завтра в 19:00". Sent before the move.
+#
+# And as the native speakers of T-256 read them. Russian: «назначена на
+# завтра» (without «на», «назначена сегодня» read as when it was set), «Вас
+# позвали на репетицию», a project's name in quotes, a «seen» in the order of
+# the others, «Прогон, завтра в 18:00 — Марфа Кабанова в курсе», and a
+# cancelled one says which: «Репетиция «Прогон» на завтра в 18:00 отменена».
+# Spanish: the place after «Lugar:», no article to guess; a cancelled one
+# «Cancelado el ensayo «…» previsto para mañana a las 18:00». German: «Probe
+# „Fechtszene“», the title no longer running into the date; «für eine Probe
+# eingeteilt»; «Du verwaltest jetzt das Projekt „Faust“», the case on
+# «Projekt»; «hat die Probe … als gesehen markiert», not watched it. Clearing
+# the inbox is asked and left, «¿Borrar todas las notificaciones?» / «Borrar
+# todo», «Alle Mitteilungen löschen?» / «Alle löschen», not "Vaciar", "leeren".
+# Each card
+# is found by what both wordings share, its words checked and the flow goes
+# on; it fails at the end naming every one that was wrong.
+appId: ${APP_ID}
+name: Rehearsal notices read right in Spanish, German and Russian
+tags:
+  - notifications
+  - language
+---
+- evalScript: ${output.wrong = ''}
+# Spanish (T-250): moved, said as where to.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Escena del balcón
+      CHANGE: datetime
+# Spanish (T-251): seen, cancelled, a role given, removed.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: member_response
+      REHEARSAL: Escena del balcón
+      MEMBER: Jacinta Labradora
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: rehearsal_deleted
+      REHEARSAL: Escena del balcón
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: role_changed
+      PROJECT: Fuenteovejuna
+      ROLE: admin
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: member_removed
+      PROJECT: Fuenteovejuna
+# Spanish: "programado para", and the participle agreeing with "Ensayo".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: rehearsal_created
+      REHEARSAL: Escena del balcón
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Escena del balcón
+# The longest (T-252): in five days, so on its date, and a long place.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Escena del comendador
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${LAURENCIA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notificaciones"
+      SEE: "(Marcar como leídas|Marcar todas|Todavía nada)"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del comendador» programado para el .* a las 18:00.*Corral de comedias de Almagro.*"
+    timeout: 15000
+- runFlow:
+    when:
+      notVisible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del comendador» programado para el [a-záé]+ \\d+ de [a-z]+ a las 18:00\\. Lugar: Corral de comedias de Almagro.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: added, el martes 6 de octubre and Lugar: | '}"
+- runFlow:
+    when:
+      notVisible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00\\. Lugar: Patio.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: added, Lugar: | '}"
+- assertVisible: ".*Nuevo ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00.*"
+- takeScreenshot: 86-spanish
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-spanish
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
+- scrollUntilVisible:
+    element: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto Fuenteovejuna.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Cambio de rol.*Ahora administras Fuenteovejuna.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Ensayo cancelado.*Fuenteovejuna: .*«Escena del balcón».*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Ensayo cancelado.*Fuenteovejuna: Cancelado el ensayo «Escena del balcón» previsto para (mañana|el .*) a las 18:00.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: cancelled, previsto para when | '}"
+- scrollUntilVisible:
+    element: ".*Ensayo visto.*Jacinta Labradora ha visto «Escena del balcón» \\((mañana|el .*) a las 18:00\\) en Fuenteovejuna.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Ensayo actualizado.*Fuenteovejuna: Escena del balcón, pasa (a mañana|al .*) a las 18:00.*"
+    direction: DOWN
+- takeScreenshot: 86-spanish-cancelled-role-removed-seen
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-spanish-cancelled-role-removed-seen
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
+# Clearing the inbox, asked and left (T-256): "Borrar todo", "¿Borrar todas las
+# notificaciones?", not "Vaciar". The bin's label is the alert's button.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(Borrar todo|Vaciar)"
+      SEE: "¿(Borrar todas las|Vaciar las) notificaciones\\?"
+      WAIT_MS: "10000"
+- takeScreenshot: 86-spanish-clear-all
+- runFlow:
+    when:
+      notVisible: "¿Borrar todas las notificaciones\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: ¿Borrar todas las notificaciones?, not Vaciar | '}"
+- runFlow:
+    when:
+      notVisible:
+        text: "Borrar todo"
+        rightOf: "Cancelar"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Borrar todo, not Vaciar | '}"
+- tapOn: "Cancelar"
+- extendedWaitUntil:
+    notVisible: "¿(Borrar todas las|Vaciar las) notificaciones\\?"
+    timeout: 10000
+# German (T-250): moved, "verlegt auf".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Fechtszene
+      CHANGE: datetime
+# German (T-251): seen, not "reagiert"; a role given, a verb rather than
+# "Administrator".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: member_response
+      REHEARSAL: Fechtszene
+      MEMBER: Marthe Schwerdtlein
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: role_changed
+      PROJECT: Faust
+      ROLE: admin
+# German: the participle last, the place after it.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: rehearsal_created
+      REHEARSAL: Fechtszene
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Fechtszene
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${GRETCHEN_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Mitteilungen"
+      SEE: "(Alle gelesen|Alle als gelesen|Noch nichts)"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Du wurdest .*Probe.*Faust: .*Fechtszene.* (morgen|am .*) um 18:00 angesetzt, Ort: Probebühne.*"
+    timeout: 15000
+- runFlow:
+    when:
+      notVisible: ".*Du wurdest für eine Probe eingeteilt.*Faust: Probe „Fechtszene“ (morgen|am .*) um 18:00 angesetzt, Ort: Probebühne.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: added, für eine Probe eingeteilt, Probe „Fechtszene“ | '}"
+- runFlow:
+    when:
+      notVisible: ".*Neue Probe.*Faust: Probe „Fechtszene“ (morgen|am .*) um 18:00 angesetzt.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: new, Probe „Fechtszene“ | '}"
+- takeScreenshot: 86-german
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-german
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
+- scrollUntilVisible:
+    element: ".*Rolle geändert.*Du verwaltest jetzt .*Faust.*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Rolle geändert.*Du verwaltest jetzt das Projekt „Faust“.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: role, das Projekt „Faust“ | '}"
+- scrollUntilVisible:
+    element: ".*Probe gesehen.*Marthe Schwerdtlein hat .*Fechtszene.*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Probe gesehen.*Faust: Marthe Schwerdtlein hat die Probe „Fechtszene“ \\((morgen|am .*) um 18:00\\) als gesehen markiert.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: seen, als gesehen markiert | '}"
+- scrollUntilVisible:
+    element: ".*Probe geändert.*Faust: .*Fechtszene.* – verlegt auf (morgen|[A-Z][a-z]\\.,.*), 18:00.*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Probe geändert.*Faust: Probe „Fechtszene“ – verlegt auf (morgen|[A-Z][a-z]\\.,.*), 18:00.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: moved, Probe „Fechtszene“ | '}"
+- takeScreenshot: 86-german-role-seen
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-german-role-seen
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
+# Clearing the inbox, asked and left (T-256): "Alle Mitteilungen löschen?",
+# "Die Liste wird geleert", "Alle löschen" — not "leeren", "wird leer sein".
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(Alle löschen|Leeren)"
+      SEE: "(Alle Mitteilungen löschen|Mitteilungen leeren)\\?"
+      WAIT_MS: "10000"
+- takeScreenshot: 86-german-clear-all
+- runFlow:
+    when:
+      notVisible: "Alle Mitteilungen löschen\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Alle Mitteilungen löschen?, not leeren | '}"
+- runFlow:
+    when:
+      notVisible: "Die Liste wird geleert\\. Das lässt sich nicht rückgängig machen\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Die Liste wird geleert, not wird leer sein | '}"
+- runFlow:
+    when:
+      notVisible:
+        text: "Alle löschen"
+        rightOf: "Abbrechen"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Alle löschen, not Leeren | '}"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "(Alle Mitteilungen löschen|Mitteilungen leeren)\\?"
+    timeout: 10000
+# Russian (T-250): longer, only the end moved (19:00–21:00 made 19:00–22:00,
+# the seed): "теперь до 22:00", and not told as a move ("— теперь завтра в
+# 19:00"). Sent first, so it is the lowest card.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Сцена на бульваре
+      CHANGE: end
+# Russian (T-250): moved, "теперь".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Прогон
+      CHANGE: datetime
+# Russian (T-251): cancelled, a woman who joins, a woman who has seen it, a
+# role given.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_deleted
+      REHEARSAL: Прогон
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: member_joined
+      PROJECT: Гроза
+      MEMBER: Марфа Кабанова
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: member_response
+      REHEARSAL: Прогон
+      MEMBER: Марфа Кабанова
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: role_changed
+      PROJECT: Гроза
+      ROLE: admin
+# Russian: the participle agreeing with "Репетиция", whatever the title.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_created
+      REHEARSAL: Прогон
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Прогон
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KATERINA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Уведомления"
+      SEE: "(Прочитать все|Отметить все|Пока тихо)"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Вас .* репетици.*Гроза: Репетиция «Прогон» назначена .* в 18:00, место: Малый зал.*"
+    timeout: 15000
+- runFlow:
+    when:
+      notVisible: ".*Вас позвали на репетицию.*Гроза: Репетиция «Прогон» назначена на (завтра|.*) в 18:00, место: Малый зал.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: added, позвали на, назначена на | '}"
+- runFlow:
+    when:
+      notVisible: ".*Новая репетиция.*Гроза: Репетиция «Прогон» назначена на (завтра|.*) в 18:00.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: new, назначена на | '}"
+- takeScreenshot: 86-russian
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-russian
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
+- scrollUntilVisible:
+    element: ".*Изменение роли.*Теперь вы администратор проекта .*Гроза.*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Изменение роли.*Теперь вы администратор проекта «Гроза».*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: role, «Гроза» in quotes | '}"
+- scrollUntilVisible:
+    element: ".*Репетиция просмотрена.*Марфа Кабанова в курсе.*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Репетиция просмотрена.*Гроза: Прогон, (завтра|.*) в 18:00 — Марфа Кабанова в курсе.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: seen, in the order of the others | '}"
+- scrollUntilVisible:
+    element: ".*Новый участник.*Марфа Кабанова теперь в проекте .*Гроза.*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Новый участник.*Марфа Кабанова теперь в проекте «Гроза».*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: joined, «Гроза» in quotes | '}"
+- scrollUntilVisible:
+    element: ".*Отменена репетиция.*Гроза: Репетиция «Прогон».*отменена.*"
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Отменена репетиция.*Гроза: Репетиция «Прогон» на (завтра|.*) в 18:00 отменена.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: cancelled, на when | '}"
+- scrollUntilVisible:
+    element: ".*Изменена репетиция.*Гроза: Прогон — теперь (завтра|[а-я]{2}, .*) в 18:00.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: ".*Изменена репетиция.*Гроза: Сцена на бульваре, (завтра|[а-я]{2}, .*) в 19:00 — теперь до 22:00.*"
+    direction: DOWN
+- assertNotVisible: ".*Сцена на бульваре — теперь.*"
+- takeScreenshot: 86-russian-cancelled-joined-seen-role
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 86-russian-cancelled-joined-seen-role
+      LEFT: "0.18"
+      RIGHT: "0.9"
+      TOP: "0.12"
+      BOTTOM: "1"
+
+- evalScript: "${console.log('86 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

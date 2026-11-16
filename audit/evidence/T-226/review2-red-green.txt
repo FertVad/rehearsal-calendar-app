@@ -1,0 +1,52 @@
+T-226 review, second round (Астра) — red before and green after:
+a stop before midnight after a failed batch
+=================================================================
+
+The finding against b1e2692: run.mjs's loop sets process.exitCode = 1 when a
+batch fails; if nextStep then returns { stop }, it throws EnvironmentError, and
+main().catch sets `machine ? 75 : 1` — 75 over the 1. The supervisor takes the
+run as the machine's: no red result kept, no flake registered.
+
+The fix: the run's exit code is exitCode({ failed, error }) in e2e/midnight.mjs;
+a stop for the machine after a failed batch is 1, 75 only when nothing failed.
+run.mjs says "stopped, a flow had already failed (junit.xml): midnight in …"
+instead of "not ready, not the change". junit.xml is written after each batch
+and the artifacts flattened as before; the wait, batches and reseed unchanged.
+
+Red: exitCode put back to what b1e2692's handler did
+(`if (error === 'machine') return 75;` — 75 whatever had failed).
+The test plays the review's path: two flows from 23:50, setup 3 min 39 s; the
+first a batch of its own (take 1), failed after 54 s + 134 s; then nextStep
+gives stop (wait past the 900 s limit).
+
+$ node --test e2e/__tests__/midnight.test.mjs      # exitCode as b1e2692 behaved
+✔ the runner's limit is the supervisor's
+✔ the review's path: one flow from 23:47 with a 3 min 19 s setup runs at once and ends in its limit
+✔ the longest flow alone (70, 200 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ flow 41 alone (134 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ the two longest (70, 26): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ the task's seven flows: begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✖ the second review's path: a batch failed, then no wait for midnight — the run ends 1, not 75
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  75 !== 1
+✔ a stop for the machine with nothing failed is 75; the other ends as before
+✔ far from midnight the whole set is one batch
+✔ the batches' flows are where the supervisor takes a red run's from: artifacts/<run>/<flow>
+ℹ tests 10  ℹ pass 9  ℹ fail 1
+
+Green, with the fix:
+
+$ node --test e2e/__tests__/midnight.test.mjs
+✔ the runner's limit is the supervisor's
+✔ the review's path: one flow from 23:47 with a 3 min 19 s setup runs at once and ends in its limit
+✔ the longest flow alone (70, 200 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ flow 41 alone (134 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ the two longest (70, 26): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ the task's seven flows: begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ the second review's path: a batch failed, then no wait for midnight — the run ends 1, not 75
+✔ a stop for the machine with nothing failed is 75; the other ends as before
+✔ far from midnight the whole set is one batch
+✔ the batches' flows are where the supervisor takes a red run's from: artifacts/<run>/<flow>
+ℹ tests 10  ℹ pass 10  ℹ fail 0
+
+$ node --check e2e/run.mjs   → ok

@@ -41,7 +41,10 @@ import type {
 export type DirectionOutcome<T> =
   | { status: 'off' } // not switched on: nothing was done
   | { status: 'done'; result: T }
-  | { status: 'failed'; error: string };
+  // What it threw, whole: the screen says it in the app's language
+  // (requestErrorMessage). Its message alone was axios's "Network Error"
+  // offline (T-228).
+  | { status: 'failed'; error: unknown };
 
 export interface SyncRun {
   import: DirectionOutcome<ImportResult>;
@@ -93,7 +96,14 @@ async function exportRehearsals(
   const projectsRes = await projectsAPI.getUserProjects();
   const projectIds = (projectsRes.data?.projects || []).map((p: any) => p.id);
   const res = projectIds.length > 0 ? await rehearsalsAPI.getBatch(projectIds) : null;
-  const rehearsals = (res?.data?.rehearsals || []).map(toRehearsalWithProject);
+  // The batch is everything this person may see, which for an admin is every
+  // rehearsal of their projects (T-232). Their calendar is only the ones they
+  // are on: someone else's call is not their time. Only an explicit false is
+  // left out — a rehearsal without the field came from a server that sent only
+  // those they are on, and dropping it would take its event back.
+  const rehearsals = (res?.data?.rehearsals || [])
+    .filter((r: any) => r.onRoster !== false)
+    .map(toRehearsalWithProject);
 
   const mappings = await getAllMappings(session);
 
@@ -133,7 +143,7 @@ async function eachDirection<T>(name: string, work: () => Promise<T | null>): Pr
   } catch (error: any) {
     if (error instanceof SessionEndedError) throw error;
     logger.error(`[CalendarSync] ${name} failed:`, error);
-    return { status: 'failed', error: error?.message || '' };
+    return { status: 'failed', error };
   }
 }
 

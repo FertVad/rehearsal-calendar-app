@@ -65,7 +65,7 @@ Pressable.displayName = 'Pressable';
 
 // FlatList needs special handling to render items
 const FlatList = React.forwardRef((props, ref) => {
-  const { data, renderItem, keyExtractor, ListEmptyComponent, ListHeaderComponent, ListFooterComponent, ...otherProps } = props;
+  const { data, renderItem, keyExtractor: _keyExtractor, ListEmptyComponent, ListHeaderComponent, ListFooterComponent, ...otherProps } = props;
 
   // If no data, render empty component
   if (!data || data.length === 0) {
@@ -93,7 +93,6 @@ const FlatList = React.forwardRef((props, ref) => {
   }
 
   data.forEach((item, index) => {
-    const key = keyExtractor ? keyExtractor(item, index) : String(index);
     children.push(renderItem({ item, index, separators: {} }));
   });
 
@@ -111,15 +110,14 @@ FlatList.displayName = 'FlatList';
 
 // SectionList similar handling
 const SectionList = React.forwardRef((props, ref) => {
-  const { sections, renderItem, renderSectionHeader, keyExtractor, ...otherProps } = props;
+  const { sections, renderItem, renderSectionHeader, keyExtractor: _keyExtractor, ...otherProps } = props;
 
   const children = [];
-  sections.forEach((section, sectionIndex) => {
+  sections.forEach((section) => {
     if (renderSectionHeader) {
       children.push(renderSectionHeader({ section }));
     }
     section.data.forEach((item, index) => {
-      const key = keyExtractor ? keyExtractor(item, index) : String(index);
       children.push(renderItem({ item, index, section, separators: {} }));
     });
   });

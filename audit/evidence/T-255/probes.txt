@@ -1,0 +1,54 @@
+T-255 runs on auto/main 97c9a65, 16.11.2026 (Maestro artifacts in
+rehearsal-calendar-native/e2e/out/artifacts, named below)
+
+1. npm run e2e -- e2e/flows/10-availability-days.yaml   (artifacts 2026-11-16_000431)
+[Passed] Availability saves the day it changed (3m 50s)
+1/1 Flow Passed in 3m 50s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+   maestro.log: 00:06:44.013 tap login-submit; 00:06:48.741 tap tab-create;
+   00:06:50.089 tap "Mark Busy" (found at once).
+
+2. probe-sign-in-then-plus.yaml as e2e/flows/10-probe-tab-create.yaml   (artifacts 2026-11-16_001343)
+[Passed] T-255 probe - Mark Busy after sign-in (4m 10s)
+1/1 Flow Passed in 4m 10s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+3. probe-tab-create-at-once.yaml as e2e/flows/10-probe-tab-create.yaml   (artifacts 2026-11-16_002426)
+[Passed] T-255 probe - Mark Busy at once after sign-in (3m 57s)
+1/1 Flow Passed in 3m 57s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+   node audit/evidence/T-255/password-window.mjs e2e/out/artifacts/2026-11-16_002426
+   T-255 probe - Mark Busy at once after sign-in
+     password controller hosted 00:27:14.938 - 00:27:16.788
+     password controller hosted 00:27:52.760 - 00:27:52.967
+     password controller hosted 00:28:31.195 - 00:28:31.383
+     password controller hosted 00:29:07.758 - 00:29:07.987
+     password controller hosted 00:29:44.235 - 00:29:44.391
+     tap login-submit 00:27:13.863
+     tap tab-create   00:27:16.076  <- inside the password controller window
+     tap login-submit 00:27:51.755
+     tap tab-create   00:27:53.816
+     tap login-submit 00:28:30.280
+     tap tab-create   00:28:31.899
+     tap login-submit 00:29:06.672
+     tap tab-create   00:29:08.632
+     tap login-submit 00:29:43.353
+     tap tab-create   00:29:44.983
+
+   node audit/evidence/T-255/password-window.mjs e2e/out/artifacts/2026-11-16_000431
+   Availability saves the day it changed
+     password controller hosted 00:06:45.317 - 00:06:47.144
+     tap login-submit 00:06:44.013
+     tap tab-create   00:06:48.741
+     tap tab-create   00:07:48.436
+     tap tab-create   00:08:36.467
+
+4. node audit/evidence/T-207/touch-scan.mjs rehearsal-calendar-native/e2e/out/artifacts (tail)
+2026-11-16_000431  Availability saves the day it changed: digitizers 43, registered twice 1 (s after the app's last scene change: 8.06s/tap 1 after "unspecified -> foreground"), app scene changes 5, taps lost 1
+    lost 00:06:06.758 -> Something have changed in the UI judging by view hierarchy. Proceed.
+2026-11-16_001343  T-255 probe - Mark Busy after sign-in: digitizers 45, registered twice 1 (s after the app's last scene change: 8.71s/tap 0 after "unspecified -> foreground"), app scene changes 28, taps lost 1
+    lost 00:16:01.895 -> Something have changed in the UI judging by view hierarchy. Proceed.
+
+161 flow logs, 3726 digitizers attached, 18 registered twice, 11 taps lost

@@ -1,0 +1,103 @@
+'use strict';
+
+// A name the person typed — a project's, a rehearsal's — set in quotes in a
+// sentence, the one way for the app and the server alike (T-261).
+//
+// In a theatre a production's name is written in quotes out of habit, so a
+// project is called «Вишнёвый сад» with them, and every sentence that quoted it
+// doubled them: «Проект ««Вишнёвый сад»» удалён». So quotes around the whole
+// name are taken off first, and quotes inside it become the language's second
+// level, as each language nests them: ru «…„…“…», de „…‚…‘…“, es «…“…”…»,
+// en “…‘…’…”.
+//
+// CommonJS so that both sides can load the one file: the server's ES modules
+// import it, Metro bundles it, and the app's Jest loads it as it is.
+
+const LEVELS = {
+  ru: [['«', '»'], ['„', '“']],
+  en: [['“', '”'], ['‘', '’']],
+  es: [['«', '»'], ['“', '”']],
+  de: [['„', '“'], ['‚', '‘']],
+};
+
+// Quotes around a whole name that are taken off: an opening mark and the mark
+// that closes it.
+const AROUND = { '«': '»', '"': '"', '“': '”', '„': '“', '‘': '’', '‚': '‘' };
+
+const DOUBLE = '«»"“”„';
+const SINGLE = '‘’‚';
+// A single opening mark and the one mark that closes it.
+const SINGLE_CLOSES = { '‚': '‘', '‘': '’' };
+const ALWAYS_OPEN = '«„‚';
+const ALWAYS_CLOSE = '»';
+const WORD = /[\p{L}\p{N}]/u;
+const BEFORE_OPENING = /[\s([{\-–—/]/u;
+
+/**
+ * The quote marks of a name: where each one is, whether it opens or closes,
+ * and whether it is a double or a single one. An apostrophe — "Rock’n’roll",
+ * "Actors’ studio", ‚Actors’ Studio‘ — is not a mark: a single closing mark
+ * counts only as the one closing the single mark open last (‚…‘, ‘…’).
+ *
+ * A mark that could open or close (“ ” " ‘ ’) opens at the start or after a
+ * space, a bracket or a dash. Right after another mark it goes the way that one
+ * went: “‘ opens twice, but in „Durchlauf ‚Die Möwe‘“ the “ after the closing ‘
+ * closes too, as does the second “ of „Probe „Die Möwe““.
+ */
+function marksOf(text) {
+  const marks = [];
+  // The single marks open now, innermost last: a closing one closes only its
+  // own pair — ‚ by ‘, ‘ by ’ — so the ’ of ‚Actors’ Studio‘ is an apostrophe.
+  const openSingles = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    const double = DOUBLE.includes(c);
+    if (!double && !SINGLE.includes(c)) continue;
+    const prev = i === 0 ? '' : text[i - 1];
+    const next = i + 1 < text.length ? text[i + 1] : '';
+    const last = marks.length ? marks[marks.length - 1] : null;
+    let open;
+    if (ALWAYS_OPEN.includes(c)) open = true;
+    else if (ALWAYS_CLOSE.includes(c)) open = false;
+    else if (last && last.at === i - 1) open = last.open;
+    else open = prev === '' || BEFORE_OPENING.test(prev);
+    if (!double) {
+      if (open && c === '’') continue;
+      if (open) openSingles.push(c);
+      else if (SINGLE_CLOSES[openSingles[openSingles.length - 1]] !== c || (WORD.test(prev) && WORD.test(next))) continue;
+      else openSingles.pop();
+    }
+    marks.push({ at: i, open, double });
+  }
+  return marks;
+}
+
+/** True when the first and the last character are one pair of quotes around all of it. */
+function quotedWhole(text) {
+  if (text.length < 2 || AROUND[text[0]] !== text[text.length - 1]) return false;
+  const marks = marksOf(text);
+  if (!marks.length || marks[0].at !== 0 || !marks[0].open) return false;
+  let depth = 0;
+  for (const mark of marks) {
+    depth += mark.open ? 1 : -1;
+    if (depth <= 0) return mark.at === text.length - 1;
+  }
+  return false;
+}
+
+/**
+ * `name` in the quotes of `language` (ru, en, es, de; any other reads as en):
+ * «Вишнёвый сад» for «Вишнёвый сад» or "Вишнёвый сад", «Прогон „Чайки“» for
+ * Прогон «Чайки».
+ */
+function quoteName(name, language) {
+  const [outer, inner] = LEVELS[language] || LEVELS.en;
+  let text = String(name).trim();
+  while (quotedWhole(text)) text = text.slice(1, -1).trim();
+  // marksOf counts UTF-16 units, as split('') does: an emoji keeps its place.
+  const units = text.split('');
+  for (const mark of marksOf(text)) units[mark.at] = mark.open ? inner[0] : inner[1];
+  return `${outer[0]}${units.join('')}${outer[1]}`;
+}
+
+module.exports = { quoteName };

@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { useAvailabilityData } from '../useAvailabilityData';
 import { availabilityAPI } from '../../../../shared/services/api';
+import { requestErrorMessage } from '../../../../shared/utils/requestError';
 
 jest.mock('../../../../shared/services/api');
 jest.mock('../../../../contexts/I18nContext', () => ({
@@ -80,6 +81,21 @@ describe('When it does not', () => {
 
     expect(Object.keys(offline.current.availability)).toHaveLength(1);
     expect(offline.current.loadFailed).toBe(true);
+  });
+
+  // The banner says why from this: kept as `true`, it said "No connection"
+  // with the server down as well (T-228, review 2).
+  it.each([
+    ['no connection', { isAxiosError: true, code: 'ERR_NETWORK', request: {} }, 'noConnection'],
+    ['the server down', { isAxiosError: true, response: { status: 503, data: {} } }, 'serverUnavailable'],
+  ] as const)('keeps what the load failed with, %s', async (_, error, said) => {
+    const { ru } = jest.requireActual('../../../../i18n/translations');
+    (availabilityAPI.getAll as jest.Mock).mockRejectedValue(error);
+
+    const result = await load();
+
+    expect(result.current.loadFailed).toBe(true);
+    expect(requestErrorMessage(ru, result.current.loadError, '')).toBe(ru.common[said]);
   });
 
   it('is honest when there is nothing cached either', async () => {

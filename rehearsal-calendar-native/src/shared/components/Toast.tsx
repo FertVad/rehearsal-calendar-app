@@ -18,7 +18,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
 import { BOTTOM_ACTION_GAP, BOTTOM_ACTION_HEIGHT } from './BottomActionBar';
 

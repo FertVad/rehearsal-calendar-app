@@ -1,0 +1,42 @@
+T-227 — the Release launch check on the committed tip, green.
+Source: commit 49b63786f7ab7055cdba6239ccfa5acdeb0131bb, tree
+b3ad34fdb415b24e8fe58415b58e1405344a0fc1; git status empty, nothing changed.
+Run on 2026-11-09 at 06:27 (Mac's clock), before the red run.
+
+The project the run kept was generated from these inputs (hash 66d6c3728e4a,
+the same as app.json and locales/ of 9d265da). An earlier attempt through
+`node e2e/hold-lock.mjs npm run e2e …` printed nothing for 10 minutes and a
+second one showed why: run.mjs waits for the e2e lock that hold-lock.mjs
+itself holds ("a job under the e2e lock (pid 82807: npm run e2e -- …) is
+going; waiting for it"). npm run e2e takes the same lock on its own, so it was
+run directly:
+
+$ npm run e2e -- e2e/release/01-launch.yaml
+[e2e] native inputs 66d6c3728e4a (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] building the Release app, its JS bundled for the local server
+[e2e] checking the Release bundle talks to the local server
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Release app and running its flows
+
+Waiting for flows to complete...
+[Passed] Release opens on sign-in (45s)
+
+1/1 Flow Passed in 45s
+
+[e2e] the Release app's device log: 0 error(s) of a failed start (…/e2e/out/release-device.log)
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+(Maestro's JVM warnings about sun.misc.Unsafe left out.)
+
+On screen (release-green-after.png, the flow's takeScreenshot
+release-01-sign-in): the sign-in screen — Rehearsly, Email, Password,
+Sign In, Google and Apple.
+
+The bundle check passed ("checking the Release bundle talks to the local
+server"): the Release JS and its bytecode carry the local server's address,
+not production's.

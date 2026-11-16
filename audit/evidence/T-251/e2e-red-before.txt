@@ -1,0 +1,44 @@
+T-251: e2e/flows/86-rehearsal-notices-read-right.yaml, red on the old words.
+
+server/i18n/pushNotifications.js and
+server/services/notifications/pushNotificationService.js put back as at bd4b8ac
+(git restore --source=bd4b8ac -- <both>), the flow, mailbox and notify.js as
+in c024f21; restored with git restore --source=HEAD afterwards.
+
+== Run 1: the whole flow (it stops at its first language, Spanish) ==
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[Failed] Rehearsal notices read right in Spanish, German and Russian (1m 51s) (No visible element found: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto Fuenteovejuna.*")
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+On screen (screen hierarchy, artifacts 2026-11-12_045922):
+  Eliminado del proyecto, Has sido eliminado del proyecto Fuenteovejuna, hace 1 min
+  Cambio de rol, Ahora eres administrador en Fuenteovejuna, hace 1 min
+  Ensayo cancelado, Fuenteovejuna: Escena del balcón cancelado, hace 1 min
+
+== Run 2: its German and Russian parts alone, as two temporary flows ==
+(the flow's German and Russian sections from "# German (T-251)" and
+"# Russian (T-251)" on, deleted after)
+
+$ npm run e2e -- e2e/flows/zz-tmp-86-german.yaml e2e/flows/zz-tmp-86-russian.yaml
+[Failed] 86 German part (1m 21s) (No visible element found: ".*Rolle geändert.*Du verwaltest jetzt Faust.*")
+[Failed] 86 Russian part (58s) (No visible element found: ".*Изменение роли.*Теперь вы администратор проекта Гроза.*")
+2/2 Flows Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+On screen (screen hierarchy, artifacts 2026-11-12_050521):
+  Rolle geändert, Du bist jetzt Administrator in Faust, gerade eben
+  Изменение роли, Вы теперь администратором проекта Гроза, только что
+  Новый отклик, Марфа Кабанова откликнулся на «Прогон» (завтра в 18:00) в проекте Гроза, только что
+  Новый участник, Марфа Кабанова присоединился к проекту Гроза, только что
+  Отменена репетиция, Гроза: Прогон отменена, только что
+
+== Green, on c024f21 ==
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[Passed] Rehearsal notices read right in Spanish, German and Russian (2m 16s)
+1/1 Flow Passed in 2m 16s
+[e2e] taps taken again (tap-and-see.yaml): 0
+(screenshots 86-spanish-cancelled-role-removed, 86-german-role,
+86-russian-cancelled-joined-seen-role, artifacts 2026-11-12_045236)

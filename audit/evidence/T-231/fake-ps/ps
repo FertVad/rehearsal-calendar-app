@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+// A stand-in for `ps -o lstart= -p <pid>` where the sandbox denies the real ps:
+// a fixed start time per pid, kept in a file, for a pid that is alive. Only for
+// running lock.test.mjs's ps path in this session (T-231 evidence).
+const fs = require('node:fs');
+const pid = Number(process.argv[process.argv.indexOf('-p') + 1]);
+try { process.kill(pid, 0); } catch (error) { if (error.code !== 'EPERM') process.exit(1); }
+const file = `/tmp/fake-ps-${pid}`;
+if (!fs.existsSync(file)) fs.writeFileSync(file, new Date().toString());
+console.log(fs.readFileSync(file, 'utf8'));

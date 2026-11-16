@@ -35,7 +35,8 @@ tags:
     centerElement: true
 - assertVisible: "(?s)(?=.*Night watch)(?=.*\\b2:00.AM).*"
 - takeScreenshot: 23-calendar-in-tel-aviv
-# The planner's week starts on today in Tel Aviv.
+# The planner's week starts on today in Tel Aviv - or tomorrow, once today's
+# working hours are gone (seed.mjs, WEEK_CHOSEN_LABEL); never the day before.
 - tapOn: "Planner, tab.*"
 - extendedWaitUntil:
     visible: "${WEEK_CHOSEN_LABEL}"
@@ -184,3 +185,253 @@ tags:
     id: profile-notifications
     checked: false
 - takeScreenshot: 23-switch-after
+
+# The picker in German (T-257). The cities had Russian and English names only:
+# German read the English ones, and its search found neither "Moskau" nor
+# "Wien" - Vienna was not even in the list. Now the zone chosen above reads
+# "Tokio", and the search finds a city by its German name as by its English.
+# The profile is taken back to the top: its language row clipped under the
+# title is on screen to Maestro, and a tap on it lands on the title (flow 44).
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: profile-timezone
+    text: ".*Tokio \\(UTC\\+9\\).*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-timezone
+      SEE: "Zeitzone auswählen"
+      WAIT_MS: "10000"
+# The list in German, with the Spanish-speaking cities it lacked.
+- assertVisible: "Mexiko-Stadt \\(UTC-[56]\\)"
+- assertNotVisible: "Mexico City \\(UTC-[56]\\)"
+- tapOn:
+    id: timezone-search
+- inputText: "Moskau"
+- extendedWaitUntil:
+    visible: "Moskau \\(UTC\\+3\\)"
+    timeout: 5000
+- assertNotVisible: "Moscow \\(UTC\\+3\\)"
+- eraseText: 20
+- inputText: "Wien"
+- extendedWaitUntil:
+    visible: "Wien \\(UTC\\+[12]\\)"
+    timeout: 5000
+- takeScreenshot: 23-search-wien-in-german
+# By its English name too, and named in German.
+- eraseText: 20
+- inputText: "Vienna"
+- extendedWaitUntil:
+    visible: "Wien \\(UTC\\+[12]\\)"
+    timeout: 5000
+- eraseText: 20
+- inputText: "Kiew"
+- extendedWaitUntil:
+    visible: "Kiew \\(UTC\\+[23]\\)"
+    timeout: 5000
+- assertNotVisible: "Kyiv \\(UTC\\+[23]\\)"
+- takeScreenshot: 23-search-kiew-in-german
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Schließen"
+      GONE: "Zeitzone auswählen"
+      WAIT_MS: "10000"
+# Still Tokyo: nothing was chosen.
+- assertVisible:
+    id: profile-timezone
+    text: ".*Tokio \\(UTC\\+9\\).*"
+# A zone a phone reports that the list does not offer is named on the profile
+# by the table of such zones, PHONE_ZONES (T-262). Spanish read the English
+# IANA names of Europe - "Lisbon" - and the bare IANA names of Latin America,
+# without their accents - "Cordoba"; German read "Canary". The picker offers
+# only the list and the phone's Honolulu, so each zone is saved as from
+# another device (set-timezone.js), and the app reads it with the profile the
+# server answers a change of language with, or at a start.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: Europe/Lisbon
+# The search in Spanish, typed without the accent (T-262). Spanish names are
+# written with theirs, and a search rarely types them: "moscu" found nothing,
+# "Moscú" being neither in English nor in the zone's name. The search folds
+# both sides with String.prototype.normalize - this step is what shows the
+# app's Hermes has it.
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Español"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-es
+      SEE: "Perfil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+# Lisbon, saved elsewhere, in Spanish: Lisboa - UTC+0, or UTC+1 in summer.
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Lisboa \\(UTC\\+[01]\\).*"
+    timeout: 10000
+- takeScreenshot: 23-phone-zone-lisboa-in-spanish
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-timezone
+      SEE: "Seleccionar zona horaria"
+      WAIT_MS: "10000"
+- tapOn:
+    id: timezone-search
+- inputText: "moscu"
+- extendedWaitUntil:
+    visible: "Moscú \\(UTC\\+3\\)"
+    timeout: 5000
+- takeScreenshot: 23-search-moscu-in-spanish
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Cerrar"
+      GONE: "Seleccionar zona horaria"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-timezone
+    text: ".*Lisboa \\(UTC\\+[01]\\).*"
+# Córdoba, under the older name a phone may still report, America/Cordoba:
+# the zone of America/Argentina/Cordoba, as Buenos Aires's. Read at a start.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: America/Cordoba
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Calendario, tab.*"
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Idioma, Español.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Córdoba \\(UTC-3\\).*"
+    timeout: 10000
+- takeScreenshot: 23-phone-zone-cordoba-in-spanish
+# The Canaries in German: Kanaren.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: Atlantic/Canary
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-timezone
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Kanaren \\(UTC\\+[01]\\).*"
+    timeout: 10000
+- takeScreenshot: 23-phone-zone-kanaren-in-german
+# Back to Tokyo, as the flow chose it above, and to English.
+- runScript:
+    file: ../scripts/set-timezone.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+      PASSWORD: ${PASSWORD}
+      ZONE: Asia/Tokyo
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "English"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-en
+      SEE: "Profile, tab.*"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: profile-timezone
+      text: ".*Tokyo \\(UTC\\+9\\).*"
+    timeout: 10000

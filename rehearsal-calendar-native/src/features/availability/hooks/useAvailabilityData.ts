@@ -137,7 +137,10 @@ export const useAvailabilityData = () => {
   // reads an empty state as "you have marked nothing, so you are counted as
   // free" — which offline is false twice over: the availability is safe on the
   // server, and nobody is being told anything different.
-  const [loadFailed, setLoadFailed] = useState(false);
+  // The error itself, null when the load answered: the banner says no
+  // connection apart from the server down (T-228).
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const loadFailed = loadError != null;
 
   // Busy hours are read in the profile's zone, the app's one (time.ts), and
   // saved in it (useAvailabilitySave); the server keys a day on it too.
@@ -149,7 +152,7 @@ export const useAvailabilityData = () => {
   // away from the week the person was on (T-021).
   const loadAvailability = useCallback(async () => {
     try {
-      setLoadFailed(false);
+      setLoadError(null);
       const response = await availabilityAPI.getAll();
 
       logger.debug('[useAvailabilityData] Received response:', response.data?.length, 'records');
@@ -378,7 +381,7 @@ export const useAvailabilityData = () => {
       });
     } catch (err) {
       logger.error('Failed to load availability:', err);
-      setLoadFailed(true);
+      setLoadError(err ?? new Error('availability load failed'));
 
       // Fall back to what was last seen, so the screen is not blank while the
       // reader's real availability sits safely on the server.
@@ -411,6 +414,7 @@ export const useAvailabilityData = () => {
     setAvailability,
     loading,
     loadFailed,
+    loadError,
     saving,
     setSaving,
     hasChanges,

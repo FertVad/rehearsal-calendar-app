@@ -142,6 +142,7 @@ function findFreeSlots(
       date,
       startTime: slotStart,
       endTime,
+      freeUntil: workHoursEnd, // set below, once the day's slots are known
       category: categorizeSlot(slotBusyMembers.length, relevantMembers.length),
       totalMembers: relevantMembers.length,
       freeMembers: relevantMembers.length - slotBusyMembers.length,
@@ -176,6 +177,15 @@ function findFreeSlots(
   }
 
   closeSlot(workHoursEnd);
+
+  // How far each slot's free time goes, for the people free at its start: to
+  // the first later slot where one of them is busy. The day's slots follow
+  // one another without a gap, so that slot's start is the moment (T-238).
+  slots.forEach((slot, i) => {
+    const busyAtStart = new Set(slot.busyMembers.map(m => m.id));
+    const ends = slots.slice(i + 1).find(next => next.busyMembers.some(m => !busyAtStart.has(m.id)));
+    slot.freeUntil = ends ? ends.startTime : workHoursEnd;
+  });
 
   return slots;
 }

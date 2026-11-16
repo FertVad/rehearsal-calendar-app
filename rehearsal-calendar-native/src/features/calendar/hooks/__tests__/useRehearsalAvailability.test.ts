@@ -10,13 +10,18 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useRehearsalAvailability } from '../useRehearsalAvailability';
 import { projectsAPI } from '../../../../shared/services/api';
+import { Alert } from 'react-native';
+import { AxiosError } from 'axios';
 
 jest.mock('../../../../shared/services/api', () => ({
   projectsAPI: { getMembersAvailability: jest.fn(), getMembersAvailabilityRange: jest.fn() },
 }));
 jest.mock('react-native/Libraries/Alert/Alert', () => ({ alert: jest.fn() }));
 
-const t = { common: { error: 'Error' }, rehearsals: { loadAvailabilityError: 'Could not load' } };
+const t = {
+  common: { error: 'Error', noConnection: 'No connection', serverUnavailable: 'Server unavailable' },
+  rehearsals: { loadAvailabilityError: 'Could not load' },
+};
 const project = { id: 'p1', name: 'Hamlet' } as any;
 const MONDAY = new Date(2026, 9, 19);
 const TUESDAY = new Date(2026, 9, 20);
@@ -95,4 +100,13 @@ it('says a failed load failed, rather than reading as nobody busy', async () => 
 
   await waitFor(() => expect((result.current as any).failed).toBe(true));
   expect((result.current as any).ready).toBe(false);
+});
+
+it('says why it failed in the app\'s words: no connection (T-228)', async () => {
+  (projectsAPI.getMembersAvailability as jest.Mock)
+    .mockRejectedValueOnce(new AxiosError('Network Error', 'ERR_NETWORK', undefined, {}));
+  const { result } = renderHook(() => useRehearsalAvailability(project, MONDAY, IDS, t));
+
+  await waitFor(() => expect((result.current as any).failed).toBe(true));
+  expect(Alert.alert).toHaveBeenCalledWith('Error', 'No connection');
 });

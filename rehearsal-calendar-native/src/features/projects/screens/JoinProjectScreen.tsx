@@ -12,7 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
@@ -20,6 +20,7 @@ import { invitesAPI } from '../../../shared/services/api';
 import { inviteCodeFromInput } from '../../../shared/utils/inviteCode';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { joinProjectScreenStyles as styles } from '../styles';
 
 import { logger } from '../../../shared/utils/logger';
@@ -53,6 +54,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   useEffect(() => {
     if (!linkCode) return;
     checkAndFetchInviteInfo(linkCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per link: the function is this render's and new on each, listed it would ask about the invite on every render (T-243)
   }, [linkCode]);
 
   const changeCode = (text: string) => {
@@ -112,7 +114,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       } else if (err.response?.status === 410) {
         setError(t.projects.inviteExpired);
       } else {
-        setError(t.projects.inviteLoadError);
+        setError(requestErrorMessage(t, err, t.projects.inviteLoadError));
       }
     } finally {
       if (isLatest()) setLoading(false);
@@ -143,7 +145,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           routes: [{ name: 'MainTabs' }],
         });
       } else {
-        setError(err.response?.data?.error || t.projects.joinError);
+        setError(requestErrorMessage(t, err, t.projects.joinError));
         // A typed code goes back to its field, the error under it.
         if (!linkCode) setProjectInfo(null);
       }

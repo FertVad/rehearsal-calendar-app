@@ -1,0 +1,274 @@
+# Spanish buttons as the native speaker of T-256 wrote them, and whole on the
+# phone:
+# - the window of a phone that refused notifications offers "Abrir
+#   configuración" — the phone's own settings are "la configuración del
+#   teléfono" (owner's decision 5), not "Abrir ajustes"; opened in German
+#   too, its title "Mitteilungen sind nicht erlaubt" read whole and uncut;
+# - the reset's button, once its minute is up, is "Reenviar código", not
+#   "Enviar el código otra vez";
+# - the address change's is "Reenviar códigos", not "Enviar los códigos otra
+#   vez".
+#
+# Yerma's account speaks Spanish. Her phone refused notifications in iOS's
+# prompt — the app launched as such a phone (e2e/device/expo-notifications.js,
+# rehearslyPushDevice "denied"): the simulator gets no push and reads no
+# permission. She signs in, opens the window from her profile and leaves it;
+# signs out, so the sign-in screen speaks Spanish, asks for a reset code and
+# waits out its minute; signs in again, asks for codes for a new address and
+# waits out theirs. Nothing is changed. Each text is checked where it shows,
+# and that nothing on the shot is cut ("…", no-ellipsis.js), and the flow goes
+# on, so a run on the old words names every one; it fails at the end if any
+# was wrong.
+appId: ${APP_ID}
+name: Spanish buttons read right and fit
+tags:
+  - auth
+  - profile
+  - notifications
+  - language
+env:
+  NEW_EMAIL: yerma.nueva@e2e.test
+---
+- evalScript: ${output.wrong = ''}
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      rehearslyPushDevice: "denied"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${YERMA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# The window of a refused phone.
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible:
+      id: profile-notifications-device
+    timeout: 15000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-notifications-device
+      SEE: "Las notificaciones no están permitidas"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 94-push-denied-es
+- runFlow:
+    when:
+      notVisible: "Abrir configuración"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Abrir configuración, not Abrir ajustes | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 94-push-denied-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'es: ' + output.cut + ' | ' : '')}"
+- tapOn: "Cancelar"
+- extendedWaitUntil:
+    notVisible: "Las notificaciones no están permitidas"
+    timeout: 10000
+
+# The same window in German: "Mitteilungen sind nicht erlaubt", iOS's word
+# for notifications, as the rest of the app says it, not "Benachrichtigungen
+# sind nicht erlaubt" — whole, and nothing on the shot cut. Her language is
+# set back to Spanish after.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-notifications-device
+      SEE: "(Mitteilungen|Benachrichtigungen) sind nicht erlaubt"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 94-push-denied-de
+- runFlow:
+    when:
+      notVisible: "Mitteilungen sind nicht erlaubt"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Mitteilungen sind nicht erlaubt, not Benachrichtigungen sind nicht erlaubt | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 94-push-denied-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'de: ' + output.cut + ' | ' : '')}"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "(Mitteilungen|Benachrichtigungen) sind nicht erlaubt"
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Español"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-es
+      SEE: "Perfil, tab.*"
+      WAIT_MS: "10000"
+
+# Signed out: the sign-in screen in Spanish, a reset code asked for.
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- extendedWaitUntil:
+    visible:
+      id: login-forgot-password
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: login-forgot-password
+      SEE: ".*la dirección de tu cuenta.*"
+      WAIT_MS: "10000"
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: reset-email
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${YERMA_EMAIL}
+      - assertVisible:
+          id: reset-email
+          text: ${YERMA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: reset-send
+      SEE: ".*código de seis dígitos.*"
+      WAIT_MS: "20000"
+# Its minute, counted down on the button.
+- extendedWaitUntil:
+    visible: "(Reenviar código|Enviar el código otra vez)"
+    timeout: 90000
+- waitForAnimationToEnd
+- takeScreenshot: 94-resend-code-es
+- runFlow:
+    when:
+      notVisible: "Reenviar código"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Reenviar código, not Enviar el código otra vez | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 94-resend-code-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'es: ' + output.cut + ' | ' : '')}"
+
+# Signed in again, from the start: codes for a new address.
+- launchApp
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${YERMA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- tapOn:
+    id: tab-profile
+- tapOn:
+    id: profile-edit
+- tapOn:
+    id: profile-change-email
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: change-new-email
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${NEW_EMAIL}
+      - assertVisible:
+          id: change-new-email
+          text: ${NEW_EMAIL}
+- tapOn:
+    id: change-password
+- inputText: ${PASSWORD}
+- assertVisible:
+    id: change-password
+    text: ${'•'.repeat(PASSWORD.length)}
+# hideKeyboard finds no dismiss action here; a tap off the fields closes it.
+- tapOn:
+    id: change-subtitle
+- tapOn:
+    id: change-send
+- extendedWaitUntil:
+    visible:
+      id: change-new-code
+    timeout: 30000
+- tapOn:
+    id: change-subtitle
+- extendedWaitUntil:
+    visible: "(Reenviar códigos|Enviar los códigos otra vez)"
+    timeout: 90000
+- waitForAnimationToEnd
+- takeScreenshot: 94-resend-codes-es
+- runFlow:
+    when:
+      notVisible: "Reenviar códigos"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: Reenviar códigos, not Enviar los códigos otra vez | '}"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 94-resend-codes-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+      RECORD: cut
+- evalScript: "${output.wrong = output.wrong + (output.cut ? 'es: ' + output.cut + ' | ' : '')}"
+
+- evalScript: "${console.log('94 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

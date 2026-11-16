@@ -1,0 +1,42 @@
+T-226 review (Астра) — red before: the wait for midnight and the batches' artifacts
+==================================================================================
+
+The two P2 findings against b463ff3, shown red by e2e/__tests__/midnight.test.mjs
+with e2e/midnight.mjs put back to what b463ff3's run.mjs did:
+  FLOW_BOUND_MS = 10 minutes (b463ff3), the wait begun whatever the deadline
+  (b463ff3 had none), and no emptying of each batch's Maestro folder into the
+  run's (b463ff3 passed --test-output-dir artifacts/<run> to each Maestro, which
+  makes artifacts/<run>/<its own stamp>/<flow>).
+The test plays e2e/run.mjs's loop (nextStep) for every start, second by second,
+in the half hour before midnight, with the measured costs (setup 3 min 39 s,
+Maestro start 54 s, reseed 15 s, teardown 11 s, the flows' own times), against
+tools/autodev/lib/checks.mjs e2eLimitMs; and the artifacts against its
+maestroRuns and failedFlows, as keepFailedRun takes them
+(artifacts/<newest run>/<flow name>).
+
+$ node --test e2e/__tests__/midnight.test.mjs      # midnight.mjs as b463ff3 behaved
+✔ the runner's limit is the supervisor's
+✖ the review's path: one flow from 23:47 with a 3 min 19 s setup runs at once and ends in its limit
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  +   wait: 582000
+  -   take: 1
+✖ the longest flow alone (70, 200 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+  AssertionError [ERR_ASSERTION]: begun Fri Nov 06 2026 23:46:22 GMT+0200 (Israel Standard Time): ended 1099 s in, limit 750 s
+✖ flow 41 alone (134 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+  AssertionError [ERR_ASSERTION]: begun Fri Nov 06 2026 23:46:22 GMT+0200 (Israel Standard Time): ended 1033 s in, limit 750 s
+✖ the two longest (70, 26): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+  AssertionError [ERR_ASSERTION]: begun Fri Nov 06 2026 23:42:08 GMT+0200 (Israel Standard Time): ended 1337 s in, limit 900 s
+✖ the task's seven flows: begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+  AssertionError [ERR_ASSERTION]: begun Fri Nov 06 2026 23:30:49 GMT+0200 (Israel Standard Time): ended 1917 s in, limit 1650 s
+✔ far from midnight the whole set is one batch
+✖ the batches' flows are where the supervisor takes a red run's from: artifacts/<run>/<flow>
+  AssertionError [ERR_ASSERTION]: Sign in not in artifacts/2026-11-06_235210
+ℹ tests 8  ℹ pass 2  ℹ fail 6
+
+The review's path: setup done 23:50:19, 9 min 41 s to midnight, under the old
+10-minute bound — a wait of 582 s, the run past its 750 s before Maestro.
+
+The nesting, on a real run of b463ff3 (e2e/out/artifacts/2026-11-07_055316):
+  2026-11-07_055316/2026-11-07_055326/Today selects today/...
+  2026-11-07_055316/2026-11-07_055326/Day strip centres the day/...
+  — the flows one level below where keepFailedRun looks.

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
@@ -47,7 +48,7 @@ export default function WhatWhereScreen({ navigation }: WhatWhereScreenProps) {
       await updateUser({ weekStartDay: phoneWeekStart() });
       await completeOnboarding();
     } catch (error) {
-      Alert.alert(t.common.error, error instanceof Error ? error.message : String(error));
+      Alert.alert(t.common.error, requestErrorMessage(t, error, t.profile.updateError));
     } finally {
       setIsSaving(false);
     }

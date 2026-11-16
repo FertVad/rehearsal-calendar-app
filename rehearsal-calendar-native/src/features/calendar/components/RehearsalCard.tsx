@@ -5,7 +5,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 // part in gesture-handler's arbitration: a swipe let slide back would open the
 // details as well (as in the inbox, NotificationsScreen).
 import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handler';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { IconButton } from '../../../shared/components/IconButton';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -83,6 +83,12 @@ export default function RehearsalCard({
         : `${stats.confirmed}`
       : null;
 
+  // An admin sees every rehearsal of their project, the ones they are not on
+  // too (T-232). There is nothing for them to mark there — the server refuses
+  // it, NOT_ON_REHEARSAL — so no eye, and the row says why. Only an explicit
+  // false: a rehearsal read without the field is one the reader is on.
+  const notOnRoster = rehearsal.onRoster === false;
+
   const day = dateColumn === 'day' && rehearsal.date ? rehearsal.date : null;
 
   const row = (
@@ -136,21 +142,31 @@ export default function RehearsalCard({
             ) : null}
           </View>
 
-          {projectName ? (
+          {projectName || notOnRoster ? (
             <View style={styles.rehearsalRowLine}>
-              <View
-                style={[styles.rehearsalProjectDot, { backgroundColor: projectColor(rehearsal.projectId) }]}
-                testID="rehearsal-project-dot"
-              />
-              <Text style={styles.rehearsalRowProject} numberOfLines={1}>
-                {projectName}
-              </Text>
+              {projectName ? (
+                <>
+                  <View
+                    style={[styles.rehearsalProjectDot, { backgroundColor: projectColor(rehearsal.projectId) }]}
+                    testID="rehearsal-project-dot"
+                  />
+                  <Text style={styles.rehearsalRowProject} numberOfLines={1}>
+                    {projectName}
+                  </Text>
+                </>
+              ) : null}
+              {notOnRoster ? (
+                <Text style={styles.rehearsalRowNotOnRoster} numberOfLines={1} testID="rehearsal-not-on-roster">
+                  {projectName ? ` · ${t.rehearsals.notOnRoster}` : t.rehearsals.notOnRoster}
+                </Text>
+              ) : null}
             </View>
           ) : null}
         </View>
       </GestureTouchable>
 
       <View style={styles.seenColumn}>
+        {notOnRoster ? null : (
         <IconButton
           testID="seen-toggle"
           icon={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
@@ -170,17 +186,31 @@ export default function RehearsalCard({
           }}
           disabled={responding}
         />
-        {/* Under the eye, outside its 44: the button already says it as its
-            value, as it did when the count was inside it. */}
-        {seenLabel && (
-          <Text
-            style={styles.seenCount}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            {seenLabel}
-          </Text>
         )}
+        {/* Under the eye, outside its 44: the button already says it as its
+            value, as it did when the count was inside it. With no eye — a
+            rehearsal the reader is not on — the count says itself, or an
+            admin off the cast would see the number and VoiceOver not read it. */}
+        {seenLabel &&
+          (notOnRoster ? (
+            <Text
+              style={styles.seenCount}
+              testID="seen-count"
+              accessible
+              accessibilityLabel={t.rehearsals.seenCount(seenLabel)}
+            >
+              {seenLabel}
+            </Text>
+          ) : (
+            <Text
+              style={styles.seenCount}
+              testID="seen-count"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              {seenLabel}
+            </Text>
+          ))}
       </View>
     </View>
   );

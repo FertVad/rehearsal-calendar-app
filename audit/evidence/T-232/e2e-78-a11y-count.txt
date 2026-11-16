@@ -1,0 +1,17 @@
+T-232 review (Astra P2): flow 78 now also asserts the seen count of a
+rehearsal Olga (admin) is not on is in the accessibility tree, labelled
+"Seen: …" (Maestro on iOS reads the same tree VoiceOver does).
+
+RED — RehearsalCard.tsx and translations/calendar.ts restored from HEAD
+(5a0f55d…ff98479), the extended flow:
+
+$ npm run e2e -- e2e/flows/78-admin-sees-rehearsal-not-on.yaml
+[Failed] An admin sees a rehearsal they are not on, marked so (1m 50s) (Assertion is false: "Seen: .*", id: seen-count is visible)
+1/1 Flow Failed
+
+GREEN — with the fix:
+
+$ npm run e2e -- e2e/flows/78-admin-sees-rehearsal-not-on.yaml
+[Passed] An admin sees a rehearsal they are not on, marked so (1m 31s)
+1/1 Flow Passed in 1m 31s
+[e2e] taps taken again (tap-and-see.yaml): 0

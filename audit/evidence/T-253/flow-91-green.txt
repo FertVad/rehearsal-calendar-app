@@ -1,0 +1,11 @@
+$ npm run e2e -- e2e/flows/91-planner-tab-after-form-and-sync-german.yaml   (13.11.2026, flow 91 with both planner taps through tap-and-see)
+
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Passed] The planner's tab after the form and after the sync, in German (2m 7s)
+
+1/1 Flow Passed in 2m 8s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

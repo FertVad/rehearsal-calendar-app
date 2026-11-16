@@ -24,7 +24,7 @@ npm run type-check           # TypeScript type checking
 npm test                     # Run Jest tests
 npm run test:watch           # Run tests in watch mode
 npm run check                # Run all checks (secrets, dead code, type-check, tests)
-npm run check:dead           # knip on app + server: an unused file, export or dependency fails it (knip.jsonc)
+npm run check:dead           # knip on app + server, twice: as is and --production (tests are not users); an unused file, export or dependency fails it (knip.jsonc)
 
 # Security
 npm run check:secrets        # Check for exposed secrets/API keys
@@ -262,6 +262,18 @@ seen — not declined. So editing a rehearsal must keep existing
 answers and add newcomers as `'no'`; wiping the rows and reinserting everyone as
 `'yes'` marks the whole cast as having seen a rehearsal at the exact moment it
 changed, and dropping a `'no'` row removes that person from the call.
+
+**Seeing a rehearsal is not being on it** (T-232). Who may *see* one is also
+roster.js's: an admin or owner of the project sees every rehearsal of it, a
+member only those they are on — `viewerOf` for one rehearsal,
+`visibleRehearsals` for the lists, the same rule for "All projects" (`GET
+/native/rehearsals/batch`) and for one project's filter. Each rehearsal in them
+carries `onRoster`. One with `onRoster: false` — an admin looking in — shows "you
+are not in the cast" and no eye on the card and in the details, since there is
+nothing to answer (`NOT_ON_REHEARSAL`); the phone-calendar export
+(`calendarSync.ts`) leaves it out. Busy slots, reminders and notices read the
+roster itself, never the visible list, so an admin's calendar and time hold only
+the rehearsals they are on.
 
 **Order matters when updating.** `bookRehearsalSlots` reads the roster out of
 `native_rehearsal_responses`, so participants must be settled *before* the
@@ -1090,12 +1102,30 @@ npm run test:coverage       # With coverage
 ### End-to-End (Maestro)
 ```bash
 cd rehearsal-calendar-native
-npm run e2e                 # flows in e2e/flows on the "Rehearsly E2E" simulator
+npm run e2e                 # e2e/flows on Debug + e2e/release on Release, "Rehearsly E2E" simulator
+npm run e2e -- e2e/release/01-launch.yaml   # only the Release launch check
 npm run e2e:up              # stay up for Maestro MCP / Studio until Ctrl-C
 ```
 Everything is local and thrown away: a PostgreSQL container, the server with an
-environment built from nothing, its own Metro, a Debug build, a seed made
-through the API. See [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+environment built from nothing, its own Metro, a seed made through the API.
+See [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+
+**The app e2e runs is built from this tree's `app.json`, never from `ios/`.**
+`e2e/native.mjs` generates its own iOS project in `e2e/.native`
+(`expo prebuild --clean`, then `pod install`) whenever `app.json`, `locales/`,
+`assets/` or the packages changed — their hash stamps the project and every app
+built from it, and an app of other inputs (`E2E_APP` included) is not used.
+`node_modules` must be what `package-lock.json` says (versions, and no package
+the lock lacks), or the run stops with 75 and asks for `npm ci`: the hash
+covers the lock, not what is installed. The
+`ios/` of the main checkout, where releases are built, is never touched. The
+full run also builds **Release** for the simulator from the same project, its
+JS bundled with `REHEARSLY_E2E=1` and the local address and checked like the
+dev bundle, and runs `e2e/release/` on it: the app must reach the sign-in
+screen. TestFlight 1.0.0 (1) opened on a black screen because `app.json` had
+lost the `NSReminders*` keys (expo-calendar's `EXFatal`), and the old e2e build
+from a stale `ios/` could not see it (T-227). A Release build is only for the
+full run or a flow named from `e2e/release` — not for a task's checks (8 GB).
 
 **Setting `EXPO_PUBLIC_API_URL` does not decide where a dev build talks.** In
 development Expo bundles the project's `.env` files and lets them win over the
@@ -1103,6 +1133,16 @@ environment, and this checkout's `.env` names production. The runner keeps
 `.env*` out of its bundle (`REHEARSLY_E2E=1` in `metro.config.js`), refuses a
 bundle carrying any other address, and stops everything if the app reports
 one. Never point the simulator app at a Metro the runner did not start.
+
+**A heavy job on this Mac goes under the e2e lock.** An iOS Release build (or
+any `xcodebuild`, `expo run:ios --configuration Release`, a local EAS build, a
+second simulator) beside an e2e run chokes the machine; on 2026-11-07 one
+made Metro take 96 s over the app's bundle, past iOS's 60 s, and a flow failed
+on the dev client's "Could not connect to development server" (T-231).
+`npm run ios` / `npm run android` take the lock themselves. Run anything else
+as `node e2e/hold-lock.mjs <command> [args...]` from `rehearsal-calendar-native`,
+never `npx expo run:ios` directly: it waits for a run that is going, and a run
+started meanwhile waits for it.
 
 ## Autonomous Development
 

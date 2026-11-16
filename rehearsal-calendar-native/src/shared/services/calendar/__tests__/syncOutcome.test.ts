@@ -25,7 +25,6 @@ jest.mock('../../../utils/calendarMappings', () => ({
   getAllMappings: jest.fn(),
   saveEventMapping: jest.fn().mockResolvedValue(undefined),
   removeEventMapping: jest.fn().mockResolvedValue(undefined),
-  clearAllMappings: jest.fn().mockResolvedValue(undefined),
 }));
 // The leftover list as the real one keeps it: a map in storage.
 jest.mock('../../../utils/calendarStorage', () => {
@@ -299,8 +298,6 @@ describe('"Remove all exported" with one event that will not go (EX02)', () => {
     expect(result).toMatchObject({ success: 1, failed: 1 });
     expect(removeEventMapping).toHaveBeenCalledWith('1', expect.any(Number));
     expect(removeEventMapping).not.toHaveBeenCalledWith('2', expect.anything());
-    const { clearAllMappings } = jest.requireMock('../../../utils/calendarMappings');
-    expect(clearAllMappings).not.toHaveBeenCalled();
   });
 });
 

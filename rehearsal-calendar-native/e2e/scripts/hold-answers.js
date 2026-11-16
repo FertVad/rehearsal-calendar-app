@@ -26,6 +26,19 @@ const before = typeof BEFORE === 'undefined' ? '' : '&before=' + BEFORE;
 const open = typeof OPEN === 'undefined' ? '' : '&open=' + OPEN;
 const once = typeof ONCE === 'undefined' ? '' : '&once=' + ONCE;
 const drop = typeof DROP === 'undefined' ? '' : '&drop=' + DROP;
+// ${DEAD}, when "1", changes the network under the app at the matching
+// request: its connection and every other one the app has open go silent —
+// read, never answered, never closed — and a new connection is answered as
+// usual (T-240).
 const lose = typeof LOSE === 'undefined' ? '' : '&lose=' + LOSE;
-const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once + drop + lose);
+const dead = typeof DEAD === 'undefined' ? '' : '&dead=' + DEAD;
+// ${FAIL}, a status from 400 to 599, answers the request at once with it and
+// is not handled by the server: an answer the server gives in a state the
+// stand cannot reach. ${CODE} and ${ERROR} go in its body as the server writes
+// them, `{ error, code }` — 503 and EMAIL_UNAVAILABLE, its mail provider down
+// (flow 93).
+const fail = typeof FAIL === 'undefined' ? '' : '&fail=' + FAIL
+  + (typeof CODE === 'undefined' ? '' : '&code=' + encodeURIComponent(CODE))
+  + (typeof ERROR === 'undefined' ? '' : '&error=' + encodeURIComponent(ERROR));
+const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once + drop + lose + dead + fail);
 if (!response.ok) throw new Error('hold answered ' + response.status + ': ' + response.body);

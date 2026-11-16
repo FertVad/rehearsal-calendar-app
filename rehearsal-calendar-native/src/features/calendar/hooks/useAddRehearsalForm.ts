@@ -20,6 +20,7 @@ import { endAfter, nextRoundHour } from '../utils/rehearsalDefaults';
 import { useUsualDuration } from './useUsualDuration';
 
 import { logger } from '../../../shared/utils/logger';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
 interface RouteParams {
@@ -28,6 +29,8 @@ interface RouteParams {
   prefilledDate?: string;
   /** A start only: the end is the form's own rule (rehearsalDefaults.ts). */
   prefilledTime?: string;
+  /** Where the planner's free time from that start ends, 'HH:mm' (T-238). */
+  prefilledFreeUntil?: string;
 }
 
 /** What the form holds, field by field, as text to compare (T-013). */
@@ -58,7 +61,7 @@ export function useAddRehearsalForm({
   const { t } = useI18n();
 
   // Extract route params
-  const { projectId: prefilledProjectId, prefilledDate, prefilledTime } = routeParams || {};
+  const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledFreeUntil } = routeParams || {};
 
   // Filter projects - only show where user is admin
   const adminProjects = useMemo(() => projects.filter(p => p.is_admin), [projects]);
@@ -91,19 +94,45 @@ export function useAddRehearsalForm({
   const [startTime, setStartTime] = useState(opening);
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
-  const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(
-    selectedProject?.is_admin ? selectedProject : null
+  // The project the form is on, by id: the form's choice is the id, and the
+  // project is that id in the list as it is now (T-229 review). A copy kept
+  // from when it was chosen held its role from then, so an admin taken off it
+  // elsewhere still had Create, and the server refused it. A project the
+  // person is no longer admin of is no project here: Create is not offered,
+  // and nothing else is picked in its place unasked.
+  const [chosenProjectId, setChosenProjectId] = useState<string | null>(
+    selectedProject?.is_admin ? selectedProject.id : null
+  );
+  const localSelectedProject = useMemo(
+    () => adminProjects.find(p => p.id === chosenProjectId) ?? null,
+    [adminProjects, chosenProjectId]
+  );
+  const setLocalSelectedProject = useCallback(
+    (project: Project | null) => setChosenProjectId(project?.id ?? null),
+    []
   );
   // The end is the usual length after the start until someone sets it: picked
   // in its picker, or an edit's own. It follows the start, and the project's
   // usual length once that is in (rehearsalDefaults.ts).
   const isEditMode = Boolean(routeParams?.rehearsalId && routeParams?.projectId);
   const usualMinutes = useUsualDuration(isEditMode ? null : localSelectedProject);
+  //
+  // A start taken from free time — a recommendation, a planner's slot — ends
+  // no later than that free time does: the usual length on, or the moment the
+  // first of the people free at the start is busy, whichever is sooner. Three
+  // hours on a free hour put the rehearsal on their busy time (T-238). A free
+  // time longer than the usual length still gives the usual length (T-012).
+  // Only for that start: one picked by hand, another day or another project's
+  // people are not the free time it came from.
   const [chosenEnd, setEndTime] = useState<Date | null>(null);
-  const endTime = useMemo(
-    () => chosenEnd ?? endAfter(startTime, usualMinutes),
-    [chosenEnd, startTime, usualMinutes]
-  );
+  const [freeUntil, setFreeUntil] = useState<string | null>(null);
+  const endTime = useMemo(() => {
+    if (chosenEnd) return chosenEnd;
+    const usual = endAfter(startTime, usualMinutes);
+    if (!freeUntil) return usual;
+    const free = parseTimeString(freeUntil, startTime);
+    return free > startTime && free < usual ? free : usual;
+  }, [chosenEnd, startTime, usualMinutes, freeUntil]);
   // Who is on the rehearsal, for which project, and whether that is settled
   // (review R9-01, R9-02). One owner: the project switch empties it and marks
   // it unsettled, starting it settles it — from the edited rehearsal's roster,
@@ -134,16 +163,20 @@ export function useAddRehearsalForm({
   // chosen in the calendar, whose other past days take no tap (T-018).
   const [savedDate, setSavedDate] = useState<string | undefined>(undefined);
 
-  // Prefill form from route params
+  // The route's project, once per route, as soon as it is one the person is
+  // admin of: not again on each new list, which put it back over the project
+  // chosen in the form since — the list is read again on the way back to the
+  // app, and the next Create went to the route's project (T-229 review).
+  const prefilledFor = useRef<string | null>(null);
   useEffect(() => {
-    if (prefilledProjectId) {
-      const project = projects.find(p => p.id === prefilledProjectId);
-      if (project && project.is_admin) {
-        setLocalSelectedProject(project);
-        setSelectedProject(project);
-      }
+    if (!prefilledProjectId || prefilledFor.current === prefilledProjectId) return;
+    const project = projects.find(p => p.id === prefilledProjectId);
+    if (project && project.is_admin) {
+      prefilledFor.current = prefilledProjectId;
+      setChosenProjectId(project.id);
+      setSelectedProject(project);
     }
-  }, [prefilledProjectId, projects]);
+  }, [prefilledProjectId, projects, setSelectedProject]);
 
   // The route's day and time, once per route: not on each new project list,
   // which put them back over what was chosen - and, a list made anew on each
@@ -165,26 +198,24 @@ export function useAddRehearsalForm({
 
     if (prefilledTime) {
       setStartTime(parseTimeString(prefilledTime));
+      setFreeUntil(prefilledFreeUntil ?? null);
     }
-  }, [prefilledDate, prefilledTime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per route (above): `opening` never changes, and a new zone is no reason to put the route's day back over the one chosen since (T-243)
+  }, [prefilledDate, prefilledTime, prefilledFreeUntil]);
 
   // Update selected project when projects list changes or default changes
   useEffect(() => {
     // Don't override if we have a prefilled project
     if (prefilledProjectId) return;
 
-    // If current selection is not an admin project, select the default
-    if (localSelectedProject && !localSelectedProject.is_admin) {
-      setLocalSelectedProject(defaultProject);
-      if (defaultProject) {
-        setSelectedProject(defaultProject);
-      }
-    } else if (!localSelectedProject && defaultProject) {
-      // If no project selected and there is a default, select it
-      setLocalSelectedProject(defaultProject);
+    // Nothing chosen yet: the default. A project chosen and since taken from
+    // the person stays chosen and shows as none, rather than the form moving
+    // to another project by itself (T-229 review).
+    if (!chosenProjectId && defaultProject) {
+      setChosenProjectId(defaultProject.id);
       setSelectedProject(defaultProject);
     }
-  }, [defaultProject, prefilledProjectId]);
+  }, [defaultProject, prefilledProjectId, chosenProjectId, setSelectedProject]);
 
   // Load rehearsal data in edit mode
   useEffect(() => {
@@ -225,7 +256,7 @@ export function useAddRehearsalForm({
         // (review DF03), so a form that could not load closes.
         logger.error('Failed to load rehearsal:', error);
         const gone = error?.response?.status === 404;
-        Alert.alert(t.common.error, gone ? t.rehearsals.notFound : t.rehearsals.loadRehearsalError);
+        Alert.alert(t.common.error, gone ? t.rehearsals.notFound : requestErrorMessage(t, error, t.rehearsals.loadRehearsalError));
         navigation.goBack();
       } finally {
         setLoadingRehearsal(false);
@@ -233,14 +264,16 @@ export function useAddRehearsalForm({
     };
 
     loadRehearsal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per rehearsal: loaded again for a new language or zone it would put the saved fields back over the person's edits; the project comes with the id in one route (T-243)
   }, [routeParams?.rehearsalId]);
 
   // Handlers
   // A recommendation is free time, not a rehearsal: it gives the start, and the
-  // end is the usual length on (T-012).
-  const handleTimeSelect = (startTime: string) => {
+  // end is the usual length on (T-012) — within the free time (T-238).
+  const handleTimeSelect = (startTime: string, freeEnd?: string) => {
     touch('start', 'end');
     setStartTime(parseTimeString(startTime, date));
+    setFreeUntil(freeEnd ?? null);
     setEndTime(null);
   };
 
@@ -263,6 +296,9 @@ export function useAddRehearsalForm({
   const handleDateChange = (selectedDate: Date) => {
     touch('date');
     setDate(selectedDate);
+    // Another day is not the free time the start came from; the day shown
+    // tapped again still is (T-238 review).
+    if (formatDateToString(selectedDate) !== formatDateToString(date)) setFreeUntil(null);
   };
 
   // The form's times are clock times on `date`; an end before the start is the
@@ -324,11 +360,14 @@ export function useAddRehearsalForm({
     // A start can move the end along with it.
     touch('start', 'end');
     setStartTime(selectedTime);
+    // A start moved by hand is the person's own, not the free time's; the one
+    // shown confirmed as it was still is (T-238 review).
+    const start = formatDateToTimeString(selectedTime);
+    if (start !== startClock) setFreeUntil(null);
     // An end nobody set follows the start. One that was set stays, unless a
     // later start passes it: then it goes back to following — the usual length
     // on, which may well be the next morning. A rehearsal that already ran
     // overnight keeps its end, unless the start lands right on it.
-    const start = formatDateToTimeString(selectedTime);
     const wasOvernight = endsNextDay(startClock, endClock);
     if (isEmptyClockRange(start, endClock) || (!wasOvernight && endsNextDay(start, endClock))) {
       setEndTime(null);
@@ -345,6 +384,7 @@ export function useAddRehearsalForm({
     setDate(start);
     setStartTime(start);
     setEndTime(null);
+    setFreeUntil(null);
     setLocation('');
   };
 
@@ -355,9 +395,10 @@ export function useAddRehearsalForm({
     setShowProjectPicker(false);
     if (isEditMode || project.id === localSelectedProject?.id) return;
     touch('project', 'participants');
-    setLocalSelectedProject(project);
+    setChosenProjectId(project.id);
     setSelectedProject(project); // Also update global context
     setParticipants({ projectId: project.id, ids: [], settled: false });
+    setFreeUntil(null);
   };
 
   const handleCreateProject = async () => {

@@ -1,0 +1,28 @@
+T-239 — src/shared/utils/__tests__/formatLastSync.test.ts on the old code (HEAD 74b4376, test file only)
+npx jest --selectProjects frontend --testPathPatterns 'shared/utils/__tests__/formatLastSync'
+
+FAIL frontend src/shared/utils/__tests__/formatLastSync.test.ts
+    ✕ ru: Синхронизировано только что (569 ms)
+    ✕ en: Synced just now (3 ms)
+    ✕ es: Sincronizado ahora mismo (2 ms)
+    ✕ de: Synchronisiert gerade eben (2 ms)
+    ✓ ru (2 ms)
+    ✓ en (2 ms)
+    ✓ es (2 ms)
+    ✓ de (1 ms)
+    ✓ ru (1 ms)
+    ✓ en (2 ms)
+    ✕ es (2 ms)
+    ✕ de (2 ms)
+    ✓ says nothing when there has been no sync (2 ms)
+    Received: "Синхронизировано Только что"
+    Received: "Synced Just now"
+    Received: "Sincronizado Ahora mismo"
+    Received: "Synchronisiert Gerade eben"
+    Received: "hace 5 min"
+    Received: "vor 5 Min"
+Tests:       6 failed, 7 passed, 13 total
+
+The two last failures are the same cause from the other side: the availability's
+"last synced" stands alone and began in lower case in Spanish and German
+("hace 5 min", "vor 5 Min").

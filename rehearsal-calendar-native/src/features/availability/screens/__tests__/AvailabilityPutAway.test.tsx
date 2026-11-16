@@ -84,6 +84,8 @@ beforeEach(async () => {
   await AsyncStorage.removeItem('availability-cache');
   __resetPreventRemove();
   (Navigation.useNavigation as jest.Mock).mockReturnValue(navigation);
+  // Focused once, on opening.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the screen's focus effect, run once as a focus would
   (Navigation.useFocusEffect as jest.Mock).mockImplementation((effect) => React.useEffect(effect, []));
   (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [{
     startsAt: '2026-11-03T00:00:00.000Z', endsAt: '2026-11-03T23:59:59.999Z', type: 'busy', isAllDay: true, source: 'manual',

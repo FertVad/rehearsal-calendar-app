@@ -11,10 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { GlassButton } from '../../../shared/components';
 import { styles } from '../styles/calendarSyncSettingsScreenStyles';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
@@ -173,10 +174,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     const providerCalendars = getProviderCalendars(provider);
 
     if (providerCalendars.length === 0) {
-      Alert.alert(
-        t.common.error,
-        `No writable ${provider === 'google' ? 'Google' : 'Apple'} calendar found`
-      );
+      Alert.alert(t.common.error, t.calendarSync.noWritableCalendars);
       return;
     }
 
@@ -224,7 +222,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       await updateSettings(patch);
       return true;
     } catch (error: any) {
-      Alert.alert(t.common.error, error?.message || t.calendarSync.syncError);
+      Alert.alert(t.common.error, requestErrorMessage(t, error, t.calendarSync.syncError));
       return false;
     }
   };
@@ -301,7 +299,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               }
             } catch (error: any) {
               logger.error('[Sync] Failed to remove exported events:', error);
-              Alert.alert(t.common.error, error?.message || t.calendarSync.syncError);
+              Alert.alert(t.common.error, requestErrorMessage(t, error, t.calendarSync.syncError));
             } finally {
               setIsRemoving(false);
             }
@@ -353,7 +351,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       run = await synchronize();
     } catch (error: any) {
       logger.error('[Sync] ❌ Error during synchronization:', error);
-      Alert.alert(t.calendarSync.syncError || 'Sync Error', error?.message || 'Failed to synchronize calendars');
+      Alert.alert(t.calendarSync.syncError || 'Sync Error', requestErrorMessage(t, error, t.auth.requestFailed));
       return;
     }
     // Ended with the session: there is nobody to tell.
@@ -366,7 +364,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       imported = run.import.result.success;
       if (run.import.result.failed > 0) problems.push(t.calendarSync.importIncomplete(run.import.result.failed));
     } else if (run.import.status === 'failed') {
-      problems.push(run.import.error || t.calendarSync.syncError);
+      problems.push(requestErrorMessage(t, run.import.error, t.calendarSync.syncError));
     }
 
     let exported = 0;
@@ -374,7 +372,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       exported = run.export.result.success;
       if (run.export.result.failed > 0) problems.push(t.calendarSync.exportIncomplete(run.export.result.failed));
     } else if (run.export.status === 'failed') {
-      problems.push(run.export.error || t.calendarSync.syncError);
+      problems.push(requestErrorMessage(t, run.export.error, t.calendarSync.syncError));
     }
 
     if (run.export.status === 'done' && run.export.result.rehearsals === 0 && problems.length === 0) {
@@ -403,6 +401,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         kind="stack"
         title={t.calendarSync.title}
         backTitle={t.profile.title}
+        backWord={t.common.back}
         onBack={() => navigation.goBack()}
       />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
@@ -564,14 +563,15 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                 {settings?.lastExportTime && (
                   <View style={styles.syncStatus}>
                     <Ionicons name="checkmark-circle-outline" size={16} color={Colors.accent.green} />
-                    <Text style={styles.syncStatusText}>
-                      {t.calendarSync.syncedAgo(formatLastSync(settings.lastExportTime, t))}
+                    <Text testID="calendar-sync-status" style={styles.syncStatusText}>
+                      {t.calendarSync.syncedAgo(formatLastSync(settings.lastExportTime, t, 'inSentence'))}
                       {syncedCount > 0 ? ` · ${t.calendarSync.inCalendar(syncedCount)}` : ''}
                     </Text>
                   </View>
                 )}
 
                 <GlassButton
+                  testID="calendar-sync-run"
                   title={t.calendarSync.synchronize}
                   onPress={handleSynchronize}
                   variant="purple"
@@ -584,6 +584,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                     exported stays in the user's own calendar. This is the way
                     to take it back. */}
                 <TouchableOpacity
+                  testID="calendar-sync-remove-all"
                   style={styles.removeAllButton}
                   onPress={handleRemoveAll}
                   disabled={isImporting || isSyncing || isRemoving}

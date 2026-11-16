@@ -1,0 +1,23 @@
+$ node ../audit/evidence/T-231/job-beside-run.mjs e2e/flows/40-details-seen-one-model.yaml locked
+# (from rehearsal-calendar-native; Maestro's JVM "WARNING" lines left out)
+# The same job, the same moment, through e2e/hold-lock.mjs, as `npm run ios` runs expo now.
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[beside 2026-11-07T12:10:11.241Z] the e2e run's flows started; starting the job through e2e/hold-lock.mjs
+[hold-lock] another e2e run (pid 81602) is going; waiting for it
+
+Waiting for flows to complete...
+[Passed] Details and the card read one seen mark (2m 5s)
+
+1/1 Flow Passed in 2m 5s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[beside 2026-11-07T12:13:23.447Z] e2e/run.mjs exited 0
+[job 2026-11-07T12:13:24.619Z] started; no e2e run's Metro is running: nothing to starve
+[beside 2026-11-07T12:13:24.648Z] the job exited 0

@@ -18,17 +18,30 @@
 # and leaves the calendar where it was; the sheet's "Clear" is "Deselect"; a
 # save that fails, the sheet's or the close question's, says why on the screen
 # (T-021).
+# And the words read as a native speaker's (T-256): the overlap's alert is
+# closed with "OK", not "Understood"; the close question's "Don’t Save" has
+# its typographic apostrophe; no connection is "Could not connect. Check your
+# internet connection and try again.", not "Check the internet". The flow
+# goes on whatever the words, and fails at the end naming every one that was
+# wrong: a run on the old words names them all, not the first alone.
 appId: ${APP_ID}
 name: Availability saves the day it changed
 tags:
   - availability
 ---
+- evalScript: ${output.wrong = ''}
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
       EMAIL: ${TREPLEV_EMAIL}
-- tapOn:
-    id: tab-create
+# A tap the simulator loses is taken once more (T-207); this one failed the
+# flow on ec914b4, the sheet never there (T-255, audit/evidence/T-255).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
 - tapOn: "Mark Busy"
 # It opens on this week, not on the first of the month (T-021): today's week
 # is the first row under the legend, this month's title gone up above it.
@@ -154,9 +167,13 @@ tags:
     notVisible:
       id: availability-legend
     timeout: 10000
-- assertNotVisible: "Don't Save"
-- tapOn:
-    id: tab-create
+- assertNotVisible: "Don.t Save"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
 - tapOn: "Mark Busy"
 - scrollUntilVisible:
     element:
@@ -220,19 +237,29 @@ tags:
 - tapOn:
     id: availability-save
 - extendedWaitUntil:
-    visible: "Cannot save"
+    visible: "Cannot Save"
     timeout: 10000
 - assertVisible: "Error \\(${MARK_DAY_LABEL}\\):[\\s\\S]*Slots must not overlap[\\s\\S]*"
 - takeScreenshot: 10-availability-overlap
-- tapOn: "Understood"
+- runFlow:
+    when:
+      notVisible: "OK"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: OK, not Understood | '}"
+- tapOn: "(OK|Understood)"
 # The overlapping slot is not saved: closing asks first (T-013).
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
 - takeScreenshot: 10-close-asks
-- tapOn: "Don't Save"
+- runFlow:
+    when:
+      notVisible: "Don’t Save"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Don’t Save, its apostrophe | '}"
+- tapOn: "Don.t Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
@@ -241,9 +268,15 @@ tags:
 # sheet's own Save above that button, and the close question's Save on the
 # screen, which stays open with the change. The
 # request fails: its connection is closed, as when the network goes (not held
-# past ten seconds — those are iOS's to keep, T-220).
-- tapOn:
-    id: tab-create
+# past ten seconds — those are iOS's to keep, T-220). With no answer, why is
+# no connection, in the app's language; the save's own "Failed to save
+# availability" is for a failure that is not the network's (T-228).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
 - tapOn: "Mark Busy"
 - scrollUntilVisible:
     element:
@@ -278,10 +311,16 @@ tags:
 - extendedWaitUntil:
     visible:
       id: availability-save-error
-      text: "Failed to save availability"
       above:
         id: availability-save
     timeout: 15000
+- runFlow:
+    when:
+      notVisible:
+        id: availability-save-error
+        text: "Could not connect\\. Check your internet connection and try again\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'en: Could not connect, not Check the internet | '}"
 - assertNotVisible: "OK"
 - takeScreenshot: 10-save-error-above-save
 # Letting go of the day with it changed asks, as the editor's arrow does
@@ -290,12 +329,12 @@ tags:
 - tapOn:
     id: day-${MARK_DAY}
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
 - tapOn:
     point: "50%, 8%"
 - extendedWaitUntil:
-    notVisible: "Don't Save"
+    notVisible: "Don.t Save"
     timeout: 5000
 - assertVisible:
     id: availability-save
@@ -310,13 +349,12 @@ tags:
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
 - tapOn: "Save"
 - extendedWaitUntil:
     visible:
       id: availability-save-error
-      text: "Failed to save availability"
     timeout: 15000
 - assertNotVisible: "OK"
 - assertVisible:
@@ -325,10 +363,20 @@ tags:
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
-    visible: "Don't Save"
+    visible: "Don.t Save"
     timeout: 5000
-- tapOn: "Don't Save"
+- tapOn: "Don.t Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
     timeout: 10000
+
+- evalScript: "${console.log('10 not as a native speaker writes it: ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: words-not-as-a-native-speaker-writes-them
+          timeout: 1000

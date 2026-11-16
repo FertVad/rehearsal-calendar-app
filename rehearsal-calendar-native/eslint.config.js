@@ -78,8 +78,10 @@ module.exports = [
     },
     rules: {
       // TypeScript
+      // An error, not a warning, since T-243 brought it to zero: a prop passed
+      // and never read can be the bug itself, and warnings pile up unread.
       '@typescript-eslint/no-unused-vars': [
-        'warn',
+        'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
@@ -96,7 +98,10 @@ module.exports = [
       'react/prop-types': 'off', // TypeScript does this
       'react/display-name': 'warn',
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      // An error since T-243: a value an effect reads and does not list leaves
+      // it on what it loaded before (CLAUDE.md 11). A list left short on
+      // purpose says so — a ref, or a disable comment with its reason.
+      'react-hooks/exhaustive-deps': 'error',
 
       // React Native
       'react-native/no-unused-styles': 'warn',

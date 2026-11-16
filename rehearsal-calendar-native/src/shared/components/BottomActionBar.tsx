@@ -26,7 +26,7 @@ import {
 } from 'react-native';
 import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
 
 /** Above the home indicator, or above the keyboard, by this much. */

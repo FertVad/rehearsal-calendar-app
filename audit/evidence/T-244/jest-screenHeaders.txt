@@ -1,0 +1,37 @@
+T-244 — src/shared/components/__tests__/screenHeaders.test.tsx
+npx jest --selectProjects frontend --testPathPatterns screenHeaders
+
+== Red: ScreenHeader.tsx as at 3f2c4d2 (git restore --source=3f2c4d2), the test of 3f2f956 ==
+
+  ScreenHeader
+    a sheet's buttons are never cut, the title gives way
+      ✕ each end as wide as its button, never squeezed; both as wide as the wider (15 ms)
+      ✕ the title takes what is left, over two lines (8 ms)
+      ✕ every sheet's title may take two lines (14 ms)
+
+  ● … › each end as wide as its button, never squeezed; both as wide as the wider
+    expect(received).toBeUndefined()
+    Received: 0
+    > 144 |         expect(own.flexBasis).toBeUndefined();
+    (the end is a share of the row, flexGrow 1 from flexBasis 0: "Изменить" gets what is left of it)
+
+  ● … › the title takes what is left, over two lines
+    expect(received).toBeUndefined()
+    Received: "50%"
+    > 156 |       expect(style(title).maxWidth).toBeUndefined();
+
+  ● … › every sheet's title may take two lines
+    Expected: 2
+    Received: 1
+    > 162 |       expect(sheet().getByTestId('header-title').props.numberOfLines).toBe(2);
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 24 passed, 27 total
+
+== Green: 3f2f956 ==
+
+PASS frontend src/shared/components/__tests__/screenHeaders.test.tsx
+      ✓ each end as wide as its button, never squeezed; both as wide as the wider (11 ms)
+      ✓ the title takes what is left, over two lines (9 ms)
+      ✓ every sheet's title may take two lines (5 ms)
+Tests:       27 passed, 27 total

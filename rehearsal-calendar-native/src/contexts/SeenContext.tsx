@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { RSVPStatus } from '../shared/types';
 import { rehearsalsAPI } from '../shared/services/api';
 import { useI18n } from './I18nContext';
+import { requestErrorMessage } from '../shared/utils/requestError';
 import { useRequestOrder, useSessionState } from '../shared/hooks/useSession';
 import { isCurrentSession, currentSession } from '../shared/services/session';
 
@@ -112,7 +113,7 @@ export function SeenProvider({ children }: { children: ReactNode }) {
         // Put it back. An optimistic update that survives its own failure is
         // worse than no optimism at all.
         setResponses((prev) => ({ ...prev, [rehearsalId]: current }));
-        if (isCurrentSession(session)) Alert.alert(t.common.error, err?.message || t.rehearsals.seenError);
+        if (isCurrentSession(session)) Alert.alert(t.common.error, requestErrorMessage(t, err, t.rehearsals.seenError));
       } finally {
         setResponding((prev) => ({ ...prev, [rehearsalId]: false }));
       }

@@ -14,9 +14,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { AppNavigation } from '../../../navigation';
 import { useToday } from '../../../shared/hooks/useClock';
 import { endsNextDay } from '../../../shared/utils/time';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
@@ -65,11 +66,20 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     getDayState,
     loadAvailability,
     loadFailed,
+    loadError,
   } = useAvailabilityData();
 
   // Save hook for validation and API submission
   const { saveAvailability, canSave, error: saveError, clearError } = useAvailabilitySave();
   const toast = useToast();
+
+  // Why the load failed, in the app's language — no connection is not the
+  // server down — then that what is shown is the last that loaded (T-228).
+  // A failure that is not a request's keeps the old words.
+  const loadErrorText = (error: unknown) => {
+    const why = requestErrorMessage(t, error, '');
+    return why ? `${why} ${t.availability.lastLoadedShown}` : t.availability.couldNotLoad;
+  };
 
   // Sync hook for calendar sync management
   const {
@@ -93,7 +103,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   // Editor hook for selection, validation, time picker, and slot editing
   const editor = useAvailabilityEditor({
-    availability,
     setAvailability,
     markChanged,
     markSettled,
@@ -198,7 +207,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         year={item.year}
         month={item.month}
         selectedDates={editor.selectedDates}
-        availability={availability}
         today={today}
         onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
         getDayStatus={(date) => getDayStatus(date, availability)}
@@ -242,7 +250,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       {loadFailed ? (
         <View style={styles.nothingMarked}>
           <Ionicons name="cloud-offline-outline" size={18} color={Colors.accent.yellow} />
-          <Text style={styles.nothingMarkedText}>{t.availability.couldNotLoad}</Text>
+          <Text testID="availability-load-error" style={styles.nothingMarkedText}>{loadErrorText(loadError)}</Text>
         </View>
       ) : (
         Object.keys(availability).length === 0 && (
@@ -373,7 +381,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                       style: 'destructive',
                       onPress: () =>
                         editor.deletePastDates((error) => {
-                          if (error) Alert.alert(t.common.error, t.availability.saveError);
+                          if (error) Alert.alert(t.common.error, requestErrorMessage(t, error, t.availability.saveError));
                         })
                     }
                   ]

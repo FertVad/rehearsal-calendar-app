@@ -58,6 +58,23 @@
  * the server made whose answer never reached the app (flow 13); unlike `drop`,
  * the request reaches the server.
  *
+ * With `&dead=1` the network changes under the app: the request's connection
+ * and every other connection the app has open go silent — whatever arrives on
+ * them is read and never answered, and they are not closed, as a connection
+ * the phone left on its old network looks from the app (T-240, the owner's
+ * iPhone going from LTE to 5G). A new connection is answered as usual. Each
+ * request on a silent one, and each later request on the same path, is logged
+ * with its connection's number, so the log shows which connection a retry
+ * took. A silent connection is closed after HOLD_WINDOW_MS, if the app has not
+ * given up on it first.
+ *
+ * With `&fail=<status>` the request is not handled: it is answered at once with
+ * that status and `{ error, code }` from `&error=` and `&code=` (either may be
+ * left out) — an answer the server gives in a state the stand cannot reach:
+ * its mail provider down, `503` with `EMAIL_UNAVAILABLE` as passwordReset.js
+ * says it (flow 93), or a refusal the app has no words of its own for, a `400`
+ * with no code, as a proxy in front of the server gives one (flow 93, T-256).
+ *
  * With `&once=1` only the next matching request is held, and the ones after it
  * go through: a read on a slow connection and the change after it on a good
  * one (flow 36). A request held `before` says how the server answered it on
@@ -73,11 +90,28 @@
  *                                                  "New member" about that
  *                                                  project, sent as the join
  *                                                  sends it (flow 61)
+ *   GET /notify?to=<address>&type=admin_appointed&project=<name>&member=<who>
+ *                                                  "New administrator" about
+ *                                                  that project, as a role
+ *                                                  given tells the others who
+ *                                                  run it (flow 88)
  *   GET /notify?to=<address>&type=rehearsal_updated&rehearsal=<title>&change=<key>
  *   GET /notify?to=<address>&type=member_response&rehearsal=<title>&member=<who>
  *                                                  that rehearsal changed, or
  *                                                  answered, sent as an edit
  *                                                  and a "yes" send it (flow 62)
+ *   GET /notify?to=<address>&type=rehearsal_created&rehearsal=<title>
+ *   GET /notify?to=<address>&type=added_to_rehearsal&rehearsal=<title>
+ *   GET /notify?to=<address>&type=rehearsal_deleted&rehearsal=<title>
+ *                                                  a new rehearsal, one they
+ *                                                  were put on, or one
+ *                                                  cancelled, in their
+ *                                                  language (flow 86)
+ *   GET /notify?to=<address>&type=role_changed&project=<name>&role=<r>
+ *   GET /notify?to=<address>&type=member_removed&project=<name>
+ *                                                  the notice of a role given
+ *                                                  or of being removed, and
+ *                                                  nothing more (flow 86)
  *
  * It measures an icon on a screenshot a flow took, which Maestro cannot: a
  * button that is only an icon is one element, the size of its target (ink.mjs):
@@ -87,6 +121,10 @@
  *                                    that colour within those fractions of the
  *                                    newest <name>.png in e2e/out/artifacts;
  *                                    within 40 a channel, or `tolerance`
+ *   GET /ellipses?shot=<name>&left=&right=&top=&bottom=
+ *                                    { ellipses: [{ left, top }] } in points,
+ *                                    each "…" drawn there in place of text
+ *                                    that did not fit (flow 59, T-241)
  *
  * It reads back what the server stored from an account's bug reports, to show
  * a report sent from the app arrived (flow 47):
@@ -99,6 +137,13 @@
  *
  *   GET /pasteboard?device=<udid>&text=<t>   `xcrun simctl pbcopy` on that
  *                                            simulator
+ *
+ * It delivers a push to the app on the simulator, which receives none from
+ * Expo — as the server's own would arrive (flow 75, T-229):
+ *
+ *   GET /push?device=<udid>&app=<bundle>&type=role_changed&project=<name>&role=<r>
+ *                                            `xcrun simctl push` of what
+ *                                            notifyRoleChanged sends
  *
  * And it keeps count of the taps the flows had to take again:
  *
@@ -117,9 +162,12 @@ import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
-import { notifyMemberJoined, notifyMemberResponse, notifyRehearsalUpdated } from '../server/services/notifications/pushNotificationService.js';
+import {
+  notifyAddedToRehearsal, notifyAdminAppointed, notifyMemberJoined, notifyMemberRemoved, notifyMemberResponse, notifyRehearsalCreated,
+  notifyRehearsalDeleted, notifyRehearsalUpdated, notifyRoleChanged,
+} from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
-import { inkBox } from './ink.mjs';
+import { ellipses, inkBox } from './ink.mjs';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
 const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
@@ -239,6 +287,50 @@ function logAgain(request, response) {
   };
 }
 
+// The app's connections, numbered as they come, and those the network left
+// behind (`&dead=1`): read, never answered, never closed by us before
+// HOLD_WINDOW_MS.
+const connections = new Set();
+const silent = new WeakSet();
+let connectionCount = 0;
+// The paths a `dead` hold named, for HOLD_WINDOW_MS: their requests are logged
+// with the connection each came on.
+let watched = [];
+
+function trackConnection(socket) {
+  socket.e2eNumber = ++connectionCount;
+  connections.add(socket);
+  socket.on('close', () => connections.delete(socket));
+}
+
+function goSilent() {
+  for (const socket of connections) {
+    if (silent.has(socket)) continue;
+    silent.add(socket);
+    // Node closes an idle connection after its keep-alive time; one the
+    // network left behind is not closed, it is just never heard from again.
+    socket.setTimeout(0);
+    setTimeout(() => socket.destroy(), HOLD_WINDOW_MS).unref();
+  }
+}
+
+// True when the request came on a silent connection: it is read and dropped
+// on the floor, with no answer.
+function swallowed(request) {
+  const { pathname } = new URL(request.url, 'http://api');
+  watched = watched.filter((watch) => watch.until > Date.now());
+  const number = request.socket.e2eNumber;
+  if (silent.has(request.socket)) {
+    console.log(`[e2e] ${request.method} ${pathname} on connection #${number}, which the network left behind: no answer`);
+    request.resume();
+    return true;
+  }
+  if (watched.some((watch) => watch.method === request.method && watch.path.test(pathname))) {
+    console.log(`[e2e] ${request.method} ${pathname} on connection #${number}, a live one`);
+  }
+  return false;
+}
+
 // Hands the request to `handle` — at once, or on release when its hold says
 // the request waits.
 function holdAnswer(request, response, handle) {
@@ -247,10 +339,23 @@ function holdAnswer(request, response, handle) {
   const hold = holds.find((candidate) => candidate.method === request.method && candidate.path.test(pathname));
   if (!hold) return handle();
   if (hold.once) holds = holds.filter((candidate) => candidate !== hold);
+  if (hold.dead) {
+    goSilent();
+    watched.push({ method: hold.method, path: hold.path, until: Date.now() + HOLD_WINDOW_MS });
+    console.log(`[e2e] the network changed: ${request.method} ${pathname} on connection #${request.socket.e2eNumber} and ${connections.size - 1} other connection(s) went silent`);
+    request.resume();
+    return;
+  }
   const drop = () => {
     console.log(`[e2e] dropped the request ${request.method} ${pathname}: its connection closed, no answer`);
     request.socket.destroy();
   };
+  if (hold.fail) {
+    console.log(`[e2e] answered ${request.method} ${pathname} with ${hold.fail.status}${hold.fail.body.code ? ` ${hold.fail.body.code}` : ''}, not handled`);
+    request.resume();
+    response.writeHead(hold.fail.status, { 'Content-Type': 'application/json' });
+    return response.end(JSON.stringify(hold.fail.body));
+  }
   if (hold.drop && !hold.before) return drop();
   if (hold.lose) return loseAnswer(request, response, handle);
   if (hold.open) return holdOpen(request, response, hold);
@@ -311,10 +416,11 @@ function withoutUpgrade(response) {
 
 // As app.listen would, with the hold in front.
 http.createServer((request, response) => {
+  if (swallowed(request)) return;
   withoutUpgrade(response);
   logAgain(request, response);
   holdAnswer(request, response, () => app(request, response));
-}).listen(Number(process.env.PORT), process.env.HOST, () => {
+}).on('connection', trackConnection).listen(Number(process.env.PORT), process.env.HOST, () => {
   console.log('[e2e] server listening');
 });
 
@@ -332,10 +438,22 @@ http.createServer((request, response) => {
     const once = url.searchParams.get('once') === '1';
     const drop = url.searchParams.get('drop') === '1';
     const lose = url.searchParams.get('lose') === '1';
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, until: Date.now() + HOLD_WINDOW_MS });
+    const dead = url.searchParams.get('dead') === '1';
+    const failStatus = Number(url.searchParams.get('fail'));
+    const fail = failStatus >= 400 && failStatus <= 599
+      ? {
+          status: failStatus,
+          body: Object.fromEntries(['error', 'code']
+            .filter((key) => url.searchParams.get(key))
+            .map((key) => [key, url.searchParams.get(key)])),
+        }
+      : null;
+    if (url.searchParams.has('fail') && !fail) return answer(400, { error: 'fail is a status from 400 to 599' });
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, dead, fail, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
-  if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {
+  const told = url.searchParams.get('type');
+  if (request.method === 'GET' && url.pathname === '/notify' && ['member_joined', 'admin_appointed', 'role_changed', 'member_removed'].includes(told)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const projectName = url.searchParams.get('project') || '';
     const member = url.searchParams.get('member') || 'Somebody';
@@ -344,15 +462,22 @@ http.createServer((request, response) => {
       if (!user) return answer(404, { error: `no account ${to}` });
       const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
       if (!project) return answer(404, { error: `no project ${projectName}` });
-      // As the join tells them (inviteRedemption.js), the server's own words and data.
-      await notifyMemberJoined(project.name, member, [user.id], project.id);
-      console.log(`[e2e] told ${to} that ${member} joined ${project.name}`);
+      // As the join, a role given (to them, or to another, told to those who
+      // run the project) and a removal tell them (inviteRedemption.js,
+      // routes/native/members.js), the server's own words and data. Only the
+      // notice: the role and the membership stay as they are.
+      if (told === 'member_joined') await notifyMemberJoined(project.name, member, [user.id], project.id);
+      else if (told === 'admin_appointed') await notifyAdminAppointed(project.name, member, [user.id], project.id);
+      else if (told === 'role_changed') await notifyRoleChanged(project.name, user.id, url.searchParams.get('role') || 'admin');
+      else await notifyMemberRemoved(project.name, user.id);
+      console.log(`[e2e] told ${to} of ${told} in ${project.name}`);
       return answer(200, { recorded: 1 });
     })().catch((error) => answer(500, { error: String(error) }));
     return;
   }
   const about = url.searchParams.get('type');
-  if (request.method === 'GET' && url.pathname === '/notify' && (about === 'rehearsal_updated' || about === 'member_response')) {
+  if (request.method === 'GET' && url.pathname === '/notify'
+    && ['rehearsal_updated', 'member_response', 'rehearsal_created', 'added_to_rehearsal', 'rehearsal_deleted'].includes(about)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const title = url.searchParams.get('rehearsal') || '';
     (async () => {
@@ -361,10 +486,18 @@ http.createServer((request, response) => {
       const rehearsal = await db.get('SELECT * FROM native_rehearsals WHERE title = $1', [title]);
       if (!rehearsal) return answer(404, { error: `no rehearsal ${title}` });
       const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [rehearsal.project_id]);
-      // As an edit and a "yes" tell them (routes/native/rehearsals.js), the
-      // server's own words, on the reader's clock.
+      // As an edit, a "yes", a new rehearsal and a cast that grew tell them
+      // (routes/native/rehearsals.js), the server's own words, on the reader's
+      // clock and in the reader's language.
       if (about === 'rehearsal_updated') {
         await notifyRehearsalUpdated(rehearsal, project.name, [{ user_id: user.id }], [url.searchParams.get('change') || 'location']);
+      } else if (about === 'rehearsal_created') {
+        await notifyRehearsalCreated(rehearsal, project.name, [{ user_id: user.id }]);
+      } else if (about === 'added_to_rehearsal') {
+        await notifyAddedToRehearsal(rehearsal, project.name, [{ user_id: user.id }]);
+      } else if (about === 'rehearsal_deleted') {
+        // Only the notice: the rehearsal stays.
+        await notifyRehearsalDeleted(rehearsal, project.name, [{ user_id: user.id }]);
       } else {
         await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
       }
@@ -373,7 +506,7 @@ http.createServer((request, response) => {
     })().catch((error) => answer(500, { error: String(error) }));
     return;
   }
-  if (request.method === 'GET' && url.pathname === '/ink') {
+  if (request.method === 'GET' && (url.pathname === '/ink' || url.pathname === '/ellipses')) {
     // The newest screenshot of that name the flows took (e2e/out/artifacts).
     const name = path.basename(url.searchParams.get('shot') || '') + '.png';
     const shots = fs.readdirSync(ARTIFACTS, { recursive: true })
@@ -382,6 +515,7 @@ http.createServer((request, response) => {
       .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
     if (!shots.length) return answer(404, { error: `no screenshot ${name}` });
     const region = Object.fromEntries(['left', 'right', 'top', 'bottom'].map((side) => [side, Number(url.searchParams.get(side))]));
+    if (url.pathname === '/ellipses') return answer(200, { ellipses: ellipses(shots[0], { region }) });
     const tolerance = url.searchParams.has('tolerance') ? Number(url.searchParams.get('tolerance')) : undefined;
     return answer(200, { box: inkBox(shots[0], { colour: url.searchParams.get('colour') || '', region, tolerance }) });
   }
@@ -425,6 +559,32 @@ http.createServer((request, response) => {
       return answer(200, { copied: true });
     });
     child.stdin.end(url.searchParams.get('text') || '');
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/push') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    const app = url.searchParams.get('app') || '';
+    if (!/^[\w.-]+$/.test(app)) return answer(400, { error: `no app ${app}` });
+    const type = url.searchParams.get('type');
+    const projectName = url.searchParams.get('project') || '';
+    // The data notifyRoleChanged sends (pushNotificationService.js), where
+    // Expo's servers put it for iOS: under "body", which expo-notifications
+    // reads as a remote notification's data.
+    const data = type === 'role_changed'
+      ? { type, projectName, newRole: url.searchParams.get('role') || 'admin' }
+      : null;
+    if (!data) return answer(400, { error: `no push of type ${type}` });
+    const payload = {
+      aps: { alert: { title: 'Role changed', body: `${projectName}: ${data.newRole}` }, sound: 'default' },
+      body: data,
+    };
+    const child = execFile('xcrun', ['simctl', 'push', device, app, '-'], { timeout: 30000 }, (error) => {
+      if (error) return answer(500, { error: String(error) });
+      console.log(`[e2e] pushed ${type} about ${projectName} to the simulator`);
+      return answer(200, { pushed: true });
+    });
+    child.stdin.end(JSON.stringify(payload));
     return;
   }
   if (request.method === 'GET' && url.pathname === '/tap-again') {

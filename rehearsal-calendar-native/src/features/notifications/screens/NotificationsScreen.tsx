@@ -16,16 +16,17 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 // This one loses to the pan, which is the whole point.
 import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handler';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
-import { useUnread } from '../../../contexts/UnreadContext';
+import { useUnread, type ChangeAnswer } from '../../../contexts/UnreadContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { logger } from '../../../shared/utils/logger';
 import { useRequestOrder } from '../../../shared/hooks/useSession';
-import { openProject, projectSectionOf } from '../../../shared/hooks/useNotifications';
+import { openCalendar, openProject, projectSectionOf } from '../../../shared/hooks/useNotifications';
 import { currentSession, isCurrentSession } from '../../../shared/services/session';
 import { styles } from '../styles/notificationsScreenStyles';
 import {
@@ -38,12 +39,21 @@ import {
 } from '../inboxPages';
 import type { AppNavigation } from '../../../navigation';
 
-/** Matches the notification type to the icon the rest of the app uses for it. */
+/**
+ * Matches the notification type to the icon the rest of the app uses for it.
+ *
+ * Every type the server sends is named (everyServerNotification.test.tsx):
+ * "New member" and "New administrator" fell through to the bell, both alike,
+ * while the person with a plus stood for "project_invite" (T-252). That one is
+ * no longer sent (b973361), but the inbox is older and may still hold it.
+ */
 function iconFor(type: string): keyof typeof Ionicons.glyphMap {
   if (type.startsWith('rehearsal_reminder')) return 'alarm-outline';
   if (type.startsWith('rehearsal')) return 'calendar-outline';
   if (type === 'member_response') return 'eye-outline';
-  if (type === 'project_invite') return 'person-add-outline';
+  if (type === 'member_joined') return 'person-add-outline';
+  if (type === 'admin_appointed') return 'key-outline';
+  if (type === 'project_invite') return 'mail-outline';
   if (type === 'role_changed') return 'shield-checkmark-outline';
   if (type === 'member_removed' || type === 'project_deleted') return 'close-circle-outline';
   return 'notifications-outline';
@@ -66,8 +76,10 @@ export default function NotificationsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   // The last read of the list failed (NI05). An empty list said "Nothing yet"
-  // when the server had not been reached at all.
-  const [loadError, setLoadError] = useState(false);
+  // when the server had not been reached at all. The error itself, not a flag:
+  // no connection and the server down are said apart (T-228).
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const loadErrorText = loadError ? requestErrorMessage(t, loadError, t.notifications.loadError) : null;
 
   // A list read while a change was on its way may still hold the deleted card,
   // or the read one as unread: reads and changes on this screen go in one order
@@ -110,11 +122,11 @@ export default function NotificationsScreen() {
       const res = await notificationsAPI.list();
       if (answer()) {
         setInbox((prev) => withFirstPage(prev, pageOf(res.data)));
-        setLoadError(false);
+        setLoadError(null);
       } else landed = false;
     } catch (err) {
       logger.warn('[Notifications] Could not load:', err);
-      if (answer()) setLoadError(true);
+      if (answer()) setLoadError(err ?? new Error('load failed'));
       else landed = false;
     } finally {
       // The spinner stays while the read is still to be made again.
@@ -137,11 +149,11 @@ export default function NotificationsScreen() {
       const res = await notificationsAPI.list(cursor);
       if (answer()) {
         setInbox((prev) => withNextPage(prev, pageOf(res.data), cursor));
-        setLoadError(false);
+        setLoadError(null);
       }
     } catch (err) {
       logger.warn('[Notifications] Could not load more:', err);
-      if (answer()) setLoadError(true);
+      if (answer()) setLoadError(err ?? new Error('load failed'));
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
@@ -158,7 +170,7 @@ export default function NotificationsScreen() {
   // through: the first read failing late put the card back unread, though the
   // server had it read (review).
   const marks = useRef(new Map<number, { out: number; landed: boolean }>());
-  const markShown = useCallback(async (ids: number[], send: () => Promise<boolean>) => {
+  const markShown = useCallback(async (ids: number[], send: () => Promise<ChangeAnswer>) => {
     for (const id of ids) {
       const mark = marks.current.get(id) ?? { out: 0, landed: false };
       mark.out += 1;
@@ -167,7 +179,8 @@ export default function NotificationsScreen() {
     const covered = new Set(ids);
     setItems((prev) => prev.map((n) => (covered.has(n.id) ? { ...n, read: true } : n)));
 
-    const ok = await change(send);
+    const answer = await change(send);
+    const ok = answer === true;
     const back = new Set<number>();
     for (const id of ids) {
       const mark = marks.current.get(id);
@@ -181,7 +194,7 @@ export default function NotificationsScreen() {
     if (back.size > 0) {
       setItems((prev) => prev.map((n) => (back.has(n.id) ? { ...n, read: false } : n)));
     }
-    return ok;
+    return answer;
   }, [change, setItems]);
 
   // The whole inbox, by name — the pages not loaded too. The badge follows the
@@ -189,8 +202,10 @@ export default function NotificationsScreen() {
   // whose own read is still on its way.
   const markEverythingRead = useCallback(async () => {
     const ids = items.filter((n) => !n.read || marks.current.has(n.id)).map((n) => n.id);
-    const ok = await markShown(ids, () => markAllRead());
-    if (!ok) Alert.alert(t.common.error, t.notifications.markReadError);
+    const answer = await markShown(ids, () => markAllRead());
+    if (answer !== true) {
+      Alert.alert(t.common.error, requestErrorMessage(t, answer?.failed, t.notifications.markReadError));
+    }
   }, [items, markAllRead, markShown, t]);
 
   useFocusEffect(
@@ -204,6 +219,13 @@ export default function NotificationsScreen() {
     // had plainly dealt with the thing. It opens at once; if the server did not
     // take the "read", the card is unread again when the reader comes back.
     if (!item.read) markShown([item.id], () => markRead([item.id]));
+
+    // Taken off a rehearsal: to the calendar it has left, not the rehearsal,
+    // which they can no longer see (T-233).
+    if (item.type === 'rehearsal_removed') {
+      openCalendar(navigation);
+      return;
+    }
 
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
     const projectId = item.data?.projectId ?? (item.relatedType === 'project' ? item.relatedId : null);
@@ -220,6 +242,10 @@ export default function NotificationsScreen() {
     // push opens it, "New member" on its members (T-023).
     if (projectId) openProject(navigation, projectId, projectSectionOf(item.type));
   };
+
+  // What a change that failed is called: its own error, in the app's language.
+  const failedText = (answer: Exclude<ChangeAnswer, true>, fallback: string) =>
+    requestErrorMessage(t, answer?.failed, fallback);
 
   const ageOf = (iso: string) => {
     const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -240,8 +266,8 @@ export default function NotificationsScreen() {
     const wasAt = items.findIndex((n) => n.id === item.id);
     setItems((prev) => prev.filter((n) => n.id !== item.id));
 
-    const ok = await change(() => remove(item.id));
-    if (ok) return;
+    const answer = await change(() => remove(item.id));
+    if (answer === true) return;
 
     // Put it back where it was, from memory. Asking the server for the list
     // instead was wrong in the one case this matters: with no connection that
@@ -254,7 +280,7 @@ export default function NotificationsScreen() {
       return restored;
     });
 
-    Alert.alert(t.common.error, t.notifications.deleteError);
+    Alert.alert(t.common.error, failedText(answer, t.notifications.deleteError));
   };
 
   const confirmClearAll = () => {
@@ -269,10 +295,10 @@ export default function NotificationsScreen() {
           const before = inbox;
           setInbox(emptyInbox);
 
-          const ok = await change(() => removeAll());
-          if (!ok) {
+          const answer = await change(() => removeAll());
+          if (answer !== true) {
             setInbox(before);
-            Alert.alert(t.common.error, t.notifications.deleteError);
+            Alert.alert(t.common.error, failedText(answer, t.notifications.deleteError));
           }
         },
       },
@@ -309,12 +335,15 @@ export default function NotificationsScreen() {
         />
       </View>
 
+      {/* Whole, however many lines it takes. Cut at the second, "… programado
+          para mañana a las 1…" hid the time and place it was sent for, and
+          nowhere else shows the text: a tap opens what it is about (T-252). */}
       <View style={styles.body}>
-        <Text style={[styles.cardTitle, item.read && styles.cardTitleRead]} numberOfLines={2}>
+        <Text style={[styles.cardTitle, item.read && styles.cardTitleRead]}>
           {item.title}
         </Text>
         {item.body ? (
-          <Text style={styles.cardBody} numberOfLines={2}>
+          <Text style={styles.cardBody}>
             {item.body}
           </Text>
         ) : null}
@@ -384,7 +413,7 @@ export default function NotificationsScreen() {
           ListHeaderComponent={
             loadError && items.length > 0 ? (
               <Text testID="inbox-load-error" style={styles.loadErrorBanner}>
-                {t.notifications.loadError}
+                {loadErrorText}
               </Text>
             ) : null
           }
@@ -405,7 +434,7 @@ export default function NotificationsScreen() {
             loadError ? (
               <View style={styles.empty}>
                 <Ionicons name="cloud-offline-outline" size={48} color={Colors.text.tertiary} />
-                <Text style={styles.emptyTitle}>{t.notifications.loadError}</Text>
+                <Text style={styles.emptyTitle}>{loadErrorText}</Text>
                 <TouchableOpacity testID="inbox-retry" style={styles.more} onPress={() => load()}>
                   <Text style={styles.moreText}>{t.common.retry}</Text>
                 </TouchableOpacity>

@@ -1,0 +1,20 @@
+$ npx jest --selectProjects frontend --testPathPatterns SmartPlannerErrorLanguage
+# on df43622 (useSmartPlanner.ts unchanged), the new test only
+
+  ● a failed load is told in the language switched to while it is on screen
+
+    Unable to find an element with text: Сервер недоступен. Попробуйте позже.
+    (the screen after the switch to Russian, trimmed:)
+            Ошибка загрузки
+            The server is unavailable. Try again later.
+
+      81 |
+      82 |   expect(screen.getByText(translations.ru.smartPlanner.errorLoading)).toBeTruthy();
+    > 83 |   expect(screen.getByText(translations.ru.common.serverUnavailable)).toBeTruthy();
+         |                 ^
+      84 |   expect(screen.queryByText(translations.en.common.serverUnavailable)).toBeNull();
+      85 |   // Not loaded again for it: a change of language is not a new question.
+      86 |   expect(projectsAPI.getMembersAvailabilityRange).toHaveBeenCalledTimes(1);
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total

@@ -1,0 +1,22 @@
+T-249 — e2e on the fix (b9c64fa + flow 87), 12.11.2026.
+
+[Passed] Planner and the calendar's top in German (40s)          87
+[Passed] Dates in Russian, one format (52s)                       65
+[Passed] Screen headers, one style (1m)                           66
+[Passed] Planner follows the project (1m 59s)                     07
+[Passed] From the planner to a rehearsal (1m 1s)                  06
+[Passed] Planner list is dense (1m 24s)                           58
+[Passed] The planner's filters fit in four languages (1m 55s)     59
+[Passed] Inbox (39s)                                              05
+[Passed] Calendar filter against a late answer (55s)              17
+[Passed] Chosen project deleted (1m 29s)                          19
+[Passed] Today selects today (1m 39s)                             41
+[Passed] Day strip centres the day (1m 10s)                       57
+[Passed] Day strip turns as a wheel (1m 2s)                       74-day-strip-wheel
+[Passed] The calendar's rehearsals are rows with a date column    74-calendar-rows
+[Passed] The profile's language, kept by the account (2m 35s)     44
+taps taken again (tap-and-see.yaml): 0 in every run
+
+Screenshots: before-{ru,de}-{calendar,planner}.png on bd4b8ac's code,
+after-{ru,de}-{calendar,planner}.png on the fix — taken by a temporary flow
+(sign in, calendar, planner tab; no assertions), removed afterwards.

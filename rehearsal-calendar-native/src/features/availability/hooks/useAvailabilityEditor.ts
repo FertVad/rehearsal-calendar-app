@@ -10,7 +10,6 @@ import { SCREEN_HEIGHT, PANEL_HEIGHT } from '../constants';
 const DEFAULT_SLOT: TimeSlot = { start: '10:00', end: '18:00' };
 
 interface UseAvailabilityEditorProps {
-  availability: Record<string, DayState>;
   setAvailability: (updater: (prev: Record<string, DayState>) => Record<string, DayState>) => void;
   /** These days now differ from what was saved. */
   markChanged: (dates: string[]) => void;
@@ -29,7 +28,6 @@ interface UseAvailabilityEditorProps {
 }
 
 export function useAvailabilityEditor({
-  availability,
   setAvailability,
   markChanged,
   markSettled,
@@ -46,7 +44,6 @@ export function useAvailabilityEditor({
   // render that has the deleted days settled, so only what is still unsaved
   // is asked about (T-026, review 2).
   const [putAwayDue, setPutAwayDue] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Time picker state. The picker holds its own draft and hands back only a
   // confirmed time (PickerModal, usePickerDraft).
@@ -70,20 +67,12 @@ export function useAvailabilityEditor({
     }).start();
   }, [panelOpen, panelAnimation]);
 
-  // Validate slots when selection or availability changes
-  useEffect(() => {
-    if (selectedDate) {
-      const state = getDayState(selectedDate);
-      if (state.mode === 'custom') {
-        const validation = validateSlots(state.slots);
-        setValidationError(validation.isValid ? null : validation.error!);
-      } else {
-        setValidationError(null);
-      }
-    } else {
-      setValidationError(null);
-    }
-  }, [selectedDate, availability]);
+  // The selected day's hours as they are now, checked on each render: an
+  // effect that kept the answer in state ran a render behind, and listed only
+  // part of what it read (T-243).
+  const selectedState = selectedDate ? getDayState(selectedDate) : null;
+  const slotsCheck = selectedState?.mode === 'custom' ? validateSlots(selectedState.slots) : null;
+  const validationError = slotsCheck && !slotsCheck.isValid ? slotsCheck.error ?? null : null;
 
   const handleDayPress = (year: number, month: number, day: number, formatDate: (y: number, m: number, d: number) => string) => {
     const date = formatDate(year, month, day);
@@ -130,11 +119,15 @@ export function useAvailabilityEditor({
   /** The editor's arrow and "Deselect": put away through the screen. */
   const collapse = () => putAway(clearSelection);
 
+  // Once, in the render where it fell due: that render's `collapse` asks with
+  // the deleted days already settled. Listed, `collapse` — new each render —
+  // would only run this again for nothing (T-243).
   useEffect(() => {
     if (!putAwayDue) return;
     setPutAwayDue(false);
     collapse();
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above: the render it fell due in is the one to ask from
+  }, [putAwayDue]);
 
   // Time picker handlers
   const openTimePicker = (slotIndex: number, field: 'start' | 'end') => {

@@ -1,0 +1,69 @@
+T-228, review (Astra): the new and updated tests run against the code of bf2194c,
+before the fix. Command (rehearsal-calendar-native):
+
+npx jest --selectProjects frontend --silent \
+  src/features/profile/components/__tests__/BugReportSheet.test.tsx \
+  src/shared/utils/__tests__/errorWindowsSayNoMessage.test.ts \
+  src/features/auth/utils/__tests__/authErrors.test.ts \
+  src/features/projects/screens/__tests__/JoinProjectScreen.test.tsx \
+  src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx \
+  src/features/calendar/hooks/__tests__/useRehearsalAvailability.test.ts \
+  src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts \
+  src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.test.tsx \
+  src/shared/hooks/__tests__/useAutoCalendarSync.test.ts
+(output filtered to PASS/FAIL, expected/received and the totals)
+
+FAIL frontend src/features/calendar/hooks/__tests__/useRehearsalAvailability.test.ts (7.356 s)
+    Expected: "Error", "No connection"
+    Received: "Error", "Could not load"
+FAIL frontend src/features/profile/components/__tests__/BugReportSheet.test.tsx (7.726 s)
+    Expected: "Ошибка", "Нет соединения. Проверьте интернет и попробуйте ещё раз."
+    Received: "Ошибка", "Failed to send report"
+    Expected: "Ошибка", "Сервер недоступен. Попробуйте позже."
+    Received: "Ошибка", "Failed to send report"
+    Expected: "Ошибка", undefined
+    Received: "Ошибка", "Failed to send report"
+FAIL frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts (8.51 s)
+    - Expected  - 1
+    + Received  + 1
+    -   "error": [AxiosError: Network Error],
+    +   "error": "Network Error",
+FAIL frontend src/features/projects/screens/__tests__/JoinProjectScreen.test.tsx (8.916 s)
+    Expected element to have text content:
+    Received:
+    Expected element to have text content:
+    Received:
+FAIL frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.test.tsx (8.973 s)
+    Expected substring: "No connection. Check the internet and try again."
+    Received string:    "Imported: 0
+    Expected substring: "No connection. Check the internet and try again."
+    Received string:    "Imported: 2
+    Expected substring: "The server is unavailable. Try again later."
+    Received string:    "Imported: 2
+    Expected substring: "Sync error"
+    Received string:    "Imported: 0
+FAIL frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx (8.958 s)
+    Expected: "Error", "No connection. Check the internet and try again."
+    Received: "Error", "Failed to load project data"
+FAIL frontend src/features/auth/utils/__tests__/authErrors.test.ts
+    Expected: "Сервер недоступен. Попробуйте позже."
+    Received: "Что-то пошло не так. Попробуйте ещё раз"
+    Expected: "The server is unavailable. Try again later."
+    Received: "Something went wrong. Try again"
+    Expected: "El servidor no está disponible. Inténtalo más tarde."
+    Received: "Algo salió mal. Inténtalo de nuevo"
+    Expected: "Der Server ist nicht erreichbar. Versuche es später erneut."
+    Received: "Etwas ist schiefgelaufen. Versuche es erneut"
+FAIL frontend src/shared/utils/__tests__/errorWindowsSayNoMessage.test.ts
+    - Expected  - 1
+    + Received  + 4
+    - Array []
+    + Array [
+    +   "features/profile/components/BugReportSheet.tsx:36 — error window says a written-in text; use requestErrorMessage",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:177 — error window says a written-in text; use requestErrorMessage",
+    + ]
+FAIL frontend src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts (9.246 s)
+    Expected: "Ошибка", "Нет соединения. Проверьте интернет и попробуйте ещё раз."
+    Received: "Ошибка", "Не удалось загрузить репетицию. Проверьте соединение и попробуйте ещё раз."
+Test Suites: 9 failed, 9 total
+Tests:       18 failed, 83 passed, 101 total

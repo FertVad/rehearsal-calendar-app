@@ -1,0 +1,63 @@
+T-257: src/shared/constants/__tests__/timezoneNames.test.ts on the old timezones.ts (3b16cd5)
+$ git restore --source=3b16cd5 -- src/shared/constants/timezones.ts
+$ npx jest --selectProjects frontend --testPathPatterns timezoneNames
+
+    ✓ Europe/Moscow in en reads Moscow (UTC+3) (20 ms)
+    ✓ Europe/Moscow in ru reads Москва (UTC+3) (1 ms)
+    ✕ Europe/Moscow in es reads Moscú (UTC+3) (6 ms)
+    ✕ Europe/Moscow in de reads Moskau (UTC+3) (2 ms)
+    ✕ America/New_York in es reads Nueva York (UTC-4) (3 ms)
+    ✕ Europe/London in es reads Londres (UTC+1) (2 ms)
+    ✕ Asia/Kolkata in es reads Bombay (UTC+5:30) (2 ms)
+    ✕ Africa/Cairo in de reads Kairo (UTC+3) (2 ms)
+    ✕ Asia/Yekaterinburg in de reads Jekaterinburg (UTC+5) (2 ms)
+    ✕ Asia/Tokyo in de reads Tokio (UTC+9) (2 ms)
+    ✕ names Kyiv as each language writes it (2 ms)
+    ✕ lists the cities in the language of the interface (20 ms)
+    ✕ Europe/Madrid (8 ms)
+    ✕ America/Mexico_City (7 ms)
+    ✕ America/Bogota (12 ms)
+    ✕ America/Argentina/Buenos_Aires (8 ms)
+    ✕ Europe/Vienna (7 ms)
+    ✕ Europe/Zurich (8 ms)
+    ✕ in de, "moskau" finds Europe/Moscow (7 ms)
+    ✕ in de, "Wien" finds Europe/Vienna (6 ms)
+    ✕ in de, "zürich" finds Europe/Zurich (7 ms)
+    ✕ in de, "kiew" finds Europe/Kiev (6 ms)
+    ✕ in es, "Moscú" finds Europe/Moscow (5 ms)
+    ✕ in es, "nueva york" finds America/New_York (3 ms)
+    ✕ in es, "Ciudad de México" finds America/Mexico_City (3 ms)
+    ✕ in es, "londres" finds Europe/London (3 ms)
+    ✓ in ru, "москва" finds Europe/Moscow (5 ms)
+    ✕ in ru, "Вена" finds Europe/Vienna (7 ms)
+    ✓ in es, "cairo" finds Africa/Cairo (6 ms)
+    ✓ in es, "mumbai" finds Asia/Kolkata (6 ms)
+    ✓ in de, "moscow" finds Europe/Moscow (6 ms)
+    ✓ in ru, "moscow" finds Europe/Moscow (6 ms)
+    ✕ takes its name from the tables of likely zones (2 ms)
+    ✓ keeps its English IANA name where no table has it (3 ms)
+    ✕ is listed first, in the language of the interface, and found by that name (14 ms)
+    ✕ a phone in Europe/Kyiv sees Kyiv once (9 ms)
+    ✓ a phone in Europe/Kiev sees Kyiv once (11 ms)
+    ✕ names Europe/Kyiv as the list names Kyiv (2 ms)
+    ✓ Buenos Aires under its older name, America/Buenos_Aires, is listed once too (6 ms)
+
+Tests:       29 failed, 10 passed, 39 total
+
+Kyiv twice, reproduced - a phone that reports the zone's current IANA name:
+
+  ● Kyiv, whichever name of the zone the phone has › a phone in Europe/Kyiv sees Kyiv once
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"labelEn": "Kyiv", "labelRu": "Kyiv", "value": "Europe/Kyiv"}, {"labelEn": "Kyiv", "labelRu": "Киев", "value": "Europe/Kiev"}]
+
+The cause: the list compared zone names as strings. Europe/Kyiv is not the
+string "Europe/Kiev", so the phone's zone was put in front of the list as a
+zone of its own, though Europe/Kiev is an IANA link (alias) of Europe/Kyiv
+since tzdata 2022b. Fixed by ALIASES / sameTimezone in timezones.ts, used by
+the list, the labels and both pickers' check mark.
+
+The passing guards (✓) hold on old and new code alike: English names, English
+search in every language, a phone already on Europe/Kiev.
+
+On HEAD after the fix: Tests: 44 passed, 44 total (timezoneNames + timezones).

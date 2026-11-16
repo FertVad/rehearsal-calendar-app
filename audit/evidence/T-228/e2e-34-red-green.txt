@@ -1,0 +1,40 @@
+T-228, review 2 — e2e/flows/34-inbox-load-and-read-fail.yaml (08.11.2026)
+
+The flow: the inbox list, "Mark all read" and a swiped deletion each go nowhere
+(hold-answers.js DROP: "1"); each must say "No connection. Check the internet
+and try again." — not the fixed "Could not load notifications" / "Could not mark
+as read" / "Could not delete" — and the deleted card comes back.
+
+== Red before: sources restored from 543dd3c (same file list as r3-jest-red-before.txt)
+
+$ npm run e2e -- e2e/flows/34-inbox-load-and-read-fail.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Failed] Inbox load and read fail (1m 20s) (Assertion is false: "No connection\. Check the internet and try again\." is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+== Green after: git restore --source=HEAD -- src
+
+$ npm run e2e -- e2e/flows/34-inbox-load-and-read-fail.yaml
+...
+[Passed] Inbox load and read fail (1m 35s)
+1/1 Flow Passed in 1m 35s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshots of the green run (not copied: the copy was refused in this session):
+  rehearsal-calendar-native/e2e/out/artifacts/2026-11-08_092001/Inbox load and read fail/takeScreenshot/
+    34-could-not-load.png, 34-could-not-mark-read.png,
+    34-could-not-delete.png — "Error / No connection. Check the internet and try again.",
+    "Bread delivery" back in the list under it.
+
+== Flow 37 (one assertion added: no "Error" window after sign-out)
+
+$ npm run e2e -- e2e/flows/37-inbox-refused-after-sign-out.yaml
+1/1 Flow Passed in 2m 8s

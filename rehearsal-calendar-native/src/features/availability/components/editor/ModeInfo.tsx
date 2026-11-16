@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../../../shared/constants/colors';
 import { DayMode } from '../../types';
 import { useI18n } from '../../../../contexts/I18nContext';

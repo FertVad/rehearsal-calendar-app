@@ -1,0 +1,14 @@
+T-249 — Jest on the old code (common.ts and CalendarScreen.tsx at bd4b8ac), new tests.
+$ npx jest --selectProjects frontend --silent src/i18n/__tests__/navPlanner.test.ts src/shared/components/__tests__/screenHeaders.test.tsx
+
+FAIL frontend src/i18n/__tests__/navPlanner.test.ts
+    Expected: "Planner"
+    Received: "Планер"
+    Expected: "Planner"
+    Received: "Planificador"
+    Expected: "Planner"
+    Received: "Planer"
+FAIL frontend src/shared/components/__tests__/screenHeaders.test.tsx
+    Expected pattern: not /<ScreenHeader\b/
+    Received string:      "import React, { useState, useCallback, useMemo, useEffect } from 'react';
+Tests:       4 failed, 27 passed, 31 total

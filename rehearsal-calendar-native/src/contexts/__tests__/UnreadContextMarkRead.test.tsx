@@ -42,16 +42,19 @@ beforeEach(() => {
   mockMarkRead.mockReset();
 });
 
-it('answers false when the server did not take it, true when it did', async () => {
+it('answers the error when the server did not take it, true when it did', async () => {
+  // The error itself, not false: the inbox says what went wrong in the app's
+  // language, no connection apart from the server down (T-228).
+  const offline = new Error('offline');
   mockMarkRead
-    .mockRejectedValueOnce(new Error('offline'))
+    .mockRejectedValueOnce(offline)
     .mockResolvedValueOnce({ data: { unreadCount: 2 } });
   const { getByTestId } = render(<UnreadProvider><Probe /></UnreadProvider>);
 
   await act(async () => { fireEvent.press(getByTestId('read-one')); });
   await act(async () => { fireEvent.press(getByTestId('read-one')); });
 
-  expect(answers).toEqual([false, true]);
+  expect(answers).toEqual([{ failed: offline }, true]);
 });
 
 // The person who asked has signed out before the refusal came: the inbox's

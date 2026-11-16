@@ -7,6 +7,8 @@ import { lastDateOf, rehearsalInZone } from '../../../shared/utils/rehearsalDays
 import { useSeen } from '../../../contexts/SeenContext';
 import { useLatestRequest } from '../../../shared/hooks/useSession';
 import { useTimezone } from '../../../shared/hooks/useClock';
+import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 
 // Cache duration in milliseconds (15 seconds)
 const CACHE_DURATION = 15000;
@@ -21,10 +23,11 @@ const transformRehearsal = (r: Rehearsal, userTimezone: string): Rehearsal =>
   rehearsalInZone(r, userTimezone);
 
 export const useRehearsals = (projects: Project[], filterProjectId: string | null) => {
+  const { t } = useI18n();
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const lastFetchTime = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
   const beginLoad = useLatestRequest();
@@ -158,7 +161,8 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     } catch (err: any) {
       if (!current()) return;
       logger.error('Failed to fetch rehearsals:', err);
-      setError(err.message || 'Failed to load rehearsals');
+      // The failure itself, said in the language of the moment (T-228).
+      setError(err ?? new Error('Failed to load rehearsals'));
     } finally {
       if (current()) {
         setLoading(false);
@@ -174,7 +178,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     rehearsals,
     loading,
     refreshing,
-    error,
+    error: error === null ? null : requestErrorMessage(t, error, t.auth.requestFailed),
     fetchRehearsals,
     refresh,
   };

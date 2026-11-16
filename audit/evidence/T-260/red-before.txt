@@ -1,0 +1,31 @@
+T-260 red before: the new stall tests on the old setup (every test of the file
+gets transport() with timeoutMs: 300). The event loop is kept busy for 400 ms
+right after the request is made, as Jest workers and swap did on 15.11; the
+deadline timer then fires before the local server's answer is read, and the
+shape test fails with the very message of the supervisor's red run.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/services/expoTransport.test.js
+
+    ✓ a receipts request answered with data null is a rejection, not "no receipts yet" (3 ms)
+    ✕ a send answered with null is a rejection for its shape even when the machine stalls (446 ms)
+    ✕ a receipts request answered with data null is a rejection for its shape even when the machine stalls (408 ms)
+    ✓ a receipts request answered with null is a rejection (R8-04) (4 ms)
+    ✓ an answer that never comes is a rejection at the deadline (305 ms)
+    ✓ an answer that stops half-way is a rejection at the deadline (307 ms)
+
+  ● Answers that fail the request, and nothing else › a send answered with null is a rejection for its shape even when the machine stalls
+
+    expect(received).rejects.toThrow(expected)
+
+    Expected pattern: /not an answer/
+    Received message: "Expo did not answer within 300 ms"
+
+  ● Answers that fail the request, and nothing else › a receipts request answered with data null is a rejection for its shape even when the machine stalls
+
+    expect(received).rejects.toThrow(expected)
+
+    Expected pattern: /not an answer/
+    Received message: "Expo did not answer within 300 ms"
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 14 passed, 16 total

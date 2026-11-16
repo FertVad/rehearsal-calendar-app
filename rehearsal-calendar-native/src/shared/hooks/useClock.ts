@@ -15,16 +15,12 @@
  */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
-import { appTimezone, formatDateToString, onAppTimezone, todayIn, wallClockIn } from '../utils/time';
+import { appTimezone, formatDateToString, onAppTimezone, wallClockIn } from '../utils/time';
 
 /** The app's zone: the profile's, the device's only while the profile has none. */
 export function useTimezone(): string {
   return useSyncExternalStore(onAppTimezone, appTimezone);
 }
-
-/** The date in `timezone` now, 'YYYY-MM-DD'. */
-export const localDate = (now: Date = new Date(), timezone?: string): string =>
-  timezone ? todayIn(timezone, now) : formatDateToString(now);
 
 const POLL_MS = 30 * 1000;
 
@@ -42,7 +38,6 @@ export function useNow(stepMinutes = 1): Date {
   const timezone = useTimezone();
   const [read, setRead] = useState(() => ({ zone: timezone, instant: new Date() }));
   if (read.zone !== timezone) setRead({ zone: timezone, instant: new Date() });
-  const instant = read.zone === timezone ? read.instant : new Date();
   const zone = useRef(timezone);
   zone.current = timezone;
 
@@ -70,7 +65,13 @@ export function useNow(stepMinutes = 1): Date {
     };
   }, [stepMinutes, timezone]);
 
-  return useMemo(() => wallClockIn(timezone, instant), [timezone, instant]);
+  // A read for another zone is replaced above, before this render is shown;
+  // until then the clock is read afresh. Decided inside, so the memo's inputs
+  // are the kept read itself and not a new Date on such a render (T-243).
+  return useMemo(
+    () => wallClockIn(timezone, read.zone === timezone ? read.instant : new Date()),
+    [timezone, read]
+  );
 }
 
 /** Today in the profile's zone, turning at its midnight and on return to the app. */

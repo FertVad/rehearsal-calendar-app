@@ -273,6 +273,16 @@ export async function testConnection() {
   await probe(owner);
 }
 
+/**
+ * Closes the adapter (docs/server-runtime.md). The server never closes it — a
+ * Vercel function ends with its process — but the PostgreSQL checks run by
+ * scripts/r0-postgres.mjs (__tests__/postgres/*.mjs) close it after each check,
+ * and adapterContract.mjs checks the close itself. `@internal` tells knip
+ * --production that those checks are its only users by design; plain knip
+ * still checks they are.
+ *
+ * @internal
+ */
 export function closeDatabase() {
   if (closing) return closing;
   const owners = [...new Set([runtime, candidate].filter(Boolean))];

@@ -54,7 +54,6 @@ const setup = (
 
   const hook = renderHook(() =>
     useAvailabilityEditor({
-      availability,
       setAvailability,
       markChanged,
       markSettled,
