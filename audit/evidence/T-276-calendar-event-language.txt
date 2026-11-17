@@ -40,8 +40,17 @@ fixed title would not have rewritten the notes of a rehearsal with its own name.
 Note: an event whose notes the person edited in the calendar is rewritten with
 the app's notes at the next sync, as any update already did before.
 
-== 3. Each language read by its editor ==
+== 3. Each language - NOT yet read by its editor ==
 
+Review (Astra): item 4 of the task is not met. The readings below are Claude's
+own, done in this session; they are not the native editors' readings the task
+asks for (T-256 procedure: each language read by its own native speaker, the
+reply a separate T-276-natives-<lang>.md). The brief for the editors - the
+strings, where they are seen, the questions - is T-276-editors-brief.md. Until
+their replies are here, item 4 stays open; any edit they make goes into
+calendarSync.ts and the expectation in exportLanguage.test.ts.
+
+Claude's own reading (not an editor's), kept for the editors to check against.
 Read on the standard of T-256/T-261/T-267/T-268: the app's terms, one Spanish
 for every country. Title and notes are labels, "Label: value", no closing
 period in any language (as in English), no quotes around the project's name.
