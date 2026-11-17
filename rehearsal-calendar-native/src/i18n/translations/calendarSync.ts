@@ -52,6 +52,15 @@ export interface CalendarSyncTranslations {
   exportedRehearsals: string;
   // Calendar picker
   chooseCalendar: string;
+  /**
+   * The phone calendar's event for a rehearsal with no name of its own, in the
+   * language chosen in the app (T-276). The word for a rehearsal is the one the
+   * screens use (calendar.rehearsal). A name the organiser gave is written as it
+   * is, never through this.
+   */
+  eventTitle: (project: string) => string;
+  /** The event's notes. English events from before the URL mark are still known by their English ending (ownMark.ts). */
+  eventNotes: (project: string) => string;
 }
 
 export const ru = {
@@ -97,6 +106,8 @@ export const ru = {
     exportedRehearsals: 'Экспортировано репетиций',
     // Calendar picker
     chooseCalendar: 'Выберите календарь для экспорта',
+    eventTitle: (project: string) => `Репетиция: ${project}`,
+    eventNotes: (project: string) => `Проект: ${project}\n\nСоздано в Rehearsly`,
   },
 };
 
@@ -143,6 +154,8 @@ export const en = {
     exportedRehearsals: 'Exported rehearsals',
     // Calendar picker
     chooseCalendar: 'Choose Export Calendar',
+    eventTitle: (project: string) => `Rehearsal: ${project}`,
+    eventNotes: (project: string) => `Project: ${project}\n\nCreated via Rehearsly`,
   },
 };
 
@@ -191,6 +204,8 @@ export const es = {
     exportedRehearsals: 'Ensayos exportados',
     // Calendar picker
     chooseCalendar: 'Elegir calendario de exportación',
+    eventTitle: (project: string) => `Ensayo: ${project}`,
+    eventNotes: (project: string) => `Proyecto: ${project}\n\nCreado con Rehearsly`,
   },
 };
 
@@ -237,5 +252,7 @@ export const de = {
     exportedRehearsals: 'Exportierte Proben',
     // Calendar picker
     chooseCalendar: 'Exportkalender auswählen',
+    eventTitle: (project: string) => `Probe: ${project}`,
+    eventNotes: (project: string) => `Projekt: ${project}\n\nErstellt mit Rehearsly`,
   },
 };

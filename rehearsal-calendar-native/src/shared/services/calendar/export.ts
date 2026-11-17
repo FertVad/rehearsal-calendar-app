@@ -19,9 +19,28 @@ import {
   updateLastExportTime,
 } from '../../utils/calendarStorage';
 import { logger } from '../../utils/logger';
-import { eventNotesFor, eventUrlFor, isOwnEventOf, LEGACY, MarkedEvent, ownMarkOf } from './ownMark';
+import { eventUrlFor, isOwnEventOf, LEGACY, MarkedEvent, ownMarkOf } from './ownMark';
 import { appTimezone } from '../../utils/time';
+import { appLanguage } from '../../utils/storage';
+import { translations } from '../../../i18n/translations';
+import type { CalendarSyncTranslations } from '../../../i18n/translations/calendarSync';
 import { assertSession, currentSession, sessionWork, SessionEndedError, SessionStamp } from '../session';
+
+/** What the export writes into an event, in one language. */
+type EventWords = Pick<CalendarSyncTranslations, 'eventTitle' | 'eventNotes'>;
+
+/**
+ * The event's words in the language chosen in Rehearsly now (T-276).
+ *
+ * They were English on every phone — "Rehearsal: …", "Project: …\n\nCreated via
+ * Rehearsly" — while the screens spoke Russian, Spanish or German. Asked for
+ * at each export, not fixed at start: after a change of language the next sync
+ * finds the event by its mark, sees words that are not the app's, and rewrites
+ * that same event (eventMatchesRehearsal).
+ */
+async function eventWords(): Promise<EventWords> {
+  return translations[await appLanguage()].calendarSync;
+}
 
 /**
  * Check if event exists in calendar
@@ -36,7 +55,8 @@ import { assertSession, currentSession, sessionWork, SessionEndedError, SessionS
  */
 function eventMatchesRehearsal(
   event: MarkedEvent & { title?: string; startDate?: string | Date; endDate?: string | Date; location?: string | null; timeZone?: string | null },
-  rehearsal: RehearsalWithProject
+  rehearsal: RehearsalWithProject,
+  words: EventWords
 ): boolean {
   const sameMoment = (a?: string | Date, b?: string | Date) =>
     a !== undefined && b !== undefined && new Date(a).getTime() === new Date(b).getTime();
@@ -45,7 +65,11 @@ function eventMatchesRehearsal(
     // An event of ours without the mark — written before it existed — is
     // rewritten once so that it carries it, and is found by it from then on.
     ownMarkOf(event) === String(rehearsal.id) &&
-    event.title === eventTitleFor(rehearsal) &&
+    // Title and notes in the app's language: after a change of language the
+    // event is rewritten in place (T-276). The notes too — a rehearsal with its
+    // own name keeps its title in every language, and only they change.
+    event.title === eventTitleFor(rehearsal, words) &&
+    event.notes === words.eventNotes(rehearsal.projectName) &&
     sameMoment(event.startDate, rehearsal.startsAt) &&
     sameMoment(event.endDate, rehearsal.endsAt) &&
     locationKey(event.location) === locationKey(rehearsal.location) &&
@@ -103,11 +127,19 @@ function isEventNotFound(error: unknown): boolean {
 }
 
 /**
- * What to call the event. The rehearsal's own name when it has one — most do
- * not, and then the project is the only useful thing to show.
+ * What to call the event. The rehearsal's own name when it has one, as the
+ * organiser wrote it — most do not, and then the project is the only useful
+ * thing to show, after the app's word for a rehearsal.
  */
-const eventTitleFor = (rehearsal: RehearsalWithProject) =>
-  rehearsal.title?.trim() || `Rehearsal: ${rehearsal.projectName}`;
+const eventTitleFor = (rehearsal: RehearsalWithProject, words: EventWords) =>
+  rehearsal.title?.trim() || words.eventTitle(rehearsal.projectName);
+
+/**
+ * The title every unnamed rehearsal had before T-276, in any language. Kept in
+ * the search for events from before the URL mark, which are English; not the
+ * English dictionary's, so an edit to that cannot lose them.
+ */
+const legacyTitleFor = (rehearsal: RehearsalWithProject) => `Rehearsal: ${rehearsal.projectName}`;
 
 /** '' means "no location", whatever the platform or our own API called it. */
 const locationKey = (value?: string | null) => (value ?? '').trim();
@@ -123,7 +155,8 @@ async function findDuplicateEvent(
   rehearsal: RehearsalWithProject,
   calendarId: string,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  words: EventWords
 ): Promise<Calendar.Event | null> {
   // Search in a narrow time window (±1 day) for performance
   const searchStart = new Date(startDate);
@@ -148,9 +181,11 @@ async function findDuplicateEvent(
   const duplicateEvent = events.find(event => {
     if (ownMarkOf(event) !== LEGACY) return false;
 
+    // Such events were written in English (T-276), whatever the app's
+    // language then or now.
     const titleMatch =
-      event.title === eventTitleFor(rehearsal) ||
-      event.title === `Rehearsal: ${rehearsal.projectName}`;
+      event.title === eventTitleFor(rehearsal, words) ||
+      event.title === legacyTitleFor(rehearsal);
     const startMatch = Math.abs(new Date(event.startDate).getTime() - startDate.getTime()) < 60000; // Within 1 minute
     const endMatch = Math.abs(new Date(event.endDate).getTime() - endDate.getTime()) < 60000;
     const locationMatch = locationKey(event.location) === locationKey(rehearsal.location);
@@ -173,9 +208,10 @@ async function findDuplicateEvent(
 export async function createCalendarEvent(
   rehearsal: RehearsalWithProject,
   calendarId: string,
-  session: SessionStamp = currentSession()
+  session: SessionStamp = currentSession(),
+  words?: EventWords
 ): Promise<string | null> {
-  const eventId = await placeEvent(rehearsal, calendarId, session);
+  const eventId = await placeEvent(rehearsal, calendarId, session, words ?? (await eventWords()));
   if (eventId) {
     // Save mapping to database + AsyncStorage
     logger.debug('[CalendarSync] 💾 Saving event mapping...');
@@ -194,7 +230,8 @@ export async function createCalendarEvent(
 async function placeEvent(
   rehearsal: RehearsalWithProject,
   calendarId: string,
-  session: SessionStamp
+  session: SessionStamp,
+  words: EventWords
 ): Promise<string | null> {
   try {
     logger.debug('[CalendarSync] 📅 createCalendarEvent called:', {
@@ -217,7 +254,7 @@ async function placeEvent(
 
     // Check for duplicate events (prevents creating duplicates after AsyncStorage loss)
     logger.debug('[CalendarSync] 🔍 Checking for duplicate events...');
-    const duplicate = await findDuplicateEvent(rehearsal, calendarId, startDate, endDate);
+    const duplicate = await findDuplicateEvent(rehearsal, calendarId, startDate, endDate, words);
     if (duplicate) {
       const duplicateEventId = duplicate.id;
       logger.info(`[CalendarSync] Using existing event ${duplicateEventId} instead of creating duplicate`);
@@ -226,18 +263,18 @@ async function placeEvent(
       // its mark it may be stale — another device wrote it before the time
       // changed — and adopting it as it was reported the export done with the
       // old time in the calendar (EX03). One from before the mark gains it.
-      if (!eventMatchesRehearsal(duplicate, rehearsal)) {
-        await updateCalendarEvent(duplicateEventId, rehearsal, session);
+      if (!eventMatchesRehearsal(duplicate, rehearsal, words)) {
+        await updateCalendarEvent(duplicateEventId, rehearsal, session, words);
       }
       return duplicateEventId;
     }
 
     const eventDetails: Omit<Partial<Calendar.Event>, 'id' | 'organizer'> = {
-      title: eventTitleFor(rehearsal),
+      title: eventTitleFor(rehearsal, words),
       startDate,
       endDate,
       location: rehearsal.location || undefined,
-      notes: eventNotesFor(rehearsal.projectName),
+      notes: words.eventNotes(rehearsal.projectName),
       url: eventUrlFor(rehearsal.id),
       // Say which zone the times mean, on both paths.
       //
@@ -290,7 +327,8 @@ async function placeEvent(
 export async function updateCalendarEvent(
   eventId: string,
   rehearsal: RehearsalWithProject,
-  session: SessionStamp = currentSession()
+  session: SessionStamp = currentSession(),
+  words?: EventWords
 ): Promise<void> {
   try {
     const hasPermission = await checkCalendarPermissions();
@@ -298,12 +336,13 @@ export async function updateCalendarEvent(
       throw new Error('Calendar permission not granted');
     }
 
+    const said = words ?? (await eventWords());
     const eventDetails: Partial<Calendar.Event> = {
-      title: eventTitleFor(rehearsal),
+      title: eventTitleFor(rehearsal, said),
       startDate: new Date(rehearsal.startsAt),
       endDate: new Date(rehearsal.endsAt),
       location: rehearsal.location || undefined,
-      notes: eventNotesFor(rehearsal.projectName),
+      notes: said.eventNotes(rehearsal.projectName),
       // Also on update, so events written before this gain the mark.
       url: eventUrlFor(rehearsal.id),
       timeZone: appTimezone(),
@@ -388,6 +427,9 @@ async function syncOneRehearsal(
       endsAt: rehearsal.endsAt,
     });
 
+    // One language for every write of this rehearsal, the app's now (T-276).
+    const words = await eventWords();
+
     // Check if already synced
     const mapping = knownMapping !== undefined ? knownMapping : await getEventMapping(rehearsal.id, session);
     logger.debug('[CalendarSync] 🔍 Event mapping check:', mapping ? 'Found existing mapping' : 'No mapping found');
@@ -412,7 +454,7 @@ async function syncOneRehearsal(
       if (existing && !isOwnEventOf(existing, rehearsal.id)) {
         logger.warn(`[CalendarSync] Event ${mapping.eventId} is not ours for rehearsal ${rehearsal.id}, letting it go`);
         await removeEventMapping(rehearsal.id, session);
-        await createCalendarEvent(rehearsal, calendarId, session);
+        await createCalendarEvent(rehearsal, calendarId, session, words);
         return;
       }
 
@@ -441,7 +483,7 @@ async function syncOneRehearsal(
       // "remove all", tries it again.
       if (mapping.calendarId && mapping.calendarId !== calendarId) {
         logger.info(`[CalendarSync] Moving rehearsal ${rehearsal.id} to calendar ${calendarId}`);
-        const movedId = await placeEvent(rehearsal, calendarId, session);
+        const movedId = await placeEvent(rehearsal, calendarId, session, words);
         if (!movedId) throw new Error('The calendar did not create the event');
         if (eventExists) {
           assertSession(session);
@@ -452,7 +494,7 @@ async function syncOneRehearsal(
         return;
       }
 
-      if (existing && eventMatchesRehearsal(existing, rehearsal)) {
+      if (existing && eventMatchesRehearsal(existing, rehearsal, words)) {
         logger.debug('[CalendarSync] Event already matches - nothing to write');
         return;
       }
@@ -466,7 +508,7 @@ async function syncOneRehearsal(
         // run reported success with the old time in the calendar (EX03).
         logger.info(`[CalendarSync] Rehearsal ${rehearsal.id} already synced, updating...`);
         logger.debug('[CalendarSync] 📝 Updating existing event...');
-        await updateCalendarEvent(mapping.eventId, rehearsal, session);
+        await updateCalendarEvent(mapping.eventId, rehearsal, session, words);
         // Update lastSynced timestamp
         await saveEventMapping(rehearsal.id, mapping.eventId, mapping.calendarId, session);
         logger.debug('[CalendarSync] ✅ Event updated successfully');
@@ -475,13 +517,13 @@ async function syncOneRehearsal(
         logger.warn(`[CalendarSync] Event ${mapping.eventId} no longer exists, recreating...`);
         logger.debug('[CalendarSync] ⚠️ Event no longer exists, recreating...');
         await removeEventMapping(rehearsal.id, session);
-        await createCalendarEvent(rehearsal, calendarId, session);
+        await createCalendarEvent(rehearsal, calendarId, session, words);
       }
     } else {
       // Create new event
       logger.info(`[CalendarSync] Rehearsal ${rehearsal.id} not synced, creating...`);
       logger.debug('[CalendarSync] ➕ Creating new event...');
-      const eventId = await createCalendarEvent(rehearsal, calendarId, session);
+      const eventId = await createCalendarEvent(rehearsal, calendarId, session, words);
       logger.debug('[CalendarSync] ✅ New event created:', eventId);
     }
 

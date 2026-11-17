@@ -2,6 +2,23 @@
  * AsyncStorage utility functions for user preferences
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Language, translations } from '../../i18n/translations';
+
+/**
+ * Where the language chosen in Rehearsly is kept: written by the profile's
+ * language picker (I18nContext) and by the account's preferences below.
+ */
+export const LANGUAGE_STORAGE_KEY = 'userLanguage';
+
+/**
+ * The app's language now, for code outside the screens — the calendar export
+ * (T-276). The same answer I18nContext starts from: the stored choice, English
+ * when there is none. Not the phone's language.
+ */
+export async function appLanguage(): Promise<Language> {
+  const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return saved && saved in translations ? (saved as Language) : 'en';
+}
 
 interface User {
   timezone?: string;
@@ -33,7 +50,7 @@ export const syncUserPreferences = async (user: User): Promise<void> => {
 
   const preferences = [
     { key: 'timezone', value: user.timezone },
-    { key: 'userLanguage', value: user.locale },
+    { key: LANGUAGE_STORAGE_KEY, value: user.locale },
     { key: 'weekStartDay', value: user.weekStartDay },
   ];
 

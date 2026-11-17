@@ -62,6 +62,8 @@ const SAMPLES: Record<string, unknown[][]> = {
   'calendarSync.minutesAgo': COUNTS,
   'calendarSync.hoursAgo': COUNTS,
   'calendarSync.daysAgo': COUNTS,
+  'calendarSync.eventTitle': [['Hamlet']],
+  'calendarSync.eventNotes': [['Hamlet']],
   'notifications.minutesAgo': COUNTS,
   'notifications.hoursAgo': COUNTS,
   'notifications.daysAgo': COUNTS,

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Language, Translations, translations } from '../i18n/translations';
-import { onAccountLanguage } from '../shared/utils/storage';
+import { LANGUAGE_STORAGE_KEY, onAccountLanguage } from '../shared/utils/storage';
 
 import { logger } from '../shared/utils/logger';
 interface I18nContextType {
@@ -15,8 +15,6 @@ const I18nContext = createContext<I18nContextType | undefined>(undefined);
 interface I18nProviderProps {
   children: ReactNode;
 }
-
-const LANGUAGE_STORAGE_KEY = 'userLanguage';
 
 export function I18nProvider({ children }: I18nProviderProps) {
   const [language, setLanguageState] = useState<Language>('en');
