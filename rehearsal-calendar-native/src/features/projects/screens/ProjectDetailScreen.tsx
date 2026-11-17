@@ -54,8 +54,6 @@ interface Member {
   characterName?: string;
   firstName: string;
   lastName?: string;
-  email: string;
-  avatarUrl?: string;
   joinedAt: string;
 }
 

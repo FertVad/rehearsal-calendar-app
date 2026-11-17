@@ -73,7 +73,7 @@ export async function verifyGoogleToken(idToken) {
       emailVerified: payload.email_verified || false,
       firstName: payload.given_name || 'User',
       lastName: payload.family_name || '',
-      avatarUrl: payload.picture || null,
+      // payload.picture is not taken: the app draws initials (T-273).
       locale: payload.locale || null,
     };
   } catch (error) {

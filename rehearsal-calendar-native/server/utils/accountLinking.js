@@ -56,7 +56,7 @@ const ATTEMPTS = 3;
  * @throws {ProviderSignInRefused}
  */
 export async function signInWithProvider({
-  provider, providerUserId, email, emailVerified, firstName, lastName, avatarUrl,
+  provider, providerUserId, email, emailVerified, firstName, lastName,
 }) {
   const address = normalizeEmail(email) || null;
   const claim = {
@@ -70,7 +70,8 @@ export async function signInWithProvider({
     // space, a first name reappears joined to a surname by two.
     firstName: typeof firstName === 'string' ? firstName.trim() : firstName,
     lastName: typeof lastName === 'string' ? lastName.trim() || null : lastName,
-    avatarUrl,
+    // No photo: the app draws initials, so a provider's picture is not kept
+    // (T-273).
   };
   for (let attempt = 1; ; attempt++) {
     try {
@@ -122,18 +123,12 @@ async function providerSignIn(tx, claim, now) {
       if (!user || user.email !== proof) throw new SignInMoved();
       logger.info(`[AccountLinking] Linking ${provider} to existing user ${user.id}`);
       await insertProvider(tx, user.id, claim, now);
-      if (claim.avatarUrl) {
-        await tx.run(
-          'UPDATE native_users SET avatar_url = $1, updated_at = $2::timestamptz WHERE id = $3 AND avatar_url IS NULL',
-          [claim.avatarUrl, now.toISOString(), user.id]
-        );
-      }
       linked = true;
     } else {
       const created = await tx.run(
-        `INSERT INTO native_users (email, password_hash, first_name, last_name, avatar_url, created_at, updated_at)
-         VALUES ($1, NULL, $2, $3, $4, $5::timestamptz, $5::timestamptz)`,
-        [proof, claim.firstName || 'User', claim.lastName || null, claim.avatarUrl || null, now.toISOString()]
+        `INSERT INTO native_users (email, password_hash, first_name, last_name, created_at, updated_at)
+         VALUES ($1, NULL, $2, $3, $4::timestamptz, $4::timestamptz)`,
+        [proof, claim.firstName || 'User', claim.lastName || null, now.toISOString()]
       );
       user = await lockUser(created.lastInsertId);
       await insertProvider(tx, user.id, claim, now);

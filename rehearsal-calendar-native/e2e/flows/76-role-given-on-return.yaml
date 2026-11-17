@@ -32,7 +32,7 @@ tags:
       EMAIL: ${GAEV_EMAIL}
       PASSWORD: ${PASSWORD}
       PROJECT: "Verona Masque"
-      MEMBER: ${MERCUTIO_EMAIL}
+      MEMBER: Mercutio Escalus
       ROLE: admin
 - pressKey: Home
 - launchApp:

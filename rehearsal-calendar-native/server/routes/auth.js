@@ -181,7 +181,6 @@ router.post('/google', asyncHandler(async (req, res) => {
       emailVerified: googleUser.emailVerified,
       firstName: googleUser.firstName,
       lastName: googleUser.lastName,
-      avatarUrl: googleUser.avatarUrl,
     }));
   } catch (err) {
     if (err instanceof ProviderSignInRefused) return res.status(err.status).json(err.body);
@@ -213,7 +212,6 @@ router.post('/apple', asyncHandler(async (req, res) => {
       emailVerified: appleUser.emailVerified,
       firstName,
       lastName,
-      avatarUrl: null, // Apple doesn't provide avatars
     }));
   } catch (err) {
     if (err instanceof AppleAuthUnavailableError) {

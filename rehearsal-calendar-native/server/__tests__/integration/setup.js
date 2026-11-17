@@ -64,6 +64,7 @@ export async function setupIntegrationDb() {
       project_id INTEGER NOT NULL REFERENCES native_projects(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
       role TEXT DEFAULT 'member',
+      character_name VARCHAR(100),
       status TEXT DEFAULT 'active',
       invited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,

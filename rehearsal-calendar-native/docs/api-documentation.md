@@ -116,7 +116,9 @@ server startup alone does not confirm it.
 
 `POST /auth/google` and `POST /auth/apple` decide the account in one locked
 transaction. The provider's address counts as proof only when the provider says
-it is verified; it is trimmed and lower-cased like every other address.
+it is verified; it is trimmed and lower-cased like every other address. Of the
+profile only the name is kept: Google's profile photo is not stored (the app
+draws initials, T-273).
 
 - **Already linked provider**: signs in to that account — for Apple even when the
   token carries no address. Google refuses a token whose address it has not
@@ -417,7 +419,7 @@ Retrieve the authenticated user's profile information.
   "firstName": "John",
   "lastName": "Doe",
   "phone": "+1234567890",
-  "avatarUrl": "https://example.com/avatar.jpg",
+  "avatarUrl": null,
   "timezone": "Asia/Jerusalem",
   "locale": "en",
   "notificationsEnabled": true,
@@ -1539,9 +1541,7 @@ Retrieve all active members of a project.
       "status": "active",
       "joinedAt": "2024-01-15T10:30:00.000Z",
       "firstName": "John",
-      "lastName": "Doe",
-      "email": "john@example.com",
-      "avatarUrl": "https://example.com/avatar.jpg"
+      "lastName": "Doe"
     },
     {
       "id": "2",
@@ -1551,9 +1551,7 @@ Retrieve all active members of a project.
       "status": "active",
       "joinedAt": "2024-01-16T14:00:00.000Z",
       "firstName": "Jane",
-      "lastName": "Smith",
-      "email": "jane@example.com",
-      "avatarUrl": null
+      "lastName": "Smith"
     }
   ]
 }
@@ -1568,8 +1566,6 @@ Retrieve all active members of a project.
 - `joinedAt` (string): When the user joined the project
 - `firstName` (string): User's first name
 - `lastName` (string): User's last name
-- `email` (string): User's email
-- `avatarUrl` (string|null): User's avatar URL
 
 **Error Responses:**
 - `403 Forbidden`: User is not a project member
@@ -1580,6 +1576,8 @@ Retrieve all active members of a project.
 **Notes:**
 - Members are sorted by role (owner, admin, member) and then by join date
 - Only returns active members
+- No member's email address or photo is returned: the app shows a member by
+  name, and nobody is handed what nobody shows (T-273)
 
 ---
 
@@ -1904,7 +1902,7 @@ interface User {
   firstName: string;
   lastName: string;
   phone: string | null;
-  avatarUrl: string | null;
+  avatarUrl: string | null;      // null: nothing stores a photo (T-273)
   timezone: string;              // IANA timezone (e.g., "America/New_York")
   locale: string;                // Locale code (e.g., "en")
   notificationsEnabled: boolean;
@@ -2005,8 +2003,7 @@ interface ProjectMember {
   joinedAt: string;              // ISO 8601 timestamp
   firstName: string;
   lastName: string;
-  email: string;
-  avatarUrl: string | null;
+  // No email and no avatarUrl: nobody is handed another's address or photo (T-273)
 }
 ```
 

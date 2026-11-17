@@ -1,0 +1,22 @@
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/othersPersonalData.test.js
+
+PASS __tests__/routes/othersPersonalData.test.js
+  the members list
+    ✓ names everyone, and gives nobody another's address or photo (95 ms)
+  a Google sign-in
+    ✓ creates the account without the Google photo (62 ms)
+    ✓ links an existing account without the Google photo (17 ms)
+Tests:       3 passed, 3 total
+
+$ npm run e2e -- e2e/flows/75-role-given-by-push.yaml
+[Passed] Role given by push (1m 3s)
+1/1 Flow Passed in 1m 3s
+
+$ npm run e2e -- e2e/flows/76-role-given-on-return.yaml e2e/flows/79-added-to-rehearsal-told.yaml
+[Passed] Role given, seen on return (1m 11s)
+[Passed] Added to a rehearsal, told (40s)
+2/2 Flows Passed in 1m 51s
+
+$ npm run e2e -- e2e/flows/77-rehearsal-form-projects-read-again.yaml
+[Passed] Rehearsal form, the projects read again (1m 54s)
+1/1 Flow Passed in 1m 54s

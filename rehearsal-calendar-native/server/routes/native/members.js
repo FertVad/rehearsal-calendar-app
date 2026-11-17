@@ -279,7 +279,8 @@ router.get('/:projectId/members', requireAuth, asyncHandler(async (req, res) => 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Get all members with user info
+    // Get all members with what the app shows of them: names. No address and
+    // no photo — nobody shows them, so nobody is handed them (T-273).
     const members = await db.all(
       `SELECT
         m.id,
@@ -289,9 +290,7 @@ router.get('/:projectId/members', requireAuth, asyncHandler(async (req, res) => 
         m.status,
         m.joined_at,
         u.first_name,
-        u.last_name,
-        u.email,
-        u.avatar_url
+        u.last_name
       FROM native_project_members m
       JOIN native_users u ON m.user_id = u.id
       WHERE m.project_id = $1 AND m.status = 'active'
@@ -315,8 +314,6 @@ router.get('/:projectId/members', requireAuth, asyncHandler(async (req, res) => 
         joinedAt: m.joined_at,
         firstName: m.first_name,
         lastName: m.last_name,
-        email: m.email,
-        avatarUrl: m.avatar_url,
       })),
     });
   } catch (error) {
