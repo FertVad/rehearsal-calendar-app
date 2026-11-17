@@ -108,6 +108,23 @@ test.each(LANGS)('%s: the profile’s rows are named as the app names them', lan
   expect(text).toContain(`${title} → ${deleteAccount}`);
 });
 
+// iOS's own path, in Apple's words for each language (support.apple.com, "Change
+// notification settings on iPhone"): Settings → Notifications → the app. Since
+// iOS 18 an app is no longer a row of Settings itself but sits under Apps, so
+// "Settings → Rehearsly" leads nowhere; the Notifications list holds on every iOS.
+const IOS = {
+  en: { settings: 'Settings', notifications: 'Notifications' },
+  ru: { settings: 'Настройки', notifications: 'Уведомления' },
+  es: { settings: 'Ajustes', notifications: 'Notificaciones' },
+  de: { settings: 'Einstellungen', notifications: 'Mitteilungen' },
+};
+test.each(LANGS)('%s: iOS’s notification settings are found where iOS has them', lang => {
+  const { settings, notifications } = IOS[lang];
+  const text = section(lang);
+  expect(text).toContain(`${settings} → ${notifications} → Rehearsly`);
+  expect(text).not.toContain(`${settings} → Rehearsly`);
+});
+
 test.each(LANGS)('%s: a fresh invite comes from the project’s own button', lang => {
   expect(section(lang)).toContain(projects[lang].shareLink);
 });

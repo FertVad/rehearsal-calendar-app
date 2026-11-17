@@ -47,8 +47,7 @@ read in its four languages against the app of build 6 (up to T-267).
 
 Checked and true, unchanged: the support address and reply time (the owner's
 own words); calendar sync sends only the time span (calendar/import.ts: titles,
-notes, places stay on the phone); iOS's own path Settings → Rehearsly →
-Notifications in each language; four languages, the page picks one as
+notes, places stay on the phone); four languages, the page picks one as
 legal.js does (T-011 test green); requesting your data; the privacy link.
 Nothing about rehearsal reminders on the page (off by the owner, T-266).
 
@@ -145,6 +144,34 @@ GREEN - HEAD:
   Tests:       8 failed, 1205 passed, 1213 total
   The one failing suite is __tests__/startup/runtimeStartup.test.js, the same
   8 recorded in T-267-review.txt as failing before T-267 too: not this task's.
+
+== 4. Review (Astra, CHANGES): iOS's notification settings path ==
+
+Section 1 above first called "Settings → Rehearsly → Notifications" checked and
+true. It was not checked against a source, and it is wrong on current iOS:
+since iOS 18 an app is no longer a row of Settings itself but sits under
+Settings → Apps, so a person following the page does not find Rehearsly there.
+Apple's guide (support.apple.com, "Change notification settings on iPhone")
+gives Settings → Notifications → the app, a list that holds on every iOS
+version. All four languages now say it in Apple's words: Settings →
+Notifications → Rehearsly / Настройки → Уведомления → Rehearsly / Ajustes →
+Notificaciones → Rehearsly / Einstellungen → Mitteilungen → Rehearsly. The page
+has no other iOS Settings path (calendar access is not described as a path).
+
+supportPage.test.js, new per language: the section contains
+"<Settings> → <Notifications> → Rehearsly" in Apple's words and not
+"<Settings> → Rehearsly".
+
+RED - the page as of a3197de (before this fix), the new test added:
+  ✕ en: iOS’s notification settings are found where iOS has them
+  ✕ ru: iOS’s notification settings are found where iOS has them
+  ✕ es: iOS’s notification settings are found where iOS has them
+  ✕ de: iOS’s notification settings are found where iOS has them
+  Tests:       4 failed, 22 passed, 26 total
+
+GREEN - after:
+  supportPage, legalPageLanguage, appBuild together:
+  Tests:       52 passed, 52 total
 
 No e2e: the page is static and the route test covers it (the task's own
 ruling). Not touched: index.html, styles.css, i18n.js, privacy.html.
