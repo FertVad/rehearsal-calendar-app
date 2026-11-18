@@ -54,9 +54,10 @@ export interface CalendarSyncTranslations {
   chooseCalendar: string;
   /**
    * The phone calendar's event for a rehearsal with no name of its own, in the
-   * language chosen in the app (T-276). The word for a rehearsal is the one the
-   * screens use (calendar.rehearsal). A name the organiser gave is written as it
-   * is, never through this.
+   * language chosen in the app (T-276): the project first, then the word the
+   * screens use for a rehearsal (calendar.rehearsal; lower case after the colon
+   * in Russian, the native speaker's choice). A name the organiser gave takes
+   * the word's place as it is, in export.ts, never through this.
    */
   eventTitle: (project: string) => string;
   /** The event's notes. English events from before the URL mark are still known by their English ending (ownMark.ts). */
@@ -106,7 +107,7 @@ export const ru = {
     exportedRehearsals: 'Экспортировано репетиций',
     // Calendar picker
     chooseCalendar: 'Выберите календарь для экспорта',
-    eventTitle: (project: string) => `Репетиция: ${project}`,
+    eventTitle: (project: string) => `${project}: репетиция`,
     eventNotes: (project: string) => `Проект: ${project}\n\nСоздано в Rehearsly`,
   },
 };
@@ -154,7 +155,7 @@ export const en = {
     exportedRehearsals: 'Exported rehearsals',
     // Calendar picker
     chooseCalendar: 'Choose Export Calendar',
-    eventTitle: (project: string) => `Rehearsal: ${project}`,
+    eventTitle: (project: string) => `${project}: Rehearsal`,
     eventNotes: (project: string) => `Project: ${project}\n\nCreated via Rehearsly`,
   },
 };
@@ -204,7 +205,7 @@ export const es = {
     exportedRehearsals: 'Ensayos exportados',
     // Calendar picker
     chooseCalendar: 'Elegir calendario de exportación',
-    eventTitle: (project: string) => `Ensayo: ${project}`,
+    eventTitle: (project: string) => `${project}: Ensayo`,
     eventNotes: (project: string) => `Proyecto: ${project}\n\nCreado con Rehearsly`,
   },
 };
@@ -252,7 +253,7 @@ export const de = {
     exportedRehearsals: 'Exportierte Proben',
     // Calendar picker
     chooseCalendar: 'Exportkalender auswählen',
-    eventTitle: (project: string) => `Probe: ${project}`,
+    eventTitle: (project: string) => `${project}: Probe`,
     eventNotes: (project: string) => `Projekt: ${project}\n\nErstellt mit Rehearsly`,
   },
 };

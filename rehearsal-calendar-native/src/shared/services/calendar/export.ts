@@ -65,9 +65,9 @@ function eventMatchesRehearsal(
     // An event of ours without the mark — written before it existed — is
     // rewritten once so that it carries it, and is found by it from then on.
     ownMarkOf(event) === String(rehearsal.id) &&
-    // Title and notes in the app's language: after a change of language the
-    // event is rewritten in place (T-276). The notes too — a rehearsal with its
-    // own name keeps its title in every language, and only they change.
+    // Title and notes as the export writes them now: after a change of language
+    // the event is rewritten in place (T-276). The notes too — a rehearsal with
+    // its own name keeps its title in every language, and only they change.
     event.title === eventTitleFor(rehearsal, words) &&
     event.notes === words.eventNotes(rehearsal.projectName) &&
     sameMoment(event.startDate, rehearsal.startsAt) &&
@@ -126,20 +126,33 @@ function isEventNotFound(error: unknown): boolean {
   return code === 'ERR_EVENT_NOT_FOUND' || /^Event with id .* could not be found/.test(message || '');
 }
 
-/**
- * What to call the event. The rehearsal's own name when it has one, as the
- * organiser wrote it — most do not, and then the project is the only useful
- * thing to show, after the app's word for a rehearsal.
- */
-const eventTitleFor = (rehearsal: RehearsalWithProject, words: EventWords) =>
-  rehearsal.title?.trim() || words.eventTitle(rehearsal.projectName);
+/** The rehearsal's own name, as the organiser wrote it; most have none. */
+const ownNameOf = (rehearsal: RehearsalWithProject) => rehearsal.title?.trim() || null;
 
 /**
- * The title every unnamed rehearsal had before T-276, in any language. Kept in
- * the search for events from before the URL mark, which are English; not the
- * English dictionary's, so an edit to that cannot lose them.
+ * What to call the event: the project first, as the pushes do, then the
+ * rehearsal's own name or the app's word for a rehearsal (T-276, the owner's
+ * decision). Narrow places cut the end of a title: with the word first a month
+ * showed the same "Rehearsal…" on every day, and with the name alone two
+ * projects' "Act II run-through" could not be told apart. The name is not a
+ * phrase of any language, so this form is the same in all of them.
  */
-const legacyTitleFor = (rehearsal: RehearsalWithProject) => `Rehearsal: ${rehearsal.projectName}`;
+const eventTitleFor = (rehearsal: RehearsalWithProject, words: EventWords) => {
+  const ownName = ownNameOf(rehearsal);
+  return ownName ? `${rehearsal.projectName}: ${ownName}` : words.eventTitle(rehearsal.projectName);
+};
+
+/**
+ * The titles an event from before the URL mark can have: until T-276 the
+ * organiser's name alone, or the English "Rehearsal: <project>" — the latter
+ * for a named rehearsal too, which was written without its name before EO05 or
+ * named after the export. Literals, not the English dictionary's, so an edit to
+ * that cannot lose old events.
+ */
+const legacyTitlesFor = (rehearsal: RehearsalWithProject) => [
+  `Rehearsal: ${rehearsal.projectName}`,
+  ownNameOf(rehearsal),
+];
 
 /** '' means "no location", whatever the platform or our own API called it. */
 const locationKey = (value?: string | null) => (value ?? '').trim();
@@ -181,11 +194,11 @@ async function findDuplicateEvent(
   const duplicateEvent = events.find(event => {
     if (ownMarkOf(event) !== LEGACY) return false;
 
-    // Such events were written in English (T-276), whatever the app's
+    // Such events carry the titles of their time (T-276), whatever the app's
     // language then or now.
     const titleMatch =
       event.title === eventTitleFor(rehearsal, words) ||
-      event.title === legacyTitleFor(rehearsal);
+      legacyTitlesFor(rehearsal).includes(event.title);
     const startMatch = Math.abs(new Date(event.startDate).getTime() - startDate.getTime()) < 60000; // Within 1 minute
     const endMatch = Math.abs(new Date(event.endDate).getTime() - endDate.getTime()) < 60000;
     const locationMatch = locationKey(event.location) === locationKey(rehearsal.location);
