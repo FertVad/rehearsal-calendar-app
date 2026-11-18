@@ -47,8 +47,8 @@ describe.each(Object.keys(IRELAND))('privacy policy, %s', (lang) => {
     expect(collected(lang)).toMatch(/15/);
   });
 
-  test('the update date is the day Resend went live', () => {
+  test('the update date is that of the last revision (T-269)', () => {
     const updated = section(lang).match(/<p class="updated">([^<]*)<\/p>/)[1];
-    expect(updated).toMatch(/\b4\.? (de )?(November|ноября|noviembre) (de )?2026/);
+    expect(updated).toMatch(/\b18\.? (de )?(November|ноября|noviembre) (de )?2026/);
   });
 });
