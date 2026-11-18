@@ -217,6 +217,96 @@ describe.each(LANGS)('Google and Apple sign-in data, %s', lang => {
   });
 });
 
+// T-269 review. A person's name goes into the notifications of those who run a
+// project (member joined, new administrator, rehearsal seen). The row belongs to
+// its recipient (native_notifications.user_id), so it outlives the person named,
+// and it is delivered through Expo and APNs. Apple's token comes at every sign-in;
+// only the name comes once.
+const AFTER_DELETION = {
+  en: {
+    keeping: /<h2>How long we keep it<\/h2>/,
+    stays: [/join a project, become its administrator or mark a rehearsal as seen/,
+      /notification with your name/, /deleting your account does not remove it/,
+      /no automatic time limit/, /deleted from the inbox or the account it was sent to is deleted/],
+    removal: /except your name in notifications already sent/,
+    delivery: /Expo Push Service[^.]*APNs[^.]*show your name/,
+    promise: 'Delete everything',
+    tokenExtras: /do not use or keep them/,
+    appleEvery: /Each time you sign in, Apple gives us your account identifier/,
+    appleOnce: /Your name comes only once, on your first sign-in, and only if you allow it/,
+    appleOld: /your name if you allow it, on your first sign-in only/,
+  },
+  ru: {
+    keeping: /<h2>Сколько храним<\/h2>/,
+    stays: [/вступаете в проект, становитесь его администратором или отмечаете репетицию как просмотренную/,
+      /уведомление с вашим именем/, /удаление вашего аккаунта его не затрагивает/,
+      /Автоматического срока нет/, /не удалят из входящих или пока не будет удалён аккаунт, на который оно пришло/],
+    removal: /кроме вашего имени в уже отправленных уведомлениях/,
+    delivery: /Expo Push Service[^.]*APNs[^.]*вашим именем/,
+    promise: 'Удалить всё',
+    tokenExtras: /мы их не используем и не храним/,
+    appleEvery: /При каждом входе Apple передаёт нам идентификатор аккаунта/,
+    appleOnce: /Имя приходит один раз, при первом входе, и только если вы его разрешили/,
+    appleOld: /имя, если вы его разрешили, — только при первом входе/,
+  },
+  es: {
+    keeping: /<h2>Cuánto tiempo los conservamos<\/h2>/,
+    stays: [/te unes a un proyecto, pasas a administrarlo o marcas un ensayo como visto/,
+      /notificación con tu nombre/, /eliminar tu cuenta no la borra/,
+      /No hay un plazo automático/, /se borra de la bandeja o se elimina la cuenta que la recibió/],
+    removal: /salvo tu nombre en las notificaciones ya enviadas/,
+    delivery: /Expo Push Service[^.]*APNs[^.]*tu nombre/,
+    promise: 'Eliminarlo todo',
+    tokenExtras: /no los usamos ni los guardamos/,
+    appleEvery: /Cada vez que inicias sesión, Apple nos da el identificador de tu cuenta/,
+    appleOnce: /Tu nombre llega una sola vez, la primera vez que inicias sesión, y solo si lo permites/,
+    appleOld: /tu nombre si lo permites, solo la primera vez/,
+  },
+  de: {
+    keeping: /<h2>Wie lange wir sie speichern<\/h2>/,
+    stays: [/einem Projekt beitrittst, zu seiner Verwaltung ernannt wirst oder eine Probe als gesehen markierst/,
+      /Mitteilung mit deinem Namen/, /das Löschen deines Kontos entfernt sie nicht/,
+      /Eine automatische Frist gibt es nicht/, /aus dem Posteingang gelöscht oder das Konto gelöscht wird, an das sie ging/],
+    removal: /außer deinem Namen in bereits versendeten Mitteilungen/,
+    delivery: /Expo Push Service[^.]*APNs[^.]*deinem Namen/,
+    promise: 'Alles löschen',
+    tokenExtras: /beides nutzen und speichern wir nicht/,
+    appleEvery: /Bei jeder Anmeldung gibt uns Apple deine Kontokennung/,
+    appleOnce: /Deinen Namen erhalten wir nur einmal, bei der ersten Anmeldung, und nur, wenn du es erlaubst/,
+    appleOld: /deinen Namen, wenn du es erlaubst, nur bei der ersten Anmeldung/,
+  },
+};
+
+describe.each(LANGS)('what the policy promises about names and Apple, %s', lang => {
+  const copy = AFTER_DELETION[lang];
+  const signIn = () => part(lang, SIGN_IN[lang].heading);
+
+  test('says the name stays in notifications already sent, and for how long', () => {
+    const body = part(lang, copy.keeping);
+    for (const claim of copy.stays) expect(body).toMatch(claim);
+  });
+
+  test('promises no complete removal the server does not perform', () => {
+    expect(signIn()).toMatch(copy.removal);
+    expect(text('privacy', lang)).not.toContain(copy.promise);
+  });
+
+  test('names the delivery services that carry the name', () => {
+    expect(signIn()).toMatch(copy.delivery);
+  });
+
+  test('does not claim the sign-in token’s photo and language are never read', () => {
+    expect(signIn()).toMatch(copy.tokenExtras);
+  });
+
+  test('separates what Apple sends at every sign-in from the name it sends once', () => {
+    const body = signIn();
+    expect(body).toMatch(copy.appleEvery);
+    expect(body).toMatch(copy.appleOnce);
+    expect(body).not.toMatch(copy.appleOld);
+  });
+});
+
 // The owner's rule: the texts do not guess a person's gender.
 const GUESSES = {
   ru: [/занят с \d/, /единственным администратором/, /аккаунт завёл/],

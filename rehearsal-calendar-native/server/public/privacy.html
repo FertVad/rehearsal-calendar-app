@@ -184,7 +184,7 @@
     <p>
       We ask Google only for basic sign-in access: who you are, your name and
       your email address. Google’s sign-in token may also carry your profile photo
-      and language; we do not take or keep them. We do not ask for access to your
+      and language; we do not use or keep them. We do not ask for access to your
       Gmail, Google Calendar or Google Contacts. Our server checks the sign-in
       token and does not store it. If a Google calendar is on your phone and you
       turn on calendar sync, the app reads it through iOS, as described above, and
@@ -205,15 +205,18 @@
     <p>
       It is kept in our database, hosted by Neon, with the rest of your account
       data. We do not sell it, and we pass it to no one except the providers that
-      run Rehearsly for us: Neon stores it, Vercel runs our server, and Resend
-      receives your email address when we send you a code. We do not use it for
-      advertising or to train AI or machine-learning models.
+      run Rehearsly for us: Neon stores it, Vercel runs our server, Resend
+      receives your email address when we send you a code, and Expo Push Service
+      with Apple’s APNs delivers the notifications that show your name to the
+      people who run your projects. We do not use it for advertising or to train
+      AI or machine-learning models.
     </p>
 
     <h3>How to remove it</h3>
     <p>
       Profile → Delete Account removes it from our database with the rest of your
-      account, as described under “How long we keep it”. You can also remove
+      account, except your name in notifications already sent to the people who
+      run your projects, as described under “How long we keep it”. You can also remove
       Rehearsly’s access in your
       <a href="https://myaccount.google.com/connections">Google Account settings</a>. That ends the
       permission at Google but does not delete what we already hold; deleting your
@@ -226,9 +229,10 @@
 
     <h3>Sign in with Apple</h3>
     <p>
-      Apple gives us an account identifier, your email address with Apple’s
-      confirmation that it is verified, and your name if you allow it, on your
-      first sign-in only. If you choose Hide My Email, we receive and keep a private
+      Each time you sign in, Apple gives us your account identifier and, when its
+      sign-in token includes them, your email address and Apple’s confirmation that
+      it is verified. Your name comes only once, on your first sign-in, and only if
+      you allow it. If you choose Hide My Email, we receive and keep a private
       address ending in @privaterelay.appleid.com instead of your real one. If you
       do not share a name, the account is called “User” until you change it in
       Profile → Edit Profile.
@@ -243,13 +247,19 @@
     <p>
       Your data lives for as long as your account does. Delete the account and
       everything tied to it — availability, imported calendar events,
-      notifications, seen marks, sign-in records, push tokens, email code
+      your notifications, seen marks, sign-in records, push tokens, email code
       records, project memberships — is removed from our database along with it.
       The projects you own go too, with all their rehearsals, and so do projects
       where you were the only admin; their other members lose them. The app warns
       you about the projects you own before it proceeds and tells you afterwards
       how many were deleted. Rehearsals you created in projects that remain stay
       there, without your name.
+    </p>
+    <p>
+      One thing stays with other people. When you join a project, become its administrator or mark a rehearsal as seen,
+      the people who run that project get a notification with your name. It sits
+      in their inboxes, and deleting your account does not remove it. There is
+      no automatic time limit: it stays until it is deleted from the inbox or the account it was sent to is deleted.
     </p>
     <p>
       Two records outlast that for a short time. Neon keeps a history of database
@@ -260,7 +270,7 @@
 
     <h2>Your rights</h2>
     <ul>
-      <li><strong>Delete everything</strong> — Profile → Delete Account. This is immediate and cannot be undone.</li>
+      <li><strong>Delete your account and data</strong> — Profile → Delete Account. This is immediate and cannot be undone; “How long we keep it” says what remains.</li>
       <li><strong>Correct your data</strong> — Profile → Edit Profile.</li>
       <li><strong>Stop calendar import</strong> — Profile → Calendar Sync.</li>
       <li><strong>Stop notifications</strong> — Profile → Notifications, or your device settings.</li>
@@ -457,8 +467,7 @@
     </ul>
     <p>
       Мы запрашиваем у Google только базовый доступ для входа: кто вы, ваше имя и
-      адрес почты. В токене входа от Google могут быть также фото профиля и язык; мы
-      их не берём и не храним. Доступа к Gmail, Google Календарю и Google Контактам
+      адрес почты. В токене входа от Google могут быть также фото профиля и язык; мы их не используем и не храним. Доступа к Gmail, Google Календарю и Google Контактам
       мы не просим. Токен входа сервер проверяет и не сохраняет. Если на телефоне
       есть календарь Google и вы включили синхронизацию, приложение читает его
       средствами iOS, как описано выше, а не через Google.
@@ -478,15 +487,17 @@
     <p>
       Они хранятся в нашей базе на Neon вместе с остальными данными аккаунта. Мы их
       не продаём и не передаём никому, кроме сервисов, которые обеспечивают работу
-      Rehearsly: Neon их хранит, на Vercel работает наш сервер, а Resend получает
-      адрес почты, когда мы отправляем вам код. Для рекламы и для обучения моделей
-      ИИ и машинного обучения мы их не используем.
+      Rehearsly: Neon их хранит, на Vercel работает наш сервер, Resend получает
+      адрес почты, когда мы отправляем вам код, а Expo Push Service и APNs от Apple
+      доставляют уведомления с вашим именем тем, кто управляет вашими проектами. Для
+      рекламы и для обучения моделей ИИ и машинного обучения мы их не используем.
     </p>
 
     <h3>Как их удалить</h3>
     <p>
       Профиль → Удалить аккаунт удаляет их из нашей базы вместе с остальными данными
-      аккаунта, как описано в разделе «Сколько храним». Отозвать доступ Rehearsly
+      аккаунта, кроме вашего имени в уже отправленных уведомлениях тем, кто управляет
+      вашими проектами, как описано в разделе «Сколько храним». Отозвать доступ Rehearsly
       можно и в <a href="https://myaccount.google.com/connections">настройках аккаунта Google</a>. Это
       отменяет разрешение на стороне Google, но не удаляет то, что уже хранится у
       нас; для этого нужно удалить аккаунт.
@@ -504,8 +515,8 @@
 
     <h3>Вход через Apple</h3>
     <p>
-      Apple передаёт нам идентификатор аккаунта, адрес почты с отметкой о том, что он
-      подтверждён, и имя, если вы его разрешили, — только при первом входе. Если вы
+      При каждом входе Apple передаёт нам идентификатор аккаунта, а если они есть в
+      токене входа — адрес почты и отметку о том, что он подтверждён. Имя приходит один раз, при первом входе, и только если вы его разрешили. Если вы
       выбрали «Скрыть e-mail», мы получаем и храним не настоящий адрес, а скрытый, на
       @privaterelay.appleid.com. Если имя не передано, аккаунт называется «User»,
       пока вы не измените его в разделе Профиль → Редактировать профиль.
@@ -520,13 +531,19 @@
     <p>
       Данные живут ровно столько, сколько существует аккаунт. Удалите его — и
       из нашей базы вместе с ним удалится всё связанное: занятость, импортированные
-      события, уведомления, отметки «просмотрено», записи о входах, push-токены,
+      события, ваши уведомления, отметки «просмотрено», записи о входах, push-токены,
       записи о кодах из писем, участие в проектах. Удаляются и проекты, которыми вы
       владеете, со всеми репетициями, и проекты, где, кроме вас, нет
       администраторов; остальные участники тоже их теряют. О проектах, которыми вы
       владеете, приложение предупреждает заранее, а после удаления сообщает, сколько
       проектов удалено. Репетиции, созданные вами в оставшихся проектах, остаются в
       них, но без вашего имени.
+    </p>
+    <p>
+      Одно остаётся у других людей. Когда вы вступаете в проект, становитесь его администратором или отмечаете репетицию как просмотренную,
+      те, кто управляет проектом, получают уведомление с вашим именем. Оно лежит у
+      них во входящих, и удаление вашего аккаунта его не затрагивает. Автоматического срока нет:
+      уведомление хранится, пока его не удалят из входящих или пока не будет удалён аккаунт, на который оно пришло.
     </p>
     <p>
       Две записи живут немного дольше. Neon хранит историю изменений базы до 7 дней,
@@ -536,7 +553,7 @@
 
     <h2>Ваши права</h2>
     <ul>
-      <li><strong>Удалить всё</strong> — Профиль → Удалить аккаунт. Сразу и без возможности восстановления.</li>
+      <li><strong>Удалить аккаунт и данные</strong> — Профиль → Удалить аккаунт. Сразу и без возможности восстановления; что остаётся, сказано в разделе «Сколько храним».</li>
       <li><strong>Исправить данные</strong> — Профиль → Редактировать профиль.</li>
       <li><strong>Прекратить импорт календаря</strong> — Профиль → Синхронизация.</li>
       <li><strong>Отключить уведомления</strong> — Профиль → Уведомления или настройки устройства.</li>
@@ -735,7 +752,7 @@
     <p>
       A Google solo le pedimos el acceso básico para iniciar sesión: quién eres, tu
       nombre y tu dirección de correo. El token de inicio de sesión de Google también
-      puede incluir tu foto de perfil y tu idioma; no los tomamos ni los guardamos. No
+      puede incluir tu foto de perfil y tu idioma; no los usamos ni los guardamos. No
       pedimos acceso a tu Gmail, Google Calendar ni Google Contacts. Nuestro servidor
       comprueba el token y no lo guarda. Si tienes un calendario de Google en el
       teléfono y activas la sincronización, la aplicación lo lee a través de iOS, como
@@ -757,15 +774,18 @@
       Se guardan en nuestra base de datos, alojada en Neon, junto con el resto de los
       datos de tu cuenta. No los vendemos ni los pasamos a nadie, salvo a los
       proveedores que hacen funcionar Rehearsly: Neon los almacena, Vercel ejecuta
-      nuestro servidor y Resend recibe tu dirección de correo cuando te enviamos un
-      código. No los usamos para publicidad ni para entrenar modelos de inteligencia
-      artificial o aprendizaje automático.
+      nuestro servidor, Resend recibe tu dirección de correo cuando te enviamos un
+      código, y Expo Push Service y APNs de Apple entregan las notificaciones que
+      muestran tu nombre a quienes gestionan tus proyectos. No los usamos para
+      publicidad ni para entrenar modelos de inteligencia artificial o aprendizaje
+      automático.
     </p>
 
     <h3>Cómo eliminarlos</h3>
     <p>
       Perfil → Eliminar cuenta los borra de nuestra base de datos junto con el resto de
-      tu cuenta, como se explica en «Cuánto tiempo los conservamos». También puedes
+      tu cuenta, salvo tu nombre en las notificaciones ya enviadas a quienes gestionan
+      tus proyectos, como se explica en «Cuánto tiempo los conservamos». También puedes
       retirar el acceso de Rehearsly en los
       <a href="https://myaccount.google.com/connections">ajustes de tu cuenta de Google</a>. Eso anula el
       permiso en Google, pero no borra lo que ya tenemos; para ello hay que eliminar la
@@ -784,9 +804,9 @@
 
     <h3>Iniciar sesión con Apple</h3>
     <p>
-      Apple nos da un identificador de cuenta, tu dirección de correo con la
-      confirmación de que está verificada y tu nombre si lo permites, solo la primera
-      vez que inicias sesión. Si eliges Ocultar mi correo, recibimos y guardamos una
+      Cada vez que inicias sesión, Apple nos da el identificador de tu cuenta y, si el
+      token de inicio de sesión los incluye, tu dirección de correo y la confirmación
+      de que está verificada. Tu nombre llega una sola vez, la primera vez que inicias sesión, y solo si lo permites. Si eliges Ocultar mi correo, recibimos y guardamos una
       dirección privada terminada en @privaterelay.appleid.com en lugar de la real. Si
       no compartes un nombre, la cuenta se llama «User» hasta que lo cambies en Perfil →
       Editar perfil.
@@ -801,13 +821,19 @@
     <p>
       Tus datos existen mientras exista tu cuenta. Al eliminarla desaparece de
       nuestra base de datos todo lo asociado: disponibilidad, eventos importados,
-      notificaciones, marcas de visto, registros de inicio de sesión, tokens de
+      tus notificaciones, marcas de visto, registros de inicio de sesión, tokens de
       notificaciones, registros de códigos enviados por correo y pertenencia a
       proyectos. También se eliminan los proyectos que son tuyos, con todos sus
       ensayos, y los que solo administrabas tú; los demás miembros también los
       pierden. La aplicación te avisa de los proyectos que son tuyos antes de
       continuar y, al terminar, te indica cuántos se han eliminado. Los ensayos que
       creaste en proyectos que siguen existiendo permanecen en ellos, sin tu nombre.
+    </p>
+    <p>
+      Una cosa permanece en manos de otras personas. Cuando te unes a un proyecto, pasas a administrarlo o marcas un ensayo como visto,
+      quienes gestionan ese proyecto reciben una notificación con tu nombre. Queda en
+      su bandeja de entrada, y eliminar tu cuenta no la borra. No hay un plazo automático: se conserva hasta que
+      se borra de la bandeja o se elimina la cuenta que la recibió.
     </p>
     <p>
       Dos registros duran algo más. Neon conserva un historial de cambios de la base
@@ -818,7 +844,7 @@
 
     <h2>Tus derechos</h2>
     <ul>
-      <li><strong>Eliminarlo todo</strong> — Perfil → Eliminar cuenta. Es inmediato e irreversible.</li>
+      <li><strong>Eliminar tu cuenta y tus datos</strong> — Perfil → Eliminar cuenta. Es inmediato e irreversible; «Cuánto tiempo los conservamos» indica lo que permanece.</li>
       <li><strong>Corregir tus datos</strong> — Perfil → Editar perfil.</li>
       <li><strong>Detener la importación de calendario</strong> — Perfil → Sincronización.</li>
       <li><strong>Desactivar las notificaciones</strong> — Perfil → Notificaciones, o los ajustes del dispositivo.</li>
@@ -1018,7 +1044,7 @@
     <p>
       Wir bitten Google nur um den grundlegenden Zugriff für die Anmeldung: wer du bist,
       dein Name und deine E-Mail-Adresse. Das Anmeldetoken von Google kann auch dein
-      Profilfoto und deine Sprache enthalten; beides übernehmen und speichern wir nicht.
+      Profilfoto und deine Sprache enthalten; beides nutzen und speichern wir nicht.
       Zugriff auf Gmail, Google Kalender oder Google Kontakte fordern wir nicht an. Unser
       Server prüft das Token und speichert es nicht. Liegt ein Google-Kalender auf deinem
       Telefon und du schaltest die Synchronisation ein, liest die App ihn wie oben
@@ -1039,15 +1065,16 @@
     <p>
       Sie liegen in unserer Datenbank bei Neon, zusammen mit deinen übrigen Kontodaten.
       Wir verkaufen sie nicht und geben sie an niemanden weiter außer an die Dienste, die
-      Rehearsly für uns betreiben: Neon speichert sie, Vercel betreibt unseren Server, und
-      Resend erhält deine E-Mail-Adresse, wenn wir dir einen Code senden. Für Werbung oder
+      Rehearsly für uns betreiben: Neon speichert sie, Vercel betreibt unseren Server,
+      Resend erhält deine E-Mail-Adresse, wenn wir dir einen Code senden, und Expo Push Service mit Apples APNs stellt die Mitteilungen mit deinem Namen den Personen zu, die deine Projekte verwalten. Für Werbung oder
       das Training von KI- und Machine-Learning-Modellen nutzen wir sie nicht.
     </p>
 
     <h3>Wie du sie entfernst</h3>
     <p>
       Profil → Konto löschen entfernt sie zusammen mit deinem übrigen Konto aus unserer
-      Datenbank, wie unter „Wie lange wir sie speichern“ beschrieben. Den Zugriff von
+      Datenbank, außer deinem Namen in bereits versendeten Mitteilungen an die Personen,
+      die deine Projekte verwalten, wie unter „Wie lange wir sie speichern“ beschrieben. Den Zugriff von
       Rehearsly kannst du auch in den
       <a href="https://myaccount.google.com/connections">Einstellungen deines Google-Kontos</a> entziehen. Das
       beendet die Erlaubnis bei Google, löscht aber nicht, was wir bereits gespeichert
@@ -1066,8 +1093,8 @@
 
     <h3>Mit Apple anmelden</h3>
     <p>
-      Apple gibt uns eine Kontokennung, deine E-Mail-Adresse mit der Bestätigung, dass sie
-      verifiziert ist, und deinen Namen, wenn du es erlaubst, nur bei der ersten Anmeldung.
+      Bei jeder Anmeldung gibt uns Apple deine Kontokennung und, wenn das Anmeldetoken sie
+      enthält, deine E-Mail-Adresse und die Bestätigung, dass sie verifiziert ist. Deinen Namen erhalten wir nur einmal, bei der ersten Anmeldung, und nur, wenn du es erlaubst.
       Wählst du „E-Mail-Adresse verbergen“, erhalten und speichern wir statt deiner echten
       Adresse eine private auf @privaterelay.appleid.com. Gibst du keinen Namen weiter,
       heißt das Konto „User“, bis du das unter Profil → Profil bearbeiten änderst.
@@ -1082,13 +1109,19 @@
     <p>
       Deine Daten existieren, solange dein Konto existiert. Löschst du es,
       verschwindet alles Zugehörige aus unserer Datenbank: Verfügbarkeit, importierte
-      Termine, Mitteilungen, Gesehen-Markierungen, Anmeldedaten, Push-Tokens, Einträge
+      Termine, deine Mitteilungen, Gesehen-Markierungen, Anmeldedaten, Push-Tokens, Einträge
       zu E-Mail-Codes und Projektmitgliedschaften. Gelöscht werden auch die Projekte,
       die dir gehören, samt all ihren Proben, und Projekte, die nur du verwaltet hast;
       auch die anderen Mitglieder verlieren sie. Auf die Projekte, die dir gehören,
       weist die App vorher hin, und danach zeigt sie an, wie viele gelöscht wurden.
       Proben, die du in weiter bestehenden Projekten angelegt hast, bleiben dort, ohne
       deinen Namen.
+    </p>
+    <p>
+      Eines bleibt bei anderen Personen. Wenn du einem Projekt beitrittst, zu seiner Verwaltung ernannt wirst oder eine Probe als gesehen markierst,
+      erhalten die Personen, die das Projekt verwalten, eine Mitteilung mit deinem
+      Namen. Sie liegt in deren Posteingang, und das Löschen deines Kontos entfernt sie nicht.
+      Eine automatische Frist gibt es nicht: Sie bleibt, bis sie aus dem Posteingang gelöscht oder das Konto gelöscht wird, an das sie ging.
     </p>
     <p>
       Zwei Aufzeichnungen bleiben etwas länger bestehen. Neon bewahrt einen Verlauf der
@@ -1099,7 +1132,7 @@
 
     <h2>Deine Rechte</h2>
     <ul>
-      <li><strong>Alles löschen</strong> — Profil → Konto löschen. Sofort und unwiderruflich.</li>
+      <li><strong>Konto und Daten löschen</strong> — Profil → Konto löschen. Sofort und unwiderruflich; was bleibt, steht unter „Wie lange wir sie speichern“.</li>
       <li><strong>Daten berichtigen</strong> — Profil → Profil bearbeiten.</li>
       <li><strong>Kalenderimport beenden</strong> — Profil → Kalender-Sync.</li>
       <li><strong>Benachrichtigungen abschalten</strong> — Profil → Benachrichtigungen oder die Geräteeinstellungen.</li>
