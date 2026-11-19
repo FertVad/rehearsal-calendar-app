@@ -10,7 +10,7 @@ import { fullName } from '../../utils/names.js';
 
 const router = Router();
 const validateInviteCode = (req, res, next) => {
-  if (!isInviteCode(req.params.code)) return res.status(404).json({ error: 'Invite not found' });
+  if (!isInviteCode(req.params.code)) return res.status(404).json({ error: 'Invite not found', code: 'INVITE_INVALID' });
   next();
 };
 
@@ -26,12 +26,12 @@ router.get('/:code', limitInviteIp, validateInviteCode, asyncHandler(async (req,
     );
 
     if (!project) {
-      return res.status(404).json({ error: 'Invite not found' });
+      return res.status(404).json({ error: 'Invite not found', code: 'INVITE_INVALID' });
     }
 
     // Check if expired
     if (project.invite_expires_at && new Date(project.invite_expires_at) < new Date()) {
-      return res.status(410).json({ error: 'Invite has expired' });
+      return res.status(410).json({ error: 'Invite has expired', code: 'INVITE_EXPIRED' });
     }
 
     res.json({
@@ -59,12 +59,12 @@ const joinHandlers = [limitInviteIp, requireAuth, limitInviteAccount, validateIn
     );
 
     if (!project) {
-      return res.status(404).json({ error: 'Invite not found' });
+      return res.status(404).json({ error: 'Invite not found', code: 'INVITE_INVALID' });
     }
 
     // Check if expired
     if (project.invite_expires_at && new Date(project.invite_expires_at) < new Date()) {
-      return res.status(410).json({ error: 'Invite has expired' });
+      return res.status(410).json({ error: 'Invite has expired', code: 'INVITE_EXPIRED' });
     }
 
     // Check if user is already a member
@@ -75,7 +75,7 @@ const joinHandlers = [limitInviteIp, requireAuth, limitInviteAccount, validateIn
 
     if (existingMembership) {
       if (existingMembership.status === 'active') {
-        return res.status(400).json({ error: 'You are already a member of this project' });
+        return res.status(400).json({ error: 'You are already a member of this project', code: 'ALREADY_MEMBER' });
       }
       // Reactivate membership
       await db.run(

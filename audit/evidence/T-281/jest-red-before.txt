@@ -1,0 +1,21 @@
+T-281 — requestErrorMessage on the old code (src/shared/utils/requestError.ts at d086ead),
+new test src/shared/utils/__tests__/requestError.test.ts, Node 22.
+
+$ npx jest --selectProjects frontend --testPathPatterns requestError.test --silent
+FAIL frontend src/shared/utils/__tests__/requestError.test.ts
+  ● ru › never shows the server's own words for a 4xx, coded or not
+  ● ru › says each code a person meets on the way in their language
+  ● en › never shows the server's own words for a 4xx, coded or not
+  ● en › says each code a person meets on the way in their language
+  ● es › never shows the server's own words for a 4xx, coded or not
+  ● es › says each code a person meets on the way in their language
+  ● de › never shows the server's own words for a 4xx, coded or not
+  ● de › says each code a person meets on the way in their language
+Tests:       8 failed, 23 passed, 31 total
+
+Sample:
+  ● de › never shows the server's own words for a 4xx, coded or not
+    Expected: not "Only project admins can remove members"
+  ● de › says each code a person meets on the way in their language
+    Expected: "Du bist nicht mehr Mitglied dieses Projekts, oder es wurde gelöscht."
+    Received: "English for NOT_PROJECT_MEMBER"

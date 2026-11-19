@@ -120,13 +120,13 @@ router.get('/:projectId', requireAuth, asyncHandler(async (req, res) => {
     );
 
     if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ error: 'Access denied', code: 'NOT_PROJECT_MEMBER' });
     }
 
     const project = await db.get('SELECT * FROM native_projects WHERE id = $1', [projectId]);
 
     if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
+      return res.status(404).json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' });
     }
 
     res.json({
@@ -160,18 +160,18 @@ router.delete('/:projectId', requireAuth, asyncHandler(async (req, res) => {
     );
 
     if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ error: 'Access denied', code: 'NOT_PROJECT_MEMBER' });
     }
 
     if (membership.role !== 'owner') {
-      return res.status(403).json({ error: 'Only the project owner can delete the project' });
+      return res.status(403).json({ error: 'Only the project owner can delete the project', code: 'OWNER_ONLY' });
     }
 
     // Check if project exists
     const project = await db.get('SELECT * FROM native_projects WHERE id = $1', [projectId]);
 
     if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
+      return res.status(404).json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' });
     }
 
     // Get all members BEFORE deletion (excluding owner)

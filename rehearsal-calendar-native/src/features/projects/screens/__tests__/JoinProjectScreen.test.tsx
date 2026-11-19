@@ -24,7 +24,10 @@ jest.mock('../../../../shared/services/api', () => ({
   invitesAPI: { getInviteInfo: jest.fn(), joinProject: jest.fn() },
 }));
 
-const notFound = () => Object.assign(new Error('404'), { response: { status: 404 } });
+// As the server answers it: a code, its English for the logs (T-281).
+const notFound = () => Object.assign(new Error('404'), {
+  response: { status: 404, data: { error: 'Invite not found', code: 'INVITE_INVALID' } },
+});
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 const navigation = () => ({ goBack: jest.fn(), reset: jest.fn() } as any);
 

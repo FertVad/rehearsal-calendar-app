@@ -1,7 +1,8 @@
 /**
  * What a failed request is called on screen (T-228): in the app's language,
- * never axios's English. No answer is the connection, a 5xx is the server, and
- * what the server explained itself is shown as it said it.
+ * never axios's English. No answer is the connection, a 5xx is the server, a
+ * 4xx is its `code` in the app's words or the caller's fallback — never the
+ * server's English sentence (T-281).
  */
 import { AxiosError } from 'axios';
 import { requestErrorMessage } from '../requestError';
@@ -53,16 +54,54 @@ describe.each(LANGUAGES)('%s', (language) => {
       expect(t.common.serverUnavailable).not.toBe(translations.en.common.serverUnavailable);
     }
   });
+
+  // T-281: the server's sentence is English and stays for the logs. Under a
+  // Russian "Ошибка" stood "Only project admins can remove members".
+  it("never shows the server's own words for a 4xx, coded or not", () => {
+    const said = 'Only project admins can remove members';
+    for (const status of [400, 401, 403, 404, 409, 410, 413, 422, 426, 429]) {
+      for (const data of [{ error: said }, { error: said, code: 'SOMETHING_NEW' }]) {
+        const plain = requestErrorMessage(t, answered(status, data), FALLBACK);
+        const viaAuth = requestErrorMessage(t, toAuthFlowError(answered(status, data), 'Update failed'), FALLBACK);
+        for (const text of [plain, viaAuth]) {
+          expect(text).not.toBe(said);
+          expect(text).toBe(status === 429 ? t.errors.rateLimited : FALLBACK);
+        }
+      }
+    }
+  });
+
+  it('says each code a person meets on the way in their language', () => {
+    const known: Record<string, string> = {
+      NOT_PROJECT_MEMBER: t.errors.notProjectMember,
+      PROJECT_NOT_FOUND: t.projects.projectNotFound,
+      REHEARSAL_NOT_FOUND: t.rehearsals.notFound,
+      MEMBER_NOT_FOUND: t.errors.memberNotFound,
+      ADMIN_ONLY: t.errors.adminOnly,
+      OWNER_ONLY: t.errors.ownerOnly,
+      INVITE_INVALID: t.projects.inviteNotFound,
+      INVITE_EXPIRED: t.projects.inviteExpired,
+      ALREADY_MEMBER: t.errors.alreadyMember,
+      RATE_LIMITED: t.errors.rateLimited,
+      AVAILABILITY_BUDGET_EXCEEDED: t.errors.availabilityTooLarge,
+    };
+    for (const [code, text] of Object.entries(known)) {
+      expect(text).toBeTruthy();
+      const data = { error: `English for ${code}`, code };
+      expect(requestErrorMessage(t, answered(403, data), FALLBACK)).toBe(text);
+      expect(requestErrorMessage(t, toAuthFlowError(answered(403, data), 'Update failed'), FALLBACK)).toBe(text);
+    }
+  });
+
+  it('has the codes\' texts in its own words, not English', () => {
+    for (const key of Object.keys(translations.en.errors) as (keyof typeof translations.en.errors)[]) {
+      expect(t.errors[key]).toBeTruthy();
+      if (language !== 'en') expect(t.errors[key]).not.toBe(translations.en.errors[key]);
+    }
+  });
 });
 
 const t = translations.ru;
-
-it('shows what the server explained itself, as before', () => {
-  expect(requestErrorMessage(t, answered(403, { error: 'Only admins can invite' }), FALLBACK))
-    .toBe('Only admins can invite');
-  expect(requestErrorMessage(t, toAuthFlowError(answered(400, { error: 'Invalid timezone' }), 'Update failed'), FALLBACK))
-    .toBe('Invalid timezone');
-});
 
 it("falls back to the caller's text when the server said nothing", () => {
   expect(requestErrorMessage(t, answered(404, {}), FALLBACK)).toBe(FALLBACK);
