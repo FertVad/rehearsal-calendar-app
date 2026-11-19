@@ -21,6 +21,7 @@ import { loginScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 import { normalizeEmail } from '../utils/accountRules';
 import PasswordField from '../components/PasswordField';
+import PrivacyPolicyLink from '../components/PrivacyPolicyLink';
 import { useAttemptError } from '../hooks/useAttemptError';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
@@ -243,6 +244,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           >
             <Text style={styles.linkText}>{t.auth.noAccount}</Text>
           </TouchableOpacity>
+
+          <PrivacyPolicyLink testID="login-privacy" />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

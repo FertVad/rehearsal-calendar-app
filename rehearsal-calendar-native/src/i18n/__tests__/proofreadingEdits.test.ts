@@ -147,7 +147,7 @@ const EDITS: Edit[] = [
   ['en', 'profile.deleteAccountWarning', null, 'This action is irreversible. All your data will be permanently deleted — along with the projects you own and all their rehearsals. Everyone else in them will lose them too.', 'This cannot be undone. All your data will be permanently deleted, along with the projects you own and all their rehearsals. Other members of those projects will lose them too.'],
   ['en', 'profile.deleteAccountError', null, 'Failed to delete account', 'Could not delete your account'],
   ['en', 'profile.updateError', null, 'Failed to update profile', 'Could not update your profile'],
-  ['en', 'profile.avatarHint', null, 'Avatar is automatically generated based on your email', 'Your avatar is generated automatically from your email address.'],
+  ['en', 'profile.avatarHint', null, 'Avatar is automatically generated based on your email', 'Your avatar is created automatically from your initials.'], // T-272: the avatar is the initials, never the email
   ['en', 'profile.notificationError', null, 'Failed to update notification settings', 'Could not update notification settings'],
   ['en', 'profile.pushDeniedMessage', null, 'Allow notifications for Rehearsly in your phone settings.', 'Allow notifications for Rehearsly in Settings.'],
   ['en', 'profile.languageError', null, 'Failed to change language', 'Could not change the language'],
