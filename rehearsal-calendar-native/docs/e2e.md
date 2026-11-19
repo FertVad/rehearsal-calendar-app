@@ -13,6 +13,10 @@ npm run e2e:up                    # stay up for Maestro MCP / Studio; Ctrl-C end
 npm run e2e -- --build            # generate the iOS project and build anew anyway
 ```
 
+The App Store's screenshots are taken on the same stand, on a simulator of
+their own, by `node e2e/store/shoot.mjs` (`run.mjs --store=<locale>`); not part
+of `npm run e2e`. How to run them for a new version: `e2e/store/README.md`.
+
 Needs: Docker Desktop with a local `postgres:15` image, Xcode, CocoaPods,
 Maestro in `~/.maestro/bin` (2.11.0), Node 22. Logs, the seed, JUnit and
 screenshots go to `e2e/out`.

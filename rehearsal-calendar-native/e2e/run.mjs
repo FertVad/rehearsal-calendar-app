@@ -11,6 +11,10 @@
  *                                or Studio — until Ctrl-C
  *   --build                      generate the iOS project and build the app anew
  *                                even when they are there
+ *   --store=<locale>             the App Store's screenshots (e2e/store/shoot.mjs
+ *                                runs it): the store's simulator, iPhone 17 Pro
+ *                                Max, its status bar at 9:41, and that page's
+ *                                world seeded (e2e/store/seed.mjs)
  *
  * What it stands up, and what it refuses:
  *
@@ -92,7 +96,6 @@ const API_URL = `http://${API_HOST}:${API_PORT}/api`;
 const MAIL_PORT = 3002;
 const MAIL_URL = `http://${API_HOST}:${MAIL_PORT}`;
 const BUNDLE_ID = 'com.rehearsal.app';
-const DEVICE = { name: 'Rehearsly E2E', type: 'com.apple.CoreSimulator.SimDeviceType.iPhone-16' };
 const MAESTRO = process.env.MAESTRO_BIN || path.join(os.homedir(), '.maestro', 'bin', 'maestro');
 const DOCKER = process.env.E2E_DOCKER_BIN || '/usr/local/bin/docker';
 const DOCKER_CONTEXT = 'desktop-linux';
@@ -103,6 +106,12 @@ const argv = process.argv.slice(2);
 const stayUp = argv.includes('--up');
 const forceBuild = argv.includes('--build');
 const flows = argv.filter((arg) => !arg.startsWith('--')).map((flow) => path.resolve(flow));
+// The App Store's screenshots (e2e/store/shoot.mjs, T-274): the same stand,
+// on a simulator of the store's size, seeded with that page's world.
+const storeLocale = argv.find((arg) => arg.startsWith('--store='))?.slice('--store='.length) ?? null;
+const DEVICE = storeLocale
+  ? { name: 'Rehearsly Store', type: 'com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max' }
+  : { name: 'Rehearsly E2E', type: 'com.apple.CoreSimulator.SimDeviceType.iPhone-16' };
 
 const step = (text) => console.log(`[e2e] ${text}`);
 /** A batch of flows failed: the run ends 1 however it stops after (exitCode, e2e/midnight.mjs). */
@@ -381,6 +390,12 @@ function pinZone(udid) {
   simctl('spawn', udid, 'launchctl', 'setenv', 'TZ', SIMULATOR_ZONE);
 }
 
+/** The store's status bar: 9:41, the battery full, Wi-Fi and the network at full strength. */
+function storeStatusBar(udid) {
+  simctl('status_bar', udid, 'override', '--time', '9:41', '--dataNetwork', 'wifi', '--wifiMode', 'active', '--wifiBars', '3',
+    '--cellularMode', 'active', '--cellularBars', '4', '--operatorName', '', '--batteryState', 'charged', '--batteryLevel', '100');
+}
+
 /** The e2e simulator, created on the newest iOS runtime the first time. */
 function simulator() {
   const { devices } = JSON.parse(simctl('list', 'devices', '--json'));
@@ -472,8 +487,11 @@ async function seedDay(databaseUrl) {
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
   let seeded;
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   try {
-    seeded = await seed({ client, apiUrl: API_URL, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+    seeded = storeLocale
+      ? await (await import('./store/seed.mjs')).seedStore({ client, apiUrl: API_URL, locale: storeLocale })
+      : await seed({ client, apiUrl: API_URL, timezone });
   } finally {
     await client.end();
   }
@@ -645,6 +663,7 @@ async function main() {
     quietKeyboard(udid);
     noPasswordOffer(udid);
     pinZone(udid);
+    if (storeLocale) storeStatusBar(udid);
     showSimulator(udid);
   });
 

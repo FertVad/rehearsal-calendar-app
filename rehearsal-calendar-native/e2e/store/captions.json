@@ -1,0 +1,107 @@
+{
+ "en-US": {
+  "screenshots": [
+   "A time the whole cast\ncan make",
+   "Everyone adds\ntheir availability",
+   "See who’s busy\nbefore you book",
+   "Sync both ways with\nyour iPhone calendar",
+   "Who’s seen it:\n5 of 8",
+   "All your rehearsals\nin one calendar",
+   "Invite everyone\nwith one link",
+   "Four languages,\nyour time zone"
+  ],
+  "video": [
+   "Who can make Tuesday?",
+   "Mark your week once",
+   "…or sync your iPhone calendar",
+   "Only need three? Select them",
+   "Conflicts, right in the form",
+   "Seen by everyone: 12 of 12",
+   "In a minute, not a night\nin the group chat"
+  ]
+ },
+ "en-GB": {
+  "screenshots": [
+   "A time the whole cast\ncan make",
+   "Everyone adds\ntheir availability",
+   "See who’s busy\nbefore you book",
+   "Sync both ways with\nyour iPhone calendar",
+   "Who’s seen it:\n5 of 8",
+   "All your rehearsals\nin one calendar",
+   "Invite everyone\nwith one link",
+   "Four languages,\nyour time zone"
+  ],
+  "video": [
+   "Who can make Tuesday?",
+   "Mark your week once",
+   "…or sync your iPhone calendar",
+   "Only need three? Select them",
+   "Conflicts, right in the form",
+   "Seen by everyone: 12 of 12",
+   "In a minute, not a night\nin the group chat"
+  ]
+ },
+ "ru": {
+  "screenshots": [
+   "Свободный слот\nдля всего состава",
+   "Каждый отмечает,\nкогда не может",
+   "Накладки видны сразу,\nпока ставишь время",
+   "Календарь iPhone —\nв обе стороны",
+   "Уже в курсе:\n5 из 8",
+   "Все репетиции\nв одном месте",
+   "Позови всех\nодной ссылкой",
+   "Четыре языка\nи твой часовой пояс"
+  ],
+  "video": [
+   "Planner показывает окна",
+   "Отметь неделю один раз",
+   "…или из календаря iPhone",
+   "Нужны трое? Выбери троих",
+   "Накладки видны сразу",
+   "Все в курсе: 12 из 12",
+   "За минуту, а не за вечер в чате"
+  ]
+ },
+ "es-ES": {
+  "screenshots": [
+   "Las horas que\nles sirven a todos",
+   "Cada uno marca\ncuándo no puede",
+   "Choques de horario,\na la vista",
+   "Tu calendario del iPhone,\nen las dos direcciones",
+   "Quién lo ha visto:\n5 de 8",
+   "Todos tus ensayos\nen un solo lugar",
+   "Invita a todos\ncon un solo enlace",
+   "Cuatro idiomas\ny tu zona horaria"
+  ],
+  "video": [
+   "Planner te muestra los horarios",
+   "Marca tu semana una vez",
+   "…o con el calendario del iPhone",
+   "¿Te bastan tres? Selecciónalos",
+   "Choques de horario, a la vista",
+   "Ya lo han visto todos: 12 de 12",
+   "En un minuto,\nno en una noche de chat"
+  ]
+ },
+ "de-DE": {
+  "screenshots": [
+   "Ein Termin,\nder allen passt",
+   "Alle tragen ein,\nwann sie keine Zeit haben",
+   "Überschneidungen\ndirekt im Formular",
+   "iPhone-Kalender:\nSync in beide Richtungen",
+   "Wer es gesehen hat:\n5 von 8",
+   "Alle Proben\nan einem Ort",
+   "Alle per Link\nins Projekt einladen",
+   "Vier Sprachen,\ndeine Ortszeit"
+  ],
+  "video": [
+   "Der Planner zeigt\ndie Zeitfenster",
+   "Trag deine Woche einmal ein",
+   "… oder aus dem iPhone-Kalender",
+   "Nur drei nötig? Hak sie an",
+   "Überschneidungen\ndirekt im Formular",
+   "Alle haben’s gesehen: 12 von 12",
+   "Eine Minute – kein Abend im Chat"
+  ]
+ }
+}
