@@ -849,6 +849,19 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   revocation acts after it. `lockSession` takes `FOR NO KEY UPDATE`, so foreign
   keys pointing at the user do not wait for it — `FOR UPDATE` deadlocked
   account deletion against rehearsal slot rebuilds
+- Deleting an account revokes its Sign in with Apple (T-279, App Review
+  5.1.1(v)). The server keeps no Apple token, so when the account has an Apple
+  provider (`GET /auth/me/providers`) the app first asks Apple to confirm
+  (`confirmAppleForDeletion` in `appleAuth.ts`, no scopes, before `loading`
+  goes up) and sends the authorization code as `appleAuthorizationCode` with
+  `DELETE /me`. After the deletion commits, `services/appleRevocation.js`
+  exchanges it at Apple's `/auth/token` with an ES256 client secret
+  (`kid` = `APPLE_SIGNIN_KEY_ID`, `iss` = `APPLE_TEAM_ID`, `sub` =
+  `APPLE_CLIENT_ID`, five minutes) and revokes the refresh token at
+  `/auth/revoke` — only if the token's `sub` is the account's linked Apple ID.
+  It is an attempt: no code (sheet closed, older app), missing key variables,
+  Apple down or refusing — the account is gone all the same, and the log gets
+  one line, revoked or why not, never the code, token or secret
 - Check `native_auth_providers` table for account linking status
 - Supports multiple providers per user (can link both Google and Apple to same account)
 
@@ -1023,7 +1036,13 @@ GOOGLE_CLIENT_ID_ANDROID=your-android-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_ID_WEB=your-web-client-id.apps.googleusercontent.com
 
 # OAuth Configuration (Apple Sign-In)
-APPLE_CLIENT_ID=com.rehearsal.app  # the only Apple variable the server reads
+APPLE_CLIENT_ID=com.rehearsal.app  # sign-in; also the `sub` of the revocation client secret
+# Revoking Sign in with Apple when an account is deleted (T-279). All three or
+# none: without them deletion works and logs that revocation is off.
+APPLE_TEAM_ID=          # the developer team id (client secret `iss`)
+APPLE_SIGNIN_KEY_ID=    # id of the Sign in with Apple key (client secret `kid`)
+# and APPLE_SIGNIN_PRIVATE_KEY: the contents of that key's .p8 ("\n" for line
+# breaks is accepted). Set in Vercel only, never in a file or a message.
 
 # Email (codes for sign-up, password reset, email change)
 EMAIL_TRANSPORT=resend  # unset: routes that need an email answer 503 (services/email/transport.js)

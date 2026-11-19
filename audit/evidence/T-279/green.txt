@@ -1,0 +1,38 @@
+T-279 — green after the fix.
+
+Server: cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/accountDeletionAppleRevocation.test.js --verbose
+  ✓ exchanges the code with a client secret signed by our key and revokes exactly the token Apple returned
+  ✓ without the key variables deletes the account, asks Apple nothing and logs one line that revocation is off
+  ✓ takes the .p8 pasted as one line with its breaks written as \n
+  ✓ an unusable key is reported by name, the account still goes and Apple is not asked
+  ✓ deletes the account when Apple is down, and logs why it was not revoked
+  ✓ deletes the account when Apple refuses the code, and logs why it was not revoked
+  ✓ deletes the account when Apple cannot be reached, and logs why it was not revoked
+  ✓ deletes the account when Apple refuses the revocation, and logs why it was not revoked
+  ✓ deletes the account when the person closed Apple’s sheet and no code came
+  ✓ does not revoke a different Apple ID than the one linked to the account
+  ✓ an account without Apple is deleted as before: no request to Apple, no Apple line
+  ✓ a revoked session deletes nothing and revokes nothing
+Tests:       12 passed, 12 total
+
+App: cd rehearsal-calendar-native && npx jest --selectProjects frontend --runTestsByPath src/contexts/__tests__/AuthContext.deleteAccount.test.tsx src/shared/services/__tests__/appleAuth.test.ts --verbose
+  ✓ asks for no scopes and returns the authorization code
+  ✓ returns null when the person closes the sheet
+  ✓ returns null when Apple gives no code
+  ✓ passes on any other failure
+  ✓ asks Apple to confirm first and sends its authorization code with the deletion
+  ✓ an account without Apple is deleted as before, with no Apple sheet and no code
+  ✓ deletes the account without a code when the person closes Apple’s sheet
+  ✓ deletes the account without a code when Apple fails
+  ✓ deletes the account without a code when Apple is not available on the device
+  ✓ deletes the account without a code when the providers cannot be read
+Tests:       10 passed, 10 total
+
+Whole suites:
+- frontend jest: Test Suites: 158 passed, 158 total; Tests: 1673 passed
+- server jest (npm run test:unit): 86 of 87 suites pass, 1353 tests. The one
+  failing suite, __tests__/startup/runtimeStartup.test.js (8 of 11), fails the
+  same way with routes/auth.js restored to the base 47bb43f — its child process
+  does not start in this sandbox; not caused by this change.
+- type-check: clean. lint (src): 0 errors. check:dead (knip): clean.
+  check:secrets: pass.

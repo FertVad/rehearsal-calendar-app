@@ -75,3 +75,25 @@ export async function signInWithApple(): Promise<AppleSignInResult | null> {
     throw error;
   }
 }
+
+/**
+ * Ask Apple to confirm the person once more as they delete their account, for
+ * the authorization code the server revokes their Sign in with Apple with
+ * (T-279, App Review 5.1.1(v)). No name or email is asked for: only the code
+ * is used, and only once.
+ *
+ * @returns the authorization code, or null if the person closed the sheet.
+ * @throws if Apple fails some other way.
+ */
+export async function confirmAppleForDeletion(): Promise<string | null> {
+  try {
+    const credential = await AppleAuthentication.signInAsync({ requestedScopes: [] });
+    return credential.authorizationCode ?? null;
+  } catch (error: any) {
+    if (error?.code === APPLE_CANCELED) {
+      logger.debug('[AppleAuth] Deletion confirmation cancelled by user');
+      return null;
+    }
+    throw error;
+  }
+}

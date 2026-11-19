@@ -14,6 +14,7 @@ import { issueCode, deliverCode } from '../services/email/codes.js';
 import { identityOf, isVerified, markPending } from '../services/email/identity.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
 import { lockProject } from '../services/rehearsals/projectLock.js';
+import { revokeAppleSignIn } from '../services/appleRevocation.js';
 
 const router = Router();
 
@@ -412,9 +413,18 @@ router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
     // the transaction open on a connection handed back for anyone to use, and
     // the ROLLBACK below would then discard a bystander's write instead of this
     // request's. Everything inside uses `tx`.
+    let appleUserId = null;
     const orphanedProjects = await db.transaction(async (tx) => {
       // A session revoked while this request waited deletes nothing (R3-09).
       if (!(await lockSession(tx, req))) return null;
+
+      // The Apple ID this account signs in with, read before the cascade takes
+      // the row: it is what the revocation after the commit must match.
+      const apple = await tx.get(
+        "SELECT provider_user_id FROM native_auth_providers WHERE user_id = $1 AND provider_type = 'apple'",
+        [userId]
+      );
+      appleUserId = apple?.provider_user_id ?? null;
 
       // The projects that go with the account.
       //
@@ -515,6 +525,22 @@ router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
       } catch (notifErr) {
         logger.error(`[Auth] Project-deleted notification failed for ${project.name}:`, notifErr);
       }
+    }
+
+    // Sign in with Apple is revoked (T-279, App Review 5.1.1(v)) with the
+    // code of the confirmation the app asked Apple for as the person deleted.
+    //
+    // After the commit, never before: the account goes whatever Apple does,
+    // and a deletion that failed or was refused leaves the account's Apple
+    // sign-in working, rather than an account nobody can enter the way they
+    // always did. Before the response rather than after it: a serverless
+    // function may be frozen once it has answered. revokeAppleSignIn bounds
+    // each request to Apple and never throws, so the worst it costs is a
+    // slower answer; the line it leaves says only revoked or why not.
+    if (appleUserId) {
+      const outcome = await revokeAppleSignIn({ appleUserId, code: req.body?.appleAuthorizationCode });
+      if (outcome.revoked) console.log('[Auth] Apple sign-in revoked for a deleted account');
+      else console.warn(`[Auth] Apple sign-in not revoked for a deleted account: ${outcome.reason}`);
     }
 
     res.json({

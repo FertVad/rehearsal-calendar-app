@@ -338,7 +338,10 @@ export const authAPI = {
     onboardingCompleted?: boolean;
   }) => api.put('/auth/me', data),
 
-  deleteMe: () => api.delete('/auth/me'),
+  // With the code of a fresh Apple confirmation when the account signs in with
+  // Apple: the server revokes that sign-in with it (T-279).
+  deleteMe: (appleAuthorizationCode?: string) =>
+    api.delete('/auth/me', appleAuthorizationCode ? { data: { appleAuthorizationCode } } : undefined),
 
   logout: () => api.post('/auth/logout'),
 
