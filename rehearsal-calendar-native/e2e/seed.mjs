@@ -305,6 +305,12 @@ export const PEOPLE = {
   // it, so no other flow's notices mix in.
   hippolyta: { email: 'hippolyta@e2e.test', firstName: 'Hippolyta', lastName: 'Amazon', onboarded: true },
   bottom: { email: 'bottom@e2e.test', firstName: 'Nick', lastName: 'Bottom', onboarded: true },
+  // Snug has Theseus's company open when Theseus removes him from another
+  // device; he taps "Leave Project" all the same and is simply out of it, with
+  // no English "Only project admins can remove members" (101, T-280). A company
+  // of their own, so 100's notices and members stay as they are.
+  theseus: { email: 'theseus@e2e.test', firstName: 'Theseus', lastName: 'Athens', onboarded: true },
+  snug: { email: 'snug@e2e.test', firstName: 'Snug', lastName: 'Joiner', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -891,6 +897,15 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
     [mechanicals.id, ids.hippolyta, ids.bottom]);
+
+  // Theseus's company (101), the same way: Snug an actor in it.
+  const { rows: [athens] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Athens Court', 'The duke''s palace', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [athens.id, ids.theseus, ids.snug]);
 
   // Juliet's two (74), made as the server makes them: the sign-ins are spent.
   // Tomorrow a titled one with a place, one with no place, one with no title;

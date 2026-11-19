@@ -344,7 +344,7 @@ personal calendar, and an ordinary member could put themselves on a rehearsal by
 calling `respond` — closed in R4 by `checkParticipants` and `answer` in
 [roster.js](rehearsal-calendar-native/server/services/rehearsals/roster.js).
 
-**Leaving is removing yourself** (T-271): `DELETE /:projectId/members/:userId` with one's own id needs no rank, and the owner gets 403 (they delete the project instead); the app's "Leave Project" on the project page is that call, and `member_left` tells the owner and administrators — not whoever did it, and not one who left — while one removed by others still gets `member_removed`.
+**Leaving is removing yourself** (T-271): `DELETE /:projectId/members/:userId` with one's own id needs no rank, and the owner gets 403 (they delete the project instead); the app's "Leave Project" on the project page is that call, and `member_left` tells the owner and administrators — not whoever did it, and not one who left — while one removed by others still gets `member_removed`. Leaving a project one is no longer in (removed while its page was open, T-280) answers 200 and changes nothing, so the app leaves the page as after any leave (flow 101); removing somebody else still needs a rank.
 
 **Authorize before the work, not after.** A range that comes from a request gets
 an explicit cap before anything is expanded from it. `GET

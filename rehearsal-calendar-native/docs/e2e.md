@@ -375,7 +375,10 @@ by its admin elsewhere: `e2e/scripts/move-rehearsal.js` with `API_URL`,
 saves it that many hours later, title and place as they were (flow 73). A
 person put on a rehearsal there: `e2e/scripts/add-to-rehearsal.js` with the
 same and `MEMBER` (an address in its project) saves it as it is, its cast
-kept and the member added (flow 79). A code the server
+kept and the member added (flow 79). A member removed there:
+`e2e/scripts/remove-member.js` with `API_URL`, `EMAIL` (the owner),
+`PASSWORD`, `PROJECT` and `MEMBER` (a full name) deletes the member's row; no
+push reaches the simulator, so the page he has open stays (flow 101). A code the server
 mailed is read the same way: `e2e/scripts/read-code.js` with `MAIL_URL`
 (`${MAIL_URL}`), `TO` and `NAME` puts it in `${output.<NAME>}` (flows 11, 12).
 

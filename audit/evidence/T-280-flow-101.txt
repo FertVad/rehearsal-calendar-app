@@ -1,0 +1,33 @@
+T-280, review round 1 — e2e flow 101 "Leave a project after being removed"
+(e2e/flows/101-leave-after-removed.yaml, script e2e/scripts/remove-member.js,
+seed: Theseus's "Athens Court" with Snug Joiner).
+
+Snug opens Athens Court; Theseus removes him through the API (no push reaches
+the simulator); Snug taps "Leave Project" and confirms. Expected: back on his
+projects, Athens Court gone, no "Error", "Only project admins…" or
+"Access denied".
+
+== RED: server/routes/native/members.js from b799aee
+   (git restore --source=b799aee -- rehearsal-calendar-native/server/routes/native/members.js)
+
+$ npm run e2e -- e2e/flows/101-leave-after-removed.yaml
+[Failed] Leave a project after being removed (1m 28s) (Assertion is false: id: header-back is not visible)
+1/1 Flow Failed
+
+Screenshot at the failure (artifacts 2026-11-19_143505,
+step-065-assertCondition-header-back.png): still on "Athens Court", an alert
+"Error / Access denied" with OK. The leave's DELETE got 403; the screen reset
+isDeleting, reloaded itself, and GET /members answered 403 "Access denied"
+(server.log: "[ROUTE] Access denied - user 114 not a member of project 59"),
+an English refusal on top of the leave's own "Only project admins can remove
+members".
+
+== GREEN: HEAD (git restore --source=HEAD -- rehearsal-calendar-native/server/routes/native/members.js)
+
+$ npm run e2e -- e2e/flows/101-leave-after-removed.yaml
+[Passed] Leave a project after being removed (1m 25s)
+1/1 Flow Passed in 1m 25s
+
+Flow 100 on the same seed (one more company in it):
+$ npm run e2e -- e2e/flows/100-member-leaves-project.yaml
+1/1 Flow Passed in 2m 38s
