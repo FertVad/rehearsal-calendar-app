@@ -1,0 +1,42 @@
+T-269, review round 2: a rejected Google token leaves the person out of the logs.
+Test: server/__tests__/routes/googleTokenLogs.test.js
+Command: cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/googleTokenLogs.test.js --verbose
+
+== RED: utils/oauthVerification.js as of 64d7860 ==
+    ✕ is rejected without the person in the log or in the error
+    ✕ is logged as expired, so the cause is still readable
+    ✕ through the route: the same answer as before, nothing of the person logged
+    ✕ a forged signature: the library would print the whole token, the log does not
+    ✓ another app's audience: both client ids are named, the person is not
+    ✕ a token issued in the future: nothing of the person either
+    ✓ still signs in through the real verifier
+Tests:       5 failed, 2 passed, 7 total
+
+What the log held for the expired token (route test, leaks found in the log text):
+    + Array [
+    +   "nina.leak-check@gmail.com",
+    +   "Ninaleakcheck",
+    +   "Petrovaleakcheck",
+    +   "Ninaleakcheck Petrovaleakcheck",
+    +   "https://lh3.googleusercontent.com/a/leak-check-photo",
+    +   "xx-LEAKCHECK",
+    + ]
+Forged signature, the log line on the old code:
+    "[OAuth] Google token verification failed: Invalid token signature: eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOi...<the whole signed token, payload included>"
+
+== GREEN: the fix ==
+    ✓ is rejected without the person in the log or in the error
+    ✓ is logged as expired, so the cause is still readable
+    ✓ through the route: the same answer as before, nothing of the person logged
+    ✓ a forged signature: the library would print the whole token, the log does not
+    ✓ another app's audience: both client ids are named, the person is not
+    ✓ a token issued in the future: nothing of the person either
+    ✓ still signs in through the real verifier
+Tests:       7 passed, 7 total
+
+Neighbours on the fix, all green: __tests__/utils/googleAudience.test.js (8), __tests__/utils/appleAudience.test.js,
+__tests__/routes/appleAuth.test.js, __tests__/routes/providerSignIn.test.js.
+
+Full server Jest on the fix: 84 of 85 suites, 1327 of 1335 tests pass. The 8 failures are all in
+__tests__/startup/runtimeStartup.test.js ("import-failed" in a child process, sandbox); the same 8 fail
+with the old oauthVerification.js restored (8 failed, 3 passed, 11 total), so they are not this change.
