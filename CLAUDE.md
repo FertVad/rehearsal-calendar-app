@@ -1137,6 +1137,11 @@ PostgreSQL dialect the routes are written in. It covers only the constructs
 actually used; anything else surfaces as a `SqliteError`, which is the signal to
 extend it rather than to work around it in the test.
 
+**Everything `npm run check` runs also runs on Linux in GitHub's "Application
+checks"; a test that needs a Mac (xcrun swiftc, ffmpeg, the simulator) says so
+with a skip by platform (`{ skip: process.platform === 'darwin' ? false : 'needs macOS: …' }`),
+never by whether the tool is installed — on a Mac a missing tool fails it (T-282).**
+
 ### Frontend Tests
 ```bash
 cd rehearsal-calendar-native
