@@ -143,12 +143,12 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: profile-calendar-sync
-      SEE: ".*Apple Calendar.*"
+      SEE: ".*Apple Kalender.*"
       WAIT_MS: "15000"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: ".*Apple Calendar.*"
+      TAP: ".*Apple Kalender.*"
       SEE: ".*Synchronisieren.*"
       WAIT_MS: "10000"
 - tapOn:
@@ -182,12 +182,12 @@ tags:
 - extendedWaitUntil:
     notVisible: "Alle Proben aus dem Kalender entfernt"
     timeout: 5000
-- runFlow:
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP_ID: calendar-sync-toggle
-      GONE_ID: calendar-sync-run
-      WAIT_MS: "10000"
+# The removal turned Auto-Sync off itself, or the next sync would put the
+# rehearsals back (T-270).
+- extendedWaitUntil:
+    notVisible:
+      id: calendar-sync-run
+    timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: 91-sync-off
 

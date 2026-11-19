@@ -472,6 +472,18 @@ calendar but the organiser's. The export runs on foreground alongside the
 import, on its own ten-minute timer because each rehearsal costs a mapping
 lookup; pull-to-refresh ignores that timer.
 
+**Removing takes back what sync did, and stays done** (T-270). Profile →
+Calendar Sync has two buttons at the bottom, shown whether Auto Sync is on or
+off: "Remove Exported Rehearsals" (with calendar access — the events are in
+this phone's calendar) and "Remove Imported Busy Times" (always, even without
+calendar access). Imported busy times are removed from all the person's
+devices — `DELETE /availability/imported/all`, the server's rows, as decided in
+EI03 — and only those with a calendar source; what they marked by hand stays.
+The privacy policy names that button by `calendarSync.clearImported`
+(`privacyPage.test.js` holds them equal). Either removal turns Auto Sync off
+first, both directions as the switch does, and its question ends with
+`autoSyncTurnsOff`: otherwise the next run exports or imports everything again.
+
 **Import skips what we exported.** Rehearsal events are excluded by the
 `rehearsalapp://rehearsal/` link the export puts on them, and by this device's
 mapping ids for events written before the link existed; otherwise a rehearsal
