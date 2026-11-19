@@ -488,6 +488,20 @@ router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
       // Delete user (CASCADE will handle remaining memberships, availability, calendar connections, etc.)
       await tx.run('DELETE FROM native_users WHERE id = $1', [userId]);
 
+      // And this person's name from other people's inboxes (T-278). A row
+      // belongs to its reader, so the cascade above takes only this account's
+      // own; the notices that name it — joined, made an administrator, has seen
+      // a rehearsal — say whose name they carry in data.aboutUserId. After the
+      // account's row is gone, not before: a notice being written about this
+      // person holds that row while it inserts (recordNotifications), so it is
+      // either committed by now and deleted here, or it waits for this
+      // transaction and then writes nothing. Rows from before this mark are
+      // removed by data step 015.
+      await tx.run(
+        "DELETE FROM native_notifications WHERE CAST(data->>'aboutUserId' AS TEXT) = $1",
+        [String(userId)]
+      );
+
       return orphaned;
     });
     if (orphanedProjects === null) return res.status(401).json(SESSION_REVOKED);

@@ -107,8 +107,9 @@ const joinHandlers = [limitInviteIp, requireAuth, limitInviteAccount, validateIn
           'SELECT first_name, last_name FROM native_users WHERE id = $1',
           [userId]
         );
+        // With whose name it is, so deleting this account removes it (T-278).
         const joinerName = fullName(joiner);
-        await notifyMemberJoined(project.name, joinerName, runners.map((r) => r.user_id), project.id);
+        await notifyMemberJoined(project.name, { id: userId, name: joinerName }, runners.map((r) => r.user_id), project.id);
       }
     } catch (notifErr) {
       logger.error('[Invites] Could not announce the new member:', notifErr);

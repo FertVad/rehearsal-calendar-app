@@ -388,8 +388,9 @@ router.put('/:projectId/members/:userId/role', requireAuth, asyncHandler(async (
             [parseInt(userId)]
           );
           const memberName = fullName(member);
-          // With the project's id, so a tap opens it on its members (T-252).
-          await notifyAdminAppointed(project.name, memberName, others.map((o) => o.user_id), project.id);
+          // With the project's id, so a tap opens it on its members (T-252),
+          // and whose name it is, so deleting that account removes it (T-278).
+          await notifyAdminAppointed(project.name, { id: parseInt(userId), name: memberName }, others.map((o) => o.user_id), project.id);
         }
       }
     } catch (notifErr) {

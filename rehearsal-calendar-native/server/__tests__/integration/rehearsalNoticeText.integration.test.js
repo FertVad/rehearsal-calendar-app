@@ -65,6 +65,10 @@ const addReader = (name, locale, timezone) => Number(testDb.run(
   [`${name}@test.com`, 'hash', name, locale, timezone]
 ).lastInsertId);
 
+// Who a notice names, as the routes hand it over (T-278): the name, and the
+// account it belongs to — one that exists, or no notice is written.
+const named = (name) => ({ id: Number(data.memberId), name });
+
 /** What each reader's inbox got, newest first. */
 const inboxOf = (userId) => testDb.all(
   'SELECT type, title, body, data, related_type, related_id FROM native_notifications WHERE user_id = ? ORDER BY id DESC',
@@ -108,7 +112,7 @@ describe('Each reader is told when, on their own clock and in their own language
   it('a "seen" names the rehearsal and when it is', async () => {
     // The seen route hands over the row itself: starts_at.
     const row = { id: rehearsal.id, project_id: data.projectId, title: 'Full dress', starts_at: '2026-10-06T19:00:00.000Z' };
-    await notifyMemberResponse(row, 'Hamlet', 'Ophelia Bright', [natasha, john], { now });
+    await notifyMemberResponse(row, 'Hamlet', named('Ophelia Bright'), [natasha, john], { now });
 
     expect(inboxOf(natasha)[0].body).toBe('Hamlet: Full dress, завтра в 22:00 — Ophelia Bright в курсе');
     expect(inboxOf(john)[0].body).toBe('Ophelia Bright has seen “Full dress” (tomorrow at 3:00 PM) in Hamlet');
@@ -294,21 +298,21 @@ describe('No word agrees with a title, a member or a reader the server cannot kn
   });
 
   it('a woman and a man who join read the same', async () => {
-    await notifyMemberJoined('Гамлет', 'Офелия Полониева', [olga], data.projectId);
+    await notifyMemberJoined('Гамлет', named('Офелия Полониева'), [olga], data.projectId);
     expect(inboxOf(olga)[0].body).toBe('Офелия Полониева теперь в проекте «Гамлет»');
 
-    await notifyMemberJoined('Гамлет', 'Гамлет Датский', [olga], data.projectId);
+    await notifyMemberJoined('Гамлет', named('Гамлет Датский'), [olga], data.projectId);
     expect(inboxOf(olga)[0].body).toBe('Гамлет Датский теперь в проекте «Гамлет»');
   });
 
   it('a woman and a man who have seen a rehearsal read the same, in the app\'s word', async () => {
     const row = { id: rehearsal.id, project_id: data.projectId, title: 'Сцена с письмом', starts_at: '2026-10-06T09:00:00.000Z' };
-    await notifyMemberResponse(row, 'Иллирия', 'Виола Себастьянова', [olga, carmen, klaus], { now });
+    await notifyMemberResponse(row, 'Иллирия', named('Виола Себастьянова'), [olga, carmen, klaus], { now });
     expect(inboxOf(olga)[0]).toMatchObject({ title: 'Репетиция просмотрена', body: 'Иллирия: Сцена с письмом, завтра в 12:00 — Виола Себастьянова в курсе' });
     expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ensayo visto', body: 'Виола Себастьянова ha visto «Сцена с письмом» (mañana a las 11:00) en Иллирия' });
     expect(inboxOf(klaus)[0]).toMatchObject({ title: 'Probe gesehen', body: 'Иллирия: Виола Себастьянова hat die Probe „Сцена с письмом“ (morgen um 11:00) als gesehen markiert' });
 
-    await notifyMemberResponse(row, 'Иллирия', 'Мальволио Стюард', [olga, john], { now });
+    await notifyMemberResponse(row, 'Иллирия', named('Мальволио Стюард'), [olga, john], { now });
     expect(inboxOf(olga)[0].body).toBe('Иллирия: Сцена с письмом, завтра в 12:00 — Мальволио Стюард в курсе');
     expect(inboxOf(john)[0]).toMatchObject({ title: 'Rehearsal Seen', body: 'Мальволио Стюард has seen “Сцена с письмом” (tomorrow at 5:00 AM) in Иллирия' });
   });
@@ -608,7 +612,7 @@ describe('Titles, names and the words around them, as native speakers read them 
   });
 
   it('"seen" with no title: the rehearsal, not "Rehearsal" in quotes', async () => {
-    await notifyMemberResponse(untitled(), 'Hamlet', 'Anna Smith', readersOf(), { now });
+    await notifyMemberResponse(untitled(), 'Hamlet', named('Anna Smith'), readersOf(), { now });
 
     expect(titles()[3]).toBe('Rehearsal Seen');
     expect(bodies()).toEqual([
@@ -620,7 +624,7 @@ describe('Titles, names and the words around them, as native speakers read them 
   });
 
   it('the notices about a project: its name in quotes, the German case on "Projekt"', async () => {
-    await notifyMemberJoined('Der Kirschgarten', 'Anna Schmidt', readersOf(), data.projectId);
+    await notifyMemberJoined('Der Kirschgarten', named('Anna Schmidt'), readersOf(), data.projectId);
     expect(titles()).toEqual(['Nuevo miembro', 'Neues Mitglied', 'Новый участник', 'New Member']);
     expect(bodies()).toEqual([
       'Anna Schmidt se unió al proyecto «Der Kirschgarten»',
@@ -629,7 +633,7 @@ describe('Titles, names and the words around them, as native speakers read them 
       'Anna Schmidt joined Der Kirschgarten',
     ]);
 
-    await notifyAdminAppointed('Der Kirschgarten', 'Anna Schmidt', readersOf(), data.projectId);
+    await notifyAdminAppointed('Der Kirschgarten', named('Anna Schmidt'), readersOf(), data.projectId);
     expect(titles()).toEqual(['Permisos de administrador', 'Adminrechte vergeben', 'Новый администратор', 'New Administrator']);
     expect(bodies()).toEqual([
       'Anna Schmidt ahora administra el proyecto «Der Kirschgarten»',
@@ -710,7 +714,7 @@ describe('A name in quotes, rights taken away, Spanish project notices (T-261)',
       'The project «Вишнёвый сад» has been deleted',
     ]);
 
-    await notifyMemberJoined('"Der Kirschgarten"', 'Anna Schmidt', readersOf(), data.projectId);
+    await notifyMemberJoined('"Der Kirschgarten"', named('Anna Schmidt'), readersOf(), data.projectId);
     expect(bodies()).toEqual([
       'Anna Schmidt se unió al proyecto «Der Kirschgarten»',
       'Anna Schmidt ist dem Projekt „Der Kirschgarten“ beigetreten',
@@ -759,7 +763,7 @@ describe('A name in quotes, rights taken away, Spanish project notices (T-261)',
       'Hamlet: Прогон «Чайки» scheduled tomorrow at 8:00 PM',
     ]);
 
-    await notifyMemberResponse({ ...rehearsal, title: 'Szene „Fenster“' }, 'Hamlet', 'Anna Smith', readersOf(), { now });
+    await notifyMemberResponse({ ...rehearsal, title: 'Szene „Fenster“' }, 'Hamlet', named('Anna Smith'), readersOf(), { now });
     expect(bodies()).toEqual([
       'Anna Smith ha visto «Szene “Fenster”» (mañana a las 21:00) en Hamlet',
       'Hamlet: Anna Smith hat die Probe „Szene ‚Fenster‘“ (morgen um 21:00) als gesehen markiert',
@@ -791,9 +795,9 @@ describe('A name in quotes, rights taken away, Spanish project notices (T-261)',
   });
 
   it('Spanish: the project in quotes after "proyecto" in every notice about it', async () => {
-    await notifyAdminAppointed('Bodas de sangre 2026', 'Lucía Martín', [carmen], data.projectId);
+    await notifyAdminAppointed('Bodas de sangre 2026', named('Lucía Martín'), [carmen], data.projectId);
     expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Permisos de administrador', body: 'Lucía Martín ahora administra el proyecto «Bodas de sangre 2026»' });
-    await notifyMemberJoined('Hamlet', 'Lucía Martín', [carmen], data.projectId);
+    await notifyMemberJoined('Hamlet', named('Lucía Martín'), [carmen], data.projectId);
     expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Nuevo miembro', body: 'Lucía Martín se unió al proyecto «Hamlet»' });
     await notifyMemberRemoved('Hamlet', carmen);
     expect(inboxOf(carmen)[0]).toMatchObject({ title: 'Ya no estás en el proyecto', body: 'Ya no formas parte del proyecto «Hamlet»' });
@@ -819,7 +823,7 @@ describe('No words for a notice nobody sends (T-251)', () => {
 
 describe('"New member"', () => {
   it('carries its project, so a tap can open it', async () => {
-    await notifyMemberJoined('Test Project', 'Nina Petrova', [natasha], data.projectId);
+    await notifyMemberJoined('Test Project', named('Nina Petrova'), [natasha], data.projectId);
 
     const [row] = inboxOf(natasha);
     expect(row.type).toBe('member_joined');

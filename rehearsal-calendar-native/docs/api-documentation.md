@@ -580,6 +580,10 @@ Permanently delete the authenticated user's account.
 **Notes:**
 - This action is irreversible
 - All user data and project memberships will be deleted
+- So are the notices in other people's inboxes that name the account — "joined",
+  "is now an administrator", "has seen" — in the same transaction (T-278). Each
+  such notice keeps whom it names in its `data.aboutUserId`. A push already shown
+  on someone's phone stays there: the server cannot reach it
 
 `POST /auth/logout` revokes every session of the account. A session revoked while
 its logout was under way changes nothing more: bumping the version again would

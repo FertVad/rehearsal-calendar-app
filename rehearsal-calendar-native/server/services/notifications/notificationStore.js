@@ -38,25 +38,39 @@ export async function recordNotifications(userIds, notification, { executor = db
   const relatedType = data.rehearsalId ? 'rehearsal' : data.projectId ? 'project' : null;
   const relatedId = data.rehearsalId ?? data.projectId ?? null;
 
+  // A notice that names someone is written only while that person's account
+  // exists, and the check holds their row (FOR KEY SHARE) until the insert is
+  // committed (T-278). DELETE /me deletes the account before it deletes the
+  // notices naming it, so either this insert commits first and that delete
+  // sees the row, or it waits for the deletion and then finds nobody to name.
+  // Without it a notice written in that window kept the name of a deleted
+  // account in someone's inbox.
+  const about = data.aboutUserId ?? null;
+  const insert = about === null
+    ? `INSERT INTO native_notifications
+         (user_id, type, title, body, data, related_type, related_id, sent_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       RETURNING id`
+    : `INSERT INTO native_notifications
+         (user_id, type, title, body, data, related_type, related_id, sent_at, created_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE EXISTS (SELECT 1 FROM native_users WHERE id = ? FOR KEY SHARE)
+       RETURNING id`;
+
   for (const userId of userIds) {
     try {
-      const row = await executor.get(
-        `INSERT INTO native_notifications
-           (user_id, type, title, body, data, related_type, related_id, sent_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         RETURNING id`,
-        [
-          userId,
-          data.type || 'unknown',
-          title,
-          body,
-          JSON.stringify(data),
-          relatedType,
-          relatedId ? Number(relatedId) : null,
-          now,
-          now,
-        ]
-      );
+      const row = await executor.get(insert, [
+        userId,
+        data.type || 'unknown',
+        title,
+        body,
+        JSON.stringify(data),
+        relatedType,
+        relatedId ? Number(relatedId) : null,
+        now,
+        now,
+        ...(about === null ? [] : [Number(about)]),
+      ]);
       if (row?.id) written.set(Number(userId), Number(row.id));
     } catch (err) {
       // Inside a caller's transaction the statement has failed the whole of

@@ -137,7 +137,7 @@ describe('Somebody joins a project', () => {
   it('names the person who joined', async () => {
     await joinByCode();
 
-    expect(memberJoined.mock.calls[0][1]).toBe('Нина Петрова');
+    expect(memberJoined.mock.calls[0][1]).toEqual({ id: joinerId, name: 'Нина Петрова' });
   });
 
   it('names the project by its id, so a tap on it can open it (T-023)', async () => {

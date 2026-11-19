@@ -312,7 +312,8 @@ router.post('/:rehearsalId/respond', requireAuth, asyncHandler(async (req, res) 
         if (admins.length > 0) {
           const responderName = fullName(responder);
           const adminIds = admins.map(a => a.user_id);
-          await notifyMemberResponse(rehearsal, project.name, responderName, adminIds);
+          // With whose name it is, so deleting this account removes it (T-278).
+          await notifyMemberResponse(rehearsal, project.name, { id: userId, name: responderName }, adminIds);
         }
       } catch (notifErr) {
         console.error('Error sending member response notification:', notifErr);
