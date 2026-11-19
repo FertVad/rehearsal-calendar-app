@@ -111,16 +111,17 @@ const translations = {
     },
     // Told to whoever runs the project when somebody is no longer in it (T-271).
     // Nothing agrees with the person: "вышла", "удалён" would guess a gender;
-    // the participles in the titles agree with the word "участник".
+    // "вышел" and "удалён" in the titles agree with the word "участник". The
+    // body of a removal does not repeat its title (T-280).
     memberLeft: {
-      title: 'Участник покинул проект',
+      title: 'Участник вышел из проекта',
       body: ({ memberName, projectName }) =>
         `${memberName} больше не в проекте ${ru(projectName)}`,
     },
     memberWasRemoved: {
       title: 'Участник удалён',
       body: ({ memberName, projectName }) =>
-        `Из проекта ${ru(projectName)} удалили участника: ${memberName}`,
+        `${memberName} больше не в проекте ${ru(projectName)}`,
     },
     roleChanged: {
       title: 'Изменение роли',
@@ -369,9 +370,9 @@ const translations = {
         `${memberName} dejó el proyecto ${es(projectName)}`,
     },
     memberWasRemoved: {
-      title: 'Baja en el proyecto',
+      title: 'Miembro eliminado',
       body: ({ memberName, projectName }) =>
-        `Han quitado a ${memberName} del proyecto ${es(projectName)}`,
+        `Han eliminado a ${memberName} del proyecto ${es(projectName)}`,
     },
     roleChanged: {
       title: 'Cambio de rol',

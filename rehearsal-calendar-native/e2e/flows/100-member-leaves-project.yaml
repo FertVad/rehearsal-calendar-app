@@ -45,7 +45,7 @@ tags:
 - extendedWaitUntil:
     visible: "Leave Project?"
     timeout: 10000
-- assertVisible: ".*“Mechanicals Guild” will disappear from your projects.*"
+- assertVisible: ".*“Mechanicals Guild” will no longer appear in your projects.*You can rejoin with an invitation\\..*"
 - takeScreenshot: 100-leave-asked-first
 - tapOn:
     text: "Leave Project"
