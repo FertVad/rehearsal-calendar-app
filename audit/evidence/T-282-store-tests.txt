@@ -1,0 +1,91 @@
+T-282 — the App Store tests (store-compose, store-video) on GitHub's Linux runner
+
+Red before: GitHub Actions "Application checks", job `check` (ubuntu-24.04), red
+since ead482c (T-274) and d086ead (T-275): `spawnSync xcrun ENOENT` in
+store-compose, "ffmpeg is not installed" in store-video's `before` hook; 12 tests
+failed (task's extract: AUTODEV/notes/T-282-ci-red.txt).
+
+The same reproduced on this Mac with node --import ../audit/evidence/T-282-as-linux.mjs
+(process.platform 'linux'; xcrun, ffmpeg, ffprobe and the compiled compose.swift
+spawn ENOENT, T-282-no-tools.mjs). Run from rehearsal-calendar-native.
+store-seed is left out of the emulated runs: with 'linux' bcrypt loads its Linux
+prebuild on this Mac (an artefact of the emulation; store-seed is green on GitHub).
+
+== 1. Old tests (HEAD~1 of 1ac8ca7) as Linux: RED, 12 failures as on GitHub ==
+git restore --source=HEAD~1 -- e2e/__tests__/store-compose.test.mjs e2e/__tests__/store-video.test.mjs
+node --import ../audit/evidence/T-282-as-linux.mjs --test e2e/__tests__/store-compose.test.mjs e2e/__tests__/store-video.test.mjs
+  store-compose: 5 ✖, first "Error: spawnSync .../e2e/store/out/.bin/compose-81165a52214e ENOENT"
+    (the pure "missing screenshot or language is refused" among them: it used the before hook's shots)
+  store-video: 7 ✖, each "Error: spawnSync /opt/homebrew/bin/ffmpeg ENOENT"
+    (the pure "stillness is cut to STILL" among them: the before hook failed)
+git restore --source=HEAD -- (same files)
+
+== 2. New tests as Linux: GREEN, the Mac-only suites skipped with the reason, hooks not run ==
+✔ the sizes App Store Connect takes: 1320×2868 and 1206×2622 (3.694583ms)
+✔ a missing screenshot or language is refused, not drawn over (3.0495ms)
+﹣ drawn by compose.swift (0.42825ms) # needs macOS: compose.swift is built by xcrun swiftc
+✔ the format App Store Connect takes, and seven shots of 15 to 30 seconds in all (4.198959ms)
+✔ stillness is cut to STILL, the flow's own pauses kept whole (1.117125ms)
+✔ too few recordings, or a missing one, are refused before anything is made (3.616166ms)
+﹣ made by ffmpeg, its captions by compose.swift (0.483125ms) # needs macOS: the captions are drawn by compose.swift, built by xcrun swiftc
+ℹ tests 5
+ℹ suites 2
+ℹ pass 5
+ℹ fail 0
+exit 0
+
+== 3. New tests on a Mac without xcrun/ffmpeg (darwin kept): RED, not skipped ==
+node --import ../audit/evidence/T-282-no-tools.mjs --test e2e/__tests__/store-compose.test.mjs e2e/__tests__/store-video.test.mjs
+✔ the sizes App Store Connect takes: 1320×2868 and 1206×2622
+✔ a missing screenshot or language is refused, not drawn over
+▶ drawn by compose.swift
+  ✖ eight pictures a language, at each size, RGB without alpha
+  ✖ each caption is captions.json's, broken where the file breaks it, read back off the picture
+  ✖ one size of type for the whole language, made smaller for all when one caption is too wide
+  ✖ the screenshot is under the caption, whole, with rounded corners
+✖ drawn by compose.swift
+✔ the format App Store Connect takes, and seven shots of 15 to 30 seconds in all
+✔ stillness is cut to STILL, the flow's own pauses kept whole
+✔ too few recordings, or a missing one, are refused before anything is made
+▶ made by ffmpeg, its captions by compose.swift
+  ✖ 886×1920 at 30 fps, H.264, 15 to 30 seconds, with a silent stereo AAC track at 48 kHz
+  ✖ silent: the audio track carries no sound
+  ✖ seven shots, each as long as the storyboard gives it: a short recording held, a long one sped up
+  ✖ each shot shows its recording in the window, its caption above it as captions.json breaks it
+  ✖ the window is under the band, whole, and the last shot closes on the mark
+  ✖ a recording far longer than its shot is refused, not raced through
+✖ made by ffmpeg, its captions by compose.swift
+exit 1
+
+== 4. New tests on this Mac as it is: all run, none skipped ==
+node --test e2e/__tests__/store-compose.test.mjs e2e/__tests__/store-seed.test.mjs e2e/__tests__/store-video.test.mjs
+✔ the sizes App Store Connect takes: 1320×2868 and 1206×2622 (4.381167ms)
+✔ a missing screenshot or language is refused, not drawn over (3.036042ms)
+▶ drawn by compose.swift
+  ✔ eight pictures a language, at each size, RGB without alpha (719.896584ms)
+  ✔ each caption is captions.json's, broken where the file breaks it, read back off the picture (11422.243792ms)
+  ✔ one size of type for the whole language, made smaller for all when one caption is too wide (14146.169459ms)
+  ✔ the screenshot is under the caption, whole, with rounded corners (623.532958ms)
+✔ drawn by compose.swift (99386.012958ms)
+✔ until LAST_HOUR, today has one window of each busy level, after now and by 23:00 (4.677875ms)
+✔ after LAST_HOUR in the page's country the seed refuses, before it writes anything (135.879791ms)
+✔ the format App Store Connect takes, and seven shots of 15 to 30 seconds in all (4.248875ms)
+✔ stillness is cut to STILL, the flow's own pauses kept whole (1.392584ms)
+✔ too few recordings, or a missing one, are refused before anything is made (2.735375ms)
+▶ made by ffmpeg, its captions by compose.swift
+  ✔ 886×1920 at 30 fps, H.264, 15 to 30 seconds, with a silent stereo AAC track at 48 kHz (264.6535ms)
+  ✔ silent: the audio track carries no sound (184.818ms)
+  ✔ seven shots, each as long as the storyboard gives it: a short recording held, a long one sped up (2.15325ms)
+  ✔ each shot shows its recording in the window, its caption above it as captions.json breaks it (8878.954792ms)
+  ✔ the window is under the band, whole, and the last shot closes on the mark (1232.722ms)
+  ✔ a recording far longer than its shot is refused, not raced through (6307.39975ms)
+✔ made by ffmpeg, its captions by compose.swift (66136.813917ms)
+ℹ tests 17
+ℹ suites 2
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+
+The Linux run on GitHub after push is checked by Claude on the task's commit.
