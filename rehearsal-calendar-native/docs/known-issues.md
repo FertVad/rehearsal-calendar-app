@@ -113,19 +113,6 @@ pull-to-refresh that had to be repeated. And the last fix failed its own test at
 first, because the exclusion it changed existed in three copies and the one it
 touched only fed a log line.
 
-### Nobody is told when a member leaves or is removed
-
-Found while adding the leave path on 2026-09-05. The person removed is told;
-the owner and the other administrators are not, so a cast quietly shrinks.
-
-The same reasoning that sends "somebody joined" and "somebody was made an
-administrator" to everyone who runs the project applies here — several people
-can remove members, and now anyone can leave, so the owner cannot assume they
-did it themselves.
-
-Left because it needs a string and a decision about who hears it, not because it
-is hard.
-
 ### The lint has 595 warnings, none of them about hooks or unused code
 
 `npm run lint` on 2026-11-10, after T-243: 0 errors, 595 warnings.
