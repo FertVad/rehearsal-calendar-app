@@ -55,12 +55,8 @@ tags:
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "500" }
-- tapOn:
-    id: tab-planner
-- extendedWaitUntil:
-    visible:
-      id: "planner-row-.*"
-    timeout: 30000
+- runFlow:
+    file: planner-tab.yaml
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "1800" }
@@ -183,12 +179,8 @@ tags:
     id: header-back
 
 # 4. The Planner again, the whole cast; three picked, the windows weighed again.
-- tapOn:
-    id: tab-planner
-- extendedWaitUntil:
-    visible:
-      id: "planner-row-.*"
-    timeout: 30000
+- runFlow:
+    file: planner-tab.yaml
 - waitForAnimationToEnd
 - runScript:
     file: scripts/recorder.js

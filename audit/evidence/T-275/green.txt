@@ -33,6 +33,12 @@ es-ES.mp4: 29.80 s; video h264 High 886×1920 30/1 fps yuv420p; audio aac 48000 
   shots: 2.5→3s, 10.0→5s, 2.5→4s, 10.3→6s, 11.8→5s, 7.0→4s, 2.2→2.8s
 de-DE.mp4: 29.80 s; video h264 High 886×1920 30/1 fps yuv420p; audio aac 48000 Hz 2 ch
   shots: 2.5→3s, 9.7→5s, 2.5→4s, 10.2→6s, 7.6→5s, 7.1→4s, 2.3→2.8s
+ru.mp4: 29.80 s; video h264 High 886×1920 30/1 fps yuv420p; audio aac 48000 Hz 2 ch
+  shots: 4.7→3s, 9.8→5s, 2.5→4s, 12.9→6s, 11.1→5s, 6.9→4s, 2.3→2.8s
+  (recorded after 00:00 in Moscow: the first run at 21:03 UTC lost the Planner
+  tab's tap — the simulator's lost tap, T-207 — and stayed on the calendar;
+  video.yaml now takes that tap through e2e/store/planner-tab.yaml, which taps
+  once more when the Planner did not come, and the second run passed)
 
 Previews: <locale>.png here, a frame of each shot a quarter second before its
 end, the last the closing card. The videos stay in e2e/store/out/video (ignored).
