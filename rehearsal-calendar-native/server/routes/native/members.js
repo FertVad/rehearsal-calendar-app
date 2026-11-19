@@ -7,7 +7,7 @@ import { createLocalTimestampConverter, timestampToISO } from '../../utils/timez
 import { consumeMemberAvailabilityBudget } from '../../services/memberAvailabilityRateLimit.js';
 import { limits, positiveId, parseMemberAvailabilityQuery, expandMemberAvailabilityDates, availabilityBudgetError } from '../../services/memberAvailabilityQuery.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
-import { notifyRoleChanged, notifyMemberRemoved, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
+import { notifyRoleChanged, notifyMemberRemoved, notifyMemberLeft, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
 import { fullName } from '../../utils/names.js';
 import { takeOffProjectRehearsals } from '../../services/rehearsals/roster.js';
 import { lockProject } from '../../services/rehearsals/projectLock.js';
@@ -490,11 +490,35 @@ router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (re
       );
     });
 
-    // Send push notification to the removed user
+    // Who is told (T-271). Whoever runs the project — the people who hear "New
+    // member" — since several can remove members and anyone can leave, so the
+    // owner cannot assume they did it; a cast used to shrink with nobody told.
+    // Whoever did it is left out: they were there. The person removed is told
+    // too; one who left is not — they tapped Leave, and were told "you were
+    // removed", which they were not.
     try {
-      await notifyMemberRemoved(project.name, parseInt(userId));
+      const leaverId = Number(userId);
+      if (!leavingSelf) await notifyMemberRemoved(project.name, leaverId);
+
+      const runners = await db.all(
+        `SELECT user_id FROM native_project_members
+         WHERE project_id = $1 AND status = 'active' AND role IN ('owner', 'admin')
+           AND user_id <> $2 AND user_id <> $3`,
+        [projectId, leaverId, Number(requesterId)]
+      );
+      if (runners.length > 0) {
+        const leaver = await db.get('SELECT first_name, last_name FROM native_users WHERE id = $1', [leaverId]);
+        // With whose name it is, so deleting that account removes it (T-278).
+        await notifyMemberLeft(
+          project.name,
+          { id: leaverId, name: fullName(leaver) },
+          runners.map((r) => r.user_id),
+          Number(projectId),
+          { removed: !leavingSelf }
+        );
+      }
     } catch (notifErr) {
-      console.error('Error sending member removed notification:', notifErr);
+      logger.error('[Members] Could not announce the departure:', notifErr);
     }
 
     res.json({

@@ -623,6 +623,23 @@ export async function notifyAdminAppointed(projectName, member, recipientIds, pr
 }
 
 /**
+ * Tell the people responsible for a project that somebody is no longer in it:
+ * left of their own accord, or was removed (`removed`). The same people who
+ * hear "New member" (T-271) — several can remove members and anyone can leave,
+ * so the owner cannot assume they did it. `member` is { id, name }, as for
+ * "joined" (T-278). A tap opens the project on its members.
+ */
+export async function notifyMemberLeft(projectName, member, recipientIds, projectId, { removed = false } = {}) {
+  const { id, name: memberName } = named(member);
+  await sendLocalizedNotification(
+    recipientIds,
+    removed ? 'memberWasRemoved' : 'memberLeft',
+    { memberName, projectName },
+    { type: 'member_left', projectName, projectId, aboutUserId: id }
+  );
+}
+
+/**
  * Notify user when their role is changed
  */
 export async function notifyRoleChanged(projectName, userId, newRole) {

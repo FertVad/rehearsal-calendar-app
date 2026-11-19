@@ -109,6 +109,19 @@ const translations = {
       body: ({ memberName, projectName }) =>
         `${memberName} теперь администратор проекта ${ru(projectName)}`,
     },
+    // Told to whoever runs the project when somebody is no longer in it (T-271).
+    // Nothing agrees with the person: "вышла", "удалён" would guess a gender;
+    // the participles in the titles agree with the word "участник".
+    memberLeft: {
+      title: 'Участник покинул проект',
+      body: ({ memberName, projectName }) =>
+        `${memberName} больше не в проекте ${ru(projectName)}`,
+    },
+    memberWasRemoved: {
+      title: 'Участник удалён',
+      body: ({ memberName, projectName }) =>
+        `Из проекта ${ru(projectName)} удалили участника: ${memberName}`,
+    },
     roleChanged: {
       title: 'Изменение роли',
       // A noun in the nominative after "теперь вы": "Вы теперь
@@ -219,6 +232,17 @@ const translations = {
       title: 'New Administrator',
       body: ({ memberName, projectName }) =>
         `${memberName} is now an administrator of ${projectName}`,
+    },
+    // Told to whoever runs the project when somebody is no longer in it (T-271).
+    memberLeft: {
+      title: 'Member Left',
+      body: ({ memberName, projectName }) =>
+        `${memberName} left ${projectName}`,
+    },
+    memberWasRemoved: {
+      title: 'Member Removed',
+      body: ({ memberName, projectName }) =>
+        `${memberName} was removed from ${projectName}`,
     },
     roleChanged: {
       title: 'Role Changed',
@@ -336,6 +360,19 @@ const translations = {
       body: ({ memberName, projectName }) =>
         `${memberName} ahora administra el proyecto ${es(projectName)}`,
     },
+    // Told to whoever runs the project when somebody is no longer in it (T-271).
+    // No participle agrees with the person: "dado de baja" would guess a
+    // gender, so the removal is impersonal, as "Te han quitado de un ensayo".
+    memberLeft: {
+      title: 'Salida del proyecto',
+      body: ({ memberName, projectName }) =>
+        `${memberName} dejó el proyecto ${es(projectName)}`,
+    },
+    memberWasRemoved: {
+      title: 'Baja en el proyecto',
+      body: ({ memberName, projectName }) =>
+        `Han quitado a ${memberName} del proyecto ${es(projectName)}`,
+    },
     roleChanged: {
       title: 'Cambio de rol',
       // A verb, as adminAppointed says it: "administrador" agreed with a man
@@ -445,6 +482,17 @@ const translations = {
       title: 'Adminrechte vergeben',
       body: ({ memberName, projectName }) =>
         `${memberName} verwaltet jetzt das Projekt ${de(projectName)}`,
+    },
+    // Told to whoever runs the project when somebody is no longer in it (T-271).
+    memberLeft: {
+      title: 'Mitglied ausgetreten',
+      body: ({ memberName, projectName }) =>
+        `${memberName} ist aus dem Projekt ${de(projectName)} ausgetreten`,
+    },
+    memberWasRemoved: {
+      title: 'Mitglied entfernt',
+      body: ({ memberName, projectName }) =>
+        `${memberName} wurde aus dem Projekt ${de(projectName)} entfernt`,
     },
     roleChanged: {
       title: 'Rolle geändert',
