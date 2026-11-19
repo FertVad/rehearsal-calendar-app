@@ -1,0 +1,54 @@
+# A server's refusal is said in the person's language (T-281). The app showed
+# a 4xx's own sentence as it came: English under "Ошибка" in any language
+# ("Access denied" here, "Only project admins can remove members" and the like
+# elsewhere). The server now answers with a code, and the app says it.
+#
+# Starveling, whose app speaks Russian, is an actor in Quince's company and has
+# its page open; Quince removes him from another device (no push reaches the
+# simulator). Starveling pulls the page down to refresh it and is told, in
+# Russian, that he is no longer in this project — not "Access denied".
+appId: ${APP_ID}
+name: A server refusal in Russian
+tags:
+  - projects
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${STARVELING_EMAIL}
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Quince Players.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Quince Players.*"
+- extendedWaitUntil:
+    visible:
+      id: project-members
+    timeout: 15000
+- runScript:
+    file: ../scripts/remove-member.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${QUINCE_EMAIL}
+      PASSWORD: ${PASSWORD}
+      PROJECT: "Quince Players"
+      MEMBER: Robin Starveling
+- waitForAnimationToEnd
+# Pull to refresh: the page asks the server again and is refused.
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible: "Ошибка"
+    timeout: 15000
+- takeScreenshot: 102-refusal-in-russian
+- assertNotVisible: ".*Access denied.*"
+- assertVisible: "Вы больше не участник этого проекта, или проект удалён\\."
