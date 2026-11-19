@@ -1,0 +1,41 @@
+T-280: the natives' wording — red on the texts of b799aee, green on HEAD.
+
+Method: git restore --source=b799aee -- server/i18n/pushNotifications.js
+src/i18n/translations/profile.ts src/i18n/translations/projects.ts; run; then
+git restore --source=HEAD -- <the same files>.
+
+== Jest (frontend): proofreadingEdits.test.ts, on the old texts ==
+FAIL — every T-280 row, in each language, e.g.:
+  projects.leaveProjectMessage("Anna") says "Проект «Anna» пропадёт из вашего списка, а вы — из его репетиций. Вернуться можно по приглашению.", not "Проект «Anna» исчезнет из вашего списка, а вас снимут с его репетиций. Вернуться можно по приглашению."
+  profile.avatarHint says "Аватар создаётся автоматически из ваших инициалов.", not "На аватаре — инициалы имени и фамилии."
+  projects.leaveProjectMessage("Anna") says "“Anna” will disappear from your projects, and you will be taken off its rehearsals. You can come back with an invitation.", not "“Anna” will no longer appear in your projects, and you will be taken off its rehearsals. You can rejoin with an invitation."
+  profile.avatarHint says "Your avatar is created automatically from your initials.", not "Your avatar shows the initials of your first and last name."
+  profile.avatarHint says "El avatar se crea automáticamente a partir de tus iniciales.", not "Tu avatar muestra las iniciales de tu nombre y apellido."
+  projects.leaveProjectMessage("Anna") says "Das Projekt „Anna“ verschwindet aus deiner Liste, und du bist für seine Proben nicht mehr eingeteilt. Zurück kommst du mit einer Einladung.", not "… Mit einer Einladung kannst du wieder beitreten."
+  profile.avatarHint says "Der Avatar wird automatisch aus deinen Initialen erstellt.", not "Dein Avatar zeigt die Initialen deines Vor- und Nachnamens."
+
+== Jest (server): memberLeftNotices.test.js, on the old texts ==
+    ✕ tells the owner and every administrator, naming who left
+    ✕ tells the owner, naming who was removed
+        Expected: "Нина Уходящая больше не в проекте «Test Project»"
+        Received: "Из проекта «Test Project» удалили участника: Нина Уходящая"
+    ✕ says it in Spanish to a Spanish owner, without repeating the title (T-280)
+        Expected: "Miembro eliminado"
+        Received: "Baja en el proyecto"
+Tests:       3 failed, 7 passed, 10 total
+
+== e2e: npm run e2e -- e2e/flows/100-member-leaves-project.yaml ==
+On the old texts:
+[Failed] Member leaves a project (1m 23s) (Assertion is false: ".*“Mechanicals Guild” will no longer appear in your projects.*You can rejoin with an invitation\..*" is visible)
+1/1 Flow Failed
+
+On HEAD:
+[Passed] Member leaves a project (2m 35s)
+1/1 Flow Passed in 2m 35s
+
+== Green on HEAD ==
+Server memberLeftNotices.test.js: Tests: 10 passed, 10 total.
+Frontend (src/i18n, ProjectDetailScreen, profile): 156 suites, 1663 tests passed.
+Server full Jest: 85 of 86 suites pass; __tests__/startup/runtimeStartup.test.js
+fails 8 of 11 identically with members.js and pushNotifications.js of b799aee —
+the sandbox, not this change.
