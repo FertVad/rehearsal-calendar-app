@@ -120,10 +120,12 @@ console.log(JSON.stringify({ type: 'result', is_error: false, session_id: 'r1',
   const run = await runClaude({ bin: writer, cwd: trees.REVIEW, prompt: 'p', sessionId: 'r1', model: 'claude-fable-5-2',
     settingsFile: path.join(HERE, '..', 'claude-review-settings.json'), sandboxProfile: REVIEW_PROFILE,
     sandboxParams: { REPO: trees.REPO, DEV_TREE: trees.DEV_TREE, LANDING: trees.LANDING },
+    addDirs: ['/private/tmp/autodev-review'],
     log: path.join(dir, 'r1.jsonl'), env });
   const { args, wrote } = JSON.parse(run.text.split('\n')[0]);
   assert.equal(run.failed, false);
   assert.deepEqual(args.slice(args.indexOf('--model'), args.indexOf('--model') + 2), ['--model', 'claude-fable-5-2']);
+  assert.deepEqual(args.slice(args.indexOf('--add-dir'), args.indexOf('--add-dir') + 2), ['--add-dir', '/private/tmp/autodev-review']);
   assert.deepEqual(args.slice(args.indexOf('--permission-mode'), args.indexOf('--permission-mode') + 2), ['--permission-mode', 'dontAsk']);
   assert.ok(!args.some((a) => /skip-permissions|bypassPermissions/.test(a)));
   assert.deepEqual(wrote, { REPO: false, DEV_TREE: false, LANDING: false, REVIEW: true });
@@ -131,14 +133,24 @@ console.log(JSON.stringify({ type: 'result', is_error: false, session_id: 'r1',
 
 test('the reviewer\'s tools cannot change a file, a branch or production', () => {
   const { allow, deny } = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'claude-review-settings.json'), 'utf8')).permissions;
-  for (const rule of ['Edit', 'NotebookEdit', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git checkout:*)', 'Bash(git reset:*)',
+  for (const rule of ['NotebookEdit', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git checkout:*)', 'Bash(git reset:*)',
     'Bash(git branch:*)', 'Bash(git update-ref:*)', 'Bash(sed -i:*)', 'Bash(npm run migrate:*)', 'Bash(vercel:*)', 'Bash(neonctl:*)',
     'Read(**/.env)', 'Agent', 'Workflow', 'SendMessage']) {
     assert.ok(deny.includes(rule), rule);
   }
-  // Writing only into temporary files; no wildcard that would let git or npm do anything.
-  assert.deepEqual(allow.filter((rule) => /^(Edit|Write|NotebookEdit)/.test(rule)), ['Write(//private/tmp/**)']);
-  assert.ok(!allow.some((rule) => ['Bash(git:*)', 'Bash(npm run:*)', 'Bash(npm:*)', 'Bash(sed:*)'].includes(rule)));
+  // Writing only into its scratch folder. No bare 'Edit' in deny: a deny
+  // outranks every allow, and the scratch folder's own rule stopped working
+  // (probed 19.11.2026); dontAsk refuses Edit anywhere it is not allowed.
+  assert.deepEqual(allow.filter((rule) => /^(Edit|Write|NotebookEdit)/.test(rule)), ['Edit(//private/tmp/autodev-review/**)']);
+  assert.ok(!deny.includes('Edit') && !deny.includes('Write'));
+  assert.ok(!allow.some((rule) => ['Bash(git:*)', 'Bash(npm run:*)', 'Bash(npm:*)', 'Bash(sed:*)',
+    'Bash(git *)', 'Bash(npm *)', 'Bash(npm run *)', 'Bash(sed *)', 'Bash(*)'].includes(rule)));
+  // A rule ending in ':*' takes whole words only: 'run test:*' does not let
+  // 'run test:unit' through, nor '…/autodev-review/:*' a folder inside it — the
+  // first two Fable reviews were refused exactly these. They end in a bare '*'.
+  for (const rule of ['Bash(npm --prefix rehearsal-calendar-native/server run test*)', 'Bash(mkdir -p /private/tmp/autodev-review/*)']) {
+    assert.ok(allow.includes(rule), rule);
+  }
 });
 
 test('the reviewer\'s sandbox keeps a secret\'s contents from any command too', () => {

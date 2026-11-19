@@ -67,7 +67,7 @@ function runJsonLines(command, args, { cwd, env, log, timeoutMs }) {
  * One developer turn. A new session is started with `sessionId`, an existing
  * one continued with `resume`.
  */
-export async function runClaude({ bin, cwd, prompt, sessionId, resume, model, settingsFile, sandboxProfile, sandboxParams = {}, systemPrompt, log, timeoutMs, env }) {
+export async function runClaude({ bin, cwd, prompt, sessionId, resume, model, settingsFile, sandboxProfile, sandboxParams = {}, addDirs = [], systemPrompt, log, timeoutMs, env }) {
   // Only our settings: the repository's .claude/settings.json (102 allows and
   // the main tree as a working directory) and the user's own would otherwise
   // be merged in, and the whitelist would mean little. No MCP servers either —
@@ -77,6 +77,10 @@ export async function runClaude({ bin, cwd, prompt, sessionId, resume, model, se
   if (resume) args.push('--resume', resume);
   else if (sessionId) args.push('--session-id', sessionId);
   if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
+  // Folders the session may work in besides its own: Claude Code refuses a
+  // command that writes outside them whatever the rules allow (the reviewer's
+  // copy of the base commit, probed 19.11.2026).
+  for (const dir of addDirs) args.push('--add-dir', dir);
   // The owner's model, which dropping their settings would drop with them.
   if (model) args.push('--model', model);
   // And under the OS sandbox (agent.sb, review.sb), so no command it runs can

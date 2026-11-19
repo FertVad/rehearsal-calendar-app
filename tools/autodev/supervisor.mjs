@@ -63,6 +63,10 @@ const HOME = os.homedir();
 const REVIEW_MODEL = process.env.AUTODEV_REVIEW_MODEL || 'claude-fable-5-2';
 // What review.sb keeps the reviewer from writing: every tree but its own.
 const LANDING_TREE = path.resolve(REPO, '..', 'reh_app-landing');
+// Where the reviewer builds the base commit to see a test red on it — the
+// one folder its settings let it write (Edit rule) and Claude Code lets it
+// work in (--add-dir).
+const REVIEW_SCRATCH = '/private/tmp/autodev-review';
 const E2E_APP = path.join(REPO, 'rehearsal-calendar-native/e2e/.build/Build/Products/Debug-iphonesimulator/Rehearsly.app');
 const MAX_CHECK_ATTEMPTS = 3;
 const MAX_AGENT_FAILURES = 3;
@@ -715,6 +719,7 @@ async function review(state, task, t) {
   if (!continuing) note(task, `ревью: круг ${no}`);
   t.reviewStarted = true;
   saveState(STATE, state);
+  fs.mkdirSync(REVIEW_SCRATCH, { recursive: true });
   const startedAt = Date.now();
   const run = await runClaude({
     bin: claudeBin(), cwd: REVIEW_TREE, prompt, env: CLAUDE_ENV, model: REVIEW_MODEL,
@@ -723,6 +728,7 @@ async function review(state, task, t) {
     settingsFile: path.join(HERE, 'claude-review-settings.json'),
     sandboxProfile: path.join(HERE, 'review.sb'),
     sandboxParams: { REPO, DEV_TREE: WORKTREE, LANDING: LANDING_TREE },
+    addDirs: [REVIEW_SCRATCH],
     log: path.join(LOGS, `${task.id}-review.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
