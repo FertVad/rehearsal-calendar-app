@@ -83,14 +83,14 @@ const COPY = {
     free: /free[^.]*no purchases/i,
   },
   ru: {
-    processors: /защищает ваши данные так же или не хуже/,
+    processors: /защищают их не хуже, чем обещает эта политика/,
     signIns: /время последнего входа/i,
-    inbox: /уведомления[^.]*входящи/i,
+    inbox: /Уведомления, отправленные вам[^.]*на экране «Уведомления»/,
     seen: /просмотрен/i,
     ipHash: /хеш вашего IP-адреса/i,
     hostingLogs: /Vercel[^.]*около часа/i,
     restoreHistory: /Neon[^.]*до 7 дней/i,
-    keepsImported: /Выключение[^.]*Автосинхронизаци[^.]*не удаляет/i,
+    keepsImported: /выключить переключатель «Автосинхронизация»[^.]*не удалится/,
     oldButton: 'Очистить импортированные',
     cardPromise: /данные (банковских )?карт|платёжн/i,
     free: /бесплат[^.]*покупок[^.]*нет/i,
@@ -102,24 +102,24 @@ const COPY = {
     seen: /marcad[oa]s? como vist[oa]s?/i,
     ipHash: /hash con clave de tu dirección IP/i,
     hostingLogs: /Vercel[^.]*alrededor de una hora/i,
-    restoreHistory: /Neon[^.]*hasta 7 días/i,
-    keepsImported: /Desactivar la Sincronización automática[^.]*no elimina/i,
+    restoreHistory: /Neon[^.]*un máximo de 7 días/i,
+    keepsImported: /Si desactivas la sincronización automática[^.]*no se borran/,
     oldButton: 'Borrar lo importado',
     cardPromise: /tarjeta|proveedor de pagos/i,
-    free: /gratuita[^.]*no (tiene|contiene) compras/i,
+    free: /gratuita[^.]*no ofrece compras/i,
   },
   de: {
     processors: /mindestens so gut/,
     signIns: /Zeitpunkt deiner letzten Anmeldung/i,
     inbox: /Mitteilungen[^.]*Posteingang/i,
     seen: /als gesehen markiert/i,
-    ipHash: /mit Schlüssel gebildeter Hash deiner IP-Adresse/i,
+    ipHash: /mit einem geheimen Schlüssel gebildeter Hash deiner IP-Adresse/i,
     hostingLogs: /Vercel[^.]*etwa eine Stunde/i,
     restoreHistory: /Neon[^.]*bis zu 7 Tage/i,
     keepsImported: /Wenn du Auto-Sync ausschaltest[^.]*nicht gelöscht/i,
     oldButton: 'Importierte löschen',
     cardPromise: /Kartendaten|Zahlungsdienstleister/i,
-    free: /kostenlos[^.]*keine Käufe/i,
+    free: /kostenlos[^.]*keine In-App-Käufe/i,
   },
 };
 
@@ -155,7 +155,8 @@ describe.each(LANGS)('privacy policy, %s', lang => {
   });
 
   test('says that switching Auto Sync off keeps what was imported', () => {
-    expect(text('privacy', lang)).toContain(calendarSync[lang].autoSync);
+    // Spanish writes the feature in lower case inside a sentence (its editor).
+    expect(text('privacy', lang).toLowerCase()).toContain(calendarSync[lang].autoSync.toLowerCase());
     expect(text('privacy', lang)).toMatch(copy.keepsImported);
   });
 
@@ -178,7 +179,9 @@ const SIGN_IN = {
   },
   ru: {
     heading: /<h2>Данные Google и Apple при входе<\/h2>/,
-    limitedUse: /соответствуют[^.]*Limited Use/,
+    // Not «передача Rehearsly информации»: Rehearsly does not decline, and it
+    // read as a dative, the transfer *to* Rehearsly (the ru editor).
+    limitedUse: /Rehearsly использует и передаёт информацию[^.]*Limited Use/,
     says: [/имя и фамилия/i, /адрес почты/i, /подтвержд/i, /идентификатор/i, /фото профиля/i,
       /Gmail/, /Google Календар/, /Google Контакт/, /Neon/, /не продаём/i, /реклам/i, /обучени/i,
       /Удалить аккаунт/, /настройках аккаунта Google/, /privaterelay\.appleid\.com/, /Скрыть e-mail/],
@@ -187,8 +190,8 @@ const SIGN_IN = {
     heading: /<h2>Datos de Google y Apple al iniciar sesión<\/h2>/,
     limitedUse: /cumplen[^.]*Limited Use/,
     says: [/nombre y apellido/i, /dirección de correo/i, /verificad/i, /identificador/i, /foto de perfil/i,
-      /Gmail/, /Google Calendar/, /Google Contacts/, /Neon/, /no los vendemos/i, /publicidad/i, /entrenar/i,
-      /Eliminar cuenta/, /ajustes de tu cuenta de Google/, /privaterelay\.appleid\.com/, /Ocultar mi correo/],
+      /Gmail/, /Google Calendar/, /Contactos de Google/, /Neon/, /no los vendemos/i, /publicidad/i, /entrenar/i,
+      /Eliminar cuenta/, /configuración de tu cuenta de Google/, /privaterelay\.appleid\.com/, /Ocultar mi correo/],
   },
   de: {
     heading: /<h2>Google- und Apple-Daten bei der Anmeldung<\/h2>/,
@@ -218,17 +221,18 @@ describe.each(LANGS)('Google and Apple sign-in data, %s', lang => {
 });
 
 // T-269 review. A person's name goes into the notifications of those who run a
-// project (member joined, new administrator, rehearsal seen). The row belongs to
-// its recipient (native_notifications.user_id), so it outlives the person named,
-// and it is delivered through Expo and APNs. Apple's token comes at every sign-in;
+// project (member joined, new administrator, rehearsal seen), delivered through
+// Expo and APNs. The owner's decision (19.11): deleting the account deletes those
+// notifications too (T-278, released with this policy); only a push already shown
+// on someone else's phone is out of reach. Apple's token comes at every sign-in;
 // only the name comes once.
 const AFTER_DELETION = {
   en: {
     keeping: /<h2>How long we keep it<\/h2>/,
-    stays: [/join a project, become its administrator or mark a rehearsal as seen/,
-      /notification with your name/, /deleting your account does not remove it/,
-      /no automatic time limit/, /deleted from the inbox or the account it was sent to is deleted/],
-    removal: /except your name in notifications already sent/,
+    deletes: /Deleting your account also removes the notifications with your name/,
+    pushStays: /push notification already shown on someone else’s phone stays on that phone/,
+    exception: [/One thing stays with other people/, /except your name in notifications/,
+      /deleting your account does not remove it/],
     delivery: /Expo Push Service[^.]*APNs[^.]*show your name/,
     promise: 'Delete everything',
     tokenExtras: /do not use or keep them/,
@@ -238,36 +242,33 @@ const AFTER_DELETION = {
   },
   ru: {
     keeping: /<h2>Сколько храним<\/h2>/,
-    stays: [/вступаете в проект, становитесь его администратором или отмечаете репетицию как просмотренную/,
-      /уведомление с вашим именем/, /удаление вашего аккаунта его не затрагивает/,
-      /Автоматического срока нет/, /не удалят из входящих или пока не будет удалён аккаунт, на который оно пришло/],
-    removal: /кроме вашего имени в уже отправленных уведомлениях/,
+    deletes: /Удаляются и уведомления с вашим именем, которые получили другие люди/,
+    pushStays: /Остаются только push-уведомления, которые уже показаны на чужих телефонах/,
+    exception: [/Одно остаётся у других людей/, /кроме вашего имени/, /удаление вашего аккаунта его не затрагивает/],
     delivery: /Expo Push Service[^.]*APNs[^.]*вашим именем/,
     promise: 'Удалить всё',
     tokenExtras: /мы их не используем и не храним/,
     appleEvery: /При каждом входе Apple передаёт нам идентификатор аккаунта/,
-    appleOnce: /Имя приходит один раз, при первом входе, и только если вы его разрешили/,
+    appleOnce: /Имя приходит один раз, при первом входе, и только если вы им поделились/,
     appleOld: /имя, если вы его разрешили, — только при первом входе/,
   },
   es: {
-    keeping: /<h2>Cuánto tiempo los conservamos<\/h2>/,
-    stays: [/te unes a un proyecto, pasas a administrarlo o marcas un ensayo como visto/,
-      /notificación con tu nombre/, /eliminar tu cuenta no la borra/,
-      /No hay un plazo automático/, /se borra de la bandeja o se elimina la cuenta que la recibió/],
-    removal: /salvo tu nombre en las notificaciones ya enviadas/,
+    keeping: /<h2>Cuánto tiempo conservamos tus datos<\/h2>/,
+    deletes: /Al eliminar tu cuenta, también borramos esas notificaciones de su bandeja de entrada/,
+    pushStays: /notificación push que ya llegó al teléfono de otra persona: permanece en ese teléfono/,
+    exception: [/Una cosa permanece en manos de otras personas/, /salvo tu nombre/, /eliminar tu cuenta no la borra/],
     delivery: /Expo Push Service[^.]*APNs[^.]*tu nombre/,
     promise: 'Eliminarlo todo',
     tokenExtras: /no los usamos ni los guardamos/,
     appleEvery: /Cada vez que inicias sesión, Apple nos da el identificador de tu cuenta/,
-    appleOnce: /Tu nombre llega una sola vez, la primera vez que inicias sesión, y solo si lo permites/,
+    appleOnce: /Tu nombre solo llega la primera vez que inicias sesión, y únicamente si lo permites/,
     appleOld: /tu nombre si lo permites, solo la primera vez/,
   },
   de: {
     keeping: /<h2>Wie lange wir sie speichern<\/h2>/,
-    stays: [/einem Projekt beitrittst, zu seiner Verwaltung ernannt wirst oder eine Probe als gesehen markierst/,
-      /Mitteilung mit deinem Namen/, /das Löschen deines Kontos entfernt sie nicht/,
-      /Eine automatische Frist gibt es nicht/, /aus dem Posteingang gelöscht oder das Konto gelöscht wird, an das sie ging/],
-    removal: /außer deinem Namen in bereits versendeten Mitteilungen/,
+    deletes: /Löschst du dein Konto, entfernen wir diese Mitteilungen auch aus deren Posteingang/,
+    pushStays: /Push-Mitteilungen, die auf deren Geräten schon angezeigt wurden, bleiben allerdings dort/,
+    exception: [/Eines bleibt bei anderen Personen/, /außer deinem Namen/, /das Löschen deines Kontos entfernt sie nicht/],
     delivery: /Expo Push Service[^.]*APNs[^.]*deinem Namen/,
     promise: 'Alles löschen',
     tokenExtras: /beides nutzen und speichern wir nicht/,
@@ -281,14 +282,16 @@ describe.each(LANGS)('what the policy promises about names and Apple, %s', lang 
   const copy = AFTER_DELETION[lang];
   const signIn = () => part(lang, SIGN_IN[lang].heading);
 
-  test('says the name stays in notifications already sent, and for how long', () => {
+  test('deleting the account deletes the notifications that carry the name; only a shown push stays', () => {
     const body = part(lang, copy.keeping);
-    for (const claim of copy.stays) expect(body).toMatch(claim);
+    expect(body).toMatch(copy.deletes);
+    expect(body).toMatch(copy.pushStays);
   });
 
-  test('promises no complete removal the server does not perform', () => {
-    expect(signIn()).toMatch(copy.removal);
-    expect(text('privacy', lang)).not.toContain(copy.promise);
+  test('keeps no exception for the name, and promises nothing wider than deletion does', () => {
+    const page = text('privacy', lang);
+    for (const exception of copy.exception) expect(page).not.toMatch(exception);
+    expect(page).not.toContain(copy.promise);
   });
 
   test('names the delivery services that carry the name', () => {
@@ -304,6 +307,156 @@ describe.each(LANGS)('what the policy promises about names and Apple, %s', lang 
     expect(body).toMatch(copy.appleEvery);
     expect(body).toMatch(copy.appleOnce);
     expect(body).not.toMatch(copy.appleOld);
+  });
+});
+
+// The screens the policy sends people to, by the names the app gives them: the
+// German policy sent them to «Profil → Benachrichtigungen», a row the profile
+// does not have (it is «Mitteilungen»).
+describe.each(LANGS)('the screens are named as the app names them, %s', lang => {
+  test('profile rows and the calendar screen', () => {
+    const page = text('privacy', lang);
+    const { title, notifications, deleteAccount, editProfile } = profile[lang];
+    for (const row of [calendarSync[lang].title, notifications, deleteAccount, editProfile]) {
+      expect(page).toContain(`${title} → ${row}`);
+    }
+  });
+});
+
+// T-270's button, named by the native editors. The strings stand here until
+// T-270 puts them in calendarSync.ts; then this test reads them from there.
+const IMPORT_BUTTON = {
+  en: 'Remove Imported Busy Times',
+  ru: 'Удалить импортированную занятость',
+  es: 'Eliminar horas importadas',
+  de: 'Alle importierten Zeiten löschen',
+};
+const IMPORT_HEADING = {
+  en: /<h3>About calendar import<\/h3>/,
+  ru: /<h3>Про импорт календаря<\/h3>/,
+  es: /<h3>Sobre la importación de calendario<\/h3>/,
+  de: /<h3>Zum Kalenderimport<\/h3>/,
+};
+const RIGHTS = {
+  en: /<h2>Your rights<\/h2>/,
+  ru: /<h2>Ваши права<\/h2>/,
+  es: /<h2>Tus derechos<\/h2>/,
+  de: /<h2>Deine Rechte<\/h2>/,
+};
+
+describe.each(LANGS)('the button that removes imported busy times, %s', lang => {
+  test('is named in the calendar import paragraph', () => {
+    expect(part(lang, IMPORT_HEADING[lang])).toContain(IMPORT_BUTTON[lang]);
+  });
+
+  test('is a right of its own, on the calendar screen', () => {
+    const rights = part(lang, RIGHTS[lang]);
+    expect(rights).toContain(IMPORT_BUTTON[lang]);
+    expect(rights).toContain(`${profile[lang].title} → ${calendarSync[lang].title} →`);
+  });
+});
+
+// The owner's decision (19.11): material changes are emailed to the account's
+// address before they take effect, so Resend's line names that purpose too.
+const CHANGES = {
+  en: {
+    email: /Before a material change takes effect, we will also email you about it at your account’s email address/,
+    resend: /Resend[^.;]*notices of material changes/,
+    inApp: /notify you in the app/,
+  },
+  ru: {
+    email: /О существенных изменениях мы заранее напишем на адрес почты вашего аккаунта — до того, как они вступят в силу/,
+    resend: /Resend[^.;]*писем о существенных изменениях/,
+    inApp: /сообщим об этом в приложении/,
+  },
+  es: {
+    email: /te avisaremos además por correo, a la dirección de tu cuenta, antes de que entren en vigor/,
+    resend: /Resend[^.;]*avisos de cambios sustanciales/,
+    inApp: /te avisaremos en la aplicación/,
+  },
+  de: {
+    email: /Über wesentliche Änderungen informieren wir dich per E-Mail an die Adresse deines Kontos, bevor sie in Kraft treten/,
+    resend: /Resend[^.;]*wesentliche Änderungen/,
+    inApp: /weisen in der App darauf hin/,
+  },
+};
+
+describe.each(LANGS)('changes to the policy, %s', lang => {
+  test('are emailed before they take effect, and Resend is named as sending them', () => {
+    const page = text('privacy', lang);
+    expect(page).toMatch(CHANGES[lang].email);
+    expect(page).toMatch(CHANGES[lang].resend);
+    expect(page).not.toMatch(CHANGES[lang].inApp);
+  });
+});
+
+// Checked against the code and Apple's and Google's help (E8–E14): the IP hash
+// is written on every /api/auth request (app.js), not only at sign-in; two
+// per-minute counters are tied to the account (native_invite_account_rate_limits,
+// native_member_availability_rate_limits); the seen marks are shown to everyone
+// on the rehearsal (rehearsals.js, viewerOf); Google and Apple send us data and
+// receive none; Apple's revocation reaches no handler on the server; Google's
+// page is now linkedapps; Hide My Email has two domains.
+const FACTS = {
+  en: {
+    ipEveryRequest: /other account requests from the app/,
+    counters: /Two request counters linked to your account/,
+    seenByRehearsal: /others on the same rehearsal/,
+    fromUs: /each of these providers that receives your data from us/,
+    appleKeeps: /As with Google, this does not delete what we already hold/,
+  },
+  ru: {
+    ipEveryRequest: /других запросах к аккаунту/,
+    counters: /Два счётчика запросов, привязанные к аккаунту/,
+    seenByRehearsal: /остальным участникам репетиции/,
+    fromUs: /те из этих сервисов, которые получают ваши данные от нас/,
+    appleKeeps: /Как и в случае с Google, это не удаляет то, что уже хранится у нас/,
+  },
+  es: {
+    ipEveryRequest: /otras gestiones de tu cuenta/,
+    counters: /Dos contadores de peticiones vinculados a tu cuenta/,
+    seenByRehearsal: /a los demás participantes del ensayo/,
+    fromUs: /cada proveedor al que enviamos tus datos/,
+    appleKeeps: /Igual que con Google, eso no borra lo que ya tenemos/,
+  },
+  de: {
+    ipEveryRequest: /anderen Anfragen zu deinem Konto/,
+    counters: /Zwei Anfragezähler, die mit deinem Konto verknüpft sind/,
+    seenByRehearsal: /für die Probe eingeteilt sind/,
+    fromUs: /Jeder dieser Dienste, der deine Daten von uns erhält/,
+    appleKeeps: /Wie bei Google löscht das nicht, was wir bereits gespeichert haben/,
+  },
+};
+
+describe.each(LANGS)('what was checked against the code and the providers’ help, %s', lang => {
+  const facts = FACTS[lang];
+
+  test('the IP hash on every account request, and the two counters tied to the account', () => {
+    const page = text('privacy', lang);
+    expect(page).toMatch(facts.ipEveryRequest);
+    expect(page).toMatch(facts.counters);
+    expect(page).not.toContain('Smart Planner');
+  });
+
+  test('the seen marks are shown to the others on the rehearsal too', () => {
+    expect(text('privacy', lang)).toMatch(facts.seenByRehearsal);
+  });
+
+  test('the equal-protection promise covers the providers that receive data from us', () => {
+    expect(text('privacy', lang)).toMatch(facts.fromUs);
+  });
+
+  test('leaving Sign in with Apple deletes nothing; Google’s page is linked apps', () => {
+    expect(part(lang, SIGN_IN[lang].heading)).toMatch(facts.appleKeeps);
+    const html = markup('privacy', lang);
+    expect(html).toContain('href="https://myaccount.google.com/linkedapps"');
+    expect(html).not.toContain('myaccount.google.com/connections');
+  });
+
+  test('Hide My Email has both of Apple’s domains', () => {
+    const body = part(lang, SIGN_IN[lang].heading);
+    expect(body).toContain('@privaterelay.appleid.com');
+    expect(body).toContain('@private.icloud.com');
   });
 });
 

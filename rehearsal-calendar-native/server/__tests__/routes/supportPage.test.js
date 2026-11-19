@@ -112,17 +112,30 @@ test.each(LANGS)('%s: the profile’s rows are named as the app names them', lan
 // notification settings on iPhone"): Settings → Notifications → the app. Since
 // iOS 18 an app is no longer a row of Settings itself but sits under Apps, so
 // "Settings → Rehearsly" leads nowhere; the Notifications list holds on every iOS.
+// Spanish names the Settings app by description: it is «Ajustes» in Spain and
+// «Configuración» in Latin America (T-256; the es editor, T-269).
 const IOS = {
-  en: { settings: 'Settings', notifications: 'Notifications' },
-  ru: { settings: 'Настройки', notifications: 'Уведомления' },
-  es: { settings: 'Ajustes', notifications: 'Notificaciones' },
-  de: { settings: 'Einstellungen', notifications: 'Mitteilungen' },
+  en: { settings: 'Settings', path: 'Settings → Notifications → Rehearsly' },
+  ru: { settings: 'Настройки', path: 'Настройки → Уведомления → Rehearsly' },
+  es: { settings: 'Ajustes', path: 'la configuración del teléfono: Notificaciones → Rehearsly' },
+  de: { settings: 'Einstellungen', path: 'Einstellungen → Mitteilungen → Rehearsly' },
 };
 test.each(LANGS)('%s: iOS’s notification settings are found where iOS has them', lang => {
-  const { settings, notifications } = IOS[lang];
+  const { settings, path: where } = IOS[lang];
   const text = section(lang);
-  expect(text).toContain(`${settings} → ${notifications} → Rehearsly`);
+  expect(text).toContain(where);
   expect(text).not.toContain(`${settings} → Rehearsly`);
+});
+
+// The owner's rule (17.11): the texts do not say who made the app.
+const AUTHOR = {
+  en: 'built by one person',
+  ru: 'делает один человек',
+  es: 'la hace una sola persona',
+  de: 'von einer Person gebaut',
+};
+test.each(LANGS)('%s: does not say who makes the app', lang => {
+  expect(section(lang)).not.toContain(AUTHOR[lang]);
 });
 
 test.each(LANGS)('%s: a fresh invite comes from the project’s own button', lang => {

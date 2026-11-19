@@ -1,0 +1,22 @@
+T-269, round 2 (native editors' reports, the owner's decisions of 19.11).
+privacyPage.test.js, supportPage.test.js, privacyProcessors.test.js on the pages of 25e2d1d,
+tests already updated:
+
+Tests: 62 failed, 80 passed, 142 total
+
+Failed:
+  privacyProcessors: the update date (en, ru, es, de)
+  supportPage: es iOS notification path; "does not say who makes the app" (en, ru, es, de)
+  privacy policy, ru: providers' protection; notification inbox named as the screen; Auto Sync paragraph
+  privacy policy, es: Neon "un máximo de 7 días"; Auto Sync paragraph; "no ofrece compras"
+  privacy policy, de: IP hash wording; "keine In-App-Käufe"
+  Google and Apple sign-in data, ru: Limited Use translation (dative reading)
+  Google and Apple sign-in data, es: "Contactos de Google", "configuración de tu cuenta de Google"
+  names and Apple (en, ru, es, de): deleting the account deletes the notifications with the name;
+    no exception paragraph; ru and es: the name sent once, in the editors' words
+  (a) screens named as the app names them, de: "Profil → Mitteilungen"
+  (b) T-270's button in the calendar import paragraph and in the rights (en, ru, es, de)
+  (c) changes emailed before they take effect, Resend names that purpose (en, ru, es, de)
+  (d) E8-E14 (en, ru, es, de): IP hash on every account request; two counters tied to the
+    account; seen marks shown to the others on the rehearsal; protection for the providers that
+    receive data from us; leaving Sign in with Apple deletes nothing; linkedapps; both Apple domains
