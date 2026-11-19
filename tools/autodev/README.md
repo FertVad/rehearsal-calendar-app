@@ -166,6 +166,16 @@ never fires twice.
   the developer's tree or the landing's — only its own tree and temporary
   folders. Paths go to the sandbox resolved: a rule through a symbolic link
   matches nothing (`agents.test.mjs` caught that on `/var/folders`).
+- To see a test red on the base commit it builds a copy in
+  `/private/tmp/autodev-review` (`git archive | tar -x`, `git show > …`,
+  `ln -s node_modules`): that folder is its `--add-dir` and the one place an
+  `Edit(…)` rule lets it write. There is no bare `Edit` in its deny list on
+  purpose — a deny outranks every allow, and dontAsk already refuses Edit
+  anywhere not allowed. Rules for paths and suffixes end in a bare `*`: one
+  ending in `:*` takes whole words only, so `run test:*` let no `run
+  test:unit` through and `…/autodev-review/:*` no folder inside it. All of it
+  probed with a real Claude Code run on 19.11.2026, after the first two Fable
+  reviews were refused exactly these.
 - **One reviewer session per task** (`reviewSession`), as the developer has
   one per step: round two and a resumed task go on in it. A session it has not
   got — a task Codex reviewed, a session lost — starts anew and is given the
