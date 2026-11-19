@@ -728,7 +728,10 @@ async function review(state, task, t) {
     settingsFile: path.join(HERE, 'claude-review-settings.json'),
     sandboxProfile: path.join(HERE, 'review.sb'),
     sandboxParams: { REPO, DEV_TREE: WORKTREE, LANDING: LANDING_TREE },
-    addDirs: [REVIEW_SCRATCH],
+    // Its scratch folder to work in, and the folders it is pointed at to read:
+    // the earlier rounds' answers and the notes a task's evidence is copied
+    // from. review.sb still keeps it from writing anything under REPO.
+    addDirs: [REVIEW_SCRATCH, path.join(DIR, 'notes'), REVIEWS],
     log: path.join(LOGS, `${task.id}-review.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
