@@ -69,7 +69,8 @@ const WORLDS = {
       ['Poppy', 'Edwards'], ['Alfie', 'Morgan'], ['Freya', 'Cooper'], ['Jack', 'Phillips'], ['Imogen', 'Ward'], ['Archie', 'Hall']],
     musicians: [['Rosie', 'Evans'], ['Callum', 'Baker']],
     crew: [['Eleanor', 'Price']],
-    play: ['A Midsummer Night’s Dream', 'Summer production'],
+    // Short: frame 7's header has room for about twenty letters.
+    play: ['The Tempest', 'Summer production'],
     concert: ['Winter Concert', 'Town hall, December'],
     clip: ['Music Video “Harbour Lights”', 'Two shoot days'],
     titles: {
@@ -139,23 +140,39 @@ const WORLDS = {
 /** The four levels by how many of the play's twelve are busy: none, ≤25 %, ≤50 %, more. */
 const LEVEL = { perfect: 0, good: 2, ok: 5, bad: 8 };
 
+/** The Planner's day ends at 23:00; today's three busy levels take an hour each from the next full hour. */
+const DAY_END = 23;
+/**
+ * The last hour on the page's clock at which the world can be seeded: at 19:xx
+ * the levels are 20–21, 21–22, 22–23; from 20:00 there is no room for the
+ * third, and frame 1 would lack a level while the run passed green.
+ */
+export const LAST_HOUR = DAY_END - 3 - 1;
+
+/** The hour now on `locale`'s page's clock (its world's zone). */
+export function storeHour(locale, now = new Date()) {
+  const world = WORLDS[locale];
+  if (!world) throw new Error(`No store world for ${locale}: ${Object.keys(WORLDS).join(', ')}`);
+  return Number(new Intl.DateTimeFormat('en-US', { timeZone: world.zone, hour: 'numeric', hourCycle: 'h23' }).format(now));
+}
+
 /**
  * Which hours of day `day` how many of the play's actors are busy:
  * [{ from, to, busy }] in minutes from midnight. From the day after tomorrow:
  * the morning taken by day jobs, the afternoon freeing up, the evening between.
- * Today from the next full hour on, and tomorrow from 9:00, the levels one
- * window each: the Planner drops the hours gone, and its first card — today's,
- * or tomorrow's late in the evening — must show all four on the first screen.
- * `hourNow`: the hour on the world's clock.
+ * Today from the next full hour on (9:00 at the earliest), and tomorrow from
+ * 9:00, the levels one window each: the Planner drops the hours gone, and its
+ * first card — today's — must show all four on the first screen. `hourNow`:
+ * the hour on the world's clock, LAST_HOUR at the latest (seedStore refuses after).
  */
-function busyBlocks(day, hourNow) {
+export function busyBlocks(day, hourNow) {
   const h = (hours) => hours * 60;
   // The first card lists its windows best first, and on the phone's first
   // screen there is room for six or so: one window a level, the rest free.
   if (day === 0) {
+    if (hourNow > LAST_HOUR) throw new Error(`No room for today's levels after ${LAST_HOUR}:59`);
     const start = Math.max(9, hourNow + 1);
-    return ['bad', 'ok', 'good'].map((level, i) => ({ from: h(start + i), to: h(start + i + 1), busy: LEVEL[level] }))
-      .filter((block) => block.to <= h(23));
+    return ['bad', 'ok', 'good'].map((level, i) => ({ from: h(start + i), to: h(start + i + 1), busy: LEVEL[level] }));
   }
   if (day === 1) {
     return [
@@ -229,7 +246,12 @@ export async function seedStore({ client, apiUrl, locale, now = new Date() }) {
     return `${localDate(day)}T${pad(hours)}:${pad(minutes)}:00${offset}`;
   };
   const at = (day, minutes) => localInstant(day, Math.floor(minutes / 60), minutes % 60);
-  const hourNow = Number(new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: 'numeric', hourCycle: 'h23' }).format(now));
+  const hourNow = storeHour(locale, now);
+  if (hourNow > LAST_HOUR) {
+    const clock = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(now);
+    throw new Error(`It is ${clock} in ${timezone}: the Planner's first card has no room left for all four levels `
+      + `after ${LAST_HOUR}:59 there. Shoot ${locale} before 20:00 its time (e2e/store/README.md).`);
+  }
   const hash = await bcrypt.hash(PASSWORD, 10);
   const people = { director: world.director };
   world.cast.forEach((name, i) => { people[`actor${i}`] = name; });

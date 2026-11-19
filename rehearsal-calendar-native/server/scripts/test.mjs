@@ -74,7 +74,7 @@ try {
       'e2e/__tests__/metro-watch.test.mjs', 'e2e/__tests__/junit.test.mjs', 'e2e/__tests__/midnight.test.mjs',
       'e2e/__tests__/native.test.mjs', 'e2e/__tests__/ink.test.mjs'], appDirectory);
     console.log('[tests] Running the App Store pictures\' composer (T-274).');
-    runNode(['--test', 'e2e/__tests__/store-compose.test.mjs'], appDirectory);
+    runNode(['--test', 'e2e/__tests__/store-compose.test.mjs', 'e2e/__tests__/store-seed.test.mjs'], appDirectory);
     console.log('[tests] Running the prebuilt frameworks\' dSYMs regressions (T-237).');
     runNode(['--test', 'plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs'], appDirectory);
   }

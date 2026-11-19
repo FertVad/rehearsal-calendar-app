@@ -16,9 +16,17 @@ node e2e/store/compose.mjs            # only the pictures again, from the last s
 node e2e/store/compose.mjs --preview=../audit/evidence/<task>   # and a small preview of each set
 ```
 
-Run them in the day of the page's country (9:00–21:00 there: New York for
-en-US, London, Moscow, Madrid, Berlin): the Planner's first card is today's,
-and late at night it has no hours left.
+Shoot a page before 20:00 in its country (New York for en-US, London, Moscow,
+Madrid, Berlin). The Planner's first card is today's, and its three busy levels
+take an hour each from the next full hour to 23:00: from 20:00 there is no room
+for the third. The seed refuses then, and `shoot.mjs` refuses up front any page
+that would be seeded that late, counting about seven minutes a page before it.
+
+All five pages in one command (en-US, en-GB, ru, es-ES, de-DE, in that order)
+need New York and Moscow both before 20:00: start between midnight and about
+11:30 in New York in winter, 12:30 in summer (Moscow is seeded third, about 15
+minutes in, and its 20:00 is 17:00 UTC). In UTC that is about 05:00–16:30 in
+winter and 04:00–16:30 in summer. Outside it, shoot the pages one by one.
 
 Then look at every picture before it is uploaded.
 
@@ -69,3 +77,11 @@ play's page with its link and code — 8. the profile: language and time zone.
 Known: frame 7 taps "Show Code", because the page reads the code from the
 wrong field of the server's answer and never shows it up front (reported with
 T-274). Frame 4 shows the simulator's one calendar, "Calendar".
+
+Known: on the en-GB page the dates are in the American order ("Friday,
+November 20, 2026" in frames 3 and 5): the app formats every `en` date as
+en-US (`src/shared/utils/locale.ts`), whatever the phone's region. The tool
+cannot change that; it is the app's, for a task of its own.
+
+Known: a play's name is the header of frame 7 and is cut after about twenty
+letters, so the plays in `seed.mjs` are short ones.
