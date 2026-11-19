@@ -1,9 +1,9 @@
 // The wordings below are the ones the installed CLIs produce: Claude Code
-// 2.1.74 (cli.js: XP6/Qj6) and Codex 0.160.1 (UsageLimitExceeded).
+// 2.1.74 (cli.js: XP6/Qj6) and Codex 0.160.1 (UsageLimitExceeded), the reviewer until 19.11.2026.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  limitFromText, limitFromClaudeEvents, limitFromCodexEvents, waitFor, waitOver, FALLBACK_MS, MARGIN_MS, MEMORY,
+  limitFromText, limitFromClaudeEvents, waitFor, waitOver, FALLBACK_MS, MARGIN_MS, MEMORY,
 } from '../lib/limits.mjs';
 
 // 8 October 2026, 14:20 local time.
@@ -53,38 +53,20 @@ test('Claude: an ordinary failure is not a limit', () => {
   assert.deepEqual(limitFromText('Context limit reached · /compact or /clear to continue', NOW), { limited: false });
 });
 
-test('Codex: try again at a time', () => {
+test('text: try again at a time', () => {
   const text = "You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 5:04 PM.";
   assert.equal(limitFromText(text, NOW).at.getTime(), local(2026, 9, 8, 17, 4));
 });
 
-test('Codex: try again at a dated time', () => {
+test('text: try again at a dated time', () => {
   const text = "You've hit your usage limit. Try again at Oct 9th, 2026 8:15 AM.";
   assert.equal(limitFromText(text, NOW).at.getTime(), local(2026, 9, 9, 8, 15));
 });
 
-test('Codex: try again in a duration', () => {
+test('text: try again in a duration', () => {
   assert.equal(limitFromText("You've hit your usage limit. Try again in 2 hours 13 minutes.", NOW).at.getTime(),
     NOW.getTime() + (2 * 60 + 13) * 60 * 1000);
   assert.equal(limitFromText('Rate limit reached. Please try again in 20s.', NOW).at.getTime(), NOW.getTime() + 20000);
-});
-
-test('Codex: resets_at on the failure is preferred', () => {
-  const events = [
-    { type: 'thread.started', thread_id: 't1' },
-    { type: 'turn.failed', error: { message: "You've hit your usage limit. Try again at 5:04 PM.", resets_at: 1791118800 } },
-  ];
-  assert.equal(limitFromCodexEvents(events, NOW).at.getTime(), 1791118800 * 1000);
-});
-
-test('Codex: a limit with no readable time is still a limit', () => {
-  const found = limitFromCodexEvents([{ type: 'error', message: "You've hit your usage limit." }], NOW);
-  assert.deepEqual(found, { limited: true, known: false });
-  assert.equal(waitFor(found, NOW), FALLBACK_MS);
-});
-
-test('Codex: other failures are not limits', () => {
-  assert.deepEqual(limitFromCodexEvents([{ type: 'turn.failed', error: { message: 'stream disconnected' } }], NOW), { limited: false });
 });
 
 test('waiting: until the reset plus a margin, never negative', () => {
@@ -106,7 +88,7 @@ test('a wait for memory ends when the pressure is normal, not at its hour', () =
 
 test('a limit or an e2e machine waits for its hour whatever the memory', () => {
   const now = NOW.getTime();
-  for (const waitingFor of ['Claude', 'Codex', 'e2e']) {
+  for (const waitingFor of ['Claude', 'Claude (ревьюер)', 'e2e']) {
     const wait = { waitUntil: now + 60000, waitingFor };
     assert.equal(waitOver(wait, now, () => 1), false, waitingFor);
     assert.equal(waitOver(wait, now + 60000, () => 1), true, waitingFor);

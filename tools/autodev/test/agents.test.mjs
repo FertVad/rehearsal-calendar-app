@@ -8,10 +8,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runClaude, runCodex, stopAgents, REVIEW_PERMISSIONS } from '../lib/agents.mjs';
+import { runClaude, stopAgents } from '../lib/agents.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROFILE = path.join(HERE, '..', 'agent.sb');
+const REVIEW_PROFILE = path.join(HERE, '..', 'review.sb');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-agents-'));
 const env = { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: os.homedir() };
 
@@ -26,11 +27,6 @@ const claude = stub('claude', `
 const out = (e) => console.log(JSON.stringify(e));
 out({ type: 'system', subtype: 'init', session_id: 's1' });
 out({ type: 'result', is_error: false, session_id: 's1', result: JSON.stringify(process.argv.slice(2)) + '\\nRESULT: DONE' });`);
-
-const codex = stub('codex', `
-const args = process.argv.slice(2);
-console.log(JSON.stringify({ type: 'thread.started', thread_id: 't1' }));
-require('fs').writeFileSync(args[args.indexOf('--output-last-message') + 1], JSON.stringify(args));`);
 
 test('the developer runs under the OS sandbox, with only our settings and no MCP', async () => {
   const run = await runClaude({ bin: claude, cwd: dir, prompt: 'p', sessionId: 's1', settingsFile: path.join(dir, 's.json'),
@@ -106,22 +102,53 @@ test('the sandbox profile keeps a secret\'s contents from any command, and leave
   assert.equal(spawnSync('/usr/bin/sandbox-exec', ['-f', PROFILE, '-D', `HOME=${os.homedir()}`, '/bin/test', '-e', secret]).status, 0);
 });
 
-test('the reviewer gets the permission profile and nothing about its model', async () => {
-  const run = await runCodex({ bin: codex, cwd: dir, prompt: 'p', lastMessageFile: path.join(dir, 'last.md'), log: path.join(dir, 'x.jsonl'), env });
-  const args = JSON.parse(run.text);
-  assert.equal(run.threadId, 't1');
-  assert.ok(args.includes('default_permissions="autodev_review"'));
-  const overrides = args.filter((_, i) => args[i - 1] === '-c' || args[i - 1] === '--config');
-  assert.ok(overrides.every((v) => /^(default_permissions|permissions\.)/.test(v)), overrides.join(' | '));
-  assert.ok(!args.some((a) => ['-m', '--model', '--oss', '-p', '--profile'].includes(a)));
-  assert.ok(!args.some((a) => /dangerously|workspace-write|danger-full-access/.test(a)));
+test('the reviewer runs on its own model, under its own sandbox, and writes only its own tree', async () => {
+  // Stand-ins for the trees review.sb names, and the review tree it runs in.
+  const trees = Object.fromEntries(['REPO', 'DEV_TREE', 'LANDING', 'REVIEW'].map((name) => {
+    const tree = path.join(dir, `tree-${name}`);
+    fs.mkdirSync(tree, { recursive: true });
+    return [name, tree];
+  }));
+  const writer = stub('claude-writer', `
+const fs = require('fs');
+const wrote = {};
+for (const [name, tree] of Object.entries(${JSON.stringify(trees)})) {
+  try { fs.writeFileSync(tree + '/probe.txt', 'x'); wrote[name] = true; } catch { wrote[name] = false; }
+}
+console.log(JSON.stringify({ type: 'result', is_error: false, session_id: 'r1',
+  result: JSON.stringify({ args: process.argv.slice(2), wrote }) + '\\nVERDICT: ACCEPT' }));`);
+  const run = await runClaude({ bin: writer, cwd: trees.REVIEW, prompt: 'p', sessionId: 'r1', model: 'claude-fable-5-2',
+    settingsFile: path.join(HERE, '..', 'claude-review-settings.json'), sandboxProfile: REVIEW_PROFILE,
+    sandboxParams: { REPO: trees.REPO, DEV_TREE: trees.DEV_TREE, LANDING: trees.LANDING },
+    log: path.join(dir, 'r1.jsonl'), env });
+  const { args, wrote } = JSON.parse(run.text.split('\n')[0]);
+  assert.equal(run.failed, false);
+  assert.deepEqual(args.slice(args.indexOf('--model'), args.indexOf('--model') + 2), ['--model', 'claude-fable-5-2']);
+  assert.deepEqual(args.slice(args.indexOf('--permission-mode'), args.indexOf('--permission-mode') + 2), ['--permission-mode', 'dontAsk']);
+  assert.ok(!args.some((a) => /skip-permissions|bypassPermissions/.test(a)));
+  assert.deepEqual(wrote, { REPO: false, DEV_TREE: false, LANDING: false, REVIEW: true });
 });
 
-test('the reviewer\'s profile denies the secrets', () => {
-  const profile = REVIEW_PERMISSIONS[REVIEW_PERMISSIONS.length - 1];
-  for (const denied of ['"~/**/.env"="deny"', '"~/.ssh"="deny"', '"~/.aws"="deny"', '"~/.appstoreconnect"="deny"', '"~/.config/gh"="deny"']) {
-    assert.ok(profile.includes(denied), denied);
+test('the reviewer\'s tools cannot change a file, a branch or production', () => {
+  const { allow, deny } = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'claude-review-settings.json'), 'utf8')).permissions;
+  for (const rule of ['Edit', 'NotebookEdit', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git checkout:*)', 'Bash(git reset:*)',
+    'Bash(git branch:*)', 'Bash(git update-ref:*)', 'Bash(sed -i:*)', 'Bash(npm run migrate:*)', 'Bash(vercel:*)', 'Bash(neonctl:*)',
+    'Read(**/.env)', 'Agent', 'Workflow', 'SendMessage']) {
+    assert.ok(deny.includes(rule), rule);
   }
+  // Writing only into temporary files; no wildcard that would let git or npm do anything.
+  assert.deepEqual(allow.filter((rule) => /^(Edit|Write|NotebookEdit)/.test(rule)), ['Write(//private/tmp/**)']);
+  assert.ok(!allow.some((rule) => ['Bash(git:*)', 'Bash(npm run:*)', 'Bash(npm:*)', 'Bash(sed:*)'].includes(rule)));
+});
+
+test('the reviewer\'s sandbox keeps a secret\'s contents from any command too', () => {
+  const secret = path.join(dir, '.env');
+  fs.writeFileSync(secret, 'X=1\n');
+  const cat = spawnSync('/usr/bin/sandbox-exec', ['-f', REVIEW_PROFILE, '-D', `HOME=${os.homedir()}`,
+    '-D', `REPO=${path.join(dir, 'tree-REPO')}`, '-D', `DEV_TREE=${path.join(dir, 'tree-DEV_TREE')}`, '-D', `LANDING=${path.join(dir, 'tree-LANDING')}`,
+    '/bin/cat', secret], { encoding: 'utf8' });
+  assert.notEqual(cat.status, 0);
+  assert.match(cat.stderr, /Operation not permitted/);
 });
 
 test('a letter cut between two chunks of output arrives whole', async () => {
