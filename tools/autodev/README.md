@@ -1,11 +1,16 @@
 # Autonomous development
 
-Claude Code develops, Codex ("Astra") reviews, and `supervisor.mjs` carries
-each task from the owner's queue through
+Claude Code develops, Claude Code on Fable reviews, and `supervisor.mjs`
+carries each task from the owner's queue through
 
     develop → guard → checks → review (≤ 2 rounds) → push of auto/main
 
 and on to the next, without anyone relaying messages between them.
+
+The reviewer was Codex ("Astra") until 19.11.2026. The owner moved review to
+Claude Code on Fable 5.2 (`claude-fable-5-2`, `AUTODEV_REVIEW_MODEL` overrides)
+to stop the queue waiting out a second subscription. Task bodies still call the
+reviewer Astra; the prompt tells it that is its name.
 
 ## The owner's folder — `AUTODEV/` (not in git)
 
@@ -22,11 +27,12 @@ and on to the next, without anyone relaying messages between them.
 ## What it waits out, and what it stops for
 
 **Subscription limits are waited out.** The reset time is read off what the
-agent said: Claude's `rate_limit_event` (`resetsAt`) or "resets 5pm"; Codex's
-`resets_at` or "try again at 5:04 PM" / "try again in 2 hours" (`lib/limits.mjs`,
-the wordings taken from the installed CLIs). Then the same session continues —
-`claude -p --resume`, `codex exec resume`. An unreadable time is checked again
-after 20 minutes.
+agent said: Claude's `rate_limit_event` (`resetsAt`), "resets 5pm", or "try
+again at 5:04 PM" / "try again in 2 hours" (`lib/limits.mjs`, the wordings taken
+from the installed CLIs). Then the same session continues — `claude -p
+--resume`, the developer's and the reviewer's alike. An unreadable time is
+checked again after 20 minutes. Developer and reviewer share one Claude
+subscription, so a limit stops both.
 
 **A task that cannot be finished is set aside, and the queue goes on**
 (owner, 2026-10-09): checks still red after three attempts, the reviewer not
@@ -152,8 +158,18 @@ never fires twice.
 - Claude runs with `claude-settings.json`: a whitelist and `dontAsk`, never a
   permission bypass. No reading `.env` or keys, no editing `tools/autodev` or
   `.claude`, no push, checkout, reset, migrate, curl or web.
-- Codex runs with `--sandbox workspace-write` in the review tree and **no model
-  or reasoning flags** — those are the owner's settings in `~/.codex/config.toml`.
+- The reviewer is the same Claude Code on its own model (`REVIEW_MODEL`,
+  Fable 5.2), with `claude-review-settings.json`: reading, tests, read-only
+  git and the web; no editing a file, no git that writes, no migrate, no
+  production. It runs under `review.sb`: the developer's secret rules, plus no
+  writing into the main checkout (AUTODEV/, this supervisor, the shared .git),
+  the developer's tree or the landing's — only its own tree and temporary
+  folders. Paths go to the sandbox resolved: a rule through a symbolic link
+  matches nothing (`agents.test.mjs` caught that on `/var/folders`).
+- **One reviewer session per task** (`reviewSession`), as the developer has
+  one per step: round two and a resumed task go on in it. A session it has not
+  got — a task Codex reviewed, a session lost — starts anew and is given the
+  paths of the earlier rounds' answers to read first.
 - **One session per step.** Developing the task, fixing red checks and
   fixing the reviewer's notes are three steps, and each starts a fresh Claude
   session with the whole statement: the task, the commits its branch already

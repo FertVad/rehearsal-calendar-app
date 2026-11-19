@@ -1167,15 +1167,17 @@ started meanwhile waits for it.
 
 ## Autonomous Development
 
-`tools/autodev/supervisor.mjs` runs Claude Code (developer) and Codex ("Astra",
-reviewer) through the owner's queue in `AUTODEV/TASKS.md`: develop → guard →
-checks → review (≤ 2 rounds) → push of `auto/main`, in its own worktrees
+`tools/autodev/supervisor.mjs` runs Claude Code twice — the developer, and the
+reviewer on Fable 5.2 (Codex, "Astra", until 19.11.2026) — through the owner's
+queue in `AUTODEV/TASKS.md`: develop → guard → checks → review (≤ 2 rounds) →
+push of `auto/main`, in its own worktrees
 (`../reh_app-auto`, `../reh_app-auto-review`). It waits out subscription limits
 and continues the same session; it pauses the whole queue for the owner on
 migrations, auth, `.env`, production, keys, red checks after three attempts or
 no agreement after two rounds. Reports, one per task, and `STATUS.md` are in
 `AUTODEV/` (not in git). See [tools/autodev/README.md](tools/autodev/README.md).
-Codex gets no model or reasoning flags; Claude a whitelist with `dontAsk`.
+Both get a whitelist with `dontAsk` under an OS sandbox; the reviewer cannot
+edit a file or write outside its own tree (`review.sb`).
 
 ## Documentation
 

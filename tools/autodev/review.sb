@@ -1,0 +1,33 @@
+;; The reviewer (Claude Code on Fable, since 19.11.2026), and everything it
+;; starts: the developer's rules (agent.sb) — no secret's contents, whatever
+;; command reads them — plus no writing into the trees that are not its own.
+;; It reads anything else and writes its review tree, temporary folders and
+;; Claude Code's own files; tests it runs write their caches there.
+;;
+;; The trees come in as parameters, so the profile names no machine's paths:
+;;   sandbox-exec -f review.sb -D HOME=$HOME -D REPO=… -D DEV_TREE=… -D LANDING=… claude …
+;; REPO is the main checkout: AUTODEV/ (the queue, the decisions, the reports)
+;; and tools/autodev (this supervisor) live there, and so does the .git every
+;; worktree shares — a reviewer writing it could move auto/main. Codex had the
+;; same bound: write the review tree and /private/tmp, nothing else of ours.
+(version 1)
+(allow default)
+(deny file-read-data
+  (regex #"/\.env$")
+  (regex #"/\.env\.(local|development|production|test|staging)(\.local)?$")
+  (subpath (string-append (param "HOME") "/.ssh"))
+  (subpath (string-append (param "HOME") "/.aws"))
+  (subpath (string-append (param "HOME") "/.appstoreconnect"))
+  (subpath (string-append (param "HOME") "/.config/gh"))
+  (literal (string-append (param "HOME") "/.codex/auth.json"))
+  (literal (string-append (param "HOME") "/.netrc"))
+  (literal (string-append (param "HOME") "/.npmrc")))
+(deny file-write*
+  (subpath (param "REPO"))
+  (subpath (param "DEV_TREE"))
+  (subpath (param "LANDING"))
+  (subpath (string-append (param "HOME") "/.ssh"))
+  (subpath (string-append (param "HOME") "/Library/LaunchAgents"))
+  (literal (string-append (param "HOME") "/.zshrc"))
+  (literal (string-append (param "HOME") "/.zprofile"))
+  (literal (string-append (param "HOME") "/.claude/settings.json")))

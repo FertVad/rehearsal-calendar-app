@@ -53,11 +53,27 @@ test('every developer message names its task and asks for the marker', () => {
   }
 });
 
-test('the reviewer is told when a round follows her earlier ones in the same conversation', () => {
+test('the reviewer is told when a round follows its earlier ones in the same conversation', () => {
   const args = { base: 'a', head: 'b', devReport: 'r', checks: { steps: [] }, round: 1 };
-  assert.match(P.review(task, args), /Это первый круг/);
-  assert.match(P.review(task, { ...args, earlier: true }), /новый первый круг \(владелец продлил/);
-  assert.match(P.review(task, { ...args, round: 2, earlier: true }), /второй и последний/);
+  assert.match(P.review(task, args), /Это первый круг ревью:/);
+  assert.match(P.review(task, { ...args, earlier: true }), /новый первый круг ревью \(владелец продлил работу над задачей; прежние круги и твои замечания — выше в этой беседе\)/);
+  assert.match(P.review(task, { ...args, round: 2, earlier: true }), /второй и последний круг ревью:/);
+  assert.doesNotMatch(P.review(task, args), /круг круг|круг ревью круг/);
+});
+
+test('a reviewer new to the task is sent to the answers of the rounds it has not seen', () => {
+  // Codex reviewed until 19.11.2026; its threads do not carry over to Fable.
+  const args = { base: 'a', head: 'b', devReport: 'r', checks: { steps: [] }, round: 1 };
+  const files = ['/x/AUTODEV/reviews/T-109-r1.md', '/x/AUTODEV/reviews/T-109-r2.md'];
+  const message = P.review(task, { ...args, earlierReviews: files });
+  assert.match(message, /новый первый круг ревью \(владелец продлил работу над задачей\):/);
+  assert.match(message, /Прежние круги ревью этой задачи вёл другой ревьюер/);
+  for (const file of files) assert.ok(message.includes(`- ${file}`), file);
+  // Its own session remembers them: no list then.
+  assert.doesNotMatch(P.review(task, { ...args, earlier: true, earlierReviews: files }), /вёл другой ревьюер/);
+  // The task bodies still call the reviewer Astra.
+  assert.match(message, /ревьюера иногда зовут Астрой — это ты/);
+  assert.doesNotMatch(P.REVIEW_CONTINUE, /остановилась/);
 });
 
 test('commits that would not cherry-pick are ported first, by meaning, then the step itself', () => {

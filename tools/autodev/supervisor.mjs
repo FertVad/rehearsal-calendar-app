@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Continuous development: Claude Code develops, Codex ("Astra") reviews, and
+ * Continuous development: Claude Code develops, Claude Code on Fable reviews
+ * (the owner's choice of 19.11.2026; Codex, "Astra", reviewed before), and
  * this loop carries each task from the owner's queue through
  *
  *   develop → guard → checks → review (≤ 2 rounds) → push of auto/main
@@ -13,7 +14,8 @@
  *
  * A subscription limit is waited out, not failed on: the reset time is read off
  * what the agent said (lib/limits.mjs), the loop sleeps until then and
- * continues the same session — `claude -p --resume`, `codex exec resume`.
+ * continues the same session — `claude -p --resume`, the developer's and the
+ * reviewer's alike.
  * State is on disk, so a crash, a reboot or launchd's restart carries on too.
  *
  * The owner's folder, AUTODEV/ (not in git):
@@ -33,7 +35,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
+import { runClaude, stopAgents } from './lib/agents.mjs';
 import { failedFlows, keepFailedFlows, runChecks, runE2e, SEED_FILE, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
@@ -56,7 +58,11 @@ const BRANCH = 'auto/main';
 const START_FROM = process.env.AUTODEV_START_FROM || 'claude/systematic-repair';
 const NODE = process.execPath;
 const HOME = os.homedir();
-const CODEX = process.env.CODEX_BIN || `${HOME}/.nvm/versions/node/v20.19.2/bin/codex`;
+// The reviewer's model: Fable 5.2, the owner's choice of 19.11.2026. Pinned,
+// so a new release changes the reviewer only when someone decides it should.
+const REVIEW_MODEL = process.env.AUTODEV_REVIEW_MODEL || 'claude-fable-5-2';
+// What review.sb keeps the reviewer from writing: every tree but its own.
+const LANDING_TREE = path.resolve(REPO, '..', 'reh_app-landing');
 const E2E_APP = path.join(REPO, 'rehearsal-calendar-native/e2e/.build/Build/Products/Debug-iphonesimulator/Rehearsly.app');
 const MAX_CHECK_ATTEMPTS = 3;
 const MAX_AGENT_FAILURES = 3;
@@ -690,31 +696,54 @@ async function review(state, task, t) {
   // so a continued task does not write over its first answers (nextReview).
   const round = t.round;
   const no = nextReview(REVIEWS, task.id);
-  const continuing = Boolean(t.reviewPending && t.codexThread);
+  // The reviewer's own session per task, as the developer has: round two, a
+  // task sent back to review, a task continued after the owner's decision —
+  // all go on in it, so it remembers its own notes. A session it has not got
+  // (a task reviewed by Codex before 19.11.2026, a session lost) is started
+  // anew and told where the earlier answers are.
+  if (!t.reviewSession) {
+    t.reviewSession = randomUUID();
+    t.reviewStarted = false;
+  }
+  const starting = t.reviewStarted === false;
+  const continuing = Boolean(t.reviewPending) && !starting;
+  const earlierReviews = starting
+    ? Array.from({ length: no - 1 }, (_, i) => path.join(REVIEWS, `${task.id}-r${i + 1}.md`)).filter((file) => fs.existsSync(file))
+    : [];
   const prompt = continuing ? P.REVIEW_CONTINUE
-    : P.review(task, { base: t.base, head: t.head, devReport: t.devReport ?? '', checks: t.checks, round, earlier: Boolean(t.codexThread) });
+    : P.review(task, { base: t.base, head: t.head, devReport: t.devReport ?? '', checks: t.checks, round, earlier: !starting, earlierReviews });
   if (!continuing) note(task, `ревью: круг ${no}`);
-  const lastMessageFile = path.join(STATE_DIR, `${task.id}-codex-last.md`);
+  t.reviewStarted = true;
+  saveState(STATE, state);
   const startedAt = Date.now();
-  const run = await runCodex({
-    bin: CODEX, cwd: REVIEW_TREE, prompt, env: ENV, lastMessageFile,
-    // Round two continues the reviewer's own thread, so it remembers round one.
-    // Her own thread whenever there is one: round two, a task sent back to
-    // review, a task continued after the owner's decision.
-    resume: t.codexThread || undefined,
-    log: path.join(LOGS, `${task.id}-codex.jsonl`),
+  const run = await runClaude({
+    bin: claudeBin(), cwd: REVIEW_TREE, prompt, env: CLAUDE_ENV, model: REVIEW_MODEL,
+    sessionId: starting ? t.reviewSession : undefined,
+    resume: starting ? undefined : t.reviewSession,
+    settingsFile: path.join(HERE, 'claude-review-settings.json'),
+    sandboxProfile: path.join(HERE, 'review.sb'),
+    sandboxParams: { REPO, DEV_TREE: WORKTREE, LANDING: LANDING_TREE },
+    log: path.join(LOGS, `${task.id}-review.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
-  if (run.threadId) t.codexThread = run.threadId;
-  if (run.limit.limited) { t.reviewPending = true; return waitOut(state, task, 'Codex', run.limit); }
-  const verdict = P.readVerdict(run.text);
+  if (run.missingSession && !starting) {
+    // It never existed: start it next time, told the whole round again.
+    t.reviewSession = null;
+    t.reviewPending = false;
+    return note(task, 'ревью: сессии ревьюера нет — начну её заново');
+  }
+  if (run.limit.limited) { t.reviewPending = true; return waitOut(state, task, 'Claude (ревьюер)', run.limit); }
+  // The answer is the last turn that gives a verdict: a notification or a
+  // background job can add a turn after it (prompts.pickResult, the developer's).
+  const text = [...run.results].reverse().find((answer) => P.readVerdict(answer)) ?? run.text;
+  const verdict = P.readVerdict(text);
   if ((run.failed || !verdict) && sleptSince(startedAt)) {
-    t.reviewPending = Boolean(t.codexThread);
+    t.reviewPending = true;
     return note(task, 'ревью: машина спала во время ревью — повторю, попыткой не считаю');
   }
   if (run.failed || !verdict) {
     t.failures = (t.failures ?? 0) + 1;
-    t.reviewPending = Boolean(t.codexThread);
+    t.reviewPending = true;
     note(task, `ревью: ${run.failed ? `сбой (код ${run.exit})` : 'ответ без строки VERDICT'}, попытка ${t.failures}`);
     if (t.failures >= MAX_AGENT_FAILURES) defer(state, task, t, 'ревьюер трижды не дал ответа');
     return;
@@ -722,16 +751,16 @@ async function review(state, task, t) {
   t.failures = 0;
   t.reviewPending = false;
   t.review = `${task.id}-r${no}.md`;
-  writeAtomic(path.join(REVIEWS, t.review), run.text);
+  writeAtomic(path.join(REVIEWS, t.review), text);
   note(task, `ревью круг ${no}: ${verdict === 'accept' ? 'принято' : 'есть замечания'} — reviews/${t.review}`);
   if (verdict === 'accept') { t.phase = 'push'; return; }
   if (round >= 2) {
     return defer(state, task, t, `нет согласия с ревьюером после двух кругов — reviews/${t.review}`,
-      { kind: 'fix-review', review: run.text });
+      { kind: 'fix-review', review: text });
   }
   t.round = 2;
   t.attempts = 0;
-  nextStep(t, { kind: 'fix-review', review: run.text });
+  nextStep(t, { kind: 'fix-review', review: text });
 }
 
 function push(state, task, t) {
@@ -870,7 +899,7 @@ function toReview(state, task, t, named, resume, decided = null) {
   // Astra's thread is kept: she reviews the answer to her own notes. "На
   // ревью" keeps the round; "продолжить" gives two more.
   state.tasks[task.id] = {
-    phase: 'adopt', adopt: commits, adoptedFrom: kept, round: resume ? 1 : t.round ?? 1, codexThread: t.codexThread,
+    phase: 'adopt', adopt: commits, adoptedFrom: kept, round: resume ? 1 : t.round ?? 1, reviewSession: t.reviewSession,
     devReport: t.devReport, resume, approvedKinds: t.approvedKinds,
     ownerDecided: [...(t.ownerDecided ?? []), ...(decided ? [decided] : [])], startedAt: new Date().toISOString(),
   };
