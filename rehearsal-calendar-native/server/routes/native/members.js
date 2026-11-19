@@ -428,6 +428,16 @@ router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (re
       requesterMembership &&
       (requesterMembership.role === 'owner' || requesterMembership.role === 'admin');
 
+    // Leaving a project one is no longer in: somebody removed them while its
+    // page was still open (T-280). They want to be out, and they are, so it is
+    // a success like any leave and the app takes them off the page. Nothing is
+    // touched and nobody is told — the removal was announced when it happened.
+    // It used to fall into the rank check below and answer, in English and in
+    // every language, "Only project admins can remove members".
+    if (leavingSelf && !requesterMembership) {
+      return res.json({ success: true, message: 'Not a member of this project' });
+    }
+
     if (!requesterMembership || (!leavingSelf && !runsTheProject)) {
       return res.status(403).json({ error: 'Only project admins can remove members' });
     }
