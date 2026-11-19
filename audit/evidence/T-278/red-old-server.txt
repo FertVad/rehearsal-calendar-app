@@ -1,0 +1,35 @@
+Old server code from 621d3a5 (the base), the test and test setup from 045a5d7:
+
+$ git restore --source=621d3a5 -- routes/auth.js routes/native/inviteRedemption.js routes/native/members.js \
+    routes/native/rehearsals.js services/notifications/pushNotificationService.js services/notifications/notificationStore.js
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/accountNameInOthersNotices.test.js
+
+FAIL __tests__/routes/accountNameInOthersNotices.test.js
+    ✕ each of the three notices records whom it names (9 ms)
+    ✕ leaves none naming her, and every other notice in place (14 ms)
+    ✕ writes no notice naming an account that no longer exists (1 ms)
+    ✕ will not name someone without saying whom (1 ms)
+Tests:       4 failed, 4 total
+
+The second, in detail: DELETE /me answered 200, and the others' inboxes still hold her name:
+
+  ● Deleting an account removes the notices naming it from the others' inboxes › leaves none naming her, and every other notice in place
+    - Expected  -  1
+    + Received  + 57
+    +     "body": "Лена Уходящая joined Test Project",
+    +     "body": "Лена Уходящая joined Test Project",
+    +     "body": "Лена Уходящая is now an administrator of Test Project",
+    +     "body": "Лена Уходящая has seen “Прогон” (on Tue, Oct 1 at 5:00 PM UTC) in Test Project",
+    +     "body": "Лена Уходящая has seen “Прогон” (on Tue, Oct 1 at 5:00 PM UTC) in Test Project",
+    > 171 |     expect(after.filter((row) => row.body.includes(LEAVING.first) || row.body.includes(LEAVING.last))).toEqual([]);
+
+The PostgreSQL check on the same old code:
+
+$ npm run test:r0-postgres -- --t278-only
+{"scenario":"controls","outcome":"PASS", ...}
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+    at Module.probeT278Notices (t278Notices.mjs:96:12)      <- the notices record nobody
+AssertionError [ERR_ASSERTION]: T278_NOTICES probe failed unexpectedly
+
+$ git restore --source=HEAD -- <the same files>
+$ ... accountNameInOthersNotices.test.js -> Tests: 4 passed, 4 total
