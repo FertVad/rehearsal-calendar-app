@@ -323,14 +323,14 @@ describe.each(LANGS)('the screens are named as the app names them, %s', lang => 
   });
 });
 
-// T-270's button, named by the native editors. The strings stand here until
-// T-270 puts them in calendarSync.ts; then this test reads them from there.
-const IMPORT_BUTTON = {
-  en: 'Remove Imported Busy Times',
-  ru: 'Удалить импортированную занятость',
-  es: 'Eliminar horas importadas',
-  de: 'Alle importierten Zeiten löschen',
-};
+// T-270's button, by the name the screen gives it in each language: the
+// policy and the button are one string, so neither changes alone.
+const IMPORT_BUTTON = Object.fromEntries(LANGS.map(lang => [lang, calendarSync[lang].clearImported]));
+
+test.each(LANGS)('the calendar screen has the button the policy names, %s', lang => {
+  expect(typeof IMPORT_BUTTON[lang]).toBe('string');
+  expect(IMPORT_BUTTON[lang].length).toBeGreaterThan(0);
+});
 const IMPORT_HEADING = {
   en: /<h3>About calendar import<\/h3>/,
   ru: /<h3>Про импорт календаря<\/h3>/,

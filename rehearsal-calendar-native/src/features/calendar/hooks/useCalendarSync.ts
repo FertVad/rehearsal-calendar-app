@@ -248,14 +248,14 @@ export function useCalendarSync() {
   /**
    * Remove all imported availability slots, in the sync's queue: an import
    * running alongside would put them back. Null: the session ended first.
+   *
+   * No calendar access asked: the rows are the server's, every device's
+   * (DELETE /availability/imported/all), and someone who took the calendar
+   * away from the app must still be able to take them back (T-270).
    */
   const clearImported = useCallback(async (
     onProgress?: (current: number, total: number) => void
   ): Promise<ImportResult | null> => {
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
-
     setIsImporting(true);
     setImportError(null);
 
@@ -274,7 +274,7 @@ export function useCalendarSync() {
       setImportError(error.message);
       throw error;
     }
-  }, [hasPermission]);
+  }, []);
 
   return {
     // Export State

@@ -462,8 +462,11 @@ describe('useCalendarSync - Import (Calendar → App)', () => {
       expect(calendar.removeAllImportedSlots).toHaveBeenCalledWith(onProgress);
     });
 
-    it('should throw error when no permission', async () => {
+    // The rows are the server's (DELETE /availability/imported/all): someone
+    // who took the calendar away from the app can still take them back (T-270).
+    it('removes them without calendar access', async () => {
       (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(false);
+      (calendar.removeAllImportedSlots as jest.Mock).mockResolvedValue({ success: 4, failed: 0, skipped: 0, errors: [] });
 
       const { result } = renderHook(() => useCalendarSync());
 
@@ -471,11 +474,12 @@ describe('useCalendarSync - Import (Calendar → App)', () => {
         expect(result.current.hasPermission).toBe(false);
       });
 
-      await expect(
-        act(async () => {
-          await result.current.clearImported();
-        })
-      ).rejects.toThrow('Calendar permission not granted');
+      await act(async () => {
+        await result.current.clearImported();
+      });
+
+      expect(calendar.removeAllImportedSlots).toHaveBeenCalled();
+      expect(result.current.importedCount).toBe(0);
     });
 
     it('should handle clear errors', async () => {

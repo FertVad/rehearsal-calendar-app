@@ -1,0 +1,32 @@
+T-270 — Jest on the old code (c7ee8f5), the new tests in place, nothing else changed.
+
+$ npx jest --selectProjects frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.remove.test.tsx src/features/calendar/hooks/__tests__/useCalendarSync.test.ts
+  ● the two buttons are there whatever the switch says › both, with Auto Sync off
+  ● the two buttons are there whatever the switch says › both, with Auto Sync on
+  ● the two buttons are there whatever the switch says › the imported one without calendar access, the exported one not
+  ● removing what was imported › asks first, and removes nothing on Cancel
+  ● removing what was imported › calls clearImported once confirmed, and says it is done
+  ● removing what was imported › without calendar access too
+  ● removing what was imported › with Auto Sync on, says it turns off, and turns it off before removing
+  ● removing what was imported › removes nothing when Auto Sync could not be turned off
+  ● removing what was imported › says it failed, in the app’s words
+  ● removing what was exported › with Auto Sync off, asks without a word of turning it off
+  ● removing what was exported › with Auto Sync on, says it turns off, and turns it off: the next sync would put it all back
+  ● the screen speaks the app’s language › asks for a calendar first in the translation when the switch is turned on without one
+  ● the screen speaks the app’s language › names the calendars as onboarding does
+  ● the screen speaks the app’s language › says the counts after a sync with nothing to export, not a sentence of its own
+  ● the screen speaks the app’s language › has no English of its own in the code
+  ● useCalendarSync - Import (Calendar → App) › Clear Imported › removes them without calendar access
+(16 failed; the one test of the file that passes on the old code — "has no Sync Now when sync is off
+or no calendar of it is here" — is the proof that "Please enable sync and select a calendar first"
+could not be reached: its handler is bound only to that button.)
+
+$ cd server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/privacyPage.test.js
+  ✕ the calendar screen has the button the policy names, en
+  ✕ the calendar screen has the button the policy names, ru
+  ✕ the calendar screen has the button the policy names, es
+  ✕ the calendar screen has the button the policy names, de
+    ✕ is named in the calendar import paragraph   (×4 languages)
+    ✕ is a right of its own, on the calendar screen   (×4 languages)
+Tests:       12 failed, 92 passed, 104 total
+(no calendarSync.clearImported in calendarSync.ts: the policy's button name is tied to nothing)

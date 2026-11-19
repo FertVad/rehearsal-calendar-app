@@ -295,6 +295,11 @@ export const PEOPLE = {
   wang: { email: 'wang@e2e.test', firstName: 'Wang', lastName: 'Wasser', onboarded: true },
   yangsun: { email: 'yangsun@e2e.test', firstName: 'Yang', lastName: 'Sun', onboarded: true },
   shufu: { email: 'shufu@e2e.test', firstName: 'Shu', lastName: 'Fu', onboarded: true },
+  // An hour from his phone's calendar on MARK_DAY and AFTER_DAY busy all day
+  // by his own hand; he removes the imported, with no calendar access and Auto
+  // Sync off (99, T-270). In no project, so no other flow's rehearsal lands on
+  // his days.
+  lebedev: { email: 'lebedev@e2e.test', firstName: 'Pavel', lastName: 'Lebedev', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -1165,6 +1170,15 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-market')`,
     [ids.kabanikha, localInstant(6, 9), localInstant(6, 10)]);
+  // Lebedev's (99, T-270): an hour imported from his calendar on MARK_DAY, as
+  // the import writes it, and AFTER_DAY busy all day, as a save of that day
+  // writes it. Removing the imported takes the first and leaves the second.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'apple_calendar', 'e2e-dentist'),
+            ($1, $4::timestamptz, $5::timestamptz, 'busy', TRUE, 'manual', NULL)`,
+    [ids.lebedev, localInstant(3, 9), localInstant(3, 10),
+      `${days.after}T00:00:00.000Z`, `${days.after}T23:59:59.999Z`]);
   // Mackie's today (91): busy 12:00-14:00, so Polly's form recommends times.
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)

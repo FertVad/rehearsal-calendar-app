@@ -24,6 +24,19 @@ export interface CalendarSyncTranslations {
   inCalendar: (count: number) => string;
   removeAll: string;
   removeAllConfirm: string;
+  /**
+   * The button that removes every busy time imported from the phone's
+   * calendars, from all the person's devices (T-270). The privacy policy names
+   * it by this string, in each language (privacyPage.test.js).
+   */
+  clearImported: string;
+  clearImportedConfirm: string;
+  clearImportedMessage: string;
+  clearImportedSuccess: string;
+  /** Ends the question of either removal while Auto Sync is on: removing turns it off. */
+  autoSyncTurnsOff: string;
+  /** Auto Sync switched on before a calendar was picked. */
+  chooseProviderFirst: string;
   // Status
   syncSuccess: string;
   removeAllSuccess: string;
@@ -36,8 +49,6 @@ export interface CalendarSyncTranslations {
   // Errors
   noCalendarsFound: string;
   noWritableCalendars: string;
-  // Phase 2: Import Settings
-  noCalendarsSelected: string;
   // Unified Sync
   autoSync: string;
   synchronize: string;
@@ -82,6 +93,12 @@ export const ru = {
     inCalendar: (count: number) => `В календаре: ${count}`,
     removeAll: 'Удалить репетиции из календаря',
     removeAllConfirm: 'Удалить все репетиции из календаря телефона?',
+    clearImported: 'Удалить импортированную занятость',
+    clearImportedConfirm: 'Удалить всю импортированную занятость?',
+    clearImportedMessage: 'Из Rehearsly удалится занятость, полученная из календарей всех ваших устройств. То, что вы отметили сами, останется.',
+    clearImportedSuccess: 'Вся импортированная занятость удалена',
+    autoSyncTurnsOff: 'Автосинхронизация на этом телефоне выключится, чтобы следующая синхронизация не вернула удалённое.',
+    chooseProviderFirst: 'Сначала выберите «Google Календарь» или «Календарь iPhone».',
     // Status
     syncSuccess: 'Синхронизировано',
     removeAllSuccess: 'Все репетиции удалены из календаря телефона',
@@ -92,8 +109,6 @@ export const ru = {
     // Errors
     noCalendarsFound: 'Календари не найдены',
     noWritableCalendars: 'Нет календарей для записи',
-    // Phase 2: Import Settings
-    noCalendarsSelected: 'Календари не выбраны',
     // Unified Sync
     autoSync: 'Автосинхронизация',
     synchronize: 'Синхронизировать',
@@ -130,6 +145,12 @@ export const en = {
     inCalendar: (count: number) => `In the calendar: ${count}`,
     removeAll: 'Remove Exported Rehearsals',
     removeAllConfirm: 'Remove All Rehearsals from the Calendar?',
+    clearImported: 'Remove Imported Busy Times',
+    clearImportedConfirm: 'Remove All Imported Busy Times?',
+    clearImportedMessage: 'Busy times imported from calendars on all your devices will be removed from Rehearsly. Anything you marked yourself will stay.',
+    clearImportedSuccess: 'All imported busy times removed',
+    autoSyncTurnsOff: 'Auto Sync will also be turned off — otherwise the next sync would bring it all back.',
+    chooseProviderFirst: 'To turn on Auto Sync, select Google Calendar or Apple Calendar below.',
     // Status
     syncSuccess: 'Synced',
     removeAllSuccess: 'All rehearsals removed from the calendar',
@@ -140,8 +161,6 @@ export const en = {
     // Errors
     noCalendarsFound: 'No calendars found',
     noWritableCalendars: 'No editable calendars',
-    // Phase 2: Import Settings
-    noCalendarsSelected: 'No calendars selected',
     // Unified Sync
     autoSync: 'Auto Sync',
     synchronize: 'Sync Now',
@@ -178,6 +197,12 @@ export const es = {
     inCalendar: (count: number) => `En el calendario: ${count}`,
     removeAll: 'Eliminar todo lo exportado',
     removeAllConfirm: '¿Eliminar todos los ensayos del calendario?',
+    clearImported: 'Eliminar horas importadas',
+    clearImportedConfirm: '¿Eliminar todas las horas importadas?',
+    clearImportedMessage: 'Se eliminarán de Rehearsly las horas ocupadas que llegaron de los calendarios de todos tus dispositivos. Las que marcaste tú se mantienen.',
+    clearImportedSuccess: 'Se eliminaron todas las horas importadas',
+    autoSyncTurnsOff: 'La sincronización automática se desactivará en este dispositivo; si no, la próxima sincronización volvería a añadirlo todo.',
+    chooseProviderFirst: 'Elige primero Google Calendar o Apple Calendar.',
     // Status
     syncSuccess: 'Sincronización completada',
     removeAllSuccess: 'Se eliminaron todos los ensayos del calendario',
@@ -190,8 +215,6 @@ export const es = {
     // Errors
     noCalendarsFound: 'No se encontraron calendarios',
     noWritableCalendars: 'No hay calendarios donde escribir',
-    // Phase 2: Import Settings
-    noCalendarsSelected: 'No hay calendarios seleccionados',
     // Unified Sync
     autoSync: 'Sincronización automática',
     synchronize: 'Sincronizar',
@@ -228,6 +251,12 @@ export const de = {
     inCalendar: (count: number) => `Im Kalender: ${count}`,
     removeAll: 'Alle exportierten Proben entfernen',
     removeAllConfirm: 'Alle Proben aus dem Kalender entfernen?',
+    clearImported: 'Alle importierten Zeiten löschen',
+    clearImportedConfirm: 'Alle importierten Zeiten löschen?',
+    clearImportedMessage: 'Das betrifft alle belegten Zeiten aus deinen Kalendern – auch die von deinen anderen Geräten. Was du selbst eingetragen hast, bleibt.',
+    clearImportedSuccess: 'Alle importierten Zeiten gelöscht',
+    autoSyncTurnsOff: 'Auto-Sync wird auf diesem Gerät ausgeschaltet, sonst wäre nach der nächsten Synchronisation alles wieder da.',
+    chooseProviderFirst: 'Tippe zuerst auf „Google Kalender“ oder „Apple Kalender“.',
     // Status
     syncSuccess: 'Synchronisiert',
     removeAllSuccess: 'Alle Proben aus dem Kalender entfernt',
@@ -238,8 +267,6 @@ export const de = {
     // Errors
     noCalendarsFound: 'Keine Kalender gefunden',
     noWritableCalendars: 'Keine beschreibbaren Kalender',
-    // Phase 2: Import Settings
-    noCalendarsSelected: 'Keine Kalender ausgewählt',
     // Unified Sync
     autoSync: 'Auto-Sync',
     synchronize: 'Synchronisieren',
