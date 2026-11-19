@@ -1,0 +1,97 @@
+# A member leaves a project from its page, and the owner is told (T-271).
+# The server let anyone but the owner leave since 2026-09-05, but the app had
+# no button for it: whoever came in by an invite could not get out. And those
+# who run the project were told nothing when someone went.
+#
+# Bottom, an actor in Hippolyta's "Mechanicals Guild", opens it, taps "Leave
+# Project", is asked first, confirms, and is back on his projects with it gone.
+# Then Hippolyta, its owner, finds "Member Left" in her inbox, and her own page
+# of it has "Delete Project" and no "Leave Project".
+appId: ${APP_ID}
+name: Member leaves a project
+tags:
+  - projects
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BOTTOM_EMAIL}
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Mechanicals Guild.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Mechanicals Guild.*"
+- extendedWaitUntil:
+    visible:
+      id: header-back
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: project-leave
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- assertNotVisible:
+    id: project-delete
+- tapOn:
+    id: project-leave
+- extendedWaitUntil:
+    visible: "Leave Project?"
+    timeout: 10000
+- assertVisible: ".*“Mechanicals Guild” will disappear from your projects.*"
+- takeScreenshot: 100-leave-asked-first
+- tapOn:
+    text: "Leave Project"
+    below: "Leave Project\\?"
+# Back on his projects, and it is not among them.
+- extendedWaitUntil:
+    visible:
+      id: tab-projects
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible:
+      id: header-back
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible: ".*Mechanicals Guild.*"
+    timeout: 15000
+- takeScreenshot: 100-gone-from-his-projects
+
+# Hippolyta: told, by name.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${HIPPOLYTA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notifications"
+      SEE: ".*Nick Bottom left Mechanicals Guild.*"
+      WAIT_MS: "15000"
+- assertVisible: ".*Member Left.*"
+- takeScreenshot: 100-owner-told
+# A tap opens the company on its members: Bottom is not among them.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Nick Bottom left Mechanicals Guild.*"
+      SEE: "Members"
+      WAIT_MS: "15000"
+- assertNotVisible: ".*Nick Bottom.*"
+# The owner deletes the project; she cannot leave it.
+- scrollUntilVisible:
+    element:
+      id: project-delete
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- assertNotVisible:
+    id: project-leave
+- takeScreenshot: 100-owner-has-no-leave

@@ -52,6 +52,7 @@ function iconFor(type: string): keyof typeof Ionicons.glyphMap {
   if (type.startsWith('rehearsal')) return 'calendar-outline';
   if (type === 'member_response') return 'eye-outline';
   if (type === 'member_joined') return 'person-add-outline';
+  if (type === 'member_left') return 'person-remove-outline';
   if (type === 'admin_appointed') return 'key-outline';
   if (type === 'project_invite') return 'mail-outline';
   if (type === 'role_changed') return 'shield-checkmark-outline';

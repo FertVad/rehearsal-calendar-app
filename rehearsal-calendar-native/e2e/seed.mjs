@@ -300,6 +300,11 @@ export const PEOPLE = {
   // Sync off (99, T-270). In no project, so no other flow's rehearsal lands on
   // his days.
   lebedev: { email: 'lebedev@e2e.test', firstName: 'Pavel', lastName: 'Lebedev', onboarded: true },
+  // Bottom leaves Hippolyta's company from its page; it is gone from his
+  // projects, and "Member Left" is in her inbox (100, T-271). Nobody else in
+  // it, so no other flow's notices mix in.
+  hippolyta: { email: 'hippolyta@e2e.test', firstName: 'Hippolyta', lastName: 'Amazon', onboarded: true },
+  bottom: { email: 'bottom@e2e.test', firstName: 'Nick', lastName: 'Bottom', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -877,6 +882,15 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2, 'no', NOW(), NOW())`,
     [wrestling.id, ids.rosalind]);
   rehearsals.wrestling = String(wrestling.id);
+
+  // Hippolyta's company (100), the same way: Bottom an actor in it.
+  const { rows: [mechanicals] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Mechanicals Guild', 'Quince''s house', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [mechanicals.id, ids.hippolyta, ids.bottom]);
 
   // Juliet's two (74), made as the server makes them: the sign-ins are spent.
   // Tomorrow a titled one with a place, one with no place, one with no title;

@@ -42,6 +42,7 @@ const SAMPLES: Record<string, unknown[][]> = {
   'projects.makeAdminMessage': [['Maya Lopez']],
   'projects.removeAdminMessage': [['Maya Lopez']],
   'projects.deleteProjectMessage': NAME,
+  'projects.leaveProjectMessage': NAME,
   'profile.deleteAccountProjectsWarning': COUNTS,
   'profile.changeEmailSubtitle': EMAIL,
   'profile.currentAddressCode': EMAIL,
