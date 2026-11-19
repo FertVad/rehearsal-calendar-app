@@ -42,7 +42,7 @@ export const SIZES = [
 ];
 
 /** The landing's colours, as its stylesheet names them. */
-function landingColours() {
+export function landingColours() {
   const css = fs.readFileSync(STYLES, 'utf8');
   const value = (name) => {
     const match = css.match(new RegExp(`--${name}:\\s*([^;]+);`));
@@ -54,7 +54,7 @@ function landingColours() {
 }
 
 /** compose.swift, compiled once for each version of it. */
-function binary() {
+export function binary() {
   const source = fs.readFileSync(SOURCE);
   const bin = path.join(OUT, '.bin', `compose-${createHash('sha256').update(source).digest('hex').slice(0, 12)}`);
   if (!fs.existsSync(bin)) {

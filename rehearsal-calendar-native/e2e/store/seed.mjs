@@ -40,8 +40,8 @@ const bcrypt = createRequire(path.join(SERVER, 'package.json'))('bcrypt');
  * `appleLanguage` the phone's region and language for iOS's own words.
  * People: the director, then the eleven of the play, two musicians and one of
  * the film crew (the video's); three of the play play in the concert. `words`: the app's own words the flow taps where there is no
- * id to take — iOS's action sheet, the calendar's provider — as
- * src/i18n/translations has them.
+ * id to take — iOS's action sheet, the calendar's provider, the conflict
+ * alert's "Create Anyway" (the video, T-275) — as src/i18n/translations has them.
  */
 const WORLDS = {
   'en-US': {
@@ -60,7 +60,7 @@ const WORLDS = {
       clip: ['Choreography', 'Shoot day 1', 'Shoot day 2'],
     },
     places: { play: 'Main stage', concert: 'Rehearsal room', clip: 'Studio B' },
-    words: { markBusy: 'Mark Busy', apple: 'Apple Calendar', showCode: 'Show Code' },
+    words: { markBusy: 'Mark Busy', apple: 'Apple Calendar', showCode: 'Show Code', createAnyway: 'Create Anyway' },
   },
   'en-GB': {
     language: 'en', clock24: true, appleLocale: 'en_GB', appleLanguage: 'en-GB', zone: 'Europe/London',
@@ -79,7 +79,7 @@ const WORLDS = {
       clip: ['Choreography', 'Shoot day 1', 'Shoot day 2'],
     },
     places: { play: 'Main stage', concert: 'Rehearsal room', clip: 'Studio B' },
-    words: { markBusy: 'Mark Busy', apple: 'Apple Calendar', showCode: 'Show Code' },
+    words: { markBusy: 'Mark Busy', apple: 'Apple Calendar', showCode: 'Show Code', createAnyway: 'Create Anyway' },
   },
   ru: {
     language: 'ru', clock24: true, appleLocale: 'ru_RU', appleLanguage: 'ru-RU', zone: 'Europe/Moscow',
@@ -97,7 +97,7 @@ const WORLDS = {
       clip: ['Хореография', 'Съёмочный день 1', 'Съёмочный день 2'],
     },
     places: { play: 'Большая сцена', concert: 'Репетиционный зал', clip: 'Студия' },
-    words: { markBusy: 'Отметить занятость', apple: 'Календарь iPhone', showCode: 'Показать код' },
+    words: { markBusy: 'Отметить занятость', apple: 'Календарь iPhone', showCode: 'Показать код', createAnyway: 'Создать всё равно' },
   },
   'es-ES': {
     language: 'es', clock24: true, appleLocale: 'es_ES', appleLanguage: 'es-ES', zone: 'Europe/Madrid',
@@ -115,7 +115,7 @@ const WORLDS = {
       clip: ['Coreografía', 'Rodaje, día 1', 'Rodaje, día 2'],
     },
     places: { play: 'Sala principal', concert: 'Sala de ensayo', clip: 'Estudio B' },
-    words: { markBusy: 'Marcar horas ocupadas', apple: 'Apple Calendar', showCode: 'Mostrar el código' },
+    words: { markBusy: 'Marcar horas ocupadas', apple: 'Apple Calendar', showCode: 'Mostrar el código', createAnyway: 'Crear de todos modos' },
   },
   'de-DE': {
     language: 'de', clock24: true, appleLocale: 'de_DE', appleLanguage: 'de-DE', zone: 'Europe/Berlin',
@@ -133,7 +133,7 @@ const WORLDS = {
       clip: ['Choreografie', 'Drehtag 1', 'Drehtag 2'],
     },
     places: { play: 'Große Bühne', concert: 'Probenraum', clip: 'Studio B' },
-    words: { markBusy: 'Als beschäftigt markieren', apple: 'Apple Kalender', showCode: 'Code anzeigen' },
+    words: { markBusy: 'Als beschäftigt markieren', apple: 'Apple Kalender', showCode: 'Code anzeigen', createAnyway: 'Trotzdem erstellen' },
   },
 };
 
@@ -154,6 +154,15 @@ export function storeHour(locale, now = new Date()) {
   const world = WORLDS[locale];
   if (!world) throw new Error(`No store world for ${locale}: ${Object.keys(WORLDS).join(', ')}`);
   return Number(new Intl.DateTimeFormat('en-US', { timeZone: world.zone, hour: 'numeric', hourCycle: 'h23' }).format(now));
+}
+
+/**
+ * The pages of `locales`, taken one after another about `minutesAPage` each
+ * from `now`, that would be seeded after LAST_HOUR in their country: the seed
+ * refuses them then, so shoot.mjs and record.mjs say so before the first.
+ */
+export function latePages(locales, minutesAPage, now = Date.now()) {
+  return locales.filter((locale, i) => storeHour(locale, new Date(now + i * minutesAPage * 60_000)) > LAST_HOUR);
 }
 
 /**
@@ -369,7 +378,9 @@ export async function seedStore({ client, apiUrl, locale, now = new Date() }) {
     password: PASSWORD,
     people: { director: { email: emails.director } },
     invites: { play: play.inviteCode },
-    days: { today: localDate(0), tomorrow: localDate(1), form: localDate(1) },
+    // The video's (T-275, video.yaml): two free days the director marks busy
+    // (shot 2), and the day of the rehearsal of all twelve (shot 6).
+    days: { today: localDate(0), tomorrow: localDate(1), form: localDate(1), busy_a: localDate(8), busy_b: localDate(9), everyone: localDate(3) },
     // Tomorrow's 11:00, when five of the play's cast are busy: the form names them (frame 3).
     times: { form: '11:00' },
     labels: {
@@ -379,6 +390,14 @@ export async function seedStore({ client, apiUrl, locale, now = new Date() }) {
       apple_languages: `<array><string>${world.appleLanguage}</string></array>`,
       apple_locale: world.appleLocale,
       clock24: world.clock24 ? '<true/>' : '<false/>',
+      // The video's (T-275). Shot 4 picks three of the cast: tomorrow at
+      // FORM_TIME the first is busy and the others are not (busyBlocks), so
+      // shot 5's form names one. Shot 6: the rehearsal of all twelve, and the
+      // eleven of the cast who mark it seen, through the API, as their phones would.
+      pick_0: world.cast[0].join(' '), pick_1: world.cast[1].join(' '), pick_2: world.cast[2].join(' '),
+      create_anyway: world.words.createAnyway,
+      everyone_title: titles.play[1],
+      seen_emails: actors.map((key) => emails[key]).join(','),
     },
     rehearsals: { seen, everyone },
   };

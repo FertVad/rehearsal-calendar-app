@@ -14,8 +14,11 @@ npm run e2e -- --build            # generate the iOS project and build anew anyw
 ```
 
 The App Store's screenshots are taken on the same stand, on a simulator of
-their own, by `node e2e/store/shoot.mjs` (`run.mjs --store=<locale>`); not part
+their own, by `node e2e/store/shoot.mjs` (`run.mjs --store=<locale>`), and its
+preview video recorded there by `node e2e/store/record.mjs`; neither is part
 of `npm run e2e`. How to run them for a new version: `e2e/store/README.md`.
+What they write in `e2e/store/out` is kept out of Metro's watch, as `e2e/out`
+is (`metro.config.js`): a new file there was the "Refreshing..." banner.
 
 Needs: Docker Desktop with a local `postgres:15` image, Xcode, CocoaPods,
 Maestro in `~/.maestro/bin` (2.11.0), Node 22. Logs, the seed, JUnit and

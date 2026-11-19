@@ -1,0 +1,26 @@
+T-275, red before: e2e/__tests__/store-video.test.mjs on the tree without the
+video's builder (e2e/store/montage.mjs not written yet), 2026-11-19.
+
+$ node --test e2e/__tests__/store-video.test.mjs        (in rehearsal-calendar-native)
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/store/montage.mjs' imported from /Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/__tests__/store-video.test.mjs
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/store/montage.mjs'
+}
+
+Node.js v26.13.0
+✖ e2e/__tests__/store-video.test.mjs (192.943917ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 216.880333
+
+✖ failing tests:
+
+test at e2e/__tests__/store-video.test.mjs:1:1
+✖ e2e/__tests__/store-video.test.mjs (192.943917ms)
+  'test failed'

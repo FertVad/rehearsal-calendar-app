@@ -1,0 +1,38 @@
+T-275, green: the store's tests and Metro's watch, 2026-11-19 (Node 26.13.0 on PATH here).
+
+$ node --test e2e/__tests__/store-compose.test.mjs e2e/__tests__/store-seed.test.mjs \
+    e2e/__tests__/store-video.test.mjs e2e/__tests__/metro-watch.test.mjs     (in rehearsal-calendar-native)
+
+✔ a screenshot Maestro writes into e2e/out, or a recording into e2e/store/out, is not a change to Metro; the app's files are (6925.240458ms)
+✔ eight pictures a language, 1320×2868 and 1206×2622, RGB without alpha (682.867041ms)
+✔ each caption is captions.json's, broken where the file breaks it, read back off the picture (11682.686209ms)
+✔ one size of type for the whole language, made smaller for all when one caption is too wide (14179.387917ms)
+✔ the screenshot is under the caption, whole, with rounded corners (312.2305ms)
+✔ a missing screenshot or language is refused, not drawn over (3.797417ms)
+✔ until LAST_HOUR, today has one window of each busy level, after now and by 23:00 (7.464ms)
+✔ after LAST_HOUR in the page's country the seed refuses, before it writes anything (112.849292ms)
+✔ 886×1920 at 30 fps, H.264, 15 to 30 seconds, with a silent stereo AAC track at 48 kHz (268.010458ms)
+✔ silent: the audio track carries no sound (210.648708ms)
+✔ seven shots, each as long as the storyboard gives it: a short recording held, a long one sped up (1.466875ms)
+✔ stillness is cut to STILL, the flow's own pauses kept whole (2.321083ms)
+✔ each shot shows its recording in the window, its caption above it as captions.json breaks it (9255.3335ms)
+✔ the window is under the band, whole, and the last shot closes on the mark (1274.786833ms)
+✔ a recording far longer than its shot is refused, not raced through (4999.447375ms)
+ℹ tests 15
+ℹ pass 15
+ℹ fail 0
+
+The run itself (node e2e/store/record.mjs <locale>, on the e2e stand under
+its lock), what ffprobe says of each video:
+
+en-US.mp4: 29.80 s; video h264 High 886×1920 30/1 fps yuv420p; audio aac 48000 Hz 2 ch
+  shots (as recorded → shot): 2.5→3s, 9.8→5s, 2.5→4s, 10.2→6s, 10.8→5s, 6.9→4s, 2.3→2.8s
+en-GB.mp4: 29.80 s; video h264 High 886×1920 30/1 fps yuv420p; audio aac 48000 Hz 2 ch
+  shots: 2.6→3s, 9.8→5s, 2.5→4s, 10.8→6s, 11.8→5s, 6.8→4s, 2.2→2.8s
+es-ES.mp4: 29.80 s; video h264 High 886×1920 30/1 fps yuv420p; audio aac 48000 Hz 2 ch
+  shots: 2.5→3s, 10.0→5s, 2.5→4s, 10.3→6s, 11.8→5s, 7.0→4s, 2.2→2.8s
+de-DE.mp4: 29.80 s; video h264 High 886×1920 30/1 fps yuv420p; audio aac 48000 Hz 2 ch
+  shots: 2.5→3s, 9.7→5s, 2.5→4s, 10.2→6s, 7.6→5s, 7.1→4s, 2.3→2.8s
+
+Previews: <locale>.png here, a frame of each shot a quarter second before its
+end, the last the closing card. The videos stay in e2e/store/out/video (ignored).

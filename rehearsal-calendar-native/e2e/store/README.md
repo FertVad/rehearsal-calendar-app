@@ -1,4 +1,4 @@
-# App Store screenshots (T-274)
+# App Store screenshots (T-274) and preview video (T-275)
 
 Eight screenshots of the real app, taken on the local e2e stand and made into
 the App Store's pictures: a two-line caption at the top, the screenshot under
@@ -38,6 +38,50 @@ What comes out, outside git (`.gitignore`):
 
 The pages are `en-US`, `en-GB`, `ru`, `es-ES` (uploaded for es-MX too) and
 `de-DE`. PNG without alpha, which App Store Connect refuses.
+
+## The preview video (T-275)
+
+```bash
+cd rehearsal-calendar-native
+node e2e/store/record.mjs ru          # one page; about eight minutes
+node e2e/store/record.mjs             # every page, one after another
+node e2e/store/montage.mjs            # only the cut again, from the last recordings
+node e2e/store/record.mjs ru --preview=../audit/evidence/<task>   # and a preview frame sheet of it
+```
+
+The same stand, simulator and hours as the screenshots (seeded before 20:00 in
+the page's country; record.mjs refuses up front as shoot.mjs does). Needs
+ffmpeg (`brew install ffmpeg`). Then watch every video before it is uploaded.
+
+What comes out, outside git: `e2e/store/out/video/<locale>.mp4` — 886×1920, 30
+fps, H.264 High at 10 Mb/s, a silent stereo AAC track at 48 kHz (App Store
+Connect refuses a preview without sound), 29.8 s; and the recordings it was
+cut from, `e2e/store/out/clips/<locale>/01.mov…07.mov`, each with the flow's
+pauses beside it (`01.json`). Upload es-ES's for es-MX too.
+
+- `video.yaml` — the storyboard, played at a person's pace: 1 the Planner
+  filling (the cover; set the poster frame to it in App Store Connect), 2 two
+  days marked busy, 3 Calendar Sync on, 4 three people picked in the Planner,
+  5 the form naming who is busy and its save asking about it, 6 the seen count
+  to 12 of 12 (seven of the cast mark it through the API while it is on
+  screen, `scripts/seen.js`), 7 the week, then the landing's mark and name.
+  Each shot is recorded on its own (`xcrun simctl io <udid> recordVideo
+  --codec=h264`), started and stopped by the flow through record.mjs's
+  recorder on 127.0.0.1:3003 (`scripts/recorder.js`), which also holds the
+  flow's pauses: Maestro has no command for one.
+- `record.mjs` — runs `node e2e/run.mjs --store=<locale> e2e/store/video.yaml`
+  (the e2e lock, the store's simulator) with the recorder listening, then the cut.
+- `montage.mjs` — the cut, with ffmpeg: each shot as long as the storyboard
+  gives it (`SLOTS`), in the screenshots' look (compose.swift `card`: the
+  caption as captions.json's `video` breaks it, SF Pro, one size for the
+  language; the recording in the window under it). The screen standing still
+  while Maestro finds its next tap is cut to 0.2 s, the flow's own pauses kept;
+  a shot still longer is played faster, up to 2×, and beyond that refused. Test:
+  `node --test e2e/__tests__/store-video.test.mjs` (in `npm test`).
+
+Only the app's own screen and the captions: no device frame, hands, prices or
+reminders. The availability legend's "Free" (and its translations) is the
+app's word for a free hour, not a price.
 
 ## What does what
 

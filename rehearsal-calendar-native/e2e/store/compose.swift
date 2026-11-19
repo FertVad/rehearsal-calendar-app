@@ -4,6 +4,7 @@
 //   compose draw <job.json>                    the pictures; prints what it drew, as JSON
 //   compose read <bottom> <lang> <picture.png>…  each picture's lines of text above `bottom`, as JSON
 //   compose sheet <out.png> <height> <#bg> <picture.png>…  the pictures in a row, small, to look over
+//   compose card <card.json>                   the preview video's overlays (T-275); prints them, as JSON
 //
 // Every picture is laid out on the 1320×2868 of the iPhone 17 Pro Max and drawn
 // at each size the job asks for, scaled — not drawn once and resampled — so
@@ -77,15 +78,154 @@ func writePng(_ image: CGImage, to file: String) {
   guard CGImageDestinationFinalize(destination) else { fail("cannot write \(file)") }
 }
 
+/** One size of type for a language: the largest at which every line of every caption fits, never above the preferred one. */
+func typeSize(_ captions: [String], font file: String, colour text: CGColor) -> CGFloat {
+  let probe = boldFont(file, size: 100)
+  let widest = captions.flatMap { $0.components(separatedBy: "\n") }
+    .map { width(line($0, font: probe, colour: text)) }.max() ?? 1
+  return min(preferredSize, floor(textWidth * 100 / widest))
+}
+
+/** The landing's background and its glow: its accent, faint, behind the top of the screenshot. In the 1320-wide frame. */
+func drawBackground(_ context: CGContext, _ c: Colours) {
+  context.setFillColor(colour(c.background))
+  context.fill(CGRect(x: 0, y: 0, width: W, height: H + 2))
+  let glow = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+                        colors: [colour(c.accent).copy(alpha: 0.22)!, colour(c.accent).copy(alpha: 0)!] as CFArray,
+                        locations: [0, 1])!
+  context.drawRadialGradient(glow, startCenter: CGPoint(x: W / 2, y: shotTop + 200), startRadius: 0,
+                             endCenter: CGPoint(x: W / 2, y: shotTop + 200), endRadius: 1100, options: [])
+}
+
+/** The caption, its lines centred, the block centred in its band, the lines where the caption breaks them. */
+func drawCaption(_ context: CGContext, _ lines: [String], font: CTFont, size: CGFloat, colour text: CGColor) {
+  let lh = size * lineHeight
+  let ascent = CTFontGetAscent(font), descent = CTFontGetDescent(font)
+  let blockTop = captionTop + (captionBottom - captionTop - lh * CGFloat(lines.count)) / 2
+  for (i, string) in lines.enumerated() {
+    let l = line(string, font: font, colour: text)
+    let baseline = blockTop + CGFloat(i) * lh + (lh - ascent - descent) / 2 + ascent
+    context.saveGState()
+    // Text the right way up in the flipped frame.
+    context.translateBy(x: (W - width(l)) / 2, y: baseline)
+    context.scaleBy(x: 1, y: -1)
+    context.textPosition = .zero
+    CTLineDraw(l, context)
+    context.restoreGState()
+  }
+}
+
+/**
+ * The preview video's pictures (T-275), each `width`×`height` (886×1920): for
+ * every caption an overlay — the screenshots' look, its background, glow and
+ * caption, with a hole where the screen recording shows through, its corners
+ * rounded, a hairline round it — and the closing card: the landing's mark and
+ * name filling that hole, to fade in over the last shot. The hole is in whole,
+ * even pixels of the output, so the recording is scaled to it exactly.
+ */
+struct Card: Codable {
+  let captions: [String]; let width: Int; let height: Int; let dir: String
+  let font: String; let colours: Colours; let mark: String; let name: String
+}
+
+func card(_ job: Card) {
+  let c = job.colours
+  let size = typeSize(job.captions, font: job.font, colour: colour(c.text))
+  let font = boldFont(job.font, size: size)
+  let scale = CGFloat(job.width) / W
+  // The screenshots' frame for the shot, in the output's even pixels.
+  let even = { (v: CGFloat) -> CGFloat in (v / 2).rounded() * 2 }
+  let shotHeight = H - shotTop - shotBottomMargin
+  let holeH = even(shotHeight * scale), holeW = even(holeH * 1320 / 2868)
+  let holeTop = even(shotTop * scale), holeLeft = even((CGFloat(job.width) - holeW) / 2)
+  guard holeTop + holeH <= CGFloat(job.height) else { fail("no room for the recording in \(job.width)×\(job.height)") }
+  // The hole back in the 1320-wide frame the drawing is laid out in.
+  let hole = CGRect(x: holeLeft / scale, y: holeTop / scale, width: holeW / scale, height: holeH / scale)
+  let radius = hole.width * cornerShare
+  let rounded = CGPath(roundedRect: hole, cornerWidth: radius, cornerHeight: radius, transform: nil)
+  try? FileManager.default.createDirectory(atPath: job.dir, withIntermediateDirectories: true)
+
+  func canvas() -> CGContext {
+    guard let context = CGContext(data: nil, width: job.width, height: job.height, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { fail("no context") }
+    context.translateBy(x: 0, y: CGFloat(job.height))
+    context.scaleBy(x: scale, y: -scale)
+    context.interpolationQuality = .high
+    return context
+  }
+  func save(_ context: CGContext, _ name: String) -> String {
+    guard let picture = context.makeImage() else { fail("nothing drawn") }
+    let file = (job.dir as NSString).appendingPathComponent(name)
+    writePng(picture, to: file)
+    return file
+  }
+
+  var overlays: [String] = []
+  for (index, caption) in job.captions.enumerated() {
+    let context = canvas()
+    drawBackground(context, c)
+    drawCaption(context, caption.components(separatedBy: "\n"), font: font, size: size, colour: colour(c.text))
+    // The hole, cleared to nothing: the recording under it shows.
+    context.saveGState()
+    context.setBlendMode(.clear)
+    context.addPath(rounded)
+    context.fillPath()
+    context.restoreGState()
+    context.addPath(rounded)
+    context.setStrokeColor(colour(c.line))
+    context.setLineWidth(3)
+    context.strokePath()
+    overlays.append(save(context, String(format: "%02d.png", index + 1)))
+  }
+
+  // The closing card: the hole filled with the background, the landing's mark
+  // and the app's name in the middle of it; clear around the hole.
+  let end = canvas()
+  end.saveGState()
+  end.addPath(rounded)
+  end.clip()
+  drawBackground(end, c)
+  let mark = loadImage(job.mark)
+  let markHeight = hole.height * 0.2
+  let markWidth = markHeight * CGFloat(mark.width) / CGFloat(mark.height)
+  let nameSize = markHeight * 0.42
+  let nameFont = boldFont(job.font, size: nameSize)
+  let nameLine = line(job.name, font: nameFont, colour: colour(c.text))
+  let gap = markHeight * 0.18
+  let blockTop = hole.midY - (markHeight + gap + nameSize) / 2
+  end.saveGState()
+  end.translateBy(x: hole.midX - markWidth / 2, y: blockTop + markHeight)
+  end.scaleBy(x: 1, y: -1)
+  end.draw(mark, in: CGRect(x: 0, y: 0, width: markWidth, height: markHeight))
+  end.restoreGState()
+  end.saveGState()
+  end.translateBy(x: hole.midX - width(nameLine) / 2, y: blockTop + markHeight + gap + CTFontGetAscent(nameFont))
+  end.scaleBy(x: 1, y: -1)
+  end.textPosition = .zero
+  CTLineDraw(nameLine, end)
+  end.restoreGState()
+  end.restoreGState()
+  end.addPath(rounded)
+  end.setStrokeColor(colour(c.line))
+  end.setLineWidth(3)
+  end.strokePath()
+  let endFile = save(end, "end.png")
+
+  let manifest: [String: Any] = [
+    "fontSize": size * scale, "captionBottom": (captionBottom * scale).rounded(.up), "overlays": overlays, "end": endFile,
+    "hole": ["left": Int(holeLeft), "top": Int(holeTop), "width": Int(holeW), "height": Int(holeH)],
+  ]
+  let data = try! JSONSerialization.data(withJSONObject: manifest, options: [.sortedKeys])
+  FileHandle.standardOutput.write(data)
+}
+
 func draw(_ job: Job) {
   guard job.captions.count == job.shots.count else { fail("captions and screenshots differ in number") }
   let c = job.colours
   // One size of type for the language: the largest at which every line of
   // every caption fits, never above the preferred one.
-  let probe = boldFont(job.font, size: 100)
-  let widest = job.captions.flatMap { $0.components(separatedBy: "\n") }
-    .map { width(line($0, font: probe, colour: colour(c.text))) }.max() ?? 1
-  let size = min(preferredSize, floor(textWidth * 100 / widest))
+  let size = typeSize(job.captions, font: job.font, colour: colour(c.text))
   let font = boldFont(job.font, size: size)
   let shotHeight = H - shotTop - shotBottomMargin
   let shotWidth = (shotHeight * 1320 / 2868).rounded()
@@ -106,30 +246,8 @@ func draw(_ job: Job) {
       context.scaleBy(x: scale, y: -scale)
       context.interpolationQuality = .high
 
-      context.setFillColor(colour(c.background))
-      context.fill(CGRect(x: 0, y: 0, width: W, height: H + 2))
-      // The landing's glow: its accent, faint, behind the top of the screenshot.
-      let glow = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
-                            colors: [colour(c.accent).copy(alpha: 0.22)!, colour(c.accent).copy(alpha: 0)!] as CFArray,
-                            locations: [0, 1])!
-      context.drawRadialGradient(glow, startCenter: CGPoint(x: W / 2, y: shotTop + 200), startRadius: 0,
-                                 endCenter: CGPoint(x: W / 2, y: shotTop + 200), endRadius: 1100, options: [])
-
-      // The caption, its lines centred, the block centred in its band.
-      let lh = size * lineHeight
-      let ascent = CTFontGetAscent(font), descent = CTFontGetDescent(font)
-      let blockTop = captionTop + (captionBottom - captionTop - lh * CGFloat(lines.count)) / 2
-      for (i, text) in lines.enumerated() {
-        let l = line(text, font: font, colour: colour(c.text))
-        let baseline = blockTop + CGFloat(i) * lh + (lh - ascent - descent) / 2 + ascent
-        context.saveGState()
-        // Text the right way up in the flipped frame.
-        context.translateBy(x: (W - width(l)) / 2, y: baseline)
-        context.scaleBy(x: 1, y: -1)
-        context.textPosition = .zero
-        CTLineDraw(l, context)
-        context.restoreGState()
-      }
+      drawBackground(context, c)
+      drawCaption(context, lines, font: font, size: size, colour: colour(c.text))
 
       // The screenshot, whole, its corners rounded, a hairline round it.
       let radius = shot.width * cornerShare
@@ -205,10 +323,14 @@ case "draw" where args.count == 3:
   guard let data = FileManager.default.contents(atPath: args[2]),
         let job = try? JSONDecoder().decode(Job.self, from: data) else { fail("cannot read the job \(args[2])") }
   draw(job)
+case "card" where args.count == 3:
+  guard let data = FileManager.default.contents(atPath: args[2]),
+        let job = try? JSONDecoder().decode(Card.self, from: data) else { fail("cannot read the card job \(args[2])") }
+  card(job)
 case "sheet" where args.count >= 6:
   sheet(args[2], height: Int(args[3]) ?? 600, background: args[4], files: Array(args[5...]))
 case "read" where args.count >= 5:
   read(Array(args[4...]), bottom: CGFloat(Double(args[2]) ?? 0), language: args[3])
 default:
-  fail("usage: compose draw <job.json> | compose read <bottom> <language> <picture.png>…")
+  fail("usage: compose draw <job.json> | compose card <card.json> | compose read <bottom> <language> <picture.png>… | compose sheet …")
 }

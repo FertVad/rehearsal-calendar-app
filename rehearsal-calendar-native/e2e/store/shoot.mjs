@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LOCALES, OUT, compose, shotsOf } from './compose.mjs';
-import { LAST_HOUR, storeHour } from './seed.mjs';
+import { LAST_HOUR, latePages } from './seed.mjs';
 
 const STORE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(STORE, '..', '..');
@@ -39,7 +39,7 @@ for (const locale of locales) {
 // The seed refuses after LAST_HOUR in the page's country (seed.mjs): say so
 // now rather than after the pages before it, about seven minutes each.
 const MINUTES_A_PAGE = 7;
-const late = locales.filter((locale, i) => storeHour(locale, new Date(Date.now() + i * MINUTES_A_PAGE * 60_000)) > LAST_HOUR);
+const late = latePages(locales, MINUTES_A_PAGE);
 if (late.length) {
   console.error(`[store] ${late.join(', ')} would be seeded after ${LAST_HOUR}:59 in its country, when the Planner's `
     + 'first card has no room for all four levels; see e2e/store/README.md for the hours');

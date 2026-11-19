@@ -1,0 +1,358 @@
+# The App Store's preview video (T-275): the storyboard played on the app as
+# it is, on the store's simulator (iPhone 17 Pro Max), as the director of
+# e2e/store/seed.mjs's world, at a person's pace — a pause to look before each
+# tap and after what it brought. Not one of e2e/flows: run by
+# e2e/store/record.mjs, one language at a time, through `node e2e/run.mjs
+# --store=<locale>`, with the recorder listening (scripts/recorder.js).
+#
+# Each shot is recorded on its own, from "start" to "stop"; what leads up to
+# it — opening a screen, a sheet closed — is not. montage.mjs cuts the seven
+# into the storyboard's times (SLOTS), a shot shorter held on its last frame:
+#   1 the Planner filling with its levels (3 s, the cover)
+#   2 busy days marked in the month (5 s)
+#   3 Calendar Sync switched on (4 s)
+#   4 three people picked, the windows weighed again (6 s)
+#   5 the form naming who is busy, saved (5 s)
+#   6 the seen count running to 12 of 12 (4 s)
+#   7 the week in the calendar, then the mark (3 s)
+# Only the app's screen and its captions: no hands, no prices, no reminders.
+appId: ${APP_ID}
+name: App Store preview video
+tags:
+  - store
+---
+# Signed in on the simulator's own English, as shots.yaml does (docs/e2e.md):
+# Maestro types through the keyboard.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      rehearslyPushDevice: "1"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 30000
+# The phone as one of the page's country: its language, region and clock.
+- launchApp:
+    arguments:
+      AppleICUForce24HourTime: "${CLOCK24_LABEL}"
+      AppleLanguages: "${APPLE_LANGUAGES_LABEL}"
+      AppleLocale: "${APPLE_LOCALE_LABEL}"
+      rehearslyPushDevice: "1"
+- extendedWaitUntil:
+    visible: ".*${CONCERT_LABEL}.*"
+    timeout: 30000
+- waitForAnimationToEnd
+
+# 1. The Planner: its cards come, every level in the first.
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "01", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "500" }
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: "planner-row-.*"
+    timeout: 30000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1800" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
+
+# 2. The director's month: two free days marked busy, saved.
+- tapOn:
+    id: tab-create
+- tapOn: "${MARK_BUSY_LABEL}"
+- extendedWaitUntil:
+    visible:
+      id: day-${BUSY_A_DAY}
+    timeout: 30000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "02", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "500" }
+- tapOn:
+    id: day-${BUSY_A_DAY}
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "300" }
+- tapOn:
+    id: day-${BUSY_B_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-busy
+    timeout: 10000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: mode-busy
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible:
+      id: toast
+    timeout: 15000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "800" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
+- extendedWaitUntil:
+    notVisible:
+      id: toast
+    timeout: 10000
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+
+# 3. Calendar Sync: the iPhone's calendar chosen, sync switched on.
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible:
+      id: profile-language
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-calendar-sync
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-toggle
+    timeout: 15000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "03", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "500" }
+- tapOn: ".*${APPLE_LABEL}.*"
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- runFlow:
+    when:
+      notVisible:
+        id: calendar-sync-toggle
+        checked: true
+    commands:
+      - tapOn:
+          id: calendar-sync-toggle
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-toggle
+      checked: true
+    timeout: 15000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1500" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
+# Whatever the first sync says comes in an alert, after the shot.
+- runFlow:
+    when:
+      visible: "OK|ОК"
+    commands:
+      - tapOn: "OK|ОК"
+- tapOn:
+    id: header-back
+
+# 4. The Planner again, the whole cast; three picked, the windows weighed again.
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: "planner-row-.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "04", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "500" }
+- tapOn:
+    id: participants-row
+- extendedWaitUntil:
+    visible:
+      id: participants-all
+    timeout: 10000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: participants-all
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "300" }
+- tapOn: "${PICK_0_LABEL}.*"
+- tapOn: "${PICK_1_LABEL}.*"
+- tapOn: "${PICK_2_LABEL}.*"
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible:
+      id: participants-all
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "planner-row-.*"
+    timeout: 30000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1500" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
+
+# 5. Tomorrow at FORM_TIME, one of the three busy: the form names them; saved.
+- scrollUntilVisible:
+    element:
+      id: planner-add-${FORM_DAY}-${FORM_TIME}
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "05", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: planner-add-${FORM_DAY}-${FORM_TIME}
+- extendedWaitUntil:
+    visible:
+      id: participants-conflict
+    timeout: 15000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1300" }
+- tapOn:
+    id: rehearsal-submit
+# Saving asks first, naming who is busy: the shot ends on that question. The
+# button's spinner turns under it, so the screen never settles and Maestro
+# takes some ten seconds over the next tap; "Create Anyway" is tapped after.
+- extendedWaitUntil:
+    visible: "${CREATE_ANYWAY_LABEL}"
+    timeout: 10000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1500" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
+- tapOn: "${CREATE_ANYWAY_LABEL}"
+- extendedWaitUntil:
+    visible: "OK"
+    timeout: 30000
+- tapOn: "OK"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-submit
+    timeout: 15000
+
+# 6. The rehearsal of all twelve, on its day in the calendar: four have seen
+# it; seven more do while it is on screen, the list is pulled to read them,
+# and the director's own eye makes it 12 of 12.
+- runScript:
+    file: scripts/seen.js
+    env: { API_URL: "${API_URL}", PASSWORD: "${PASSWORD}", EMAILS: "${SEEN_EMAILS_LABEL}", REHEARSAL: "${EVERYONE_REHEARSAL}", FROM: "0", TO: "4" }
+- tapOn:
+    id: tab-calendar
+- extendedWaitUntil:
+    visible:
+      id: calendar-day-${EVERYONE_DAY}
+    timeout: 15000
+- tapOn:
+    id: calendar-day-${EVERYONE_DAY}
+# The list as the calendar last read it, 0/12: pulled to read the four.
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 75%"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      text: "4/12"
+    timeout: 15000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "06", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/seen.js
+    env: { API_URL: "${API_URL}", PASSWORD: "${PASSWORD}", EMAILS: "${SEEN_EMAILS_LABEL}", REHEARSAL: "${EVERYONE_REHEARSAL}", FROM: "4", TO: "11" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "300" }
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 75%"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      text: "11/12"
+    timeout: 15000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: seen-toggle
+    text: ".*${EVERYONE_TITLE_LABEL}"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      text: "12/12"
+    timeout: 15000
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1600" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
+
+# 7. Back to today: the week, its rehearsals under it; the mark comes after.
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "07", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: calendar-today
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1800" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
