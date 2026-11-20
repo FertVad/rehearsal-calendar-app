@@ -1,0 +1,35 @@
+T-288 green: the same tests on the new composer (Literata from e2e/store/fonts, main word italic lilac, flush left).
+
+$ node --test e2e/__tests__/store-compose.test.mjs
+✔ the sizes App Store Connect takes: 1320×2868 and 1206×2622
+✔ the fonts are the repository's, in e2e/store/fonts, each with its OFL.txt beside it; no system font (T-288)
+✔ every caption of every language marks at most one main word, in [brackets] within one line (T-288)
+✔ a missing screenshot or language is refused, not drawn over
+▶ drawn by compose.swift
+  ✔ eight pictures a language, at each size, RGB without alpha
+  ✔ each caption is captions.json's, broken where the file breaks it, read back off the picture
+  ✔ drawn with Literata and its italic from e2e/store/fonts, as Core Text says it loaded them (T-288)
+  ✔ the main word: no bracket on the picture, its letters lilac (#C084FC), the rest of the caption not (T-288)
+  ✔ each line starts at the window's left edge: its first letter's ink within a few px of the screenshot's (T-288)
+  ✔ one size of type for the whole language, at most 104 px, made smaller for all when one caption is too wide
+  ✔ the screenshot is under the caption, whole, with rounded corners
+ℹ tests 11  pass 11  fail 0
+
+$ node --test e2e/__tests__/store-video.test.mjs      (today's video: brackets not printed, Inter Tight, not SF Pro)
+✔ captions.json for the video (en-US, en-GB, ru, es-ES, de-DE; en-GB is en-US)
+✔ the format App Store Connect takes, and eight shots from seven recordings
+✔ stillness is cut to STILL, the flow's pauses too
+✔ the poster frame's time code, as App Store Connect writes it
+✔ too few recordings, or a missing one, are refused before anything is made
+✔ every language's captions as compose.swift draws them (5 languages; no bracket printed; sign-in broken where the file breaks it)
+✔ made by ffmpeg, its captions by compose.swift (9 tests)
+ℹ tests 24  pass 24  fail 0
+
+$ npm run check:dead      → clean (knip, twice)
+
+$ node e2e/store/compose.mjs --preview=../audit/evidence/T-288     (on the shots of the last run; nothing shot again)
+[store] en-US: 8 pictures, type 103 px
+[store] en-GB: 8 pictures, type 103 px
+[store] ru: 8 pictures, type 90 px
+[store] es-ES: 8 pictures, type 86 px
+[store] de-DE: 8 pictures, type 87 px

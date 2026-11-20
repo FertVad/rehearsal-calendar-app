@@ -1,0 +1,45 @@
+T-288 red-before: the new e2e/__tests__/store-compose.test.mjs and the new captions.json (main words in
+[brackets]) on the composer as it was at 027ceb1 (compose.swift, compose.mjs: SF Pro from
+/System/Library/Fonts/SFNS.ttf, lines centred, no markup).
+
+$ node --test e2e/__tests__/store-compose.test.mjs     (stack lines dropped)
+
+✔ the sizes App Store Connect takes: 1320×2868 and 1206×2622 (5.108875ms)
+✖ the fonts are the repository's, in e2e/store/fonts, each with its OFL.txt beside it; no system font (T-288) (2.274291ms)
+✔ every caption of every language marks at most one main word, in [brackets] within one line (T-288) (3.6495ms)
+✔ a missing screenshot or language is refused, not drawn over (3.720083ms)
+▶ drawn by compose.swift
+  ✔ eight pictures a language, at each size, RGB without alpha (805.475584ms)
+  ✖ each caption is captions.json's, broken where the file breaks it, read back off the picture (15890.191625ms)
+  ✖ the main word: no bracket on the picture, its letters lilac (#C084FC), the rest of the caption not (T-288) (3670.688041ms)
+  ✖ each line starts at the window's left edge: its first letter's ink within a few px of the screenshot's (T-288) (1215.816334ms)
+  ✔ one size of type for the whole language, at most 104 px, made smaller for all when one caption is too wide (14870.79575ms)
+  ✔ the screenshot is under the caption, whole, with rounded corners (620.584583ms)
+✖ drawn by compose.swift (94321.408792ms)
+ℹ tests 10
+ℹ pass 6
+ℹ fail 4
+
+✖ the fonts are the repository's, in e2e/store/fonts, each with its OFL.txt beside it; no system font (T-288)
+  AssertionError [ERR_ASSERTION]: fonts: undefined
+  (the composer names no fonts of the repository's: it draws with SF Pro, /System/Library/Fonts/SFNS.ttf)
+
+✖ each caption is captions.json's, broken where the file breaks it, read back off the picture
+  AssertionError [ERR_ASSERTION]: es-ES 7: ["Invita a todos","con [un solo enlacel"]
+  + actual - expected
+    [
+      'invitaatodos',
+  +   'conunsoloenlacel'
+  -   'conunsoloenlace'
+    ]
+  (the brackets are printed; the closing one read as "l")
+
+✖ the main word: no bracket on the picture, its letters lilac (#C084FC), the rest of the caption not (T-288)
+  AssertionError [ERR_ASSERTION]: en-US 1: ["A time the [whole cast]","can make"]
+    actual: 'A time the [whole cast]\ncan make',
+    expected: /[\[\]]/,
+    operator: 'doesNotMatch'
+
+✖ each line starts at the window's left edge: its first letter's ink within a few px of the screenshot's (T-288)
+  AssertionError [ERR_ASSERTION]: en-US 1, line 1 "A time the [whole cast]": first ink at x 117, the window at 127
+  (the lines centred, not set flush with the window)
