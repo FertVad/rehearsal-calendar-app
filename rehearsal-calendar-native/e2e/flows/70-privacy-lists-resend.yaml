@@ -11,11 +11,16 @@
 # since "Resend" in bold is an element of its own. The words are the native
 # editors' (T-269, 64d7860): "sends our emails: your codes for signing up",
 # "Versand unserer E-Mails: Codes für Registrierung" (T-284).
+#
+# Rehearsly is stopped first: the flow before this one leaves it running, and
+# with it behind Safari Maestro's driver read the app's screen, not the page,
+# and once waited 60 s on it as iOS suspended it (T-277, docs/e2e.md).
 appId: com.apple.mobilesafari
 name: Privacy policy lists Resend in every language
 tags:
   - legal
 ---
+- stopApp: ${APP_ID}
 - stopApp
 - openLink:
     link: ${API_URL.replace('/api', '')}/privacy?lang=en
