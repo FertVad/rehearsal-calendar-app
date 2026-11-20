@@ -1,0 +1,55 @@
+T-285 — red before: the new e2e/__tests__/store-video.test.mjs (3309e5b) against
+the cut before it (673dc5f): e2e/store/montage.mjs, compose.swift and compose.mjs
+restored from 673dc5f, captions.json as in 3309e5b (the old cut reads its seven
+`video` captions from it).
+
+$ git restore --source=673dc5f -- e2e/store/montage.mjs e2e/store/compose.swift e2e/store/compose.mjs
+$ node --test e2e/__tests__/store-video.test.mjs
+
+✔ captions.json for the video
+✖ the format App Store Connect takes, and eight shots from seven recordings
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal   (M.SHOTS: none — seven SLOTS)
+✖ stillness is cut to STILL, the flow's pauses too
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal   (the old cut kept the flow's pauses)
+✖ the poster frame's time code, as App Store Connect writes it
+  TypeError [Error]: M.timeCode is not a function
+✔ too few recordings, or a missing one, are refused before anything is made
+✖ every language's captions as compose.swift draws them   (5 of 5)
+  TypeError [Error]: M.videoCaptions is not a function
+✖ made by ffmpeg, its captions by compose.swift
+  ✖ 886×1920 at 30 fps, H.264, 20 to 28 seconds, with a silent stereo AAC track at 48 kHz
+    AssertionError [ERR_ASSERTION]: 29.8 s
+  ✖ no frame round the recording: its edges and corners are the recording's, in every shot
+    AssertionError [ERR_ASSERTION]: shot 0 at 2,2: 17,18,28 for the recording's 255,255,255
+  ✖ each caption over its shot as captions.json breaks it, on a band white reads on at 4.5:1 or more
+  ✖ the hook over the Planner darkened, lifting before the poster frame; the hook still on it
+  ✖ the seen count's caption comes only once the count is at 12 of 12, and stays 2 s
+  ✖ the last shot closes on the mark, the name and the sign-in line, held about 3 s
+  ✖ a recording far longer than its shot is refused, not raced through
+ℹ tests 22
+ℹ pass 7
+ℹ fail 15
+
+The corner pixel 17,18,28 is the landing's background (#0d1117) round the
+rounded window: the frame Apple refuses. The 29.8 s is T-275's length.
+
+$ git restore --source=HEAD -- e2e/store/montage.mjs e2e/store/compose.swift e2e/store/compose.mjs
+
+Green on 3309e5b:
+
+$ node --test e2e/__tests__/store-video.test.mjs
+✔ captions.json for the video
+✔ the format App Store Connect takes, and eight shots from seven recordings
+✔ stillness is cut to STILL, the flow's pauses too
+✔ the poster frame's time code, as App Store Connect writes it
+✔ too few recordings, or a missing one, are refused before anything is made
+✔ every language's captions as compose.swift draws them
+✔ made by ffmpeg, its captions by compose.swift
+ℹ tests 22
+ℹ pass 22
+ℹ fail 0
+
+$ node --test e2e/__tests__/store-compose.test.mjs   (the screenshots, untouched by T-285)
+ℹ tests 6
+ℹ pass 6
+ℹ fail 0
