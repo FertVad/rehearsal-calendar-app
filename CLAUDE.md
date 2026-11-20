@@ -131,6 +131,11 @@ server/public/
   `'unsafe-inline'`, so the browser drops them without a word. A page checked
   from a file or a plain static server never sees this; check it through the
   app's own headers.
+- **A module script goes through CORS**: the browser fetches `cinema.js` and
+  three.js with an `Origin` header, even from the page's own address. The page
+  must therefore be on an origin `app.js` allows — `BASE_URL` in production
+  (exactly `https://rehearsly.me`), `http://localhost:3001` locally; anywhere
+  else the server answers 500 for the script and the scene never starts.
 - **i18n**: every language ships in the markup and one is hidden, so the pages
   stay readable without JavaScript — all four on every page. Each language is
   written on its own terms rather than translated slot by slot, which is why
