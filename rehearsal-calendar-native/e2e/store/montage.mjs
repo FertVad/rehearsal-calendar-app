@@ -24,7 +24,8 @@
  * which the closing card says.
  *
  * The storyboard (SHOTS), eight shots from seven recordings: the hook over the
- * Planner, darkened, lifting as its windows come; the Planner's windows; a
+ * Planner with its windows, darkened, the darkness lifting after HOOK_DARK —
+ * never the Planner loading under it (readyAt); the Planner's windows; a
  * week marked; Calendar Sync; three picked; the form's conflict; the seen
  * count to 12 of 12 — its caption only once it is there; the week, then the
  * mark, the name, the slogan and the sign-in line.
@@ -62,7 +63,7 @@ export const STILL = 0.2;
 /** No caption is on screen for less. */
 export const MIN_CAPTION = 2;
 
-/** The hook's shot: the Planner held darkened this long, then lifted over DISSOLVE as it plays on. */
+/** The hook's shot: the Planner, its windows there, held darkened this long, then lifted over DISSOLVE. */
 export const HOOK_DARK = 1.5;
 const DISSOLVE = 0.5;
 
@@ -81,7 +82,7 @@ const WEEK = 2.0;
  * length is what its recording takes, plus SEEN_HOLD (`seen`).
  */
 export const SHOTS = [
-  { clip: 0, caption: 'hook', length: 2.6, place: 'bottom', hook: true }, // the Planner darkened; the windows come
+  { clip: 0, caption: 'hook', length: 2.6, place: 'bottom', hook: true }, // the Planner with its windows, darkened; the darkness lifts
   { clip: 0, caption: 0, length: 2.4, place: 'bottom' },                  // the Planner's windows (title and first windows at the top)
   { clip: 1, caption: 1, length: 3.0, place: 'top' },                     // the month: the days marked are in the middle, the sheet and Save at the bottom
   { clip: 2, caption: 2, length: 2.4, place: 'bottom' },                  // Calendar Sync: all of it in the top half
@@ -145,6 +146,22 @@ export function stillness(times, duration) {
   return { cuts, length: duration - cut };
 }
 
+/**
+ * When the Planner had its windows on screen in the hook's recording, in
+ * seconds of the recording: the flow marks it once Maestro sees them (video.yaml
+ * `mark ready`, kept by record.mjs beside the recording as 01.json `marks`).
+ * Before it the Planner is loading — "Loading…", a project with no members,
+ * "Analyzing availability…" — which no shot shows (T-286).
+ */
+function readyAt(clip) {
+  const file = clip.replace(/\.[^./]+$/, '.json');
+  const ready = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')).marks?.ready : undefined;
+  if (!Number.isFinite(ready)) {
+    throw new Error(`${file}: no "ready" mark, when the Planner showed its windows; record the scene again (record.mjs)`);
+  }
+  return ready;
+}
+
 /** The times of a recording's frames, in seconds from its first, in order. */
 function frameTimes(clip) {
   const out = execFileSync(tool('ffprobe'), ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'packet=pts_time',
@@ -155,9 +172,9 @@ function frameTimes(clip) {
 
 /**
  * How each recording goes into its shots: from where (the hook's recording
- * from its first change — the tap on the Planner's tab, not the screen before
- * it), held how long first, how fast, and each shot's start, length and the
- * moment its caption comes.
+ * from the Planner with its windows — readyAt — never the Planner loading),
+ * held how long first, how fast, and each shot's start, length and the moment
+ * its caption comes.
  */
 function plan(clips) {
   const recordings = clips.map((clip, r) => {
@@ -166,8 +183,16 @@ function plan(clips) {
     const { cuts, length: kept } = stillness(times, recorded);
     const shots = SHOTS.filter((s) => s.clip === r);
     const hook = shots.some((s) => s.hook);
-    // The hook's recording starts on its first change: what was before it is the screen the tap left.
-    const from = hook && cuts.length && cuts[0].at === times[1] ? times[1] - cuts[0].by : 0;
+    // The hook's recording starts on the frame on screen when the Planner was
+    // ready — the last recorded at or before it, as the simulator records a
+    // frame only when the screen changes — in the recording's time once its
+    // stillness is cut.
+    let from = 0;
+    if (hook) {
+      const ready = readyAt(clip);
+      const at = times[Math.max(0, times.findLastIndex((t) => t <= ready))];
+      from = at - (cuts.findLast((c) => c.at <= at)?.by ?? 0);
+    }
     const hold = hook ? HOOK_DARK : 0;
     const seen = shots.some((s) => s.seen);
     const end = shots.some((s) => s.end);
@@ -283,9 +308,12 @@ export async function montage({ locale, clips, out = path.join(OUT, 'video'), ca
     for (const [r, rec] of recordings.entries()) {
       const mine = shots.filter((s) => s.clip === r);
       const length = mine.reduce((sum, s) => sum + s.length, 0);
-      // Its stillness cut, timed anew at 30, from where it starts; the whole
-      // frame filled, scaled down to it, the rest cut evenly off top and bottom.
-      graph.push(`[${r}:v]setpts=${timing(rec)},fps=${fps},trim=start=${(rec.from / rec.speed + (rec.from ? 0.034 : 0)).toFixed(3)},`
+      // Its stillness cut, timed anew at 30, from where it starts — a frame
+      // later than its first frame's time, so the frame before it is not
+      // taken in its place, and held past its end for that; the whole frame
+      // filled, scaled down to it, the rest cut evenly off top and bottom.
+      const start = rec.from ? rec.from / rec.speed + 1 / fps + 0.004 : 0;
+      graph.push(`[${r}:v]setpts=${timing(rec)},fps=${fps},tpad=stop_mode=clone:stop_duration=1,trim=start=${start.toFixed(3)},`
         + `setpts=PTS-STARTPTS,scale=${W}:${H}:force_original_aspect_ratio=increase:flags=lanczos,crop=${W}:${H},setsar=1,`
         + `tpad=start_mode=clone:start_duration=${rec.hold}:stop_mode=clone:stop_duration=${length.toFixed(3)},`
         + `trim=duration=${length.toFixed(3)},setpts=PTS-STARTPTS${mine.length > 1 ? `,split=${mine.length}${mine.map((s) => `[c${s.index}]`).join('')}` : `[r${mine[0].index}]`}`);
@@ -324,7 +352,7 @@ export async function montage({ locale, clips, out = path.join(OUT, 'video'), ca
       '-b:v', '10M', '-maxrate', '12M', '-bufsize', '20M',
       '-c:a', 'aac', '-b:a', '128k', '-ar', '48000', '-ac', '2',
       '-t', total.toFixed(3), '-movflags', '+faststart', file], { stdio: ['ignore', 'inherit', 'inherit'], timeout: 600000 });
-    // The poster frame: the hook's shot at its end — the windows come, the hook still on.
+    // The poster frame: the hook's shot at its end — the windows lit, the hook still on.
     const poster = Math.round((hookShot.length - 0.1) * fps) / fps;
     return {
       file, length: total, poster: { seconds: poster, timeCode: timeCode(poster) },

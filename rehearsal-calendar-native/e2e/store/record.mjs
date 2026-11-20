@@ -20,6 +20,9 @@
  *   GET /start?clip=<01…07>&device=<udid>   recording begun when it answers
  *   GET /stop                               the file whole when it answers
  *   GET /wait?ms=<n>                        a person's pause in the flow (≤ 5 s)
+ *   GET /mark?name=<word>                   now, in seconds of the recording under
+ *                                           way, kept in its .json `marks` (T-286:
+ *                                           `ready`, the Planner's windows there)
  *
  * Exits as the run did when it failed: 75 is the machine's (Docker, a port,
  * the simulator), and the locales after it are not taken.
@@ -62,15 +65,15 @@ function recorder(dir) {
   let recording = null;
   const stop = () => new Promise((resolve, reject) => {
     if (!recording) return reject(new Error('nothing is being recorded'));
-    const { child, file, waits } = recording;
+    const { child, file, waits, marks } = recording;
     recording = null;
     const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`the recording of ${file} did not end`)); }, 20000);
     child.once('exit', () => {
       clearTimeout(timer);
       if (!fs.existsSync(file) || fs.statSync(file).size === 0) return reject(new Error(`no recording in ${file}`));
-      // The flow's own pauses, beside the recording: montage.mjs keeps them
-      // and shortens the rest of the screen's stillness (waitsOf).
-      fs.writeFileSync(file.replace(/\.mov$/, '.json'), JSON.stringify({ waits }));
+      // The flow's own pauses and marks, beside the recording: the pauses to
+      // see where the time went, the marks for montage.mjs (readyAt).
+      fs.writeFileSync(file.replace(/\.mov$/, '.json'), JSON.stringify({ waits, marks }));
       resolve(file);
     });
     // SIGINT is how simctl is told to finish the file.
@@ -82,7 +85,7 @@ function recorder(dir) {
     fs.rmSync(file, { force: true });
     const child = spawn('xcrun', ['simctl', 'io', device, 'recordVideo', '--codec=h264', '--force', file],
       { stdio: ['ignore', 'pipe', 'pipe'] });
-    recording = { child, file, began: null, waits: [] };
+    recording = { child, file, began: null, waits: [], marks: {} };
     const mine = recording;
     let said = '';
     const timer = setTimeout(() => reject(new Error(`recording did not start: ${said.trim()}`)), 15000);
@@ -116,6 +119,13 @@ function recorder(dir) {
         // In seconds of the recording under way, if one is.
         if (recording?.began) recording.waits.push({ from: (from - recording.began) / 1000, to: (Date.now() - recording.began) / 1000 });
         return answer(200, { waited: ms });
+      }
+      if (url.pathname === '/mark') {
+        const name = url.searchParams.get('name') ?? '';
+        if (!/^[a-z]{1,20}$/.test(name)) return answer(400, { error: 'a mark is named in small letters' });
+        if (!recording?.began) return answer(409, { error: 'nothing is being recorded' });
+        recording.marks[name] = (Date.now() - recording.began) / 1000;
+        return answer(200, { marked: name });
       }
       return answer(404, { error: 'no such thing' });
     } catch (error) {

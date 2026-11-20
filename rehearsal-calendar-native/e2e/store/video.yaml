@@ -58,6 +58,11 @@ tags:
     env: { ACTION: wait, MS: "500" }
 - runFlow:
     file: planner-tab.yaml
+# Its windows are on screen: the hook's shot starts here, never on the Planner
+# loading before it (montage.mjs readyAt, T-286).
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: mark, NAME: ready }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "1800" }

@@ -57,7 +57,7 @@ install ffmpeg`). Then watch every video before it is uploaded.
 What comes out, outside git: `e2e/store/out/video/<locale>.mp4` — 886×1920, 30
 fps, H.264 High at 10 Mb/s, 27.2 s, and a silent stereo AAC track at 48 kHz;
 and the recordings it was cut from, `e2e/store/out/clips/<locale>/01.mov…07.mov`,
-each with the flow's pauses beside it (`01.json`). Upload es-ES's for es-MX too,
+each with the flow's pauses and marks beside it (`01.json`). Upload es-ES's for es-MX too,
 and set each preview's poster frame (`previewFrameTimeCode`) to **00:00:02:15**:
 montage.mjs prints it.
 
@@ -86,8 +86,14 @@ app"). Keep to them whatever the next storyboard is:
    about 3 s, at 40 px or more; when one line would be smaller, it breaks
    after its colon (ru after «Нужен вход»).
 4. **The poster frame** is the end of the hook's shot: the Planner's windows
-   come, the hook still on. Its time code goes to App Store Connect.
-5. **No sound** but a silent track: App Store Connect refuses a preview with
+   lit, the hook still on. Its time code goes to App Store Connect.
+5. **Never the app loading.** A preview plays by itself from its first frame,
+   and the Planner loading says "Loading…" and that the project has no members.
+   The hook's shot starts on the Planner with its windows already there: the
+   flow marks the moment (`mark ready`, in `01.json`'s `marks`) and montage.mjs
+   starts from the frame on screen then (`readyAt`); a recording 01 without the
+   mark is refused (T-286).
+6. **No sound** but a silent track: App Store Connect refuses a preview with
    no audio track at all.
 
 **Why the video does not look like the screenshots.** A screenshot may be a
@@ -103,7 +109,7 @@ captions captions.json's `hook` and `video`:
 
 | shot | on screen | caption | where | why there |
 |---|---|---|---|---|
-| 0 | the Planner as recording 01 starts, darkened; after 1.5 s the darkness lifts and the windows come | `hook` | bottom | the title and first windows stay clear; the poster frame |
+| 0 | the Planner with its windows, darkened; after 1.5 s the darkness lifts | `hook` | bottom | the title and first windows stay clear; the poster frame |
 | 1 | the Planner's windows | `video[0]` | bottom | the same |
 | 2 | two days marked busy | `video[1]` | top | the days are mid-screen, the sheet and Save at the bottom |
 | 3 | Calendar Sync on | `video[2]` | bottom | the whole screen is in its top half |
@@ -157,9 +163,19 @@ does not say where on the screen its taps land, and they are not guessed.
   the public domain (Shakespeare, Chekhov, Lorca, Kleist), a concert and a
   music video; busy times for four weeks, so the Planner's first card shows all
   four levels; a rehearsal 5 of 8 have seen (frame 5); a rehearsal of all 12,
-  nobody's mark on it yet, for the video (`EVERYONE_REHEARSAL`); everyone in
-  the country's zone. Accounts are inserted as in `e2e/seed.mjs`, the rest goes
-  through the API.
+  nobody's mark on it yet, for the video (`EVERYONE_REHEARSAL`); every other
+  rehearsal seen by some of its cast and not all (`seenBy`: 4/7, 2/4, 3/4…);
+  everyone in the country's zone. Accounts are inserted as in `e2e/seed.mjs`,
+  the rest goes through the API, the "seen" marks as the phones send them.
+
+  **Changed after the screenshots.** The screenshots (T-274) were taken and
+  approved on the seed before T-286, where no rehearsal but frame 5's had a
+  "seen" mark. Since T-286 (20.11.2026) every rehearsal but the one of all
+  twelve has some, so the video's calendar does not show "0/7" under "12 of
+  12". Shot again now, frame 6 (the calendar) would read 2/4, 2/4 and 3/4
+  where the approved one reads 0/4 three times (the band rehearsal, the
+  choreography, shoot day 1); its 5/8 and the 0/12 of all twelve stay, and so
+  does every other frame. The approved pictures were not shot again.
 - `shots.yaml` — the Maestro flow: signs in as the director, then each frame
   from a fresh launch with the country's language, region and clock (12-hour
   for en-US, 24-hour elsewhere).

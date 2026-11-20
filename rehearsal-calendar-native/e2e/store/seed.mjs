@@ -22,7 +22,9 @@
  *   caption says (SEEN_REHEARSAL);
  * - a rehearsal of all 12, nobody's mark on it yet, for the video's counter
  *   that runs to 12 of 12 (T-275; EVERYONE_REHEARSAL);
- * - rehearsals ahead in all three projects (frame 6).
+ * - rehearsals ahead in all three projects (frame 6), each seen by some of
+ *   its cast and not all (seenBy; since T-286, after the screenshots were
+ *   approved: README).
  *
  * Times are the world's zone's (seedStore), every profile in it.
  */
@@ -201,6 +203,18 @@ export function busyBlocks(day, hourNow) {
   ];
 }
 
+/**
+ * Who of a rehearsal's `cast` (the director first, as the seed lists it) has
+ * seen it, the `i`th of the world's: about half to two thirds — 4 of 7, 2 of 4,
+ * 3 of 4 — never nobody, never everyone, never the director; so the calendar
+ * under the video's "12 of 12" reads like a week in work (T-286).
+ */
+function seenBy(cast, i) {
+  const share = [0.5, 0.6, 0.7][i % 3];
+  const count = Math.min(cast.length - 1, Math.max(1, Math.round(cast.length * share)));
+  return cast.filter((key) => key !== 'director').slice(0, count);
+}
+
 /** The director's own marks (frame 2): whole days away and hours taken. */
 const DIRECTOR_AWAY = [4, 10, 11, 17, 18, 24];
 const DIRECTOR_HOURS = [[6, 10, 14], [13, 18, 22], [20, 9, 13]];
@@ -349,19 +363,29 @@ export async function seedStore({ client, apiUrl, locale, now = new Date() }) {
   const concertCast = ['director', 'actor8', 'actor9', 'actor10'];
   const clipCast = ['director', 'musician0', 'musician1', 'crew0'];
 
+  // Some of a rehearsal's cast mark it seen, each from a phone of their own,
+  // as the app sends it.
+  const markSeen = async (id, keys) => {
+    for (const key of keys) {
+      await call(apiUrl, 'POST', `/native/rehearsals/${id}/respond`, { token: await token(key), body: { response: 'yes' } });
+    }
+  };
+  // Every rehearsal of the world but two — the "5 of 8" one and the one of
+  // all twelve — with its cast: each is seen by some of them (seenBy).
+  const upcoming = [];
+
   // Tomorrow: the concert in the morning, when the play's cast is mostly at
   // work anyway, the clip's choreography in the evening — neither moves a
   // level of the Planner's first card.
-  await rehearsal('concert', concert.id, titles.concert[0], 1, 9, 11, concertCast);
-  await rehearsal('clip', clip.id, titles.clip[0], 1, 19, 21, clipCast);
+  upcoming.push([await rehearsal('concert', concert.id, titles.concert[0], 1, 9, 11, concertCast), concertCast]);
+  upcoming.push([await rehearsal('clip', clip.id, titles.clip[0], 1, 19, 21, clipCast), clipCast]);
   // In two days: the director and seven of the cast, five of them have seen it.
   const seenCast = playCast(0, 7);
   const seen = await rehearsal('play', play.id, titles.play[0], 2, 18, 21, seenCast);
-  for (const key of seenCast.slice(0, 5)) {
-    await call(apiUrl, 'POST', `/native/rehearsals/${seen}/respond`, { token: await token(key), body: { response: 'yes' } });
-  }
-  await rehearsal('clip', clip.id, titles.clip[1], 2, 10, 14, clipCast);
-  // All twelve, nobody's mark yet: the video's counter (T-275).
+  await markSeen(seen, seenCast.slice(0, 5));
+  upcoming.push([await rehearsal('clip', clip.id, titles.clip[1], 2, 10, 14, clipCast), clipCast]);
+  // All twelve, nobody's mark yet: the video's counter (T-275), which runs
+  // from 4 to 12 of 12 in its shot 6 (video.yaml).
   const everyone = await rehearsal('play', play.id, titles.play[1], 3, 18, 21, playCast(0, 11));
   const ahead = [
     ['play', 5, 11, 14, 2, playCast(3, 6)], ['concert', 6, 19, 21, 1, concertCast], ['play', 7, 18, 21, 3, playCast(5, 5)],
@@ -371,8 +395,11 @@ export async function seedStore({ client, apiUrl, locale, now = new Date() }) {
   ];
   for (const [which, day, from, to, title, cast] of ahead) {
     const id = which === 'play' ? play.id : which === 'concert' ? concert.id : clip.id;
-    await rehearsal(which, id, titles[which][title % titles[which].length], day, from, to, cast);
+    upcoming.push([await rehearsal(which, id, titles[which][title % titles[which].length], day, from, to, cast), cast]);
   }
+  // The calendar lists them under the count that runs to 12 of 12 (the video's
+  // shots 6 and 7): "0/7" there would say nobody knows of the next (T-286).
+  for (const [i, [id, cast]] of upcoming.entries()) await markSeen(id, seenBy(cast, i));
 
   return {
     password: PASSWORD,

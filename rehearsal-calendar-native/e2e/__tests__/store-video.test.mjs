@@ -9,6 +9,9 @@
 // least 4.5:1; the closing card says how to sign in. Read back by ffprobe as
 // App Store Connect reads it: 886×1920, 30 frames a second, H.264, 20 to 28
 // seconds, a silent stereo AAC track at 48 kHz (it refuses one without).
+// A preview plays by itself from its first frame: the hook's shot shows the
+// Planner with its windows, never the Planner loading — "Loading…", a project
+// with no members — under the hook (T-286).
 //
 // The video is made on a Mac only: its captions are drawn by compose.swift
 // (xcrun swiftc, Core Graphics) and read back by macOS's text recognition, its
@@ -148,6 +151,12 @@ function recording(file, seconds, rgb, { rate = 60, then, thenFor = 0 } = {}) {
 // The first white: the worst a caption's band can be over.
 const COLOURS = [[255, 255, 255], [200, 60, 60], [60, 180, 90], [220, 180, 40], [150, 70, 200], [40, 190, 190], [230, 120, 40]];
 const COUNTED = [250, 250, 120];
+// The Planner loading, before its windows (the first recording's start): blue,
+// which no darkness turns grey — under any of it blue stays above red.
+const LOADING = [0, 0, 255];
+/** Recording 01: loading this long, then the Planner with its windows; the flow marks it ready this long in. */
+const LOADS = 0.8;
+const READY = 1.0;
 
 describe('made by ffmpeg, its captions by compose.swift', { skip: MAC_ONLY }, () => {
   const clips = [];
@@ -159,6 +168,10 @@ describe('made by ffmpeg, its captions by compose.swift', { skip: MAC_ONLY }, ()
     // Most shorter than their shots, and held; the fifth longer, and sped up.
     const lengths = [1.5, 2, 1, 2, 6, 1.5, 1.2];
     for (const [i, seconds] of lengths.entries()) clips.push(recording(path.join(TMP, `clip-${i + 1}.mp4`), seconds, COLOURS[i]));
+    // The hook's: the Planner loading first, then its windows; the flow's mark
+    // beside it, as record.mjs keeps it (01.json).
+    clips[0] = recording(path.join(TMP, 'clip-1.mp4'), 2, LOADING, { then: COLOURS[0], thenFor: 2 - LOADS });
+    fs.writeFileSync(path.join(TMP, 'clip-1.json'), JSON.stringify({ waits: [], marks: { ready: READY } }));
     // The seen count's: its last half second the count at 12 of 12.
     clips[5] = recording(path.join(TMP, 'clip-6.mp4'), 1.5, COLOURS[5], { then: COUNTED, thenFor: 0.5 });
     made = await M.montage({ locale: 'en-US', clips, out: path.join(TMP, 'out') });
@@ -219,6 +232,23 @@ describe('made by ffmpeg, its captions by compose.swift', { skip: MAC_ONLY }, ()
     assert.ok(near(pixel(poster, 443, 960), COLOURS[0]), `${pixel(poster, 443, 960)}`);
     const [read] = readText([path.join(TMP, 'poster.png')], { locale: 'en-US', top: made.overlays[0].band.top, bottom: made.overlays[0].band.bottom });
     assert.match(read.join(' '), /Tuesday/);
+  });
+
+  test('the hook\'s shot shows no frame of the Planner loading, from its very first: only the Planner with its windows', () => {
+    // Every frame of shot 0, its middle 2×2 pixels, read in one pass.
+    const shot = made.shots[0];
+    const raw = execFileSync(M.tool('ffmpeg'), ['-v', 'error', '-i', made.file, '-t', shot.length.toFixed(3),
+      '-vf', 'crop=2:2:442:958,scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1 << 20 });
+    const frames = Array.from({ length: raw.length / 3 }, (_, k) => [...raw.subarray(k * 3, k * 3 + 3)]);
+    assert.ok(frames.length >= Math.floor(shot.length * M.VIDEO.fps) - 1, `${frames.length} frames`);
+    const loading = frames.map((rgb, k) => ({ at: (k / M.VIDEO.fps).toFixed(3), rgb })).filter(({ rgb: [r, , b] }) => b - r > 12);
+    assert.deepEqual(loading.map(({ at, rgb }) => `${at} s ${rgb}`), [], `${loading.length} of shot 0's ${frames.length} frames show the Planner loading`);
+  });
+
+  test('a hook\'s recording without its "ready" mark is refused: where the loading ends is not guessed', async () => {
+    const unmarked = [...clips];
+    unmarked[0] = recording(path.join(TMP, 'unmarked.mp4'), 2, LOADING, { then: COLOURS[0], thenFor: 1 });
+    await assert.rejects(M.montage({ locale: 'en-US', clips: unmarked, out: path.join(TMP, 'refused') }), /unmarked\.json: no "ready" mark/);
   });
 
   test('the seen count\'s caption comes only once the count is at 12 of 12, and stays 2 s', () => {
