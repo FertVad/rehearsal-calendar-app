@@ -1,0 +1,19 @@
+T-279 — app, red before the fix.
+Base: 47bb43f (AuthContext.tsx, api.ts, appleAuth.ts unchanged).
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend --runTestsByPath src/contexts/__tests__/AuthContext.deleteAccount.test.tsx --verbose
+
+  ✕ asks Apple to confirm first and sends its authorization code with the deletion
+      expect(mockApple.confirmAppleForDeletion).toHaveBeenCalledTimes(1)
+      Expected number of calls: 1
+      Received number of calls: 0
+  ✓ an account without Apple is deleted as before, with no Apple sheet and no code
+  ✓ deletes the account without a code when the person closes Apple’s sheet
+  ✓ deletes the account without a code when Apple fails
+  ✓ deletes the account without a code when Apple is not available on the device
+  ✓ deletes the account without a code when the providers cannot be read
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 5 passed, 6 total
+
+The five that pass are the "as before" guards: before the fix the app never
+asked Apple and always deleted without a code, which is what they require in
+those cases. The first is the change itself.

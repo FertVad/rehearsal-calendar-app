@@ -1,0 +1,71 @@
+# Leaving a project one was already removed from (T-280). Leaving is removing
+# oneself, and the server checked the rank of one who was no longer a member:
+# a 403 shown in English under "Error" in any language ("Access denied" on
+# this path, "Only project admins can remove members" on another), and the
+# page stayed open.
+#
+# Snug, an actor in Theseus's "Athens Court", has it open; Theseus removes him
+# from another device (no push reaches the simulator). Snug taps "Leave
+# Project", confirms, and is back on his projects with it gone, no error.
+appId: ${APP_ID}
+name: Leave a project after being removed
+tags:
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${SNUG_EMAIL}
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Athens Court.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Athens Court.*"
+- extendedWaitUntil:
+    visible:
+      id: header-back
+    timeout: 15000
+- runScript:
+    file: ../scripts/remove-member.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${THESEUS_EMAIL}
+      PASSWORD: ${PASSWORD}
+      PROJECT: "Athens Court"
+      MEMBER: Snug Joiner
+- scrollUntilVisible:
+    element:
+      id: project-leave
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn:
+    id: project-leave
+- extendedWaitUntil:
+    visible: "Leave Project?"
+    timeout: 10000
+- tapOn:
+    text: "Leave Project"
+    below: "Leave Project\\?"
+# Back on his projects, it is not among them, and nothing was refused.
+- extendedWaitUntil:
+    visible:
+      id: tab-projects
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible:
+      id: header-back
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible: ".*Athens Court.*"
+    timeout: 15000
+- assertNotVisible: "Error"
+- assertNotVisible: ".*Only project admins.*"
+- assertNotVisible: "Access denied"
+- takeScreenshot: 101-out-without-an-error

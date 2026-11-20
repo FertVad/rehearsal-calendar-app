@@ -19,6 +19,7 @@ import { registerScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 import { looksLikeEmail, meetsPasswordRule, normalizeEmail, PASSWORD_MIN_LENGTH } from '../utils/accountRules';
 import PasswordField from '../components/PasswordField';
+import PrivacyPolicyLink from '../components/PrivacyPolicyLink';
 import { useAttemptError } from '../hooks/useAttemptError';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
@@ -228,6 +229,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               variant="glass"
               style={styles.loginButton}
             />
+
+            <PrivacyPolicyLink testID="register-privacy" />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -18,7 +18,7 @@ tags:
       EMAIL: ${ROSALIND_EMAIL}
       PASSWORD: ${PASSWORD}
       REHEARSAL: ${WRESTLING_REHEARSAL}
-      MEMBER: ${ORLANDO_EMAIL}
+      MEMBER: Orlando Boys
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:

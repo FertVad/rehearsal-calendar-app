@@ -75,6 +75,7 @@ jest.mock('../../shared/hooks/useNotifications', () => ({ useNotifications: () =
 jest.mock('../../shared/hooks/useAutoCalendarSync', () => ({ useAutoCalendarSync: () => undefined }));
 jest.mock('../../shared/components/CreateActionSheet', () => ({ CreateActionSheet: () => null }));
 jest.mock('../../shared/services/api', () => ({ rehearsalsAPI: {}, projectsAPI: {} }));
+jest.mock('../../shared/hooks/useAppVersionCheck', () => ({ useAppVersionCheck: () => undefined }));
 
 jest.mock('../../features/onboarding', () => ({
   OnboardingNavigator: () => null,

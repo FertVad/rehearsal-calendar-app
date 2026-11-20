@@ -1,0 +1,38 @@
+T-271 — server Jest on the code before the fix (base ef2e4f6), new test only.
+cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/memberLeftNotices.test.js
+
+FAIL __tests__/routes/memberLeftNotices.test.js
+  A member leaves of their own accord
+    ✕ tells the owner and every administrator, naming who left (96 ms)
+    ✕ tells the one who left nothing: they tapped Leave (21 ms)
+    ✓ tells an ordinary member nothing (11 ms)
+  A member is removed by an administrator
+    ✕ tells the owner, naming who was removed (13 ms)
+    ✓ leaves out the administrator who removed them: they were there (10 ms)
+    ✓ tells the person removed that they were, and only that (8 ms)
+    ✕ tells the other administrators when the owner removes (9 ms)
+
+  ● A member leaves of their own accord › tells the owner and every administrator, naming who left
+    Expected length: 1
+    Received length: 0
+
+  ● A member leaves of their own accord › tells the one who left nothing: they tapped Leave
+    - Array []
+    + Array [
+    +   Object {
+    +     "body": "Вас удалили из проекта «Test Project»",
+    +     "data": Object { "projectName": "Test Project", "type": "member_removed" },
+    +     "title": "Удаление из проекта",
+    +     "type": "member_removed",
+    +   },
+    + ]
+
+  ● A member is removed by an administrator › tells the owner, naming who was removed
+    Expected length: 1
+    Received length: 0
+
+  ● A member is removed by an administrator › tells the other administrators when the owner removes
+    - Array [ "member_left" ]
+    + Array []
+
+Tests:       4 failed, 3 passed, 7 total

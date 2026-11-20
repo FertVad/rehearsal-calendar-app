@@ -147,7 +147,7 @@ const EDITS: Edit[] = [
   ['en', 'profile.deleteAccountWarning', null, 'This action is irreversible. All your data will be permanently deleted — along with the projects you own and all their rehearsals. Everyone else in them will lose them too.', 'This cannot be undone. All your data will be permanently deleted, along with the projects you own and all their rehearsals. Other members of those projects will lose them too.'],
   ['en', 'profile.deleteAccountError', null, 'Failed to delete account', 'Could not delete your account'],
   ['en', 'profile.updateError', null, 'Failed to update profile', 'Could not update your profile'],
-  ['en', 'profile.avatarHint', null, 'Avatar is automatically generated based on your email', 'Your avatar is generated automatically from your email address.'],
+  ['en', 'profile.avatarHint', null, 'Avatar is automatically generated based on your email', 'Your avatar shows the initials of your first and last name.'], // T-272: the avatar is the initials, never the email; T-280's wording
   ['en', 'profile.notificationError', null, 'Failed to update notification settings', 'Could not update notification settings'],
   ['en', 'profile.pushDeniedMessage', null, 'Allow notifications for Rehearsly in your phone settings.', 'Allow notifications for Rehearsly in Settings.'],
   ['en', 'profile.languageError', null, 'Failed to change language', 'Could not change the language'],
@@ -333,6 +333,15 @@ const EDITS: Edit[] = [
   ['de', 'onboarding.calendarSync.settingUp', null, 'Kalendersynchronisation wird eingerichtet …', 'Kalendersynchronisation wird eingerichtet …'],
   ['de', 'onboarding.whatWhere.title', null, 'Was ist wo', 'Wo ist was?'],
   ['de', 'onboarding.whatWhere.availability', null, 'Zeiten', 'Verfügbarkeit'],
+  // T-280: the native speakers' reading of T-271 (leaving a project) and of
+  // T-272's avatar hint; "before" is the wording they read.
+  ['ru', 'projects.leaveProjectMessage', ['Anna'], 'Проект «Anna» пропадёт из вашего списка, а вы — из его репетиций. Вернуться можно по приглашению.', 'Проект «Anna» исчезнет из вашего списка, а вас снимут с его репетиций. Вернуться можно по приглашению.'],
+  ['en', 'projects.leaveProjectMessage', ['Anna'], '“Anna” will disappear from your projects, and you will be taken off its rehearsals. You can come back with an invitation.', '“Anna” will no longer appear in your projects, and you will be taken off its rehearsals. You can rejoin with an invitation.'],
+  ['de', 'projects.leaveProjectMessage', ['Anna'], 'Das Projekt „Anna“ verschwindet aus deiner Liste, und du bist für seine Proben nicht mehr eingeteilt. Zurück kommst du mit einer Einladung.', 'Das Projekt „Anna“ verschwindet aus deiner Liste, und du bist für seine Proben nicht mehr eingeteilt. Mit einer Einladung kannst du wieder beitreten.'],
+  ['ru', 'profile.avatarHint', null, 'Аватар создаётся автоматически из ваших инициалов.', 'На аватаре — инициалы имени и фамилии.'],
+  ['en', 'profile.avatarHint', null, 'Your avatar is created automatically from your initials.', 'Your avatar shows the initials of your first and last name.'],
+  ['es', 'profile.avatarHint', null, 'El avatar se crea automáticamente a partir de tus iniciales.', 'Tu avatar muestra las iniciales de tu nombre y apellido.'],
+  ['de', 'profile.avatarHint', null, 'Der Avatar wird automatisch aus deinen Initialen erstellt.', 'Dein Avatar zeigt die Initialen deines Vor- und Nachnamens.'],
 ];
 
 // [file, key, before (3b16cd5), after] — iOS's own permission prompts.

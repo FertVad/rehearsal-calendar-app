@@ -1,0 +1,104 @@
+# The server can require a newer build (T-265). The director is signed in;
+# the local server's minimum is raised above the app's build, as the owner
+# raises MIN_IOS_BUILD in Vercel, and the server's own middleware refuses the
+# app with 426. On the return to the foreground the app checks, and "Update
+# Required" stands in place of everything, with the App Store button and no
+# way to close it; a cold launch shows it again. The minimum lowered, the next
+# return takes it down, and the director is still signed in, the calendar with
+# their rehearsals. The old app showed no screen: every request failed and the
+# calendar stayed, empty of what it could not read.
+appId: ${APP_ID}
+name: Update required, then not
+tags:
+  - auth
+  - update
+  - invite
+onFlowComplete:
+  # A flow that fails half-way must not leave the minimum raised.
+  - runScript:
+      file: ../scripts/require-update.js
+      env:
+        MAIL_URL: ${MAIL_URL}
+        ON: "0"
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*Hamlet.*"
+    timeout: 30000
+- runScript:
+    file: ../scripts/require-update.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      ON: "1"
+- pressKey: Home
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: update-required
+    timeout: 15000
+- assertVisible: "Update Required"
+- assertVisible:
+    id: update-required-open-store
+    text: "Open App Store"
+- assertNotVisible:
+    id: tab-calendar
+- takeScreenshot: 97-update-required
+# From a cold launch too, before anything else is read.
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: update-required
+    timeout: 15000
+- assertNotVisible:
+    id: tab-calendar
+- takeScreenshot: 97-update-required-on-launch
+# An invite link opened while the screen is up waits behind it: the screen
+# stays, nothing opens yet. Twelfth Night is Orsino's; the director is not in it.
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://invite/${TWELFTH_INVITE}
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: update-required
+- assertNotVisible:
+    id: join-project-name
+# The minimum lowered: the next return checks, the app is back, signed in, and
+# the invitation that waited opens. It was lost before: the link was taken as
+# opened into a navigator the update screen had taken down, and the calendar
+# came back instead.
+- runScript:
+    file: ../scripts/require-update.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      ON: "0"
+- pressKey: Home
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 20000
+- assertNotVisible:
+    id: update-required
+- takeScreenshot: 97-invite-after-the-update
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 15000
+- assertNotVisible:
+    id: update-required
+- assertNotVisible:
+    id: login-submit
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*Hamlet.*"
+    timeout: 30000
+- takeScreenshot: 97-signed-in-after-the-update

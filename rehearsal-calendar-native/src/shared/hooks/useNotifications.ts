@@ -59,11 +59,13 @@ export function openCalendar(navigation: Pick<AppNavigation, 'navigate'>) {
 }
 
 /**
- * Where on its project a notification of this type opens: "New member" (T-023)
- * and "New administrator" (T-252) on the members.
+ * Where on its project a notification of this type opens: "New member" (T-023),
+ * "New administrator" (T-252) and "Member left" or "removed" (T-271) on the
+ * members.
  */
+const ABOUT_MEMBERS = new Set(['member_joined', 'admin_appointed', 'member_left']);
 export function projectSectionOf(type: string): ProjectSection | undefined {
-  return type === 'member_joined' || type === 'admin_appointed' ? 'members' : undefined;
+  return ABOUT_MEMBERS.has(type) ? 'members' : undefined;
 }
 
 /**
@@ -262,6 +264,7 @@ export function useNotifications() {
 
         case 'member_joined':
         case 'admin_appointed':
+        case 'member_left':
           // On its members. One sent before it carried the project's id opens
           // nothing (T-023, T-252).
           if (projectId) openProject(navigation, projectId, projectSectionOf(type));

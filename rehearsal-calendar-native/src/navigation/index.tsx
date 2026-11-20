@@ -16,6 +16,9 @@ import { useProjects } from '../contexts/ProjectContext';
 import { canScheduleAny } from '../shared/utils/rehearsalRights';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { useAutoCalendarSync } from '../shared/hooks/useAutoCalendarSync';
+import { useAppVersionCheck } from '../shared/hooks/useAppVersionCheck';
+import { useUpdateRequired } from '../shared/services/appUpdate';
+import { UpdateRequiredScreen } from '../shared/components/UpdateRequiredScreen';
 import { OnboardingNavigator } from '../features/onboarding';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
@@ -319,6 +322,10 @@ function AppNavigator() {
 
 export default function Navigation() {
   const { user, isAuthenticated, loading } = useAuth();
+  // The server may refuse this build as too old (T-265): asked on launch and
+  // on every return, before anyone signs in.
+  useAppVersionCheck();
+  const updateRequired = useUpdateRequired();
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
   const navigationRef = useNavigationContainerRef<AppStackParamList>();
 
@@ -354,8 +361,12 @@ export default function Navigation() {
 
   // The queued invite is opened only once the app stack — the one that has
   // JoinProject — is mounted: signed in and past onboarding. Until then the
-  // code waits, and is cleared only by the navigation that opens it.
-  const appStackMounted = isAuthenticated && !shouldShowOnboarding;
+  // code waits, and is cleared only by the navigation that opens it. Mounted
+  // means what the render below mounts: neither the update screen nor the
+  // spinner stands in its place. Counted as mounted under the update screen,
+  // the timer found no navigator, and once the screen came down nothing tried
+  // again: the invite was lost (T-265).
+  const appStackMounted = !updateRequired && !loading && isAuthenticated && !shouldShowOnboarding;
   useEffect(() => {
     if (!appStackMounted || !pendingInviteCode) return;
     const timer = setTimeout(() => {
@@ -365,6 +376,12 @@ export default function Navigation() {
     }, 500);
     return () => clearTimeout(timer);
   }, [appStackMounted, pendingInviteCode, navigationRef]);
+
+  // Instead of everything, as the spinner below is: nothing in the app works
+  // for a build the server refuses. The session stays as it is underneath.
+  if (updateRequired) {
+    return <UpdateRequiredScreen />;
+  }
 
   if (loading) {
     return (

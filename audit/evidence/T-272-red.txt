@@ -1,0 +1,18 @@
+T-272 — red before the fix (base 293b222, new tests only)
+npx jest --selectProjects frontend --testPathPatterns 'avatarHint|auth/screens/__tests__/(Login|Register)Screen' --verbose
+
+FAIL frontend src/i18n/__tests__/avatarHint.test.ts
+  ✕ ru: the avatar hint names the initials, not the email
+  ✕ en: the avatar hint names the initials, not the email
+  ✕ es: the avatar hint names the initials, not the email
+  ✕ de: the avatar hint names the initials, not the email
+FAIL frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx
+  ✓ (8 existing tests)
+  ✕ opens the privacy policy, in the app language, from the sign-in screen (T-272)
+      Unable to find an element with text: Privacy Policy
+FAIL frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx
+  ✓ (13 existing tests)
+  ✕ opens the privacy policy, in the app language, from under the form (T-272)
+      Unable to find an element with text: Политика конфиденциальности
+Test Suites: 3 failed, 3 total
+Tests:       6 failed, 21 passed, 27 total

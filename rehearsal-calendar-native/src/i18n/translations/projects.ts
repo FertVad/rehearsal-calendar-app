@@ -57,6 +57,10 @@ export interface ProjectsTranslations {
   deleteProjectWarning: string;
   projectDeleted: string;
   deleteProjectError: string;
+  leaveProject: string;
+  leaveProjectConfirm: string;
+  leaveProjectMessage: (projectName: string) => string;
+  leaveProjectError: string;
   inviteNotFound: string;
   inviteExpired: string;
   inviteLoadError: string;
@@ -128,6 +132,12 @@ export const ru = {
     deleteProjectWarning: 'Все репетиции и данные проекта будут удалены безвозвратно, а участники потеряют к нему доступ.',
     projectDeleted: 'Проект удалён',
     deleteProjectError: 'Не удалось удалить проект',
+    // A member who is not the owner leaves the project (T-271); the owner
+    // deletes it instead.
+    leaveProject: 'Выйти из проекта',
+    leaveProjectConfirm: 'Выйти из проекта?',
+    leaveProjectMessage: (projectName: string) => `Проект ${quoteName(projectName, 'ru')} исчезнет из вашего списка, а вас снимут с его репетиций. Вернуться можно по приглашению.`,
+    leaveProjectError: 'Не удалось выйти из проекта',
     inviteNotFound: 'Приглашение не найдено',
     inviteExpired: 'Срок действия приглашения истёк',
     inviteLoadError: 'Не удалось загрузить информацию о приглашении',
@@ -198,6 +208,10 @@ export const en = {
     deleteProjectWarning: 'All rehearsals, the member list, and other project data will be permanently deleted.',
     projectDeleted: 'Project deleted',
     deleteProjectError: 'Could not delete the project',
+    leaveProject: 'Leave Project',
+    leaveProjectConfirm: 'Leave Project?',
+    leaveProjectMessage: (projectName: string) => `${quoteName(projectName, 'en')} will no longer appear in your projects, and you will be taken off its rehearsals. You can rejoin with an invitation.`,
+    leaveProjectError: 'Could not leave the project',
     inviteNotFound: 'Invitation not found',
     inviteExpired: 'Invitation has expired',
     inviteLoadError: 'Could not load the invitation',
@@ -270,6 +284,10 @@ export const es = {
     deleteProjectWarning: 'Todos los ensayos y datos del proyecto se eliminarán de forma permanente, y sus miembros perderán el acceso.',
     projectDeleted: 'Proyecto eliminado',
     deleteProjectError: 'No se pudo eliminar el proyecto',
+    leaveProject: 'Salir del proyecto',
+    leaveProjectConfirm: '¿Salir del proyecto?',
+    leaveProjectMessage: (projectName: string) => `El proyecto ${quoteName(projectName, 'es')} desaparecerá de tu lista y dejarás de estar en sus ensayos. Podrás volver con una invitación.`,
+    leaveProjectError: 'No se pudo salir del proyecto',
     inviteNotFound: 'Invitación no encontrada',
     inviteExpired: 'La invitación ha caducado',
     inviteLoadError: 'No se pudo cargar la información de la invitación',
@@ -341,6 +359,10 @@ export const de = {
     deleteProjectWarning: 'Alle Proben, die Mitgliederliste und alle anderen Projektdaten werden unwiderruflich gelöscht.',
     projectDeleted: 'Projekt gelöscht',
     deleteProjectError: 'Projekt konnte nicht gelöscht werden',
+    leaveProject: 'Projekt verlassen',
+    leaveProjectConfirm: 'Projekt verlassen?',
+    leaveProjectMessage: (projectName: string) => `Das Projekt ${quoteName(projectName, 'de')} verschwindet aus deiner Liste, und du bist für seine Proben nicht mehr eingeteilt. Mit einer Einladung kannst du wieder beitreten.`,
+    leaveProjectError: 'Projekt konnte nicht verlassen werden',
     inviteNotFound: 'Einladung nicht gefunden',
     inviteExpired: 'Die Einladung ist abgelaufen',
     inviteLoadError: 'Einladungsinformationen konnten nicht geladen werden',

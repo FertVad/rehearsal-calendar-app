@@ -52,6 +52,7 @@ module.exports = {
         '^expo-notifications$': '<rootDir>/src/__tests__/__mocks__/expo-notifications.js',
         '^expo-device$': '<rootDir>/src/__tests__/__mocks__/expo-device.js',
         '^expo-localization$': '<rootDir>/src/__tests__/__mocks__/expo-localization.js',
+        '^expo-apple-authentication$': '<rootDir>/src/__tests__/__mocks__/expo-apple-authentication.js',
         '^@react-navigation/native$': '<rootDir>/src/__tests__/__mocks__/react-navigation-native.js',
         '^@react-native-async-storage/async-storage$': '<rootDir>/src/__tests__/__mocks__/async-storage.js',
         // The real stack router, for checking a navigation is handled. Its built

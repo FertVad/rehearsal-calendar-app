@@ -35,7 +35,7 @@ tags:
       EMAIL: ${GAEV_EMAIL}
       PASSWORD: ${PASSWORD}
       PROJECT: "Verona Square"
-      MEMBER: ${BENVOLIO_EMAIL}
+      MEMBER: Benvolio Montague
       ROLE: admin
 - runScript:
     file: ../scripts/push.js

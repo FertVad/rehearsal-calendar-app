@@ -24,10 +24,10 @@
   <!-- ============================= ENGLISH ============================= -->
   <section data-content="en">
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: 4 November 2026</p>
+    <p class="updated">Last updated: November 19, 2026</p>
 
     <p class="lede">
-      Rehearsly stores what it needs to schedule rehearsals and nothing more.
+      Rehearsly keeps only what it needs to run the app and schedule rehearsals.
       We do not sell your data, we do not use it for advertising, and there are
       no analytics or tracking SDKs in the app.
     </p>
@@ -48,31 +48,31 @@
       <tbody>
         <tr>
           <td>Email address, first and last name</td>
-          <td>To create your account and show who is in a project</td>
+          <td>To create your account, email you about it and show who is in a project</td>
           <td>On sign-up</td>
         </tr>
         <tr>
           <td>Password, stored only as a bcrypt hash</td>
           <td>To sign you in</td>
-          <td>Only if you register with email</td>
+          <td>Only if you sign up with email or set a password</td>
         </tr>
         <tr>
-          <td>One-time email codes — we keep only a keyed hash of the code and the address it went to; a code works for 15 minutes</td>
-          <td>To confirm your address, reset your password or change your email</td>
+          <td>One-time email codes — we keep only a keyed hash of each code (never the code itself), plus the email address it was sent to; a code works for 15 minutes</td>
+          <td>To confirm your email address, reset your password or change your email</td>
           <td>When you ask for a code</td>
         </tr>
         <tr>
-          <td>Google or Apple account identifier and email</td>
+          <td>Google Account or Apple Account identifier and email address</td>
           <td>To sign you in through that provider</td>
-          <td>Only if you use Sign in with Google or Apple</td>
+          <td>Only if you sign in with Google or Apple</td>
         </tr>
         <tr>
-          <td>Time zone, language, week start day</td>
+          <td>Time zone, language, first day of the week</td>
           <td>To show times and dates correctly</td>
           <td>Set automatically, changeable in the app</td>
         </tr>
         <tr>
-          <td>Projects, rehearsals, participants, notes, venue</td>
+          <td>Projects, rehearsals, participants, notes and venues</td>
           <td>The core function of the app</td>
           <td>As you create them</td>
         </tr>
@@ -82,13 +82,13 @@
           <td>As you mark them</td>
         </tr>
         <tr>
-          <td>Start and end times of your calendar events — <strong>never their titles</strong></td>
+          <td>Start and end times of your calendar events, with technical identifiers of the event and its calendar — <strong>never their titles</strong></td>
           <td>To turn them into busy periods automatically</td>
-          <td>Only if you enable calendar import</td>
+          <td>Only if you turn on calendar sync</td>
         </tr>
         <tr>
           <td>Push token, device type and device name</td>
-          <td>To deliver notifications about your rehearsals</td>
+          <td>To deliver notifications about your projects and rehearsals</td>
           <td>Only if you allow notifications</td>
         </tr>
         <tr>
@@ -96,92 +96,222 @@
           <td>To fix what you report</td>
           <td>Only when you submit one</td>
         </tr>
+        <tr>
+          <td>The time of your last sign-in, and when each sign-in method was added and last used</td>
+          <td>To see which accounts are still in use</td>
+          <td>When you sign in</td>
+        </tr>
+        <tr>
+          <td>Notifications sent to you, kept in the in-app inbox, and when you read them</td>
+          <td>So you can read them again and see what is unread</td>
+          <td>When something happens in your projects</td>
+        </tr>
+        <tr>
+          <td>Which rehearsals you have marked as seen</td>
+          <td>To show the people running the project, and others on the same rehearsal, who has seen it</td>
+          <td>When you mark one</td>
+        </tr>
+        <tr>
+          <td>A keyed hash of your IP address with a request counter — never the address itself. It counts requests for one minute and is not linked to your account; old records are replaced or cleared as new requests arrive</td>
+          <td>To limit repeated attempts to sign in, make account requests or open invite links</td>
+          <td>On sign-in and other account requests from the app, and when you open an invite link</td>
+        </tr>
+        <tr>
+          <td>Two request counters linked to your account: one for joining projects through invite links, the other for loading project members’ availability. Each counts requests for one minute, then starts over; both are deleted with your account</td>
+          <td>To limit how often these requests can be made</td>
+          <td>When you join a project through an invite link, or when the app loads members’ availability — in the Planner or while you add or edit a rehearsal</td>
+        </tr>
+        <tr>
+          <td>Your IP address and request details in Vercel’s hosting logs, kept for about an hour</td>
+          <td>To run the server and troubleshoot problems</td>
+          <td>On every request to the server</td>
+        </tr>
       </tbody>
     </table>
 
     <h3>About calendar import</h3>
     <p>
-      If you turn on calendar import, Rehearsly reads the calendars you select
-      and sends us <strong>only the time span</strong> of each event — when it
-      starts and when it ends. Event titles, notes, locations and participants
-      are read on your device and never leave it. What reaches our server is
-      “busy from 14:00 to 15:30”, not “Dentist”.
+      If you turn on calendar sync, Rehearsly reads the calendar you choose on
+      your phone and sends us <strong>only the time span</strong> of each event
+      in the next 12 months — when it starts and when it ends — with technical
+      identifiers of the event and the calendar, so that the next sync updates
+      the same entry. Event titles, notes, locations and participants never
+      leave your device. What reaches our server is “busy from 2:00 to 3:30 PM,”
+      not “Dentist.”
     </p>
     <p>
       Other members of your projects see the same thing you sent us: that you
-      are unavailable in that period, with no further detail.
+      are busy at that time, with no further detail.
     </p>
     <p>
-      Import is off by default. You can disable it at any time in
-      Profile → Calendar Sync, and “Clear imported” removes everything that was
-      brought in this way.
+      Sync is off until you turn it on. Turning off Auto Sync in
+      Profile → Calendar Sync stops new imports but does not remove the busy
+      periods already imported: they stay on your account, and other members of
+      your projects still see you as busy at those times. To clear them, tap
+      “Remove Imported Busy Times” on the same screen. It removes the busy periods
+      imported from calendars on all your devices; anything you marked yourself
+      stays. It also turns off Auto Sync on the device where you tap it. Another
+      device that still has Auto Sync on will send its busy periods again the next
+      time it syncs. Deleting your account also removes everything imported this
+      way.
     </p>
 
     <h3>What we deliberately do not collect</h3>
     <ul>
-      <li>No location data</li>
+      <li>No location data from your phone</li>
       <li>No contacts or address book</li>
-      <li>No photos, camera or microphone</li>
+      <li>No access to your photos, camera or microphone</li>
       <li>No advertising identifiers, no analytics or tracking SDKs</li>
-      <li>No payment card details — see below</li>
+      <li>No payment details — the app is free, see below</li>
     </ul>
 
     <h2>Payments</h2>
     <p>
-      Rehearsly is currently free and the app contains no purchases. Should paid
-      plans be introduced, card details would be entered on the payment
-      provider's own page and never reach our servers; we would store only the
-      fact of a payment, its amount and its status.
+      Rehearsly is free and the app contains no purchases.
     </p>
 
     <h2>Who else processes your data</h2>
-    <p>We rely on a small number of providers, each only for what it does:</p>
+    <p>We rely on a few service providers, each for one specific job:</p>
     <ul>
       <li><strong>Neon</strong> — database hosting (United States)</li>
       <li><strong>Vercel</strong> — server hosting</li>
-      <li><strong>Resend</strong> — sends the emails with your codes for sign-up, password reset and a change of address; it receives your email address and the message (EU, Ireland)</li>
-      <li><strong>Expo Push Service</strong>, and through it Apple's APNs — delivery of notifications</li>
+      <li><strong>Resend</strong> — sends our emails: your codes for signing up, resetting your password and changing your email address, and notices of material changes to this policy; it receives your email address and the message (EU, Ireland)</li>
+      <li><strong>Expo Push Service</strong>, and through it Apple’s APNs — delivery of notifications</li>
       <li><strong>Google</strong> and <strong>Apple</strong> — only if you choose their sign-in</li>
     </ul>
-    <p>We do not share your data with anyone else, and we never sell it.</p>
+    <p>We confirm that each of these providers that receives your data from us gives it the same or equal protection as stated in this policy, and uses it only to provide its service to us.</p>
+    <p>We do not share your data with any other company, and we never sell it.</p>
+
+    <h2>Google and Apple sign-in data</h2>
+    <p>This section applies only if you sign in with Google or Apple.</p>
+
+    <h3>What we receive from Google</h3>
+    <ul>
+      <li>Your first and last name</li>
+      <li>Your email address, and Google’s confirmation that it is verified</li>
+      <li>Your Google Account identifier</li>
+    </ul>
+    <p>
+      We ask Google only for basic sign-in access: who you are, your name and
+      your email address. Google’s sign-in token may also carry your profile photo
+      and language; we do not use or keep them. We do not ask for access to your
+      Gmail, Google Calendar or Google Contacts. Our server checks the sign-in
+      token and does not store it. If a Google calendar is on your phone and you
+      turn on calendar sync, the app reads it through iOS, as described above, and
+      not through Google.
+    </p>
+
+    <h3>Why we use it</h3>
+    <p>
+      Only to create your account, sign you in, send you account emails and show
+      your name to the members of your projects. Your account uses this email
+      address: the codes you ask for, such as a password reset code, are sent to
+      it, and so are our notices of material changes to this policy. We copy your
+      name from Google once, when the account is created; you can change it in
+      Profile → Edit Profile. If an account with the same verified email address
+      already exists, your Google Account is linked to it, and the name on that
+      account does not change.
+    </p>
+
+    <h3>Where it is kept and who receives it</h3>
+    <p>
+      It is kept in our database, hosted by Neon, with the rest of your account
+      data. We do not sell it. Apart from showing your name to the members of your
+      projects, we pass it only to the providers that run Rehearsly for us: Neon
+      stores it, Vercel runs our server, Resend receives your email address when
+      we email you, and Expo Push Service with Apple’s APNs delivers the
+      notifications that show your name to the people who run your projects. We do
+      not use it for advertising or to train AI or machine-learning models.
+    </p>
+
+    <h3>How to remove it</h3>
+    <p>
+      Profile → Delete Account removes it from our database along with the rest of
+      your account; “How long we keep it” says what outlasts the deletion. You can
+      also stop using Sign in with Google for Rehearsly in your
+      <a href="https://myaccount.google.com/linkedapps">Google Account settings</a>. That ends the
+      link on Google’s side but does not delete what we already hold; deleting your
+      Rehearsly account does.
+    </p>
+
+    <h3>Limited Use</h3>
+    <p>Rehearsly's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.</p>
+    <p>Read the policy: <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>.</p>
+
+    <h3>Sign in with Apple</h3>
+    <p>
+      Each time you sign in, Apple gives us your account identifier and, when its
+      sign-in token includes them, your email address and Apple’s confirmation that
+      it is verified. Your name comes only once, on your first sign-in, and only if
+      you allow it. If you choose Hide My Email, we receive and keep a private
+      address ending in @privaterelay.appleid.com or @private.icloud.com instead of
+      your real one. If you do not share a name, the account is called “User” until
+      you change it in Profile → Edit Profile.
+    </p>
+    <p>
+      We use, keep and pass on this data exactly as described above for Google, and
+      Profile → Delete Account removes it in the same way. You can stop using Sign
+      in with Apple for Rehearsly in your Apple Account settings on your iPhone:
+      Settings → [your name] → Sign in with Apple. As with Google, this does not
+      delete what we already hold; deleting your Rehearsly account does.
+    </p>
 
     <h2>How long we keep it</h2>
     <p>
-      Your data lives for as long as your account does. Delete the account and
-      everything tied to it — availability, imported calendar events, push
-      tokens, email code records, project memberships — is removed along with it. Projects where you
-      were the only administrator are deleted too, which the app warns you about
-      before it proceeds.
+      Your data lives for as long as your account does. When you delete your
+      account, everything tied to it — your availability (including busy times
+      imported from your calendars), your notifications, seen marks, sign-in
+      records, push tokens, email code records, project memberships — is removed
+      from our database along with it. The projects you own go too, with all their
+      rehearsals, and so do projects where you were the only admin; their other
+      members lose them. The app warns you about the projects you own before it
+      proceeds and tells you afterwards how many were deleted. Rehearsals you
+      created in the remaining projects stay there, without your name.
+    </p>
+    <p>
+      Deleting your account also removes the notifications with your name — the
+      ones sent when you joined a project, became an admin or marked a rehearsal as
+      seen — from the in-app inboxes of the people who run those projects. A push
+      notification already shown on someone else’s phone stays on that phone; we
+      have no way to reach it.
+    </p>
+    <p>
+      Two other records outlast your account for a short time. Neon keeps a
+      history of database changes for up to 7 days so that the database can be
+      restored after a failure, and deleted data leaves it when that period ends.
+      Vercel’s hosting logs are kept for about an hour.
     </p>
 
     <h2>Your rights</h2>
     <ul>
-      <li><strong>Delete everything</strong> — Profile → Delete account. This is immediate and cannot be undone.</li>
-      <li><strong>Correct your data</strong> — Profile → Edit profile.</li>
+      <li><strong>Delete your account and data</strong> — Profile → Delete Account. This is immediate and cannot be undone; “How long we keep it” says what remains.</li>
+      <li><strong>Correct your data</strong> — Profile → Edit Profile.</li>
       <li><strong>Stop calendar import</strong> — Profile → Calendar Sync.</li>
-      <li><strong>Stop notifications</strong> — Profile → Notifications, or your device settings.</li>
+      <li><strong>Remove imported busy times</strong> — Profile → Calendar Sync → “Remove Imported Busy Times”.</li>
+      <li><strong>Stop notifications</strong> — Profile → Notifications, or Settings → Notifications → Rehearsly on your iPhone.</li>
       <li><strong>Get a copy of your data</strong> — write to us and we will send it.</li>
     </ul>
 
     <h2>Security</h2>
     <p>
-      Traffic runs over HTTPS. Passwords are stored as bcrypt hashes and are
-      never recoverable, by us or anyone else. Sessions can be revoked, and
-      signing out or changing your password invalidates every existing session.
-      Access to project data is checked on the server for every request.
+      Traffic runs over HTTPS. Passwords are stored only as bcrypt hashes, so we
+      cannot see or recover them. Sessions can be revoked, and signing out or
+      changing your password invalidates every existing session. Access to
+      project data is checked on the server for every request.
     </p>
 
     <h2>Children</h2>
     <p>
       Rehearsly is not intended for children under 13, and we do not knowingly
-      collect their data. If you believe a child has created an account, write
-      to us and we will remove it.
+      collect their data. If you believe a child under 13 has created an account,
+      write to us and we will delete the account.
     </p>
 
     <h2>Changes</h2>
     <p>
-      If this policy changes materially, we will update the date at the top and
-      notify you in the app.
+      If we change this policy, we will post the new version on this page and
+      update the date at the top. Before a material change takes effect, we will
+      also email you about it at your account’s email address.
     </p>
 
     <div class="foot">
@@ -193,17 +323,17 @@
   <!-- ============================= РУССКИЙ ============================= -->
   <section data-content="ru" hidden>
     <h1>Политика конфиденциальности</h1>
-    <p class="updated">Обновлено: 4 ноября 2026</p>
+    <p class="updated">Обновлено: 19 ноября 2026 г.</p>
 
     <p class="lede">
-      Rehearsly хранит только то, что нужно для планирования репетиций. Мы не
-      продаём ваши данные, не используем их для рекламы, и в приложении нет
-      аналитики и трекеров.
+      Rehearsly хранит только то, что нужно для работы приложения и планирования
+      репетиций. Мы не продаём ваши данные, не используем их для рекламы, и в
+      приложении нет ни аналитики, ни трекеров.
     </p>
 
     <h2>Кто отвечает за данные</h2>
     <p>
-      Rehearsly ведёт Вадим Фертик, независимый разработчик, Израиль. По любым
+      За Rehearsly отвечает Вадим Фертик — частный разработчик из Израиля. По любым
       вопросам об этой политике и ваших данных пишите на
       <a href="mailto:support@rehearsly.me">support@rehearsly.me</a>.
     </p>
@@ -216,14 +346,14 @@
       </thead>
       <tbody>
         <tr>
-          <td>Почта, имя и фамилия</td>
-          <td>Создать аккаунт и показать состав проекта</td>
+          <td>Адрес почты, имя и фамилия</td>
+          <td>Создать аккаунт, писать вам о нём и показывать, кто в проекте</td>
           <td>При регистрации</td>
         </tr>
         <tr>
           <td>Пароль — только в виде bcrypt-хеша</td>
           <td>Вход в приложение</td>
-          <td>Только при регистрации по почте</td>
+          <td>Только при регистрации по почте или если вы задали пароль</td>
         </tr>
         <tr>
           <td>Одноразовые коды из писем — храним не сам код, а его хеш с секретным ключом и адрес, на который он ушёл; код действует 15 минут</td>
@@ -231,76 +361,112 @@
           <td>Когда вы запрашиваете код</td>
         </tr>
         <tr>
-          <td>Идентификатор и почта аккаунта Google или Apple</td>
+          <td>Идентификатор и адрес почты аккаунта Google или Apple</td>
           <td>Вход через этот сервис</td>
-          <td>Только если вы им пользуетесь</td>
+          <td>Только если вы входите через Google или Apple</td>
         </tr>
         <tr>
           <td>Часовой пояс, язык, начало недели</td>
           <td>Правильно показывать даты и время</td>
-          <td>Определяется автоматически, меняется в настройках</td>
+          <td>Определяются автоматически, меняются в настройках</td>
         </tr>
         <tr>
-          <td>Проекты, репетиции, участники, заметки, место</td>
+          <td>Проекты, репетиции, участники, заметки, место проведения</td>
           <td>Основная функция приложения</td>
           <td>По мере создания</td>
         </tr>
         <tr>
-          <td>Ваша занятость — свободные и занятые интервалы</td>
+          <td>Ваша занятость — когда вы заняты и когда свободны</td>
           <td>Подбор времени, удобного всем</td>
           <td>По мере заполнения</td>
         </tr>
         <tr>
-          <td>Время начала и окончания событий календаря — <strong>без названий</strong></td>
+          <td>Время начала и окончания событий календаря и технические идентификаторы события и календаря — <strong>без названий</strong></td>
           <td>Автоматически превращать их в занятость</td>
-          <td>Только если включён импорт календаря</td>
+          <td>Только если включена синхронизация календаря</td>
         </tr>
         <tr>
           <td>Push-токен, тип и название устройства</td>
-          <td>Доставка уведомлений о репетициях</td>
+          <td>Доставка уведомлений о ваших проектах и репетициях</td>
           <td>Только если разрешены уведомления</td>
         </tr>
         <tr>
-          <td>Баг-репорты и экран, с которого отправлены</td>
+          <td>Отчёты об ошибках и экран, с которого они отправлены</td>
           <td>Исправлять то, о чём вы сообщаете</td>
           <td>Только когда вы их отправляете</td>
+        </tr>
+        <tr>
+          <td>Время последнего входа, а для каждого способа входа — когда он добавлен и когда им пользовались в последний раз</td>
+          <td>Понимать, какими аккаунтами ещё пользуются</td>
+          <td>При входе</td>
+        </tr>
+        <tr>
+          <td>Уведомления, отправленные вам, и время, когда вы их прочитали; они хранятся в приложении, на экране «Уведомления»</td>
+          <td>Чтобы их можно было перечитать и видеть непрочитанные</td>
+          <td>Когда что-то происходит в ваших проектах</td>
+        </tr>
+        <tr>
+          <td>Какие репетиции вы отметили как просмотренные</td>
+          <td>Показывать тем, кто ведёт проект, и остальным участникам репетиции, кто её видел</td>
+          <td>Когда вы ставите отметку</td>
+        </tr>
+        <tr>
+          <td>Хеш вашего IP-адреса с секретным ключом и счётчик запросов — сам адрес не хранится. Счётчик считает запросы в течение минуты и не связан с аккаунтом; старые записи заменяются или удаляются по мере новых запросов</td>
+          <td>Ограничивать частоту попыток входа, других запросов к аккаунту и переходов по ссылкам-приглашениям</td>
+          <td>При входе и других запросах к аккаунту из приложения, а также при открытии ссылки-приглашения</td>
+        </tr>
+        <tr>
+          <td>Два счётчика запросов, привязанные к аккаунту: один — для попыток присоединиться к проекту по ссылке, другой — для загрузки занятости участников проекта. Каждый считает запросы в пределах одной минуты, а в следующую минуту начинает заново. Оба удаляются вместе с аккаунтом</td>
+          <td>Ограничивать слишком частые запросы</td>
+          <td>Когда вы присоединяетесь к проекту по ссылке или приложение загружает занятость участников (Planner и форма репетиции)</td>
+        </tr>
+        <tr>
+          <td>IP-адрес и сведения о запросе в журналах хостинга Vercel, хранятся около часа</td>
+          <td>Работа сервера и разбор сбоев</td>
+          <td>При каждом запросе к серверу</td>
         </tr>
       </tbody>
     </table>
 
     <h3>Про импорт календаря</h3>
     <p>
-      Если включить импорт, Rehearsly читает выбранные вами календари и
-      отправляет нам <strong>только временной интервал</strong> каждого события —
-      когда оно начинается и когда заканчивается. Названия, заметки, места и
-      участники читаются на устройстве и никуда с него не уходят. На сервер
-      попадает «занят с 14:00 до 15:30», а не «Стоматолог».
+      Если включить синхронизацию, Rehearsly читает выбранный вами календарь на
+      телефоне и отправляет нам <strong>только временной интервал</strong> каждого
+      события на ближайшие 12 месяцев — когда оно начинается и когда заканчивается —
+      и технические идентификаторы события и календаря, чтобы следующая
+      синхронизация обновила ту же запись. Названия, заметки, места и участники
+      с устройства не уходят. На сервер попадает «занято с 14:00 до 15:30», а не
+      «Стоматолог».
     </p>
     <p>
       Другие участники ваших проектов видят ровно то же самое, что вы нам
-      отправили: что вы недоступны в этот интервал, без каких-либо подробностей.
+      отправили: что в это время вы заняты, без каких-либо подробностей.
     </p>
     <p>
-      Импорт выключен по умолчанию. Отключить его можно в любой момент в
-      Профиль → Синхронизация календаря, а кнопка «Очистить импортированные»
-      удаляет всё, что было перенесено этим способом.
+      Синхронизация выключена, пока вы её не включите. Если выключить переключатель
+      «Автосинхронизация» в разделе Профиль → Синхронизация, новый импорт
+      прекратится, но уже полученная занятость не удалится: она останется в
+      аккаунте, и участники ваших проектов по-прежнему будут видеть эти часы
+      занятыми. Кнопка «Удалить импортированную занятость» на том же экране
+      удаляет всё, что пришло из календарей всех ваших устройств; то, что вы
+      отметили сами, остаётся. На устройстве, где вы нажали кнопку,
+      автосинхронизация при этом выключается. Но если она включена на другом вашем
+      устройстве, при следующей синхронизации оно снова пришлёт занятость из своего
+      календаря. При удалении аккаунта всё это тоже удаляется.
     </p>
 
     <h3>Что мы сознательно не собираем</h3>
     <ul>
-      <li>Геолокацию</li>
+      <li>Геолокацию телефона</li>
       <li>Контакты и адресную книгу</li>
-      <li>Фотографии, камеру, микрофон</li>
+      <li>Фотографии, видео и звук — приложение не просит доступа к фото, камере и микрофону</li>
       <li>Рекламные идентификаторы, аналитику и трекеры</li>
-      <li>Данные банковских карт — см. ниже</li>
+      <li>Данные об оплате — приложение бесплатное, см. ниже</li>
     </ul>
 
     <h2>Оплата</h2>
     <p>
-      Сейчас Rehearsly бесплатен, покупок в приложении нет. Если появятся
-      платные тарифы, данные карты будут вводиться на стороне платёжного
-      провайдера и до наших серверов не дойдут — мы сохраним только факт
-      платежа, сумму и статус.
+      Rehearsly бесплатен, покупок в приложении нет.
     </p>
 
     <h2>Кто ещё обрабатывает данные</h2>
@@ -308,48 +474,148 @@
     <ul>
       <li><strong>Neon</strong> — хостинг базы данных (США)</li>
       <li><strong>Vercel</strong> — хостинг сервера</li>
-      <li><strong>Resend</strong> — отправка писем с кодами при регистрации, сбросе пароля и смене адреса; получает ваш адрес и текст письма (ЕС, Ирландия)</li>
+      <li><strong>Resend</strong> — отправка писем с кодами при регистрации, сбросе пароля и смене адреса, а также писем о существенных изменениях этой политики; получает ваш адрес и текст письма (ЕС, Ирландия)</li>
       <li><strong>Expo Push Service</strong> и через него APNs от Apple — доставка уведомлений</li>
       <li><strong>Google</strong> и <strong>Apple</strong> — только если вы выбрали вход через них</li>
     </ul>
-    <p>Никому другому данные не передаются и никогда не продаются.</p>
+    <p>Мы подтверждаем: те из этих сервисов, которые получают ваши данные от нас, защищают их не хуже, чем обещает эта политика, и используют их только для того, чтобы оказывать нам свои услуги.</p>
+    <p>Никаким другим компаниям мы ваши данные не передаём и никогда их не продаём.</p>
+
+    <h2>Данные Google и Apple при входе</h2>
+    <p>Этот раздел касается вас, только если вы входите через Google или Apple.</p>
+
+    <h3>Что мы получаем от Google</h3>
+    <ul>
+      <li>Имя и фамилия</li>
+      <li>Адрес почты и отметка Google о том, что он подтверждён</li>
+      <li>Идентификатор аккаунта Google</li>
+    </ul>
+    <p>
+      Мы запрашиваем у Google только базовый доступ для входа: кто вы, ваше имя и
+      адрес почты. В токене входа от Google могут быть также фото профиля и язык; мы
+      их не используем и не храним. Доступа к Gmail, Google Календарю и Google
+      Контактам мы не просим. Токен входа сервер проверяет и не сохраняет. Если на
+      телефоне есть календарь Google и вы включили синхронизацию, приложение читает
+      его средствами iOS, как описано выше, а не через Google.
+    </p>
+
+    <h3>Зачем мы их используем</h3>
+    <p>
+      Только чтобы создать аккаунт, впускать вас в него, присылать письма об
+      аккаунте и показывать ваше имя участникам ваших проектов. Адрес почты — это
+      адрес вашего аккаунта, поэтому на него приходят коды, которые вы
+      запрашиваете, например для сброса пароля, и письма о существенных изменениях
+      этой политики. Имя берётся один раз, при создании аккаунта; изменить его можно
+      в разделе Профиль → Редактировать профиль. Если аккаунт с таким подтверждённым
+      адресом уже есть, вход через Google привязывается к нему, а имя в аккаунте не
+      меняется.
+    </p>
+
+    <h3>Где хранятся и кому передаются</h3>
+    <p>
+      Они хранятся в нашей базе на Neon вместе с остальными данными аккаунта. Ваше
+      имя видят участники ваших проектов, а кроме них, эти данные получают только
+      сервисы, которые обеспечивают работу Rehearsly: Neon их хранит, на Vercel
+      работает наш сервер, Resend получает адрес почты, когда мы отправляем вам
+      письма, а Expo Push Service и APNs от Apple доставляют уведомления с вашим
+      именем тем, кто ведёт ваши проекты. Мы их не продаём и не используем ни для
+      рекламы, ни для обучения моделей ИИ и машинного обучения.
+    </p>
+
+    <h3>Как их удалить</h3>
+    <p>
+      Они удаляются из нашей базы вместе с аккаунтом Rehearsly: Профиль → Удалить
+      аккаунт. Отозвать доступ можно и в
+      <a href="https://myaccount.google.com/linkedapps">настройках аккаунта Google</a>: выберите
+      там Rehearsly и нажмите «Не использовать функцию „Войти с аккаунтом Google“».
+      Это отменяет разрешение на стороне Google, но не удаляет то, что уже хранится
+      у нас: для этого нужно удалить аккаунт Rehearsly.
+    </p>
+
+    <h3>Ограниченное использование (Limited Use)</h3>
+    <p>
+      Rehearsly использует и передаёт информацию, полученную через API Google, в
+      соответствии с Правилами в отношении пользовательских данных сервисов Google
+      API (Google API Services User Data Policy), включая требования об
+      ограниченном использовании (Limited Use).
+    </p>
+    <p lang="en">Rehearsly's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.</p>
+    <p>Текст правил (на английском): <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>.</p>
+
+    <h3>Вход с Apple</h3>
+    <p>
+      При каждом входе Apple передаёт нам идентификатор аккаунта, а если они есть в
+      токене входа — адрес почты и отметку о том, что он подтверждён. Имя приходит
+      один раз, при первом входе, и только если вы им поделились. Если вы выбрали
+      «Скрыть e-mail», мы получаем и храним не настоящий адрес, а скрытый — он
+      оканчивается на @privaterelay.appleid.com или @private.icloud.com. Если имя не
+      передано, аккаунт называется «User», пока вы не измените его в разделе
+      Профиль → Редактировать профиль.
+    </p>
+    <p>
+      Эти данные мы используем, храним, передаём и удаляем так же, как описано выше
+      для Google. Прекратить использовать функцию «Вход с Apple» для Rehearsly можно
+      в настройках Аккаунта Apple на iPhone: «Настройки» → ваше имя → «Вход с
+      Apple» → Rehearsly → «Удалить». Как и в случае с Google, это не удаляет то,
+      что уже хранится у нас: для этого нужно удалить аккаунт Rehearsly.
+    </p>
 
     <h2>Сколько храним</h2>
     <p>
-      Данные живут ровно столько, сколько существует аккаунт. Удалите его — и
-      вместе с ним удалится всё связанное: занятость, импортированные события,
-      push-токены, записи о кодах из писем, участие в проектах. Проекты, где вы были единственным
-      администратором, тоже удаляются, о чём приложение предупреждает заранее.
+      Данные живут ровно столько, сколько существует аккаунт. Удалите его — и из
+      нашей базы вместе с ним удалится всё связанное: ваша занятость (в том числе
+      часы, импортированные из календарей), ваши уведомления, отметки о просмотре
+      репетиций, записи о входах, push-токены, записи о кодах из писем, участие в
+      проектах. Удаляются и проекты, которыми вы владеете, со всеми репетициями, и
+      проекты, где, кроме вас, нет администраторов; остальные участники тоже их
+      теряют. О проектах, которыми вы владеете, приложение предупреждает заранее, а
+      после удаления сообщает, сколько проектов удалено. Репетиции, созданные вами в
+      оставшихся проектах, остаются в них, но без вашего имени.
+    </p>
+    <p>
+      Удаляются и уведомления с вашим именем, которые получили другие люди. Когда вы
+      присоединяетесь к проекту, становитесь его администратором или отмечаете
+      репетицию как просмотренную, те, кто ведёт проект, получают такое уведомление;
+      после удаления аккаунта оно исчезает и у них в приложении. Остаются только
+      push-уведомления, которые уже показаны на чужих телефонах: убрать их оттуда мы
+      не можем.
+    </p>
+    <p>
+      В двух местах данные ненадолго переживают удаление. Neon хранит историю
+      изменений базы до 7 дней, чтобы базу можно было восстановить после сбоя;
+      удалённые данные исчезают из неё по истечении этого срока. Журналы хостинга
+      Vercel хранятся около часа.
     </p>
 
     <h2>Ваши права</h2>
     <ul>
-      <li><strong>Удалить всё</strong> — Профиль → Удалить аккаунт. Сразу и без возможности восстановления.</li>
+      <li><strong>Удалить аккаунт и данные</strong> — Профиль → Удалить аккаунт. Сразу и без возможности восстановления; что остаётся, сказано в разделе «Сколько храним».</li>
       <li><strong>Исправить данные</strong> — Профиль → Редактировать профиль.</li>
-      <li><strong>Прекратить импорт календаря</strong> — Профиль → Синхронизация календаря.</li>
-      <li><strong>Отключить уведомления</strong> — Профиль → Уведомления или настройки устройства.</li>
+      <li><strong>Прекратить импорт календаря</strong> — Профиль → Синхронизация.</li>
+      <li><strong>Удалить занятость, полученную из календарей</strong> — Профиль → Синхронизация → «Удалить импортированную занятость».</li>
+      <li><strong>Отключить уведомления</strong> — Профиль → Уведомления или настройки телефона.</li>
       <li><strong>Получить копию данных</strong> — напишите нам, и мы её пришлём.</li>
     </ul>
 
     <h2>Безопасность</h2>
     <p>
-      Весь трафик идёт по HTTPS. Пароли хранятся в виде bcrypt-хешей и
-      невосстановимы — ни нами, ни кем-либо ещё. Сессии можно отзывать: выход из
-      аккаунта и смена пароля обнуляют все существующие. Доступ к данным проекта
-      проверяется на сервере при каждом запросе.
+      Весь трафик идёт по HTTPS. Пароли хранятся только в виде bcrypt-хешей,
+      поэтому мы не можем ни увидеть их, ни восстановить. Сессии можно отзывать:
+      выход из аккаунта и смена пароля обнуляют все существующие. Доступ к данным
+      проекта проверяется на сервере при каждом запросе.
     </p>
 
     <h2>Дети</h2>
     <p>
-      Rehearsly не предназначен для детей младше 13 лет, и мы не собираем их
-      данные осознанно. Если вы считаете, что аккаунт завёл ребёнок, напишите
-      нам — мы его удалим.
+      Rehearsly не предназначен для детей младше 13 лет, и мы сознательно не
+      собираем их данные. Если вы считаете, что аккаунт создан ребёнком младше 13
+      лет, напишите нам — мы удалим этот аккаунт.
     </p>
 
     <h2>Изменения</h2>
     <p>
-      Если политика существенно изменится, мы обновим дату вверху страницы и
-      сообщим об этом в приложении.
+      Когда политика меняется, новая редакция появляется на этой странице, а дата
+      вверху обновляется. О существенных изменениях мы заранее напишем на адрес почты вашего аккаунта — до того, как они вступят в силу.
     </p>
 
     <div class="foot">
@@ -361,19 +627,18 @@
   <!-- ============================= ESPAÑOL ============================= -->
   <section data-content="es" hidden>
     <h1>Política de privacidad</h1>
-    <p class="updated">Última actualización: 4 de noviembre de 2026</p>
+    <p class="updated">Última actualización: 19 de noviembre de 2026</p>
 
     <p class="lede">
-      Rehearsly guarda lo necesario para planificar ensayos y nada más. No
-      vendemos tus datos, no los usamos con fines publicitarios y la aplicación
-      no contiene analítica ni rastreadores.
+      Rehearsly guarda lo que necesita para funcionar y para planificar ensayos, y
+      nada más. No vendemos tus datos, no los usamos con fines publicitarios y la
+      aplicación no incluye herramientas de análisis ni de rastreo.
     </p>
 
     <h2>Quién es responsable</h2>
     <p>
-      Rehearsly está desarrollada por Vadim Fertik, desarrollador independiente
-      residente en Israel. Para cualquier duda sobre esta política o sobre tus
-      datos, escribe a
+      Rehearsly la gestiona Vadim Fertik, desarrollador independiente residente en
+      Israel. Para cualquier duda sobre esta política o sobre tus datos, escribe a
       <a href="mailto:support@rehearsly.me">support@rehearsly.me</a>.
     </p>
 
@@ -386,23 +651,23 @@
       <tbody>
         <tr>
           <td>Correo electrónico, nombre y apellido</td>
-          <td>Crear tu cuenta y mostrar quién participa en un proyecto</td>
+          <td>Crear tu cuenta, enviarte correos sobre ella y mostrar quién participa en un proyecto</td>
           <td>Al registrarte</td>
         </tr>
         <tr>
           <td>Contraseña, almacenada solo como hash bcrypt</td>
           <td>Iniciar sesión</td>
-          <td>Solo si te registras con correo</td>
+          <td>Solo si te registras con correo o creas una contraseña</td>
         </tr>
         <tr>
-          <td>Códigos de un solo uso enviados por correo — guardamos solo un hash con clave del código y la dirección a la que se envió; cada código vale 15 minutos</td>
+          <td>Códigos de un solo uso enviados por correo — guardamos solo un hash con clave del código y la dirección a la que se envió; cada código sirve durante 15 minutos</td>
           <td>Confirmar tu correo, restablecer la contraseña o cambiar de dirección</td>
           <td>Cuando pides un código</td>
         </tr>
         <tr>
           <td>Identificador y correo de tu cuenta de Google o Apple</td>
           <td>Iniciar sesión mediante ese proveedor</td>
-          <td>Solo si usas ese acceso</td>
+          <td>Solo si inicias sesión con Google o Apple</td>
         </tr>
         <tr>
           <td>Zona horaria, idioma, inicio de la semana</td>
@@ -412,21 +677,21 @@
         <tr>
           <td>Proyectos, ensayos, participantes, notas, lugar</td>
           <td>La función principal de la aplicación</td>
-          <td>Según los creas</td>
+          <td>A medida que los creas</td>
         </tr>
         <tr>
-          <td>Tu disponibilidad — periodos libres y ocupados</td>
+          <td>Tu disponibilidad — horas libres y ocupadas</td>
           <td>Proponer horarios que convengan a todos</td>
-          <td>Según los indicas</td>
+          <td>A medida que las marcas</td>
         </tr>
         <tr>
-          <td>Hora de inicio y fin de los eventos de tu calendario — <strong>nunca sus títulos</strong></td>
-          <td>Convertirlos en periodos ocupados automáticamente</td>
-          <td>Solo si activas la importación de calendario</td>
+          <td>Hora de inicio y fin de los eventos de tu calendario, con identificadores técnicos del evento y del calendario — <strong>nunca sus títulos</strong></td>
+          <td>Convertirlos automáticamente en horas ocupadas</td>
+          <td>Solo si activas la sincronización de calendario</td>
         </tr>
         <tr>
           <td>Token de notificaciones, tipo y nombre del dispositivo</td>
-          <td>Enviarte avisos sobre tus ensayos</td>
+          <td>Enviarte notificaciones sobre tus proyectos y ensayos</td>
           <td>Solo si permites las notificaciones</td>
         </tr>
         <tr>
@@ -434,42 +699,78 @@
           <td>Corregir lo que nos comunicas</td>
           <td>Solo cuando envías uno</td>
         </tr>
+        <tr>
+          <td>La hora de tu último inicio de sesión, y cuándo se añadió y se usó por última vez cada método de acceso</td>
+          <td>Saber qué cuentas siguen en uso</td>
+          <td>Al iniciar sesión</td>
+        </tr>
+        <tr>
+          <td>Las notificaciones que te enviamos, guardadas en la bandeja de entrada de la aplicación, y cuándo las lees</td>
+          <td>Poder releerlas y ver cuáles no has leído</td>
+          <td>Cuando ocurre algo en tus proyectos</td>
+        </tr>
+        <tr>
+          <td>Los ensayos que has marcado como vistos</td>
+          <td>Mostrar a quienes administran el proyecto y a los demás participantes del ensayo quién lo ha visto</td>
+          <td>Cuando marcas uno</td>
+        </tr>
+        <tr>
+          <td>Un hash con clave de tu dirección IP y un contador de peticiones — nunca la dirección en sí. Cada registro abarca las peticiones de un minuto y no está vinculado a tu cuenta; los registros antiguos se sustituyen o se borran a medida que llegan peticiones nuevas</td>
+          <td>Limitar los intentos repetidos de iniciar sesión, de hacer otras gestiones de tu cuenta y de abrir enlaces de invitación</td>
+          <td>Al iniciar sesión o hacer otras gestiones de tu cuenta desde la aplicación, y al abrir un enlace de invitación</td>
+        </tr>
+        <tr>
+          <td>Dos contadores de peticiones vinculados a tu cuenta: uno para cuando te unes a un proyecto con un enlace y otro para cuando se carga la disponibilidad de los miembros de un proyecto. Cada uno registra las peticiones de un minuto y vuelve a empezar en el siguiente. Se borran junto con tu cuenta</td>
+          <td>Limitar las peticiones demasiado frecuentes</td>
+          <td>Cuando te unes a un proyecto con un enlace o la aplicación carga la disponibilidad de los miembros (en Planner y al añadir o editar un ensayo)</td>
+        </tr>
+        <tr>
+          <td>Tu dirección IP y los datos de la petición en los registros de alojamiento de Vercel, que se conservan alrededor de una hora</td>
+          <td>Hacer funcionar el servidor e investigar fallos</td>
+          <td>En cada petición al servidor</td>
+        </tr>
       </tbody>
     </table>
 
     <h3>Sobre la importación de calendario</h3>
     <p>
-      Si activas la importación, Rehearsly lee los calendarios que elijas y nos
-      envía <strong>únicamente el intervalo de tiempo</strong> de cada evento:
-      cuándo empieza y cuándo termina. Los títulos, las notas, los lugares y los
-      participantes se leen en tu dispositivo y nunca salen de él. A nuestro
-      servidor llega «ocupado de 14:00 a 15:30», no «Dentista».
+      Si activas la sincronización, Rehearsly lee el calendario que elijas en tu
+      teléfono y nos envía <strong>únicamente el intervalo de tiempo</strong> de cada
+      evento de los próximos 12 meses (cuándo empieza y cuándo termina), con
+      identificadores técnicos del evento y del calendario para que la siguiente
+      sincronización actualice la misma entrada. Los títulos, las notas, los lugares
+      y los participantes nunca salen de tu dispositivo. A nuestro servidor llega
+      «no disponible de 14:00 a 15:30», no «Dentista».
     </p>
     <p>
       Los demás miembros de tus proyectos ven exactamente lo mismo que nos
       enviaste: que no estás disponible en ese intervalo, sin más detalle.
     </p>
     <p>
-      La importación está desactivada por defecto. Puedes desactivarla en
-      cualquier momento en Perfil → Sincronización de calendario, y «Borrar lo
-      importado» elimina todo lo que se trajo por esta vía.
+      La sincronización está desactivada hasta que la actives. Si desactivas la
+      sincronización automática en Perfil → Sincronización, dejan de llegar horas
+      nuevas, pero las que ya se importaron no se borran: permanecen en tu cuenta y
+      los miembros de tus proyectos las siguen viendo como ocupadas. En esa misma
+      pantalla, el botón «Eliminar horas importadas» borra de Rehearsly las horas
+      ocupadas que llegaron de los calendarios de todos tus dispositivos; las que
+      marcaste tú se mantienen. Al hacerlo, la sincronización automática se
+      desactiva en el dispositivo que estás usando; si otro dispositivo tuyo la tiene
+      activada, en su próxima sincronización volverá a enviar las horas ocupadas de
+      sus calendarios. Eliminar tu cuenta también borra todo esto.
     </p>
 
     <h3>Lo que deliberadamente no recopilamos</h3>
     <ul>
-      <li>Ubicación</li>
-      <li>Contactos ni agenda</li>
-      <li>Fotos, cámara ni micrófono</li>
-      <li>Identificadores publicitarios, analítica ni rastreadores</li>
-      <li>Datos de tarjetas bancarias — véase más abajo</li>
+      <li>Datos de ubicación de tu teléfono</li>
+      <li>Contactos</li>
+      <li>Fotos, cámara ni micrófono: la aplicación no tiene acceso a ellos</li>
+      <li>Identificadores publicitarios ni datos de análisis o de rastreo</li>
+      <li>Datos de pago: la aplicación es gratuita, véase más abajo</li>
     </ul>
 
     <h2>Pagos</h2>
     <p>
-      Rehearsly es gratuita por ahora y la aplicación no contiene compras. Si se
-      introdujeran planes de pago, los datos de la tarjeta se introducirían en la
-      página del proveedor de pagos y nunca llegarían a nuestros servidores;
-      guardaríamos solo el hecho del pago, su importe y su estado.
+      Rehearsly es gratuita y no ofrece compras dentro de la aplicación.
     </p>
 
     <h2>Quién más procesa tus datos</h2>
@@ -477,50 +778,154 @@
     <ul>
       <li><strong>Neon</strong> — alojamiento de la base de datos (Estados Unidos)</li>
       <li><strong>Vercel</strong> — alojamiento del servidor</li>
-      <li><strong>Resend</strong> — envío de los correos con códigos para el registro, el restablecimiento de la contraseña y el cambio de dirección; recibe tu correo y el texto del mensaje (UE, Irlanda)</li>
+      <li><strong>Resend</strong> — envío de los correos con códigos para el registro, el restablecimiento de la contraseña y el cambio de dirección, y de los avisos de cambios sustanciales en esta política; recibe tu dirección de correo y el texto del mensaje (UE, Irlanda)</li>
       <li><strong>Expo Push Service</strong> y, a través de él, APNs de Apple — envío de notificaciones</li>
-      <li><strong>Google</strong> y <strong>Apple</strong> — solo si eliges su acceso</li>
+      <li><strong>Google</strong> y <strong>Apple</strong> — solo si inicias sesión con ellos</li>
     </ul>
-    <p>No compartimos tus datos con nadie más y nunca los vendemos.</p>
+    <p>Confirmamos que cada proveedor al que enviamos tus datos les da una protección igual o equivalente a la que se describe en esta política, y solo los usa para prestarnos su servicio.</p>
+    <p>No compartimos tus datos con ninguna otra empresa y nunca los vendemos.</p>
 
-    <h2>Cuánto tiempo los conservamos</h2>
+    <h2>Datos de Google y Apple al iniciar sesión</h2>
+    <p>Esta sección solo se aplica si inicias sesión con Google o Apple.</p>
+
+    <h3>Qué recibimos de Google</h3>
+    <ul>
+      <li>Tu nombre y apellido</li>
+      <li>Tu dirección de correo y la confirmación de Google de que está verificada</li>
+      <li>El identificador de tu cuenta de Google</li>
+    </ul>
     <p>
-      Tus datos existen mientras exista tu cuenta. Al eliminarla desaparece todo
-      lo asociado: disponibilidad, eventos importados, tokens de notificaciones,
-      registros de códigos enviados por correo y pertenencia a proyectos. También se eliminan los proyectos en los que eras
-      el único administrador, algo que la aplicación te advierte antes de
-      continuar.
+      A Google solo le pedimos el acceso básico para iniciar sesión: quién eres, tu
+      nombre y tu dirección de correo. El token de inicio de sesión de Google también
+      puede incluir tu foto de perfil y tu idioma; no los usamos ni los guardamos. No
+      pedimos acceso a tu Gmail, Google Calendar ni Contactos de Google. Nuestro
+      servidor comprueba el token y no lo guarda. Si tienes un calendario de Google
+      en el teléfono y activas la sincronización, la aplicación lo lee a través de
+      iOS, como se describe más arriba, y no a través de Google.
+    </p>
+
+    <h3>Para qué los usamos</h3>
+    <p>
+      Solo para crear tu cuenta, iniciar tu sesión, enviarte correos sobre la cuenta
+      y mostrar tu nombre a los miembros de tus proyectos. Tu dirección de correo es
+      la de tu cuenta, así que a ella se envían los códigos que pidas, por ejemplo
+      para restablecer la contraseña, y los avisos de cambios sustanciales en esta
+      política. El nombre se toma una sola vez, al crear la cuenta, y puedes
+      cambiarlo en Perfil → Editar perfil. Si ya existe una cuenta con la misma
+      dirección verificada, el inicio de sesión con Google se vincula a esa cuenta,
+      que conserva su nombre.
+    </p>
+
+    <h3>Dónde se guardan y quién los recibe</h3>
+    <p>
+      Se guardan en nuestra base de datos, alojada en Neon, junto con el resto de los
+      datos de tu cuenta. Los miembros de tus proyectos ven tu nombre. Aparte de eso,
+      solo compartimos estos datos con los servicios que hacen funcionar Rehearsly:
+      Neon los almacena, Vercel ejecuta nuestro servidor, Resend recibe tu dirección
+      de correo cuando te escribimos, y Expo Push Service y APNs de Apple entregan las
+      notificaciones que muestran tu nombre a quienes administran tus proyectos. No
+      los vendemos ni los usamos para publicidad ni para entrenar modelos de
+      inteligencia artificial o aprendizaje automático.
+    </p>
+
+    <h3>Cómo eliminarlos</h3>
+    <p>
+      Perfil → Eliminar cuenta los borra de nuestra base de datos junto con el resto
+      de tu cuenta. Solo quedan fuera de nuestro alcance las notificaciones push que
+      ya llegaron a los teléfonos de otras personas, como se explica en «Cuánto
+      tiempo conservamos tus datos». También puedes dejar de usar tu cuenta de Google
+      en Rehearsly desde la
+      <a href="https://myaccount.google.com/linkedapps">configuración de tu cuenta de Google</a>:
+      elige Rehearsly y luego «Dejar de usar Iniciar sesión con Google» (o «Dejar de
+      usar Acceder con Google»). Eso retira el permiso en Google, pero no borra lo que
+      ya tenemos; para eso tienes que eliminar tu cuenta de Rehearsly.
+    </p>
+
+    <h3>Uso limitado (Limited Use)</h3>
+    <p>
+      El uso y la transferencia por parte de Rehearsly de la información recibida de las
+      API de Google cumplen la Política de datos de usuario de los servicios de API de
+      Google (Google API Services User Data Policy), incluidos los requisitos de uso
+      limitado (Limited Use).
+    </p>
+    <p lang="en">Rehearsly's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.</p>
+    <p>Texto de la política (en inglés): <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>.</p>
+
+    <h3>Iniciar sesión con Apple</h3>
+    <p>
+      Cada vez que inicias sesión, Apple nos da el identificador de tu cuenta y, si el
+      token de inicio de sesión las incluye, tu dirección de correo y la confirmación
+      de que está verificada. Tu nombre solo llega la primera vez que inicias sesión,
+      y únicamente si lo permites. Si eliges «Ocultar mi correo», recibimos y
+      guardamos una dirección privada terminada en @privaterelay.appleid.com o en
+      @private.icloud.com en lugar de la real. Si no compartes un nombre, la cuenta se
+      llama «User» hasta que lo cambies en Perfil → Editar perfil.
+    </p>
+    <p>
+      Usamos, guardamos y transmitimos estos datos tal como se describe arriba para
+      Google, y Perfil → Eliminar cuenta los borra del mismo modo. Puedes dejar de usar
+      Iniciar sesión con Apple en Rehearsly desde la configuración del iPhone: tu
+      nombre → Iniciar sesión con Apple → Rehearsly → Eliminar. Igual que con Google,
+      eso no borra lo que ya tenemos; para eso tienes que eliminar tu cuenta de
+      Rehearsly.
+    </p>
+
+    <h2>Cuánto tiempo conservamos tus datos</h2>
+    <p>
+      Tus datos existen mientras exista tu cuenta. Al eliminarla desaparece de
+      nuestra base de datos todo lo asociado: disponibilidad, horas importadas de tus
+      calendarios, tus notificaciones, marcas de visto, registros de inicio de
+      sesión, tokens de notificaciones, registros de códigos enviados por correo y
+      pertenencia a proyectos. También se eliminan los proyectos que son tuyos, con
+      todos sus ensayos, y los que solo administrabas tú; los demás miembros también
+      los pierden. La aplicación te avisa de los proyectos que son tuyos antes de
+      continuar y, al terminar, te indica cuántos se han eliminado. Los ensayos que
+      creaste en proyectos que siguen existiendo permanecen en ellos, sin tu nombre.
+    </p>
+    <p>
+      Cuando te unes a un proyecto, te hacen admin o marcas un ensayo como visto,
+      quienes administran ese proyecto reciben una notificación con tu nombre. Al
+      eliminar tu cuenta, también borramos esas notificaciones de su bandeja de
+      entrada en la aplicación. Lo único que no podemos borrar es una notificación
+      push que ya llegó al teléfono de otra persona: permanece en ese teléfono, fuera
+      de nuestro alcance.
+    </p>
+    <p>
+      Dos registros duran algo más. Neon conserva un historial de cambios de la base
+      de datos durante un máximo de 7 días para poder restaurarla tras un fallo, y los
+      datos eliminados desaparecen de él al acabar ese plazo. Los registros de
+      alojamiento de Vercel se conservan alrededor de una hora.
     </p>
 
     <h2>Tus derechos</h2>
     <ul>
-      <li><strong>Eliminarlo todo</strong> — Perfil → Eliminar cuenta. Es inmediato e irreversible.</li>
+      <li><strong>Eliminar tu cuenta y tus datos</strong> — Perfil → Eliminar cuenta. Es inmediato e irreversible; «Cuánto tiempo conservamos tus datos» indica lo que permanece.</li>
       <li><strong>Corregir tus datos</strong> — Perfil → Editar perfil.</li>
-      <li><strong>Detener la importación de calendario</strong> — Perfil → Sincronización de calendario.</li>
-      <li><strong>Desactivar las notificaciones</strong> — Perfil → Notificaciones, o los ajustes del dispositivo.</li>
+      <li><strong>Detener la importación de calendario</strong> — Perfil → Sincronización.</li>
+      <li><strong>Eliminar las horas importadas de tus calendarios</strong> — Perfil → Sincronización → «Eliminar horas importadas».</li>
+      <li><strong>Desactivar las notificaciones</strong> — Perfil → Notificaciones, o la configuración del teléfono.</li>
       <li><strong>Obtener una copia de tus datos</strong> — escríbenos y te la enviaremos.</li>
     </ul>
 
     <h2>Seguridad</h2>
     <p>
-      Todo el tráfico usa HTTPS. Las contraseñas se guardan como hashes bcrypt y
-      no son recuperables, ni por nosotros ni por nadie. Las sesiones pueden
-      revocarse: cerrar sesión o cambiar la contraseña invalida todas las
-      existentes. El acceso a los datos de cada proyecto se comprueba en el
-      servidor en cada petición.
+      Todo el tráfico usa HTTPS. Las contraseñas se guardan solo como hashes bcrypt,
+      así que no podemos verlas ni recuperarlas. Las sesiones pueden revocarse:
+      cerrar sesión o cambiar la contraseña invalida todas las existentes. El acceso
+      a los datos de cada proyecto se comprueba en el servidor en cada petición.
     </p>
 
     <h2>Menores</h2>
     <p>
-      Rehearsly no está dirigida a menores de 13 años y no recopilamos sus datos
-      conscientemente. Si crees que un menor ha creado una cuenta, escríbenos y
-      la eliminaremos.
+      Rehearsly no está dirigida a menores de 13 años y no recopilamos sus datos a
+      sabiendas. Si crees que una persona menor de esa edad ha creado una cuenta,
+      escríbenos y eliminaremos esa cuenta.
     </p>
 
     <h2>Cambios</h2>
     <p>
-      Si esta política cambia de forma sustancial, actualizaremos la fecha
-      superior y te avisaremos en la aplicación.
+      Cuando esta política cambie, publicaremos la nueva versión en esta página y
+      actualizaremos la fecha que aparece arriba. Si los cambios son sustanciales, te avisaremos además por correo, a la dirección de tu cuenta, antes de que entren en vigor.
     </p>
 
     <div class="foot">
@@ -532,12 +937,12 @@
   <!-- ============================= DEUTSCH ============================= -->
   <section data-content="de" hidden>
     <h1>Datenschutzerklärung</h1>
-    <p class="updated">Zuletzt aktualisiert: 4. November 2026</p>
+    <p class="updated">Zuletzt aktualisiert: 19. November 2026</p>
 
     <p class="lede">
-      Rehearsly speichert, was für die Probenplanung nötig ist — und nicht mehr.
-      Wir verkaufen deine Daten nicht, nutzen sie nicht für Werbung, und die App
-      enthält weder Analyse- noch Tracking-SDKs.
+      Rehearsly speichert, was für den Betrieb der App und die Probenplanung nötig
+      ist – und nicht mehr. Wir verkaufen deine Daten nicht, nutzen sie nicht für
+      Werbung, und die App enthält weder Analyse- noch Tracking-SDKs.
     </p>
 
     <h2>Wer verantwortlich ist</h2>
@@ -556,16 +961,16 @@
       <tbody>
         <tr>
           <td>E-Mail-Adresse, Vor- und Nachname</td>
-          <td>Konto anlegen und zeigen, wer an einem Projekt beteiligt ist</td>
+          <td>Konto anlegen, dir E-Mails zu deinem Konto schicken und zeigen, wer an einem Projekt beteiligt ist</td>
           <td>Bei der Registrierung</td>
         </tr>
         <tr>
           <td>Passwort, ausschließlich als bcrypt-Hash</td>
           <td>Anmeldung</td>
-          <td>Nur bei Registrierung per E-Mail</td>
+          <td>Nur bei Registrierung per E-Mail oder wenn du ein Passwort festlegst</td>
         </tr>
         <tr>
-          <td>Einmalcodes per E-Mail — gespeichert wird nur ein mit Schlüssel gebildeter Hash des Codes und die Adresse, an die er ging; ein Code gilt 15 Minuten</td>
+          <td>Einmalcodes per E-Mail – gespeichert werden nur ein mit einem geheimen Schlüssel gebildeter Hash des Codes und die Adresse, an die er ging; ein Code gilt 15 Minuten</td>
           <td>Adresse bestätigen, Passwort zurücksetzen oder E-Mail-Adresse ändern</td>
           <td>Wenn du einen Code anforderst</td>
         </tr>
@@ -580,40 +985,72 @@
           <td>Automatisch erkannt, jederzeit änderbar</td>
         </tr>
         <tr>
-          <td>Projekte, Proben, Teilnehmer, Notizen, Ort</td>
+          <td>Projekte, Proben, Teilnehmende, Notizen, Ort</td>
           <td>Die Kernfunktion der App</td>
           <td>Sobald du sie anlegst</td>
         </tr>
         <tr>
-          <td>Deine Verfügbarkeit — freie und belegte Zeiträume</td>
+          <td>Deine Verfügbarkeit – freie und belegte Zeiträume</td>
           <td>Termine vorschlagen, die allen passen</td>
           <td>Sobald du sie einträgst</td>
         </tr>
         <tr>
-          <td>Beginn und Ende deiner Kalendereinträge — <strong>niemals deren Titel</strong></td>
-          <td>Sie automatisch in belegte Zeiten umwandeln</td>
-          <td>Nur bei aktiviertem Kalenderimport</td>
+          <td>Beginn und Ende deiner Kalendertermine sowie technische Kennungen jedes Termins und seines Kalenders – <strong>niemals ihre Titel</strong></td>
+          <td>Automatisch als belegte Zeiten eintragen</td>
+          <td>Nur wenn du die Kalendersynchronisation einschaltest</td>
         </tr>
         <tr>
           <td>Push-Token, Gerätetyp und Gerätename</td>
-          <td>Benachrichtigungen zu deinen Proben zustellen</td>
-          <td>Nur wenn du Benachrichtigungen erlaubst</td>
+          <td>Mitteilungen zu deinen Projekten und Proben zustellen</td>
+          <td>Nur wenn du Mitteilungen erlaubst</td>
         </tr>
         <tr>
           <td>Fehlerberichte und der Bildschirm, von dem aus sie gesendet wurden</td>
           <td>Beheben, was du meldest</td>
           <td>Nur wenn du einen sendest</td>
         </tr>
+        <tr>
+          <td>Der Zeitpunkt deiner letzten Anmeldung sowie wann jede Anmeldemethode hinzugefügt und zuletzt genutzt wurde</td>
+          <td>Sehen, welche Konten noch genutzt werden</td>
+          <td>Bei der Anmeldung</td>
+        </tr>
+        <tr>
+          <td>Mitteilungen an dich, gespeichert im Posteingang der App, und wann du sie gelesen hast</td>
+          <td>Damit du sie nochmals lesen kannst und Ungelesenes siehst</td>
+          <td>Wenn in deinen Projekten etwas passiert</td>
+        </tr>
+        <tr>
+          <td>Welche Proben du als gesehen markiert hast</td>
+          <td>Allen, die das Projekt verwalten oder für die Probe eingeteilt sind, zeigen, wer sie gesehen hat</td>
+          <td>Wenn du eine markierst</td>
+        </tr>
+        <tr>
+          <td>Ein mit einem geheimen Schlüssel gebildeter Hash deiner IP-Adresse samt Anfragezähler – nie die Adresse selbst. Gezählt wird jeweils eine Minute lang; der Eintrag ist nicht mit deinem Konto verknüpft, und alte Einträge werden ersetzt oder entfernt, sobald neue Anfragen eingehen</td>
+          <td>Wiederholte Versuche begrenzen – bei der Anmeldung, bei Anfragen zu deinem Konto und bei Einladungslinks</td>
+          <td>Bei der Anmeldung und bei anderen Anfragen zu deinem Konto aus der App sowie beim Öffnen eines Einladungslinks</td>
+        </tr>
+        <tr>
+          <td>Zwei Anfragezähler, die mit deinem Konto verknüpft sind: einer für den Beitritt zu Projekten per Einladungslink, einer für das Laden der Verfügbarkeit der Mitglieder eines Projekts. Beide zählen die Anfragen jeweils innerhalb einer Minute und werden in der nächsten überschrieben; gelöscht werden sie mit deinem Konto</td>
+          <td>Zu häufige Anfragen begrenzen</td>
+          <td>Wenn du einem Projekt per Einladungslink beitrittst oder die App die Verfügbarkeit der Mitglieder lädt (im Planner und beim Erstellen oder Bearbeiten einer Probe)</td>
+        </tr>
+        <tr>
+          <td>Deine IP-Adresse und Angaben zur Anfrage in den Hosting-Protokollen von Vercel, die etwa eine Stunde gespeichert werden</td>
+          <td>Server betreiben und Störungen untersuchen</td>
+          <td>Bei jeder Anfrage an den Server</td>
+        </tr>
       </tbody>
     </table>
 
     <h3>Zum Kalenderimport</h3>
     <p>
-      Wenn du den Import aktivierst, liest Rehearsly die von dir gewählten
-      Kalender und übermittelt uns <strong>ausschließlich den Zeitraum</strong>
-      jedes Termins — wann er beginnt und wann er endet. Titel, Notizen, Orte und
-      Teilnehmer werden auf deinem Gerät gelesen und verlassen es nie. Auf
-      unserem Server landet „belegt von 14:00 bis 15:30", nicht „Zahnarzt".
+      Wenn du die Synchronisation einschaltest, liest Rehearsly den von dir gewählten
+      Kalender auf deinem iPhone und übermittelt uns <strong>ausschließlich den
+      Zeitraum</strong> jedes Termins der nächsten 12 Monate – wann er beginnt und wann
+      er endet – sowie technische Kennungen des Termins und des Kalenders, damit die
+      nächste Synchronisation denselben Eintrag aktualisiert. Titel, Notizen, Orte und
+      Teilnehmende verlassen dein Gerät nie. Auf unserem Server landet „belegt von
+      14:00 bis 15:30“, nicht „Zahnarzt“.
     </p>
     <p>
       Andere Mitglieder deiner Projekte sehen genau das, was du uns geschickt
@@ -621,77 +1058,184 @@
       Angaben.
     </p>
     <p>
-      Der Import ist standardmäßig deaktiviert. Du kannst ihn jederzeit unter
-      Profil → Kalendersynchronisation abschalten; „Importierte löschen" entfernt
-      alles, was auf diesem Weg übernommen wurde.
+      Die Synchronisation ist aus, bis du sie einschaltest. Wenn du Auto-Sync
+      ausschaltest (Profil → Kalender-Sync), kommen keine neuen Zeiten mehr hinzu,
+      die bereits importierten werden aber nicht gelöscht: Sie bleiben in deinem
+      Konto, und die Mitglieder deiner Projekte sehen sie weiterhin als belegt. Mit
+      der Schaltfläche „Alle importierten Zeiten löschen“ auf demselben Bildschirm
+      entfernst du sie alle, auch die von deinen anderen Geräten; was du selbst
+      eingetragen hast, bleibt. Auto-Sync wird dabei auf diesem Gerät ausgeschaltet;
+      ein anderes Gerät mit eingeschaltetem Auto-Sync schickt seine belegten Zeiten
+      bei seiner nächsten Synchronisation erneut. Auch das Löschen deines Kontos
+      entfernt all das.
     </p>
 
     <h3>Was wir bewusst nicht erheben</h3>
     <ul>
-      <li>Standortdaten</li>
+      <li>Standortdaten deines Geräts</li>
       <li>Kontakte oder Adressbuch</li>
-      <li>Fotos, Kamera oder Mikrofon</li>
+      <li>Fotos, Kamera oder Mikrofon – die App hat keinen Zugriff darauf</li>
       <li>Werbe-IDs, Analyse- oder Tracking-SDKs</li>
-      <li>Kartendaten — siehe unten</li>
+      <li>Zahlungsdaten – die App ist kostenlos, siehe unten</li>
     </ul>
 
     <h2>Zahlungen</h2>
     <p>
-      Rehearsly ist derzeit kostenlos und enthält keine Käufe. Sollten kostenpflichtige
-      Tarife eingeführt werden, würden Kartendaten auf der Seite des
-      Zahlungsdienstleisters eingegeben und erreichten unsere Server nie; wir
-      würden nur die Tatsache der Zahlung, den Betrag und den Status speichern.
+      Rehearsly ist kostenlos und enthält keine In-App-Käufe.
     </p>
 
     <h2>Wer sonst deine Daten verarbeitet</h2>
     <p>Wir nutzen wenige Dienste, jeden nur für seinen Zweck:</p>
     <ul>
-      <li><strong>Neon</strong> — Datenbank-Hosting (USA)</li>
-      <li><strong>Vercel</strong> — Server-Hosting</li>
-      <li><strong>Resend</strong> — Versand der E-Mails mit Codes für Registrierung, Passwort-Zurücksetzen und Adressänderung; erhält deine E-Mail-Adresse und den Text der Nachricht (EU, Irland)</li>
-      <li><strong>Expo Push Service</strong> und darüber Apples APNs — Zustellung von Benachrichtigungen</li>
-      <li><strong>Google</strong> und <strong>Apple</strong> — nur wenn du deren Anmeldung wählst</li>
+      <li><strong>Neon</strong> – Datenbank-Hosting (USA)</li>
+      <li><strong>Vercel</strong> – Server-Hosting</li>
+      <li><strong>Resend</strong> – Versand unserer E-Mails: Codes für Registrierung, Passwort-Zurücksetzen und Adressänderung sowie Hinweise auf wesentliche Änderungen dieser Erklärung; erhält deine E-Mail-Adresse und den Text der Nachricht (EU, Irland)</li>
+      <li><strong>Expo Push Service</strong> und darüber Apples APNs – Zustellung von Mitteilungen</li>
+      <li><strong>Google</strong> und <strong>Apple</strong> – nur wenn du deren Anmeldung wählst</li>
     </ul>
-    <p>An niemanden sonst geben wir Daten weiter, und verkauft werden sie nie.</p>
+    <p>Wir bestätigen: Jeder dieser Dienste, der deine Daten von uns erhält, schützt sie mindestens so gut, wie es diese Erklärung zusagt, und nutzt sie nur, um seine Leistung für uns zu erbringen.</p>
+    <p>An kein anderes Unternehmen geben wir deine Daten weiter, und verkauft werden sie nie.</p>
+
+    <h2>Google- und Apple-Daten bei der Anmeldung</h2>
+    <p>Dieser Abschnitt gilt nur, wenn du dich mit Google oder Apple anmeldest.</p>
+
+    <h3>Was wir von Google erhalten</h3>
+    <ul>
+      <li>Dein Vor- und Nachname</li>
+      <li>Deine E-Mail-Adresse und Googles Bestätigung, dass sie verifiziert ist</li>
+      <li>Die Kennung deines Google-Kontos</li>
+    </ul>
+    <p>
+      Wir bitten Google nur um den grundlegenden Zugriff für die Anmeldung: wer du bist,
+      dein Name und deine E-Mail-Adresse. Das Anmeldetoken von Google kann auch dein
+      Profilfoto und deine Sprache enthalten; beides nutzen und speichern wir nicht.
+      Zugriff auf Gmail, Google Kalender oder Google Kontakte fordern wir nicht an. Unser
+      Server prüft das Token und speichert es nicht. Ist auf deinem iPhone ein
+      Google-Kalender eingerichtet und schaltest du die Synchronisation ein, liest die
+      App ihn wie oben beschrieben über iOS und nicht über Google.
+    </p>
+
+    <h3>Wozu wir sie nutzen</h3>
+    <p>
+      Nur um dein Konto anzulegen, dich anzumelden, dir E-Mails zu deinem Konto zu
+      schicken und den Mitgliedern deiner Projekte deinen Namen zu zeigen. Deine
+      E-Mail-Adresse ist die Adresse deines Kontos: Dorthin gehen die Codes, die du
+      anforderst, etwa zum Zurücksetzen des Passworts, und unsere Hinweise auf
+      wesentliche Änderungen dieser Erklärung. Der Name wird einmal übernommen, wenn
+      das Konto angelegt wird; ändern kannst du ihn unter Profil → Profil bearbeiten.
+      Gibt es schon ein Konto mit derselben verifizierten Adresse, wird dein
+      Google-Konto damit verknüpft, und dein bisheriger Name bleibt.
+    </p>
+
+    <h3>Wo sie liegen und wer sie erhält</h3>
+    <p>
+      Sie liegen in unserer Datenbank bei Neon, zusammen mit deinen übrigen
+      Kontodaten. Deinen Namen sehen die Mitglieder deiner Projekte; darüber hinaus
+      geben wir sie nur an die Dienste weiter, die Rehearsly für uns betreiben: Neon
+      speichert sie, Vercel betreibt unseren Server, Resend erhält deine
+      E-Mail-Adresse, wenn wir dir eine E-Mail senden, und Expo Push Service mit Apples APNs stellt die Mitteilungen mit deinem Namen den Personen zu, die deine
+      Projekte verwalten. Wir verkaufen sie nicht und nutzen sie weder für Werbung
+      noch für das Training von KI- und Machine-Learning-Modellen.
+    </p>
+
+    <h3>Wie du sie entfernst</h3>
+    <p>
+      Profil → Konto löschen entfernt sie zusammen mit deinem übrigen Konto aus
+      unserer Datenbank; was danach noch bleibt, steht unter „Wie lange wir sie
+      speichern“. In den
+      <a href="https://myaccount.google.com/linkedapps">Einstellungen deines Google-Kontos</a> kannst
+      du bei Rehearsly außerdem „‚Über Google anmelden‘ nicht mehr verwenden“
+      auswählen. Das beendet die Erlaubnis bei Google, löscht aber nicht, was wir
+      bereits gespeichert haben; dafür musst du dein Rehearsly-Konto löschen.
+    </p>
+
+    <h3>Eingeschränkte Nutzung (Limited Use)</h3>
+    <p>
+      Die Nutzung und Weitergabe von Informationen, die Rehearsly über Google-APIs erhält,
+      entspricht der Richtlinie zu Nutzerdaten der Google-API-Dienste (Google API Services
+      User Data Policy), einschließlich der Anforderungen an die eingeschränkte Nutzung
+      (Limited Use).
+    </p>
+    <p lang="en">Rehearsly's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.</p>
+    <p>Zur Richtlinie (auf Englisch): <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>.</p>
+
+    <h3>Mit Apple anmelden</h3>
+    <p>
+      Bei jeder Anmeldung gibt uns Apple deine Kontokennung. Steht im Anmeldetoken
+      auch deine E-Mail-Adresse, bekommen wir sie ebenfalls, zusammen mit der
+      Bestätigung, dass sie verifiziert ist. Deinen Namen erhalten wir nur einmal, bei der ersten Anmeldung, und nur, wenn du es erlaubst.
+      Wählst du „E-Mail-Adresse verbergen“, erhalten und speichern wir statt deiner
+      echten Adresse eine private, die auf @privaterelay.appleid.com oder
+      @private.icloud.com endet. Gibst du keinen Namen weiter, heißt das Konto
+      „User“, bis du das unter Profil → Profil bearbeiten änderst.
+    </p>
+    <p>
+      Diese Daten nutzen, speichern und übermitteln wir genau wie oben für Google
+      beschrieben, und Profil → Konto löschen entfernt sie ebenso. Die Verwendung von
+      „Mit Apple anmelden“ für Rehearsly beendest du in den Einstellungen deines Apple
+      Accounts auf dem iPhone: Einstellungen → [dein Name] → „Mit Apple anmelden“,
+      dann Rehearsly auswählen und auf „Löschen“ tippen. Wie bei Google löscht das
+      nicht, was wir bereits gespeichert haben; dafür musst du dein Rehearsly-Konto
+      löschen.
+    </p>
 
     <h2>Wie lange wir sie speichern</h2>
     <p>
-      Deine Daten existieren, solange dein Konto existiert. Löschst du es,
-      verschwindet alles Zugehörige: Verfügbarkeit, importierte Termine,
-      Push-Tokens, Einträge zu E-Mail-Codes und Projektmitgliedschaften. Projekte, in denen du der einzige
-      Administrator warst, werden ebenfalls gelöscht — darauf weist die App vor
-      der Bestätigung hin.
+      Deine Daten speichern wir, solange dein Konto besteht. Löschst du es,
+      verschwindet alles Zugehörige aus unserer Datenbank: Verfügbarkeit, aus
+      Kalendern importierte belegte Zeiten, deine Mitteilungen, Gesehen-Markierungen,
+      Anmeldedaten, Push-Tokens, Einträge zu E-Mail-Codes und
+      Projektmitgliedschaften. Gelöscht werden auch die Projekte, die dir gehören,
+      samt all ihren Proben, und Projekte, die nur du verwaltet hast; auch die
+      anderen Mitglieder verlieren sie. Auf die Projekte, die dir gehören, weist die
+      App vorher hin, und danach zeigt sie an, wie viele gelöscht wurden. Proben, die
+      du in weiter bestehenden Projekten angelegt hast, bleiben dort, ohne deinen
+      Namen.
+    </p>
+    <p>
+      Wenn du einem Projekt beitrittst, darin Adminrechte bekommst oder eine Probe
+      als gesehen markierst, erhalten die Personen, die das Projekt verwalten, eine
+      Mitteilung mit deinem Namen. Löschst du dein Konto, entfernen wir diese Mitteilungen auch aus deren Posteingang in der App. Push-Mitteilungen, die auf deren Geräten schon angezeigt wurden, bleiben allerdings dort: Darauf haben wir
+      keinen Zugriff.
+    </p>
+    <p>
+      Zwei Aufzeichnungen bleiben etwas länger bestehen. Neon bewahrt einen Verlauf der
+      Datenbankänderungen bis zu 7 Tage auf, damit die Datenbank nach einem Ausfall
+      wiederhergestellt werden kann; nach Ablauf dieser Frist verschwinden gelöschte
+      Daten auch daraus. Die Hosting-Protokolle von Vercel werden etwa eine Stunde
+      gespeichert.
     </p>
 
     <h2>Deine Rechte</h2>
     <ul>
-      <li><strong>Alles löschen</strong> — Profil → Konto löschen. Sofort und unwiderruflich.</li>
-      <li><strong>Daten berichtigen</strong> — Profil → Profil bearbeiten.</li>
-      <li><strong>Kalenderimport beenden</strong> — Profil → Kalendersynchronisation.</li>
-      <li><strong>Benachrichtigungen abschalten</strong> — Profil → Benachrichtigungen oder die Geräteeinstellungen.</li>
-      <li><strong>Kopie deiner Daten erhalten</strong> — schreib uns, wir senden sie zu.</li>
+      <li><strong>Konto und Daten löschen</strong> – Profil → Konto löschen. Sofort und unwiderruflich; was bleibt, steht unter „Wie lange wir sie speichern“.</li>
+      <li><strong>Daten berichtigen</strong> – Profil → Profil bearbeiten.</li>
+      <li><strong>Kalenderimport beenden</strong> – Profil → Kalender-Sync.</li>
+      <li><strong>Aus Kalendern importierte Zeiten löschen</strong> – Profil → Kalender-Sync → „Alle importierten Zeiten löschen“.</li>
+      <li><strong>Mitteilungen abschalten</strong> – Profil → Mitteilungen oder die Geräteeinstellungen.</li>
+      <li><strong>Kopie deiner Daten erhalten</strong> – schreib uns, wir senden sie zu.</li>
     </ul>
 
     <h2>Sicherheit</h2>
     <p>
-      Der gesamte Verkehr läuft über HTTPS. Passwörter werden als bcrypt-Hashes
-      gespeichert und sind nicht wiederherstellbar — weder durch uns noch durch
-      andere. Sitzungen lassen sich widerrufen: Abmelden oder ein Passwortwechsel
-      macht alle bestehenden ungültig. Der Zugriff auf Projektdaten wird bei
-      jeder Anfrage serverseitig geprüft.
+      Der gesamte Datenverkehr läuft über HTTPS. Passwörter speichern wir nur als
+      bcrypt-Hashes, deshalb können wir sie weder sehen noch wiederherstellen.
+      Sitzungen lassen sich widerrufen: Abmelden oder ein Passwortwechsel macht alle
+      bestehenden ungültig. Der Zugriff auf Projektdaten wird bei jeder Anfrage
+      serverseitig geprüft.
     </p>
 
     <h2>Kinder</h2>
     <p>
-      Rehearsly richtet sich nicht an Kinder unter 13 Jahren, und wir erheben
-      deren Daten nicht wissentlich. Wenn du glaubst, dass ein Kind ein Konto
-      angelegt hat, schreib uns — wir entfernen es.
+      Rehearsly richtet sich nicht an Kinder unter 13 Jahren, und wir erheben deren
+      Daten nicht wissentlich. Wenn du glaubst, dass ein Kind unter 13 Jahren ein
+      Konto angelegt hat, schreib uns – wir löschen das Konto.
     </p>
 
     <h2>Änderungen</h2>
     <p>
-      Ändert sich diese Erklärung wesentlich, aktualisieren wir das Datum oben
-      und weisen in der App darauf hin.
+      Eine neue Fassung dieser Erklärung veröffentlichen wir auf dieser Seite und
+      aktualisieren das Datum oben. Über wesentliche Änderungen informieren wir dich per E-Mail an die Adresse deines Kontos, bevor sie in Kraft treten.
     </p>
 
     <div class="foot">

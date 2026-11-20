@@ -2,8 +2,9 @@
 
 Дата: 18 сентября 2026. Ветка `codex/systematic-repair`.
 База: `7588ab861518c0c3988ad07443e9e5c4a71059ae`.
-Статус: **READY_FOR_CHECK** — локальная защита проверена, обязательная
-deployment-конфигурация OPS-IA01 ещё NOT_RUN. Source commit
+Статус: **VERIFIED**, 20.11.2026 — локальная защита проверена, обязательная
+deployment-конфигурация OPS-IA01 — PASS: вход через Apple на production
+работает (см. PRODUCTION_ACCESS.md). Source commit
 `0dc7666b6f66c049d436bbe5c384102e0fb6aca7`, tree
 `b7e2443c3de0afd76c1ec7c563749962aa023321`.
 
@@ -51,8 +52,8 @@ Google verification и account-linking policy не меняются.
 | HTTP/SQLite suite | 28/28 PASS, exit0; [after](evidence/IA01/http-after.txt) |
 | Полный `npm run check` на source commit | PASS, exit0: 82 suites / 1142 Jest; browser H01 4, H04 18, H02 11, persisted6; [лог](evidence/IA01/check-final.txt) |
 | Полный disposable PostgreSQL regression | PASS, exit0: controls/A02/B03/B04/H04; F01/B02/D01 остаются known defects; [лог](evidence/IA01/postgres-final.txt) |
-| Vercel APPLE_CLIENT_ID, active deployment binding | NOT_RUN, обязательный gate OPS-IA01 |
-| Production login/smoke, физический Apple Sign-In | NOT_RUN; этот локальный run не проверяет реального provider/deployment |
+| Vercel APPLE_CLIENT_ID, active deployment binding | PASS 20.11.2026: OPS-IA01, вход через Apple на production |
+| Production login/smoke, физический Apple Sign-In | PASS 20.11.2026: Вадим вошёл через Apple в сборке 1.0.0 (7) из TestFlight на production |
 
 Проверены отсутствующая/пустая/некорректная настройка, intended/wrong/missing/case
 audience, issuer, expiry/nbf, подпись/алгоритм/key, malformed JWT, входные типы,
@@ -83,7 +84,7 @@ Jest discovery и обязательный `npm run check`; отдельный �
 
 ## Обязательная карточка человека
 
-Deployment condition — **NOT_RUN**. [OPS-IA01](PRODUCTION_ACCESS.md#ops-ia01--проверка-apple_client_id-человеком)
+Deployment condition — **PASS**, 20.11.2026: результат в карточке. [OPS-IA01](PRODUCTION_ACCESS.md#ops-ia01--проверка-apple_client_id-человеком)
 требует от Вадима/уполномоченного человека подтвердить intended audience в
 переменных **Production** и его привязку к активному deployment. Само наличие
 новой переменной в UI Vercel не доказывает, что её получил запущенный deployment.

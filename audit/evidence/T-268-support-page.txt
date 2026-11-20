@@ -1,0 +1,177 @@
+T-268: the support page (server/public/support.html, the App Store's Support URL)
+read in its four languages against the app of build 6 (up to T-267).
+
+== 1. Findings, each checked in the code ==
+
+1. Bug report (all four languages). The page sent people to a button "in the
+   banner at the top of every screen" and said the report attaches the screen
+   they were on. The banner went in T-008 (29.10). The button is the profile's
+   About block, last row (ProfileScreen.tsx, testID profile-report-bug), named
+   profile.reportBug: "Report a Bug" / «Сообщить об ошибке» / «Reportar un
+   error» / „Fehler melden“ (the page had "Bug Report", «Баг-репорт», «Reportar
+   error»). BugReportSheet.tsx sends { message, screen: 'Profile' } always;
+   routes/native/bugReports.js stores user_id, message, screen and
+   created_at. So the report comes with the account and the time, nothing
+   else: the page now says so, and that device, iOS version and screen are the
+   person's to mention.
+
+2. Account deletion (all four). "the app tells you which ones before you
+   confirm" - it does not: the confirmation (profile.deleteAccountWarning) lists
+   nothing; only after the deletion an alert gives the count
+   (deleteAccountProjectsWarning). And "projects where you were the only
+   administrator" was half of it: DELETE /api/auth/me also deletes every
+   project the person owns, whoever else administers it (routes/auth.js).
+   The page now says both, that other members lose them too (as the app's
+   warning does), and that the count comes afterwards. The button is named as
+   the app names it - en "Delete Account" (the page had "Delete account") - and
+   it is at the very bottom of the profile, under Sign Out (T-024).
+
+3. Notifications, German: the profile row is "Mitteilungen"
+   (profile.notifications); the page said "Profil → Benachrichtigungen", and
+   the heading "Benachrichtigungen". Added in all four: the line under the
+   switch when this phone is not set up (pushNotAllowedHere /
+   pushNotRegisteredHere), tap to try again. "Signing out switches them off for
+   that device" holds: AuthContext.logout calls unregisterPushToken.
+
+4. Invite (all four). "Project → Invite" names nothing in the app: the
+   admin-only button on the project's page is projects.shareLink ("Share Link"
+   / «Поделиться ссылкой» / «Compartir el enlace» / „Link teilen“). "Invites
+   expire" is now how long: a week (projectInvites.js, expiresInDays = 7; the
+   app passes none).
+
+5. Google/Apple account and a password (all four). "has no password, use the
+   same button" was true but not all: "Forgot Password?" (auth.forgotPassword)
+   on the sign-in screen sets one with an emailed code for any account
+   (routes/passwordReset.js), and signs out every other session. The page now
+   says so; the heading names Apple too.
+
+Checked and true, unchanged: the support address and reply time (the owner's
+own words); calendar sync sends only the time span (calendar/import.ts: titles,
+notes, places stay on the phone); four languages, the page picks one as
+legal.js does (T-011 test green); requesting your data; the privacy link.
+Nothing about rehearsal reminders on the page (off by the owner, T-266).
+
+== 2. Each language read by its editor ==
+
+Each language read on its own by an editor working as a native speaker, on the
+standard of T-256/T-261/T-267: the app's terms and voice, one Spanish for every
+country, « » in Russian and Spanish, „ “ in German, “ ” in English.
+
+EN - one edit.
+  - invite: "Ask a project admin for a fresh one: on the project’s page,
+    “Share Link”." -> "Ask a project admin to send a fresh one — they tap
+    “Share Link” on the project’s page." (the first read as a stage direction).
+  - Kept: "admin" as the app's deletion alert says it; "sign in" as the app.
+
+RU - four edits.
+  - report: «Отчёт приходит к нам вместе с вашим аккаунтом» (a report does not
+    arrive "with an account") -> «Отчёт сам сообщает нам, от кого он и когда
+    отправлен, так что почту писать не нужно»; «к нему не прикладываются» ->
+    «он не передаёт — …упомяните их в тексте».
+  - «нажмите её» -> «нажмите на неё».
+  - «На остальных устройствах при этом произойдёт выход из аккаунта»
+    (bureaucratic) -> «При этом на остальных устройствах вы выйдете из
+    аккаунта».
+  - invite: «на странице проекта — «Поделиться ссылкой»» -> «для этого на
+    странице проекта есть кнопка «Поделиться ссылкой»».
+  - Heading «Регистрировался через Google…» was masculine only -> «Аккаунт
+    создан через Google или Apple, а войти по паролю не получается».
+
+ES - four edits.
+  - «Describe lo que pasó» -> «Describe el problema» (the app's own
+    placeholder, and no preterite/perfect split between Spain and America).
+  - «El informe nos llega con tu cuenta y la hora de envío» -> «El informe ya
+    nos dice quién lo envía y cuándo».
+  - deletion: «y también los que…; los demás miembros también…» (también twice)
+    -> «y los que solo administrabas tú» (the app's phrase).
+  - invite: «en la página del proyecto, «Compartir el enlace».» -> «lo envía
+    con «Compartir el enlace», en la página del proyecto».
+  - Heading «Me registré con Google…» -> «Mi cuenta es de Google o Apple…».
+
+DE - three edits.
+  - report: "Der Bericht kommt mit deinem Konto und der Uhrzeit des Sendens bei
+    uns an" -> "Aus dem Bericht sehen wir, von wem er kommt und wann er
+    gesendet wurde".
+  - invite: "auf der Seite des Projekts „Link teilen“" (no verb) -> "den gibt
+    es auf der Seite des Projekts über „Link teilen“"; "Admin" as the app, not
+    "Projektadministrator"; deletion "die nur du verwaltet hast" as the app.
+  - the German section's dashes: "—" -> " – " (the app's German dash), and the
+    old „Fehler melden" closed with a straight quote -> „Fehler melden“.
+
+== 3. Red before, green after ==
+
+server/__tests__/routes/supportPage.test.js, through the real app's /support
+route. It reads profile.ts, projects.ts and auth.ts, and checks per language:
+the bug report button in <strong> is exactly profile.reportBug, found at
+"<title> → <about> →"; no "banner|баннер|franja" (case-insensitive, so
+"Banner") anywhere; the old untrue claims gone; "<title> → <notifications>" and
+"<title> → <deleteAccount>"; projects.shareLink; auth.forgotPassword.
+
+RED - server/public/support.html restored from HEAD~1 (before T-268):
+
+  $ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/supportPage.test.js --verbose
+  ✓ the translations were read
+  ✕ en: the bug report button is named as the app names it, and found in the profile’s About
+  ✕ ru: the bug report button is named as the app names it, and found in the profile’s About
+  ✕ es: the bug report button is named as the app names it, and found in the profile’s About
+  ✕ de: the bug report button is named as the app names it, and found in the profile’s About
+  ✕ no language sends anyone to a banner, which the app has not had since T-008
+  ✕ en: promises nothing the app does not do
+  ✕ ru: promises nothing the app does not do
+  ✕ es: promises nothing the app does not do
+  ✕ de: promises nothing the app does not do
+  ✕ en: the profile’s rows are named as the app names them
+  ✓ ru: the profile’s rows are named as the app names them
+  ✓ es: the profile’s rows are named as the app names them
+  ✕ de: the profile’s rows are named as the app names them
+  ✕ en: a fresh invite comes from the project’s own button
+  ✕ ru: a fresh invite comes from the project’s own button
+  ✕ es: a fresh invite comes from the project’s own button
+  ✕ de: a fresh invite comes from the project’s own button
+  ✕ en: a Google or Apple account can still get a password, by the reset
+  ✕ ru: a Google or Apple account can still get a password, by the reset
+  ✕ es: a Google or Apple account can still get a password, by the reset
+  ✕ de: a Google or Apple account can still get a password, by the reset
+  Tests:       19 failed, 3 passed, 22 total
+
+GREEN - HEAD:
+  Tests:       22 passed, 22 total
+  (with legalPageLanguage.test.js and appBuild.test.js, which also open
+  /support: 47 passed, 47 total)
+
+== Server Jest, whole ==
+  Test Suites: 1 failed, 80 passed, 81 total
+  Tests:       8 failed, 1205 passed, 1213 total
+  The one failing suite is __tests__/startup/runtimeStartup.test.js, the same
+  8 recorded in T-267-review.txt as failing before T-267 too: not this task's.
+
+== 4. Review (Astra, CHANGES): iOS's notification settings path ==
+
+Section 1 above first called "Settings → Rehearsly → Notifications" checked and
+true. It was not checked against a source, and it is wrong on current iOS:
+since iOS 18 an app is no longer a row of Settings itself but sits under
+Settings → Apps, so a person following the page does not find Rehearsly there.
+Apple's guide (support.apple.com, "Change notification settings on iPhone")
+gives Settings → Notifications → the app, a list that holds on every iOS
+version. All four languages now say it in Apple's words: Settings →
+Notifications → Rehearsly / Настройки → Уведомления → Rehearsly / Ajustes →
+Notificaciones → Rehearsly / Einstellungen → Mitteilungen → Rehearsly. The page
+has no other iOS Settings path (calendar access is not described as a path).
+
+supportPage.test.js, new per language: the section contains
+"<Settings> → <Notifications> → Rehearsly" in Apple's words and not
+"<Settings> → Rehearsly".
+
+RED - the page as of a3197de (before this fix), the new test added:
+  ✕ en: iOS’s notification settings are found where iOS has them
+  ✕ ru: iOS’s notification settings are found where iOS has them
+  ✕ es: iOS’s notification settings are found where iOS has them
+  ✕ de: iOS’s notification settings are found where iOS has them
+  Tests:       4 failed, 22 passed, 26 total
+
+GREEN - after:
+  supportPage, legalPageLanguage, appBuild together:
+  Tests:       52 passed, 52 total
+
+No e2e: the page is static and the route test covers it (the task's own
+ruling). Not touched: index.html, styles.css, i18n.js, privacy.html.

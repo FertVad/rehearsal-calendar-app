@@ -1,0 +1,14 @@
+T-271 — app Jest before the client fix (client files as at ef2e4f6; server already sends member_left, fd49782).
+cd rehearsal-calendar-native && npx jest --selectProjects frontend --silent -- ProjectDetailScreen.test everyServerNotification
+
+  ● "Leave project" (T-271) › asks first, and leaves only when that is confirmed
+  ● "Leave project" (T-271) › is there for a member, and for an administrator who does not own the project
+  ● "Leave project" (T-271) › once confirmed, takes them out of it and back to their projects, read again
+  ● "Leave project" (T-271) › stays, and says so, when the server refuses
+  ● a tapped push of every type the server sends opens something › member_left
+  ● every type the server sends has an icon of its own on its card › none is the bell an unknown type gets, and "New member" and "New administrator" are told apart
+FAIL frontend src/features/notifications/__tests__/everyServerNotification.test.tsx
+FAIL frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx
+Tests:       6 failed, 24 passed, 30 total
+
+("is not there for the owner" passes before as after: there was no button for anyone.)

@@ -11,20 +11,52 @@ import { acceptedGoogleAudiences } from '../constants/googleClients.js';
 import { readAppleAuthConfig, AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
 
 /**
- * The `aud` a token claims, read without verifying anything — for the log line
- * when verification fails, and for nothing else.
- *
- * google-auth-library throws "Wrong recipient, payload audience !=
- * requiredAudience" without naming either side, which turns a one-line
- * configuration mistake into a guessing game. Never use this for a decision.
+ * A Google token we refused. Its message is one of our own words, never the
+ * library's: google-auth-library builds most of its rejections from the token
+ * itself ("Token used too late, …: {payload}", "Invalid token signature: <jwt>"),
+ * which would put the person's email, name, photo link and language in the log
+ * — the route logs what it catches. The privacy policy says the photo and
+ * language are not kept (T-269, review round 2).
  */
-function claimedAudience(idToken) {
+class GoogleTokenVerificationError extends Error {
+  constructor(reason) {
+    super(`Invalid Google token: ${reason}`);
+    this.name = 'GoogleTokenVerificationError';
+    this.code = 'GOOGLE_TOKEN_INVALID';
+    this.reason = reason;
+  }
+}
+
+/**
+ * The claims a token states, read without verifying anything — only for the
+ * log line when verification fails, and only the fields that are not about the
+ * person (audience, times). Never use this for a decision.
+ */
+function claimedTerms(idToken) {
   try {
     const [, body] = String(idToken).split('.');
-    return JSON.parse(Buffer.from(body, 'base64url').toString()).aud;
+    const { aud, exp, iat } = JSON.parse(Buffer.from(body, 'base64url').toString());
+    return { aud, exp: Number(exp), iat: Number(iat) };
   } catch {
-    return '(unreadable)';
+    return null;
   }
+}
+
+/**
+ * Why the library refused, worked out from the token's own terms rather than
+ * from the library's message (which carries the payload). Mirrors the order
+ * of its checks closely enough for a log line; a forged token can claim
+ * anything, so this is diagnosis, not a verdict.
+ */
+function rejectionReason(idToken, accepted) {
+  const terms = claimedTerms(idToken);
+  if (!terms) return 'malformed';
+  const now = Date.now() / 1000;
+  const skew = OAuth2Client.CLOCK_SKEW_SECS_ ?? 300;
+  if (Number.isFinite(terms.exp) && now > terms.exp + skew) return 'expired';
+  if (Number.isFinite(terms.iat) && now < terms.iat - skew) return 'not yet valid';
+  if (!accepted.includes(terms.aud)) return 'audience';
+  return 'rejected';
 }
 
 /**
@@ -35,61 +67,64 @@ function claimedAudience(idToken) {
  * @throws {Error} If token is invalid or verification fails
  */
 export async function verifyGoogleToken(idToken) {
+  // Fail closed. Handing verifyIdToken an undefined audience is not a laxer
+  // check, it is no check: google-auth-library guards the whole comparison
+  // with `if (typeof requiredAudience !== 'undefined')`. Signature and issuer
+  // alone say the token is a genuine Google token — not that it was issued
+  // for us. A Google `sub` is the same value for the same person across every
+  // OAuth client, so a token minted for any other app in the world would
+  // match our stored provider row and log an attacker in as that user.
+  const clientIds = acceptedGoogleAudiences();
+  if (clientIds.length === 0) {
+    console.error('[OAuth] Google token rejected: no Google client ids configured');
+    throw new GoogleTokenVerificationError('no audience configured');
+  }
+
+  let payload;
   try {
-    const client = new OAuth2Client();
-
-    // Fail closed. Handing verifyIdToken an undefined audience is not a laxer
-    // check, it is no check: google-auth-library guards the whole comparison
-    // with `if (typeof requiredAudience !== 'undefined')`. Signature and issuer
-    // alone say the token is a genuine Google token — not that it was issued
-    // for us. A Google `sub` is the same value for the same person across every
-    // OAuth client, so a token minted for any other app in the world would
-    // match our stored provider row and log an attacker in as that user.
-    const clientIds = acceptedGoogleAudiences();
-    if (clientIds.length === 0) {
-      throw new Error('No Google client ids configured; refusing to verify without an audience');
-    }
-
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience: clientIds,
-    });
-
-    const payload = ticket.getPayload();
-
-    if (!payload) {
-      throw new Error('Invalid token payload');
-    }
-
-    // Verify issuer manually for security
-    if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') {
-      throw new Error('Invalid token issuer: ' + payload.iss);
-    }
-
-    // Extract user information from token
-    return {
-      providerUserId: payload.sub,                // Google user ID (unique)
-      email: payload.email,
-      emailVerified: payload.email_verified || false,
-      firstName: payload.given_name || 'User',
-      lastName: payload.family_name || '',
-      avatarUrl: payload.picture || null,
-      locale: payload.locale || null,
-    };
-  } catch (error) {
-    // Name both sides. The library's own message says only that they differ.
-    if (/audience/i.test(error.message)) {
+    const ticket = await new OAuth2Client().verifyIdToken({ idToken, audience: clientIds });
+    payload = ticket.getPayload();
+  } catch {
+    // The library's message is not logged or passed on: it carries the token.
+    // The reason comes from the token's audience and times; for the audience,
+    // both sides are named — client ids, not anyone's data — because the
+    // library says only that they differ.
+    const reason = rejectionReason(idToken, clientIds);
+    if (reason === 'audience') {
       console.error(
-        '[OAuth] Google token rejected: token audience is',
-        claimedAudience(idToken),
+        '[OAuth] Google token rejected: audience - token audience is',
+        claimedTerms(idToken)?.aud,
         '- we accept',
-        acceptedGoogleAudiences()
+        clientIds
       );
     } else {
-      console.error('[OAuth] Google token verification failed:', error.message);
+      console.error(`[OAuth] Google token rejected: ${reason}`);
     }
-    throw new Error('Failed to verify Google token: ' + error.message);
+    throw new GoogleTokenVerificationError(reason);
   }
+
+  if (!payload) {
+    console.error('[OAuth] Google token rejected: no payload');
+    throw new GoogleTokenVerificationError('no payload');
+  }
+
+  // Verify issuer manually for security. The issuer is Google's, not the
+  // person's, but the error stays in our own words like the others.
+  if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') {
+    console.error('[OAuth] Google token rejected: issuer');
+    throw new GoogleTokenVerificationError('issuer');
+  }
+
+  // Extract user information from token
+  return {
+    providerUserId: payload.sub,                // Google user ID (unique)
+    email: payload.email,
+    emailVerified: payload.email_verified || false,
+    firstName: payload.given_name || 'User',
+    lastName: payload.family_name || '',
+    // payload.picture is not taken: the app draws initials (T-273).
+    locale: payload.locale || null,
+  };
 }
 
 /**

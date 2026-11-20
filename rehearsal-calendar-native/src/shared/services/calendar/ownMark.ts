@@ -27,10 +27,15 @@ const rehearsalIdFromUrl = (url?: string | null): string | null => {
   return match ? match[1] : null;
 };
 
-/** What the export writes into the notes. */
-export const eventNotesFor = (projectName: string) => `Project: ${projectName}\n\nCreated via Rehearsly`;
-
-/** How those notes end, under both names the app has had. */
+/**
+ * How the notes of an event from before the URL end, under both names the app
+ * has had.
+ *
+ * English only, and it stays English: until T-276 the export wrote its notes in
+ * English whatever the app's language, and every event written since carries
+ * the URL, which is what recognises it. The notes are now in the app's language
+ * (calendarSync.eventNotes); this is only how the old events are still known.
+ */
 const APP_SIGNATURE = /\n\nCreated via (Rehearsly|Rehearsal Calendar app)$/;
 
 /** An event of ours from before the URL: it names no rehearsal. */

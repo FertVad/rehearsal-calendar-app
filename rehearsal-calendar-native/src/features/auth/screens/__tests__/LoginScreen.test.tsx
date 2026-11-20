@@ -38,6 +38,10 @@ jest.mock('../../../../shared/services/googleAuth', () => ({
   useGoogleAuth: () => ({ request: null, response: null, promptAsync: jest.fn() }),
   getGoogleIdToken: () => null,
 }));
+const mockPrivacyPageUrl = (language: string) => `http://127.0.0.1:3001/privacy?lang=${language}`;
+jest.mock('../../../../shared/services/api', () => ({
+  privacyPageUrl: (language: string) => mockPrivacyPageUrl(language),
+}));
 jest.mock('../../../../shared/services/appleAuth', () => ({
   signInWithApple: jest.fn(),
   isAppleAuthAvailable: () => Promise.resolve(false),
@@ -121,6 +125,17 @@ it('names the password field by its word, and shows the password on request', ()
   expect(view.getByTestId('login-password').props.secureTextEntry).toBe(false);
   fireEvent.press(view.getByLabelText(t.auth.hidePassword));
   expect(view.getByTestId('login-password').props.secureTextEntry).toBe(true);
+});
+
+// T-272: before, the policy was only in the profile, behind sign-in; App
+// Review 5.1.1(i) wants it easily reached by someone who has no account yet.
+it('opens the privacy policy, in the app language, from the sign-in screen (T-272)', () => {
+  const { Linking } = require('react-native');
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  const view = screen();
+  fireEvent.press(view.getByText(t.profile.privacyPolicy));
+  expect(open).toHaveBeenCalledWith(mockPrivacyPageUrl('en'));
+  open.mockRestore();
 });
 
 it('leads to registration from the link at the foot', () => {

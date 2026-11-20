@@ -1,0 +1,135 @@
+# The busy times imported from the phone's calendars are removed by the button
+# the privacy policy names, "Remove Imported Busy Times" (T-270). The button
+# was gone: the logic was there and no screen called it, so turning Auto Sync
+# off left the hours in everyone's planner and nothing but deleting the account
+# took them away. Its sibling, "Remove Exported Rehearsals", was there only
+# while Auto Sync was on.
+#
+# Pavel Lebedev has an hour from his calendar on MARK_DAY and AFTER_DAY busy all
+# day by his own hand. His phone refuses the app the calendar and Auto Sync is
+# off: the button is there all the same (the exported one, which needs the
+# calendar, is not), it asks first and says what stays, and says nothing of
+# Auto Sync, which is off. Afterwards the editor shows MARK_DAY with no mark
+# and AFTER_DAY still busy.
+appId: ${APP_ID}
+name: Imported busy times removed, what was marked by hand kept
+tags:
+  - calendar
+  - availability
+  - profile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      calendar: deny
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${LEBEDEV_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+
+# Before: the imported hour marks MARK_DAY, his own day AFTER_DAY.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: day-${MARK_DAY}
+      text: ".*, Partial"
+    timeout: 30000
+- assertVisible:
+    id: day-${AFTER_DAY}
+    text: ".*, Busy"
+- takeScreenshot: 99-before
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+
+# The sync screen, without calendar access.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-calendar-sync
+      SEE: "Calendar access required"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: calendar-sync-clear-imported
+    direction: DOWN
+# One element with its icon: the label is matched in part.
+- assertVisible:
+    id: calendar-sync-clear-imported
+    text: ".*Remove Imported Busy Times.*"
+# What is in the phone's calendar needs the calendar to be removed.
+- assertNotVisible:
+    id: calendar-sync-remove-all
+- takeScreenshot: 99-buttons-without-access
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-sync-clear-imported
+      SEE: "Remove All Imported Busy Times\\?"
+      WAIT_MS: "10000"
+- assertVisible: ".*Anything you marked yourself will stay\\..*"
+# Auto Sync is off: nothing to turn off, nothing said of it.
+- assertNotVisible: ".*Auto Sync will also be turned off.*"
+- waitForAnimationToEnd
+- takeScreenshot: 99-question
+- tapOn:
+    text: "Remove Imported Busy Times"
+    below: "Remove All Imported Busy Times\\?"
+- extendedWaitUntil:
+    visible: "All imported busy times removed"
+    timeout: 15000
+- tapOn: "OK"
+- extendedWaitUntil:
+    notVisible: "All imported busy times removed"
+    timeout: 5000
+
+# After: MARK_DAY has no mark, AFTER_DAY is still busy.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-back
+      SEE: ".*Start Week On.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: day-${AFTER_DAY}
+      text: ".*, Busy"
+    timeout: 30000
+- assertVisible:
+    id: day-${MARK_DAY}
+- assertNotVisible:
+    id: day-${MARK_DAY}
+    text: ".*, .*"
+- takeScreenshot: 99-after

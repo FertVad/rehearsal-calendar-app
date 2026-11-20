@@ -1,0 +1,26 @@
+T-271 — e2e/flows/100-member-leaves-project.yaml, red before, green after.
+Each run: npm run e2e -- e2e/flows/100-member-leaves-project.yaml (seed and flow as in 554bf52).
+
+1) All fix files as at base ef2e4f6
+   (git restore --source=ef2e4f6 -- src/features/projects/screens/ProjectDetailScreen.tsx
+    src/i18n/translations/projects.ts src/shared/components/buttons/DeleteButton.tsx
+    src/shared/hooks/useNotifications.ts src/features/notifications/screens/NotificationsScreen.tsx
+    server/routes/native/members.js server/services/notifications/pushNotificationService.js
+    server/i18n/pushNotifications.js)
+
+   [Failed] Member leaves a project (1m 27s) (No visible element found: id: project-leave)
+   1/1 Flow Failed
+
+2) Only the server as at base (the app has the button; the owner is told nothing)
+   (git restore --source=ef2e4f6 -- server/routes/native/members.js
+    server/services/notifications/pushNotificationService.js server/i18n/pushNotifications.js)
+
+   [Failed] Member leaves a project (2m 37s) (Assertion is false: ".*Nick Bottom left Mechanicals Guild.*" is visible)
+   1/1 Flow Failed
+   [e2e] taps taken again (tap-and-see.yaml): 1
+
+3) HEAD (git restore --source=HEAD -- <the same files>)
+
+   [Passed] Member leaves a project (2m 3s)
+   1/1 Flow Passed in 2m 3s
+   [e2e] taps taken again (tap-and-see.yaml): 0

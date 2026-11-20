@@ -1,0 +1,186 @@
+T-276 - the phone calendar's event in the app's language
+=========================================================
+
+== 1. The cause, in the code ==
+
+src/shared/services/calendar/export.ts, eventTitleFor:
+    rehearsal.title?.trim() || `Rehearsal: ${rehearsal.projectName}`
+src/shared/services/calendar/ownMark.ts, eventNotesFor:
+    `Project: ${projectName}\n\nCreated via Rehearsly`
+Both literal English; the export never asked which language the app was in.
+And eventMatchesRehearsal compared the title only, never the notes, so even a
+fixed title would not have rewritten the notes of a rehearsal with its own name.
+
+== 2. The fix ==
+
+(As of ea17d36. The title's word order and a named rehearsal's title changed on
+18.11: sections 3 and 5.)
+
+- calendarSync.eventTitle / calendarSync.eventNotes in all four dictionaries
+  (CalendarSyncTranslations: without them the type does not build). The word
+  for a rehearsal is calendar.rehearsal of each language: Rehearsal, Репетиция,
+  Ensayo, Probe (the test checks the title starts with it).
+- storage.ts appLanguage(): the language chosen in Rehearsly, read from where
+  the app keeps it (AsyncStorage 'userLanguage', written by the profile's
+  picker via I18nContext and by the account's preferences); English when none,
+  as I18nContext starts. Not the phone's language. The key is one constant now,
+  shared with I18nContext.
+- export.ts eventWords(): translations[await appLanguage()].calendarSync, read
+  once per rehearsal at each export (syncOneRehearsal) and by
+  createCalendarEvent / updateCalendarEvent when called alone.
+- A name the organiser gave is written as it is (eventTitleFor).
+- eventMatchesRehearsal compares the notes too: after a change of language the
+  next sync finds the event (by its mapping, or by the URL mark on another
+  device), sees words that are not the app's, and updates that same event.
+- Recognition unchanged and still English: the URL mark first; for an event
+  from before the mark, APP_SIGNATURE (English, both app names) in ownMark.ts
+  and the English title `Rehearsal: <project>` in findDuplicateEvent
+  (legacyTitleFor, a literal - not the English dictionary, so an edit there
+  cannot lose old events).
+- unusedKeys.test.ts lists the two keys as read by export.ts; sentenceEnd.test.ts
+  has sample arguments for them.
+
+Note: an event whose notes the person edited in the calendar is rewritten with
+the app's notes at the next sync, as any update already did before.
+
+== 3. Read by the native speakers; the word order decided by the owner ==
+
+The native speakers of ru, en, es and de read the strings of ea17d36. Their
+reports, as written: T-276-natives-ru.md, -en.md, -es.md, -de.md.
+
+No errors in any language. The notes (eventNotes) stay as they were in all four.
+All four noted that a rehearsal with its own name shows no project in the
+calendar. On the order of the words they differ: ru proposed the project first;
+en and es found it better when cut short (the narrowest places show the same
+"Rehearsal…"/"Ensayo…" on every event) and left it to the owner; de advised
+keeping "Probe:" first ("Hamlet…" at 19:30 can read as a ticket to the show) and
+gave "Hamlet: Probe" as the form if the owner decided otherwise. The owner
+decided (18.11, "Проект первым"): the project comes first, as in the pushes, for
+named rehearsals too.
+
+Final titles:
+
+  lang | no name of its own  | with its own name
+  -----+---------------------+----------------------------
+  ru   | Гамлет: репетиция   | Гамлет: Прогон 2-го акта
+  en   | Hamlet: Rehearsal   | Hamlet: Act II run-through
+  es   | Hamlet: Ensayo      | Hamlet: Pasada del 2.º acto
+  de   | Hamlet: Probe       | Hamlet: Durchlauf 2. Akt
+
+The forms without a name are the ones in the speakers' own reports. The
+organiser's name is written as typed: not translated, not quoted.
+
+Not changed: what a person edits in the event itself (notes, time) is put back
+by the sync; the rehearsal is the source and the calendar its mirror (CLAUDE.md,
+Calendar Sync). No warning goes into the notes (the ru speaker's question).
+
+== 4. Red before, green after (first round, ea17d36) ==
+
+These are the results of the first round, with the titles of that commit. The
+order of the words changed afterwards: section 5.
+
+src/shared/services/calendar/__tests__/exportLanguage.test.ts, through the
+export module the app uses (createCalendarEvent, syncRehearsalToCalendar),
+expo-calendar mocked, the language set where the app keeps it.
+
+Before (the old export.ts / ownMark.ts / dictionaries), 11 of 13 red:
+
+FAIL frontend src/shared/services/calendar/__tests__/exportLanguage.test.ts
+    ✓ is titled and noted in en when that is the app's language (18 ms)
+    ✕ is titled and noted in ru when that is the app's language (10 ms)
+    ✕ is titled and noted in es when that is the app's language (4 ms)
+    ✕ is titled and noted in de when that is the app's language (2 ms)
+    ✓ is in English when no language has been chosen yet (1 ms)
+    ✕ keeps the name the organiser gave the rehearsal, untranslated (5 ms)
+    ✕ is still ours with the app in ru, and is rewritten, not doubled (9 ms)
+    ✕ is still ours with the app in es, and is rewritten, not doubled (3 ms)
+    ✕ is still ours with the app in de, and is rewritten, not doubled (3 ms)
+    ✕ rewrites the event already exported, in place, at the next sync (2 ms)
+    ✕ rewrites the notes of a named rehearsal too, whose title stays (1 ms)
+    ✕ rewrites the event another device wrote, found by its mark (2 ms)
+    ✕ leaves alone an event already in the app's language (2 ms)
+Tests:       11 failed, 2 passed, 13 total
+  e.g. Expected: "Репетиция: Гамлет"  Received: "Rehearsal: Гамлет"
+       updateEventAsync - Expected number of calls: 1  Received: 0
+       (a named rehearsal's English notes were never rewritten)
+
+After, 13 of 13 green:
+
+PASS frontend src/shared/services/calendar/__tests__/exportLanguage.test.ts
+    ✓ is titled and noted in en when that is the app's language (9 ms)
+    ✓ is titled and noted in ru when that is the app's language (2 ms)
+    ✓ is titled and noted in es when that is the app's language (1 ms)
+    ✓ is titled and noted in de when that is the app's language (2 ms)
+    ✓ is in English when no language has been chosen yet (1 ms)
+    ✓ keeps the name the organiser gave the rehearsal, untranslated (2 ms)
+    ✓ is still ours with the app in ru, and is rewritten, not doubled (3 ms)
+    ✓ is still ours with the app in es, and is rewritten, not doubled (1 ms)
+    ✓ is still ours with the app in de, and is rewritten, not doubled (2 ms)
+    ✓ rewrites the event already exported, in place, at the next sync (2 ms)
+    ✓ rewrites the notes of a named rehearsal too, whose title stays (1 ms)
+    ✓ rewrites the event another device wrote, found by its mark (1 ms)
+    ✓ leaves alone an event already in the app's language
+Tests:       13 passed, 13 total
+
+Whole client suite: 154 suites, 1620 tests passed (exportMatching and
+exportOwnership, the English legacy cases, unchanged and green).
+type-check clean; lint 0 errors; check:dead (knip) clean; check:secrets pass.
+
+No e2e: the event lives in the phone's calendar, not on a Rehearsly screen,
+and the Jest test runs the same export module as the app (as the task allows).
+
+== 5. The project first (18.11): red on ea17d36, green after ==
+
+The change:
+- calendarSync.eventTitle in all four: `${project}: репетиция` (lower case after
+  the colon, the ru speaker's choice) / Rehearsal / Ensayo / Probe.
+- export.ts eventTitleFor: a named rehearsal is `${project}: ${title}`, the same
+  in every language.
+- export.ts legacyTitlesFor: an event without the URL mark, with the English
+  signature, is known by "Rehearsal: <project>" or by the organiser's name alone,
+  which is how the export wrote it before T-276. Without the second, the named
+  rehearsal's old event would have been doubled the moment the title changed.
+- Events already exported are rewritten in place at the next sync (accepted by
+  the owner): eventMatchesRehearsal sees a title that is not the current one.
+
+exportLanguage.test.ts, on the code of ea17d36 (b7f4440 changed only audit
+files), 19 of 28 red:
+
+    ✕ is titled and noted in en when that is the app's language, the project first
+    ✕ is titled and noted in ru when that is the app's language, the project first
+    ✕ is titled and noted in es when that is the app's language, the project first
+    ✕ is titled and noted in de when that is the app's language, the project first
+    ✕ is in English when no language has been chosen yet
+    ✕ in ru puts the project before the name the organiser gave
+    ✕ in en puts the project before the name the organiser gave
+    ✕ in es puts the project before the name the organiser gave
+    ✕ in de puts the project before the name the organiser gave
+    ✕ keeps the organiser's name untranslated and unquoted, in any language
+    ✓ is not taken for another rehearsal's by a name that is not this one's
+    of an unnamed rehearsal (event from before the mark):
+      ✓ is still ours with the app in en / ru / es / de, rewritten, not doubled
+      ✕ takes the title with the project first
+    of a named rehearsal (event from before the mark):
+      ✓ is still ours with the app in en / ru / es / de, rewritten, not doubled
+      ✕ takes the title with the project first
+    ✕ is rewritten in place from the English title
+    ✕ is rewritten in place from the title in the language
+    ✕ is rewritten in place from the organiser's name alone
+    ✕ rewrites the event already exported, in place, at the next sync
+    ✕ rewrites the notes of a named rehearsal too, whose title stays
+    ✕ rewrites the event another device wrote, found by its mark
+    ✕ leaves alone an event already in the app's language
+  Tests: 19 failed, 9 passed, 28 total
+  e.g. Expected: "Гамлет: репетиция"         Received: "Репетиция: Гамлет"
+       Expected: "Hamlet: Act II run-through" Received: "Act II run-through"
+
+The eight "is still ours" tests are the safeguard the task asks to be green
+before and after. Being green before proves nothing about the new code, so the
+named case was checked by breaking it: with the organiser's name taken out of
+legacyTitlesFor, 5 of 28 fail - the four "is still ours" of a named rehearsal
+and its "takes the title with the project first". Restored:
+
+  exportLanguage.test.ts: Tests: 28 passed, 28 total
+
+exportMatching.test.ts: its two expectations of the old title follow the new one.
+Whole client suite: 154 suites, 1635 tests passed. type-check clean; lint 0 errors.

@@ -93,7 +93,7 @@ ${DEVELOPER_END}`;
 export function fixReview(task, reviewText, done, port) {
   return `${statement(task, done)}${portFirst(port)}
 
-Сейчас: ревьюер (Астра) вернул замечания к этим коммитам.
+Сейчас: ревьюер вернул замечания к этим коммитам.
 
 ${reviewText}
 
@@ -198,11 +198,22 @@ export function missingMarker(task) {
 ${DEVELOPER_END}`;
 }
 
-export function review(task, { base, head, devReport, checks, round, earlier = false }) {
+/**
+ * The reviewer's statement of one round. `earlier`: this session reviewed the
+ * task before and remembers it. `earlierReviews`: answers of rounds this
+ * session has not seen — a reviewer that changed (Codex, until 19.11.2026)
+ * or a session lost — so the new one reads what was asked before it judges
+ * whether it was done.
+ */
+export function review(task, { base, head, devReport, checks, round, earlier = false, earlierReviews = [] }) {
   const which = round === 1
-    ? (earlier ? 'новый первый круг (владелец продлил работу над задачей; прежние круги и твои замечания — выше в этой беседе)' : 'первый')
-    : 'второй и последний';
-  return `Ты — ревьюер (Астра) в автономном цикле разработки Rehearsly. Это ${which} круг ревью задачи ${task.id} «${task.title}».
+    ? (earlier ? 'новый первый круг ревью (владелец продлил работу над задачей; прежние круги и твои замечания — выше в этой беседе)'
+      : earlierReviews.length ? 'новый первый круг ревью (владелец продлил работу над задачей)' : 'первый круг ревью')
+    : 'второй и последний круг ревью';
+  const before = earlierReviews.length && !earlier
+    ? `\n\nПрежние круги ревью этой задачи вёл другой ревьюер, их ответы — в файлах ниже. Прочитай их инструментом Read (они вне твоего дерева, cat туда не пускают) и проверь, закрыты ли его замечания, а потом всё остальное:\n${earlierReviews.map((file) => `- ${file}`).join('\n')}`
+    : '';
+  return `Ты — ревьюер в автономном цикле разработки Rehearsly. Это ${which}: задача ${task.id} «${task.title}». В задачах и заметках ревьюера иногда зовут Астрой — это ты.${before}
 
 Дерево уже стоит на ${head} (detached). Проверяй диапазон ${base}..${head}: git log ${base}..${head}, git diff ${base}..${head}.
 
@@ -215,14 +226,14 @@ ${devReport}
 Механические проверки супервизора (их запускал он сам, не разработчик):
 ${checks.steps.map((step) => `- ${step.name}: ${step.ok ? 'PASS' : `FAIL (код ${step.code})`}`).join('\n')}
 
-Метод и планка — audit/HANDOFF_CLAUDE.md §4: каждой находке — клетка планки. Проверь, что исправлена причина, что «красное до» действительно падало на старом коде, что нет регресса, и что в диапазоне нет работы вне этой задачи. Если исправление видно на экране — есть ли e2e-сценарий, который его показывает и падал на старом коде (docs/e2e.md); нет — это замечание. Исправление теста, без которого не проходили проверки супервизора (в отчёте — «Исправление упавших проверок»), — не работа вне задачи: оцени его по существу, как остальное. Код и файлы не меняй, коммитов нет. production, rehearsly.me, server/.env — не трогай.
+Метод и планка — audit/HANDOFF_CLAUDE.md §4: каждой находке — клетка планки. Проверь, что исправлена причина, что «красное до» действительно падало на старом коде, что нет регресса, и что в диапазоне нет работы вне этой задачи. Если исправление видно на экране — есть ли e2e-сценарий, который его показывает и падал на старом коде (docs/e2e.md); нет — это замечание. Исправление теста, без которого не проходили проверки супервизора (в отчёте — «Исправление упавших проверок»), — не работа вне задачи: оцени его по существу, как остальное. Код и файлы не меняй, коммитов нет: своё дерево супервизор перед каждым кругом заново ставит на нужный коммит. Чтобы проверить «красное до» прогоном, а не чтением, собери старый код во временной папке: \`git archive ${base} rehearsal-calendar-native | tar -x -C /private/tmp/autodev-review/<задача>\` (папку создай \`mkdir -p\`), новые тесты положи туда через \`git show ${head}:<путь> > <путь в копии>\`, node_modules — \`ln -s\` из своего дерева, и запускай jest в копии. production, rehearsly.me, server/.env — не трогай.
 
 Ответ по-русски: замечания (или «замечаний нет»). Последней строкой ровно одно из:
 VERDICT: ACCEPT
 VERDICT: CHANGES`;
 }
 
-export const REVIEW_CONTINUE = 'Сессию прервал лимит подписки или сбой. Продолжай ревью с того места, где остановилась. Последней строкой — VERDICT: ACCEPT или VERDICT: CHANGES.';
+export const REVIEW_CONTINUE = 'Сессию прервал лимит подписки или сбой. Продолжай ревью с того места, где оно прервалось. Последней строкой — VERDICT: ACCEPT или VERDICT: CHANGES.';
 
 /**
  * The last line that says something. Markdown around the marker is tolerated

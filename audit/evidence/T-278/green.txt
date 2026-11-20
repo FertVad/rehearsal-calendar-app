@@ -1,0 +1,31 @@
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/accountNameInOthersNotices.test.js
+(fixed code)
+
+PASS __tests__/routes/accountNameInOthersNotices.test.js
+    ✓ each of the three notices records whom it names (10 ms)
+    ✓ leaves none naming her, and every other notice in place (27 ms)
+    ✓ writes no notice naming an account that no longer exists (2 ms)
+    ✓ will not name someone without saying whom (38 ms)
+Tests:       4 passed, 4 total
+
+$ npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --t278-only
+(fixed code, real PostgreSQL 15.13 in a disposable container)
+
+{"scenario":"controls","outcome":"PASS", ...,"externalConnections":0}
+{"scenario":"T278_NOTICES","outcome":"PASS","contracts":["step 015 deletes the joined/appointed/seen notices without a mark, keeps marked and other notices; rerun is a no-op","joined, appointed and seen notices record whom they name (data.aboutUserId) on PostgreSQL","DELETE /me removes every notice naming the account from the others' inboxes, and nothing else","a notice written during the deletion waits for it and writes nothing naming the deleted account"],"externalConnections":0}
+T278_NOTICES REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+R0 cleanup: owned disposable container removed
+
+Same check with FOR KEY SHARE taken out of the guarded insert (notificationStore.js),
+then put back:
+
+Error: timed out waiting for the notice to wait for the account being deleted
+AssertionError [ERR_ASSERTION]: T278_NOTICES probe failed unexpectedly
+
+i.e. without the lock the notice is written at once, beside an uncommitted
+deletion, and keeps the deleted account's name.
+
+Full server suite (fixed code): 82 of 83 suites pass. The one that fails,
+__tests__/startup/runtimeStartup.test.js (import-failed in the owned copy), writes
+and reads a .env in its fixture copy; reading .env is refused by the OS in this
+worktree. Untouched by this task.

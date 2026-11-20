@@ -154,12 +154,24 @@ tags:
       RIGHT: "0.9"
       TOP: "0.12"
       BOTTOM: "1"
+# The project in quotes after "proyecto" (T-261): «Ya no formas parte del
+# proyecto «Fuenteovejuna»», «Ahora administras el proyecto «Fuenteovejuna»».
 - scrollUntilVisible:
-    element: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto Fuenteovejuna.*"
+    element: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto .*Fuenteovejuna.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto «Fuenteovejuna».*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: removed, proyecto «Fuenteovejuna» | '}"
 - scrollUntilVisible:
-    element: ".*Cambio de rol.*Ahora administras Fuenteovejuna.*"
+    element: ".*Cambio de rol.*Ahora administras .*Fuenteovejuna.*"
     direction: DOWN
+- runFlow:
+    when:
+      notVisible: ".*Cambio de rol.*Ahora administras el proyecto «Fuenteovejuna».*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: role, el proyecto «Fuenteovejuna» | '}"
 - scrollUntilVisible:
     element: ".*Ensayo cancelado.*Fuenteovejuna: .*«Escena del balcón».*"
     direction: DOWN

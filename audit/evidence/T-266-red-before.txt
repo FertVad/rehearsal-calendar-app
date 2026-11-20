@@ -1,0 +1,24 @@
+T-266 — "red before": the new test on the old strings (HEAD f1f951f, notifications.ts unchanged)
+
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend src/i18n/__tests__/noReminderPromise.test.ts
+
+FAIL src/i18n/__tests__/noReminderPromise.test.ts (5.733 s)
+  ● T-266: no string promises rehearsal reminders while they are off › no line mentions reminders, in any language
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "notifications.ts:26: emptyHint: 'Здесь появятся напоминания о репетициях и всё, что происходит в ваших проектах.',",
+    +   "notifications.ts:47: emptyHint: 'Rehearsal reminders and anything happening in your projects will show up here.',",
+    +   "notifications.ts:68: emptyHint: 'Aquí verás los recordatorios de ensayos y todo lo que pase en tus proyectos.',",
+    +   "notifications.ts:89: emptyHint: 'Hier erscheinen Probenerinnerungen und alles, was in deinen Projekten passiert.',",
+    + ]
+
+      at Object.<anonymous> (src/i18n/__tests__/noReminderPromise.test.ts:36:19)
+
+Test Suites: 1 failed, 152 passed, 153 total
+Tests:       1 failed, 1605 passed, 1606 total

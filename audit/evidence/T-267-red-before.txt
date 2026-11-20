@@ -1,0 +1,17 @@
+T-267 red before: the new route test against the unchanged page (base 7f7e2a2)
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/invitePage.test.js
+
+  ✕ all four languages are in the markup, English shown and the rest hidden until a script picks one
+      expect(received).toBeGreaterThanOrEqual(6)  -- no data-l="en" block: the page carried English only, Russian came from script
+  ✕ the page is Rehearsly with its logo, and the old name is gone
+      expect(received).not.toMatch(/Rehearsal App/i)  -- <title>Join Project - Rehearsal App</title>, <h1>🎭 Rehearsal App</h1>
+  ✕ the App Store button leads to the app, and the steps say to come back after installing
+      expect(received).not.toBeNull()  -- no #appStoreButton, no link to apps.apple.com at all
+  ✕ the Smart App Banner names the app and hands it this invitation's address
+      Expected length: 1, Received length: 0  -- no <meta name="apple-itunes-app">
+  ✕ an untrusted code stays escaped data in the banner and the links
+      Expected length: 1, Received length: 0  -- no banner to carry the code
+  ✕ the Expo development link is kept beside the installed app's
+      Expected length: 1, Received length: 0  -- links kept, but no banner
+
+Tests:       6 failed, 6 total

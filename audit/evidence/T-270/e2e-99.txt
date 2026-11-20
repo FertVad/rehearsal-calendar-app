@@ -1,0 +1,24 @@
+T-270 — e2e/flows/99-remove-imported-busy-times.yaml, 19.11.2026
+
+Red on the old code (CalendarSyncSettingsScreen.tsx, useCalendarSync.ts and
+calendarSync.ts put back to c7ee8f5; the seed and the flow as in the fix):
+
+$ npm run e2e -- e2e/flows/99-remove-imported-busy-times.yaml
+[Failed] Imported busy times removed, what was marked by hand kept (1m 46s) (No visible element found: id: calendar-sync-clear-imported)
+1/1 Flow Failed
+
+Green on the fix:
+
+$ npm run e2e -- e2e/flows/99-remove-imported-busy-times.yaml
+[Passed] Imported busy times removed, what was marked by hand kept (1m 59s)
+1/1 Flow Passed in 2m
+
+What the shots show (e2e/out/artifacts/2026-11-19_110830/…/takeScreenshot):
+- 99-before: MARK_DAY "Partial" (the imported hour), AFTER_DAY "Busy" (his own).
+- 99-buttons-without-access: "Calendar Access Required", and "Remove Imported
+  Busy Times" under it; no "Remove Exported Rehearsals".
+- 99-question: "Remove All Imported Busy Times?" / "Busy times imported from
+  calendars on all your devices will be removed from Rehearsly. Anything you
+  marked yourself will stay." / "Remove Imported Busy Times" / "Cancel" — no
+  word of Auto Sync, which is off.
+- 99-after: MARK_DAY with no mark, AFTER_DAY still busy.

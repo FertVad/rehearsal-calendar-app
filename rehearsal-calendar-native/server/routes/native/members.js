@@ -7,7 +7,7 @@ import { createLocalTimestampConverter, timestampToISO } from '../../utils/timez
 import { consumeMemberAvailabilityBudget } from '../../services/memberAvailabilityRateLimit.js';
 import { limits, positiveId, parseMemberAvailabilityQuery, expandMemberAvailabilityDates, availabilityBudgetError } from '../../services/memberAvailabilityQuery.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
-import { notifyRoleChanged, notifyMemberRemoved, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
+import { notifyRoleChanged, notifyMemberRemoved, notifyMemberLeft, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
 import { fullName } from '../../utils/names.js';
 import { takeOffProjectRehearsals } from '../../services/rehearsals/roster.js';
 import { lockProject } from '../../services/rehearsals/projectLock.js';
@@ -279,7 +279,8 @@ router.get('/:projectId/members', requireAuth, asyncHandler(async (req, res) => 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Get all members with user info
+    // Get all members with what the app shows of them: names. No address and
+    // no photo — nobody shows them, so nobody is handed them (T-273).
     const members = await db.all(
       `SELECT
         m.id,
@@ -289,9 +290,7 @@ router.get('/:projectId/members', requireAuth, asyncHandler(async (req, res) => 
         m.status,
         m.joined_at,
         u.first_name,
-        u.last_name,
-        u.email,
-        u.avatar_url
+        u.last_name
       FROM native_project_members m
       JOIN native_users u ON m.user_id = u.id
       WHERE m.project_id = $1 AND m.status = 'active'
@@ -315,8 +314,6 @@ router.get('/:projectId/members', requireAuth, asyncHandler(async (req, res) => 
         joinedAt: m.joined_at,
         firstName: m.first_name,
         lastName: m.last_name,
-        email: m.email,
-        avatarUrl: m.avatar_url,
       })),
     });
   } catch (error) {
@@ -391,8 +388,9 @@ router.put('/:projectId/members/:userId/role', requireAuth, asyncHandler(async (
             [parseInt(userId)]
           );
           const memberName = fullName(member);
-          // With the project's id, so a tap opens it on its members (T-252).
-          await notifyAdminAppointed(project.name, memberName, others.map((o) => o.user_id), project.id);
+          // With the project's id, so a tap opens it on its members (T-252),
+          // and whose name it is, so deleting that account removes it (T-278).
+          await notifyAdminAppointed(project.name, { id: parseInt(userId), name: memberName }, others.map((o) => o.user_id), project.id);
         }
       }
     } catch (notifErr) {
@@ -429,6 +427,16 @@ router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (re
     const runsTheProject =
       requesterMembership &&
       (requesterMembership.role === 'owner' || requesterMembership.role === 'admin');
+
+    // Leaving a project one is no longer in: somebody removed them while its
+    // page was still open (T-280). They want to be out, and they are, so it is
+    // a success like any leave and the app takes them off the page. Nothing is
+    // touched and nobody is told — the removal was announced when it happened.
+    // It used to fall into the rank check below and answer, in English and in
+    // every language, "Only project admins can remove members".
+    if (leavingSelf && !requesterMembership) {
+      return res.json({ success: true, message: 'Not a member of this project' });
+    }
 
     if (!requesterMembership || (!leavingSelf && !runsTheProject)) {
       return res.status(403).json({ error: 'Only project admins can remove members' });
@@ -492,11 +500,35 @@ router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (re
       );
     });
 
-    // Send push notification to the removed user
+    // Who is told (T-271). Whoever runs the project — the people who hear "New
+    // member" — since several can remove members and anyone can leave, so the
+    // owner cannot assume they did it; a cast used to shrink with nobody told.
+    // Whoever did it is left out: they were there. The person removed is told
+    // too; one who left is not — they tapped Leave, and were told "you were
+    // removed", which they were not.
     try {
-      await notifyMemberRemoved(project.name, parseInt(userId));
+      const leaverId = Number(userId);
+      if (!leavingSelf) await notifyMemberRemoved(project.name, leaverId);
+
+      const runners = await db.all(
+        `SELECT user_id FROM native_project_members
+         WHERE project_id = $1 AND status = 'active' AND role IN ('owner', 'admin')
+           AND user_id <> $2 AND user_id <> $3`,
+        [projectId, leaverId, Number(requesterId)]
+      );
+      if (runners.length > 0) {
+        const leaver = await db.get('SELECT first_name, last_name FROM native_users WHERE id = $1', [leaverId]);
+        // With whose name it is, so deleting that account removes it (T-278).
+        await notifyMemberLeft(
+          project.name,
+          { id: leaverId, name: fullName(leaver) },
+          runners.map((r) => r.user_id),
+          Number(projectId),
+          { removed: !leavingSelf }
+        );
+      }
     } catch (notifErr) {
-      console.error('Error sending member removed notification:', notifErr);
+      logger.error('[Members] Could not announce the departure:', notifErr);
     }
 
     res.json({

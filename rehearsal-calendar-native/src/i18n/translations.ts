@@ -36,6 +36,8 @@ export interface Translations {
   notifications: notifications.NotificationsTranslations;
   // Onboarding
   onboarding: onboarding.OnboardingTranslations;
+  // The build is too old (T-265)
+  update: common.UpdateTranslations;
   // Days
   days: common.DaysTranslations;
 }

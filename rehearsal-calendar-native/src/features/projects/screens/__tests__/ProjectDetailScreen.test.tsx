@@ -14,7 +14,9 @@ import { AxiosError } from 'axios';
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../../i18n/translations').translations.en, language: 'en' }),
 }));
-jest.mock('../../../../contexts/ProjectContext', () => ({ useProjects: () => ({ refreshProjects: jest.fn() }) }));
+const mockRefreshProjects = jest.fn(() => Promise.resolve());
+jest.mock('../../../../contexts/ProjectContext', () => ({ useProjects: () => ({ refreshProjects: mockRefreshProjects }) }));
+jest.mock('../../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 7 } }) }));
 jest.mock('../../../../shared/hooks/useClock', () => ({
   useToday: () => '2030-01-10',
   useTimezone: () => 'UTC',
@@ -36,7 +38,7 @@ jest.mock('react-native', () => {
   return native;
 });
 jest.mock('../../../../shared/services/api', () => ({
-  projectsAPI: { getProject: jest.fn(), getMembers: jest.fn() },
+  projectsAPI: { getProject: jest.fn(), getMembers: jest.fn(), removeMember: jest.fn() },
   rehearsalsAPI: { getAll: jest.fn() },
   invitesAPI: { getInvite: jest.fn(), createInvite: jest.fn() },
 }));
@@ -213,5 +215,76 @@ describe('"New rehearsal" (T-025)', () => {
   it('is not there for an actor', async () => {
     const { screen } = await open(false);
     expect(screen.queryByTestId('project-new-rehearsal')).toBeNull();
+  });
+});
+
+describe('"Leave project" (T-271)', () => {
+  // The server let anyone but the owner leave since 2026-09-05; the app had no
+  // way to ask it, so whoever came in by an invite could not get out.
+  const open = async ({ isAdmin = false, isOwner = false } = {}) => {
+    (projectsAPI.getProject as jest.Mock).mockResolvedValue({
+      data: { project: { id: 'p1', name: 'Hamlet', description: '', is_admin: isAdmin, is_owner: isOwner, created_at: '2030-01-01' } },
+    });
+    (invitesAPI.getInvite as jest.Mock).mockResolvedValue({ data: { inviteCode: null } });
+    const navigation = { navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn(), setOptions: jest.fn(), setParams: jest.fn() };
+    const screen = render(
+      <ProjectDetailScreen
+        route={{ key: 'ProjectDetail', name: 'ProjectDetail', params: { projectId: 'p1' } } as any}
+        navigation={navigation as any}
+      />
+    );
+    await settle();
+    await settle();
+    return { screen, navigation };
+  };
+  const { Alert } = jest.requireActual('../../../../__tests__/__mocks__/react-native.js');
+  const en = translations.en.projects;
+
+  it('is there for a member, and for an administrator who does not own the project', async () => {
+    expect((await open()).screen.getByTestId('project-leave')).toBeTruthy();
+    expect((await open({ isAdmin: true })).screen.getByTestId('project-leave')).toBeTruthy();
+  });
+
+  it('is not there for the owner, who deletes the project instead', async () => {
+    const { screen } = await open({ isAdmin: true, isOwner: true });
+    expect(screen.queryByTestId('project-leave')).toBeNull();
+    expect(screen.getByTestId('project-delete')).toBeTruthy();
+  });
+
+  it('asks first, and leaves only when that is confirmed', async () => {
+    const { screen } = await open();
+    (Alert.alert as jest.Mock).mockClear();
+    fireEvent.press(screen.getByTestId('project-leave'));
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    const [title, message, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+    expect(title).toBe(en.leaveProjectConfirm);
+    expect(message).toBe(en.leaveProjectMessage('Hamlet'));
+    expect(buttons.map((b: any) => b.style)).toEqual(['cancel', 'destructive']);
+    expect(projectsAPI.removeMember).not.toHaveBeenCalled();
+  });
+
+  it('once confirmed, takes them out of it and back to their projects, read again', async () => {
+    (projectsAPI.removeMember as jest.Mock).mockResolvedValue({ data: { success: true } });
+    const { screen, navigation } = await open();
+    (Alert.alert as jest.Mock).mockClear();
+    fireEvent.press(screen.getByTestId('project-leave'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    await act(async () => { await buttons[1].onPress(); });
+
+    expect(projectsAPI.removeMember).toHaveBeenCalledWith('p1', '7');
+    expect(mockRefreshProjects).toHaveBeenCalled();
+    expect(navigation.replace).toHaveBeenCalledWith('ProjectsMain');
+  });
+
+  it('stays, and says so, when the server refuses', async () => {
+    (projectsAPI.removeMember as jest.Mock).mockRejectedValue(new AxiosError('Network Error', 'ERR_NETWORK'));
+    const { screen, navigation } = await open();
+    (Alert.alert as jest.Mock).mockClear();
+    fireEvent.press(screen.getByTestId('project-leave'));
+    await act(async () => { await (Alert.alert as jest.Mock).mock.calls[0][2][1].onPress(); });
+
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect((Alert.alert as jest.Mock).mock.calls[1][0]).toBe(translations.en.common.error);
   });
 });

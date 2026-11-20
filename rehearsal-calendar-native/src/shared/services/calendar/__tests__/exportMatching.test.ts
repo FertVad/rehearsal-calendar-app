@@ -116,11 +116,11 @@ describe('What a new event carries', () => {
     expect(details.notes).not.toContain('42');
   });
 
-  it('is called by the rehearsal\'s own name when it has one', async () => {
+  it('is called by the project and the rehearsal\'s own name when it has one', async () => {
     await createCalendarEvent(rehearsal({ title: 'Прогон второго акта' }), 'cal-1');
 
     const [, details] = (Calendar.createEventAsync as jest.Mock).mock.calls[0];
-    expect(details.title).toBe('Прогон второго акта');
+    expect(details.title).toBe('Гамлет: Прогон второго акта');
   });
 
   it('falls back to the project when the rehearsal is unnamed', async () => {
@@ -132,7 +132,7 @@ describe('What a new event carries', () => {
       await createCalendarEvent(rehearsal({ title: name }), 'cal-1');
 
       const [, details] = (Calendar.createEventAsync as jest.Mock).mock.calls[0];
-      expect(details.title).toBe('Rehearsal: Гамлет');
+      expect(details.title).toBe('Гамлет: Rehearsal');
     }
   });
 

@@ -57,8 +57,6 @@ export interface ProjectMember {
     joinedAt?: string;
     firstName: string;
     lastName?: string;
-    email?: string;
-    avatarUrl?: string;
 }
 
 export interface Project {

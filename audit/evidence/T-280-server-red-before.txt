@@ -1,0 +1,37 @@
+T-280: leaving a project one was already removed from — red before the fix.
+Route rehearsal-calendar-native/server/routes/native/members.js as of b799aee,
+test server/__tests__/routes/memberLeftNotices.test.js with T-280's cases.
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/memberLeftNotices.test.js
+
+FAIL __tests__/routes/memberLeftNotices.test.js
+  A member leaves of their own accord
+    ✓ tells the owner and every administrator, naming who left (113 ms)
+    ✓ tells the one who left nothing: they tapped Leave (12 ms)
+    ✓ tells an ordinary member nothing (10 ms)
+  A member is removed by an administrator
+    ✓ tells the owner, naming who was removed (10 ms)
+    ✓ leaves out the administrator who removed them: they were there (12 ms)
+    ✓ tells the person removed that they were, and only that (10 ms)
+    ✓ says it in Spanish to a Spanish owner, without repeating the title (T-280) (9 ms)
+    ✓ tells the other administrators when the owner removes (25 ms)
+  A member already removed leaves
+    ✕ succeeds, and touches nobody else (21 ms)
+    ✓ still needs a rank to remove somebody else (14 ms)
+
+  ● A member already removed leaves › succeeds, and touches nobody else
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 403
+
+      188 |     const res = await removes(goingId, goingId);
+      189 |
+    > 190 |     expect(res.status).toBe(200);
+          |                        ^
+
+Tests:       1 failed, 9 passed, 10 total
+
+(The push strings were already the natives' wording in this run; with the
+strings of b799aee the Russian title/body and Spanish cases fail as well.)

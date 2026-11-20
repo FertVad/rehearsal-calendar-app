@@ -344,6 +344,8 @@ personal calendar, and an ordinary member could put themselves on a rehearsal by
 calling `respond` — closed in R4 by `checkParticipants` and `answer` in
 [roster.js](rehearsal-calendar-native/server/services/rehearsals/roster.js).
 
+**Leaving is removing yourself** (T-271): `DELETE /:projectId/members/:userId` with one's own id needs no rank, and the owner gets 403 (they delete the project instead); the app's "Leave Project" on the project page is that call, and `member_left` tells the owner and administrators — not whoever did it, and not one who left — while one removed by others still gets `member_removed`. Leaving a project one is no longer in (removed while its page was open, T-280) answers 200 and changes nothing, so the app leaves the page as after any leave (flow 101); removing somebody else still needs a rank.
+
 **Authorize before the work, not after.** A range that comes from a request gets
 an explicit cap before anything is expanded from it. `GET
 /:projectId/members/availability` builds one row per day with no bound and the
@@ -472,6 +474,18 @@ calendar but the organiser's. The export runs on foreground alongside the
 import, on its own ten-minute timer because each rehearsal costs a mapping
 lookup; pull-to-refresh ignores that timer.
 
+**Removing takes back what sync did, and stays done** (T-270). Profile →
+Calendar Sync has two buttons at the bottom, shown whether Auto Sync is on or
+off: "Remove Exported Rehearsals" (with calendar access — the events are in
+this phone's calendar) and "Remove Imported Busy Times" (always, even without
+calendar access). Imported busy times are removed from all the person's
+devices — `DELETE /availability/imported/all`, the server's rows, as decided in
+EI03 — and only those with a calendar source; what they marked by hand stays.
+The privacy policy names that button by `calendarSync.clearImported`
+(`privacyPage.test.js` holds them equal). Either removal turns Auto Sync off
+first, both directions as the switch does, and its question ends with
+`autoSyncTurnsOff`: otherwise the next run exports or imports everything again.
+
 **Import skips what we exported.** Rehearsal events are excluded by the
 `rehearsalapp://rehearsal/` link the export puts on them, and by this device's
 mapping ids for events written before the link existed; otherwise a rehearsal
@@ -540,6 +554,7 @@ Running both is safe, and that is by design — see the claim below.
 fifteen minutes kept the Neon compute awake and ran through its allowance (see
 the workflow's header). Turning one back on is the owner's decision, and after
 R8 it needs migration 011 (`native_push_tickets`) applied first.
+On 2026-11-16 the owner kept them off until the first users are asked whether they want them, and the app does not promise them anywhere (T-266, `noReminderPromise.test.ts`).
 
 **The windows are deliberately wide** — 12–24h ahead for the day-before
 reminder, 0–1h for the hour-before — because no free scheduler is punctual.
@@ -834,6 +849,19 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   revocation acts after it. `lockSession` takes `FOR NO KEY UPDATE`, so foreign
   keys pointing at the user do not wait for it — `FOR UPDATE` deadlocked
   account deletion against rehearsal slot rebuilds
+- Deleting an account revokes its Sign in with Apple (T-279, App Review
+  5.1.1(v)). The server keeps no Apple token, so when the account has an Apple
+  provider (`GET /auth/me/providers`) the app first asks Apple to confirm
+  (`confirmAppleForDeletion` in `appleAuth.ts`, no scopes, before `loading`
+  goes up) and sends the authorization code as `appleAuthorizationCode` with
+  `DELETE /me`. After the deletion commits, `services/appleRevocation.js`
+  exchanges it at Apple's `/auth/token` with an ES256 client secret
+  (`kid` = `APPLE_SIGNIN_KEY_ID`, `iss` = `APPLE_TEAM_ID`, `sub` =
+  `APPLE_CLIENT_ID`, five minutes) and revokes the refresh token at
+  `/auth/revoke` — only if the token's `sub` is the account's linked Apple ID.
+  It is an attempt: no code (sheet closed, older app), missing key variables,
+  Apple down or refusing — the account is gone all the same, and the log gets
+  one line, revoked or why not, never the code, token or secret
 - Check `native_auth_providers` table for account linking status
 - Supports multiple providers per user (can link both Google and Apple to same account)
 
@@ -972,6 +1000,23 @@ own `pop: true` (`{ screen: 'Projects', params: { screen: 'ProjectsMain', pop:
 true } }`). `backToTabs.test.tsx` holds it against the real stack and tab
 routers.
 
+### 14. Forcing an update: `MIN_IOS_BUILD`
+Every request names the app's build (`X-App-Build`, from `api.ts`); the server
+refuses one older than `MIN_IOS_BUILD` with 426 `UPDATE_REQUIRED` on
+`/api/native` and `/api/auth`, before the database
+(`server/middleware/appBuild.js`), and the app shows "Update Required" in
+place of the navigator, signed in underneath (`shared/services/appUpdate.ts`,
+set only by api.ts's response interceptor). No header is build 0. Unset or 0:
+nobody is refused — production and the e2e stand run so.
+
+**Raising it is the owner's action, and only once the new build is live in the
+App Store** — earlier, everyone is locked out with nothing to update to: set
+`MIN_IOS_BUILD` (a whole number, the oldest build still allowed) in Vercel →
+Production → Environment Variables, then redeploy; a value takes effect only
+with a deployment. Lowering it or removing it, then redeploying, lets old
+builds back in; their screen goes on the next return to the foreground.
+Flow 97 shows it against the local server.
+
 ## Environment Setup
 
 ### Required Environment Variables
@@ -991,7 +1036,13 @@ GOOGLE_CLIENT_ID_ANDROID=your-android-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_ID_WEB=your-web-client-id.apps.googleusercontent.com
 
 # OAuth Configuration (Apple Sign-In)
-APPLE_CLIENT_ID=com.rehearsal.app  # the only Apple variable the server reads
+APPLE_CLIENT_ID=com.rehearsal.app  # sign-in; also the `sub` of the revocation client secret
+# Revoking Sign in with Apple when an account is deleted (T-279). All three or
+# none: without them deletion works and logs that revocation is off.
+APPLE_TEAM_ID=          # the developer team id (client secret `iss`)
+APPLE_SIGNIN_KEY_ID=    # id of the Sign in with Apple key (client secret `kid`)
+# and APPLE_SIGNIN_PRIVATE_KEY: the contents of that key's .p8 ("\n" for line
+# breaks is accepted). Set in Vercel only, never in a file or a message.
 
 # Email (codes for sign-up, password reset, email change)
 EMAIL_TRANSPORT=resend  # unset: routes that need an email answer 503 (services/email/transport.js)
@@ -1011,6 +1062,9 @@ CRON_SECRET=<generate-with-openssl-rand-base64-32>
 # Server URL (invite links, universal links)
 BASE_URL=https://your-app.vercel.app  # required in production
 HOST=0.0.0.0  # required for physical device access
+
+# Forced update (T-265): the oldest app build answered; unset or 0 = none refused
+MIN_IOS_BUILD=   # owner only, after the build is in the App Store (pitfall 14)
 ```
 
 **.env** (Frontend - Optional)
@@ -1146,15 +1200,17 @@ started meanwhile waits for it.
 
 ## Autonomous Development
 
-`tools/autodev/supervisor.mjs` runs Claude Code (developer) and Codex ("Astra",
-reviewer) through the owner's queue in `AUTODEV/TASKS.md`: develop → guard →
-checks → review (≤ 2 rounds) → push of `auto/main`, in its own worktrees
+`tools/autodev/supervisor.mjs` runs Claude Code twice — the developer, and the
+reviewer on Fable 5.2 (Codex, "Astra", until 19.11.2026) — through the owner's
+queue in `AUTODEV/TASKS.md`: develop → guard → checks → review (≤ 2 rounds) →
+push of `auto/main`, in its own worktrees
 (`../reh_app-auto`, `../reh_app-auto-review`). It waits out subscription limits
 and continues the same session; it pauses the whole queue for the owner on
 migrations, auth, `.env`, production, keys, red checks after three attempts or
 no agreement after two rounds. Reports, one per task, and `STATUS.md` are in
 `AUTODEV/` (not in git). See [tools/autodev/README.md](tools/autodev/README.md).
-Codex gets no model or reasoning flags; Claude a whitelist with `dontAsk`.
+Both get a whitelist with `dontAsk` under an OS sandbox; the reviewer cannot
+edit a file or write outside its own tree (`review.sb`).
 
 ## Documentation
 

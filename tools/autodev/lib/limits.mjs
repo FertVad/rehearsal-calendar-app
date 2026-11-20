@@ -1,14 +1,14 @@
 /**
- * When a subscription limit lifts, read from what Claude Code or Codex said
- * when it refused.
+ * When a subscription limit lifts, read from what Claude Code said when it
+ * refused — the developer's and, since 19.11.2026, the reviewer's.
  *
- * Both CLIs report the moment, in two ways. Structured: Claude's stream-json
- * emits {type:"rate_limit_event", rate_limit_info:{status:"rejected",
- * resetsAt}}, Codex's events carry `resets_at` — seconds since the epoch. And
- * as text: Claude "You've hit your session limit · resets 5pm (Asia/Jerusalem)"
- * or "… · resets Oct 9, 3pm (…)"; Codex "You've hit your usage limit. … Try
- * again at 5:04 PM." or "try again in 2 hours 13 minutes". Times in the text
- * are the machine's local time, which is where this runs.
+ * It reports the moment in two ways. Structured: stream-json emits
+ * {type:"rate_limit_event", rate_limit_info:{status:"rejected", resetsAt}} —
+ * seconds since the epoch. And as text: "You've hit your session limit ·
+ * resets 5pm (Asia/Jerusalem)" or "… · resets Oct 9, 3pm (…)". The "try again
+ * at 5:04 PM" and "try again in 2 hours 13 minutes" wordings came from Codex,
+ * the reviewer until then, and stay read: an API rate limit says it that way
+ * too. Times in the text are the machine's local time, which is where this runs.
  *
  * Nothing here guesses silently: a limit whose end cannot be read comes back
  * with `known: false`, and the caller checks again after FALLBACK_MS.
@@ -117,26 +117,6 @@ export function limitFromClaudeEvents(events, now = new Date()) {
   if (structured) return structured;
   const result = [...events].reverse().find((event) => event && event.type === 'result');
   if (result && result.is_error) return limitFromText(String(result.result ?? ''), now);
-  return { limited: false };
-}
-
-/**
- * Codex --json events: an error or failed turn whose message is a limit
- * refusal; `resets_at` anywhere on it is preferred over the wording.
- */
-export function limitFromCodexEvents(events, now = new Date()) {
-  for (const event of [...events].reverse()) {
-    if (!event) continue;
-    const failure = event.type === 'error' || event.type === 'turn.failed' ? event : null;
-    if (!failure) continue;
-    const message = String(failure.message ?? failure.error?.message ?? '');
-    const found = limitFromText(message, now);
-    const resetsAt = epoch(failure.resets_at ?? failure.error?.resets_at);
-    if (resetsAt && (found.limited || /usage_limit|rate_limit/i.test(JSON.stringify(failure)))) {
-      return { limited: true, known: true, at: resetsAt };
-    }
-    if (found.limited) return found;
-  }
   return { limited: false };
 }
 

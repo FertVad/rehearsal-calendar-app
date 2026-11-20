@@ -295,6 +295,22 @@ export const PEOPLE = {
   wang: { email: 'wang@e2e.test', firstName: 'Wang', lastName: 'Wasser', onboarded: true },
   yangsun: { email: 'yangsun@e2e.test', firstName: 'Yang', lastName: 'Sun', onboarded: true },
   shufu: { email: 'shufu@e2e.test', firstName: 'Shu', lastName: 'Fu', onboarded: true },
+  // An hour from his phone's calendar on MARK_DAY and AFTER_DAY busy all day
+  // by his own hand; he removes the imported, with no calendar access and Auto
+  // Sync off (99, T-270). In no project, so no other flow's rehearsal lands on
+  // his days.
+  lebedev: { email: 'lebedev@e2e.test', firstName: 'Pavel', lastName: 'Lebedev', onboarded: true },
+  // Bottom leaves Hippolyta's company from its page; it is gone from his
+  // projects, and "Member Left" is in her inbox (100, T-271). Nobody else in
+  // it, so no other flow's notices mix in.
+  hippolyta: { email: 'hippolyta@e2e.test', firstName: 'Hippolyta', lastName: 'Amazon', onboarded: true },
+  bottom: { email: 'bottom@e2e.test', firstName: 'Nick', lastName: 'Bottom', onboarded: true },
+  // Snug has Theseus's company open when Theseus removes him from another
+  // device; he taps "Leave Project" all the same and is simply out of it, with
+  // no English "Only project admins can remove members" (101, T-280). A company
+  // of their own, so 100's notices and members stay as they are.
+  theseus: { email: 'theseus@e2e.test', firstName: 'Theseus', lastName: 'Athens', onboarded: true },
+  snug: { email: 'snug@e2e.test', firstName: 'Snug', lastName: 'Joiner', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -873,6 +889,24 @@ export async function seed({ client, apiUrl, timezone }) {
     [wrestling.id, ids.rosalind]);
   rehearsals.wrestling = String(wrestling.id);
 
+  // Hippolyta's company (100), the same way: Bottom an actor in it.
+  const { rows: [mechanicals] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Mechanicals Guild', 'Quince''s house', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [mechanicals.id, ids.hippolyta, ids.bottom]);
+
+  // Theseus's company (101), the same way: Snug an actor in it.
+  const { rows: [athens] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Athens Court', 'The duke''s palace', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [athens.id, ids.theseus, ids.snug]);
+
   // Juliet's two (74), made as the server makes them: the sign-ins are spent.
   // Tomorrow a titled one with a place, one with no place, one with no title;
   // the day after, one whose title is longer than its row. She is on each.
@@ -1165,6 +1199,15 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-market')`,
     [ids.kabanikha, localInstant(6, 9), localInstant(6, 10)]);
+  // Lebedev's (99, T-270): an hour imported from his calendar on MARK_DAY, as
+  // the import writes it, and AFTER_DAY busy all day, as a save of that day
+  // writes it. Removing the imported takes the first and leaves the second.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'apple_calendar', 'e2e-dentist'),
+            ($1, $4::timestamptz, $5::timestamptz, 'busy', TRUE, 'manual', NULL)`,
+    [ids.lebedev, localInstant(3, 9), localInstant(3, 10),
+      `${days.after}T00:00:00.000Z`, `${days.after}T23:59:59.999Z`]);
   // Mackie's today (91): busy 12:00-14:00, so Polly's form recommends times.
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)

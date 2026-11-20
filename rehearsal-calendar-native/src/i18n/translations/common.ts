@@ -53,6 +53,17 @@ export interface ActionSheetTranslations {
   createProject: string;
 }
 
+/**
+ * The screen shown instead of the app when the server refuses this build as
+ * too old (UpdateRequiredScreen, T-265). It cannot be closed; the person stays
+ * signed in, and the message says so.
+ */
+export interface UpdateTranslations {
+  title: string;
+  message: string;
+  openStore: string;
+}
+
 export interface DaysTranslations {
   short: {
     monday: string;
@@ -106,6 +117,11 @@ export const ru = {
     markBusy: 'Отметить занятость',
     createProject: 'Создать проект',
   },
+  update: {
+    title: 'Нужно обновить приложение',
+    message: 'Эта версия Rehearsly больше не поддерживается. Обновите приложение в App Store, чтобы пользоваться им дальше. Входить в аккаунт заново не придётся.',
+    openStore: 'Открыть App Store',
+  },
   days: {
     short: {
       monday: 'Пн',
@@ -157,6 +173,11 @@ export const en = {
     createRehearsal: 'Create Rehearsal',
     markBusy: 'Mark Busy',
     createProject: 'Create Project',
+  },
+  update: {
+    title: 'Update Required',
+    message: 'This version of Rehearsly is no longer supported. Update the app in the App Store to keep using it. You’ll stay signed in.',
+    openStore: 'Open App Store',
   },
   days: {
     short: {
@@ -210,6 +231,11 @@ export const es = {
     markBusy: 'Marcar horas ocupadas',
     createProject: 'Crear proyecto',
   },
+  update: {
+    title: 'Actualización necesaria',
+    message: 'Esta versión de Rehearsly ya no es compatible. Actualiza la app en el App Store para seguir usándola. No tendrás que volver a iniciar sesión.',
+    openStore: 'Abrir App Store',
+  },
   days: {
     short: {
       monday: 'Lun',
@@ -261,6 +287,11 @@ export const de = {
     createRehearsal: 'Probe erstellen',
     markBusy: 'Als beschäftigt markieren',
     createProject: 'Projekt erstellen',
+  },
+  update: {
+    title: 'Update erforderlich',
+    message: 'Diese Version von Rehearsly wird nicht mehr unterstützt. Aktualisiere die App im App Store, um sie weiter zu nutzen. Du bleibst angemeldet.',
+    openStore: 'App Store öffnen',
   },
   days: {
     short: {

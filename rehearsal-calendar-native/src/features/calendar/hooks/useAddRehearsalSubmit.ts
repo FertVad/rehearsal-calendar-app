@@ -153,7 +153,7 @@ export function useAddRehearsalSubmit({
           endsAt: rehearsalData.endsAt,
           location: rehearsalData.location,
           // Without this the event is written the moment the rehearsal is
-          // saved and carries no name, so it reads "Rehearsal: <project>"
+          // saved and carries no name, so it reads "<project>: Rehearsal"
           // until some later sync corrects it.
           title: rehearsalData.title,
         }).catch((syncError) => {

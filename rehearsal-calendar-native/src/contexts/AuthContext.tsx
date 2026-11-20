@@ -9,6 +9,27 @@ import { AuthFlowError, toAuthFlowError, DeliveryOutcome } from '../features/aut
 import { normalizeEmail } from '../features/auth/utils/accountRules';
 import { changeOwner, restoreOwner, onSessionExpired } from '../shared/services/session';
 import { deviceTimezone, setProfileTimezone } from '../shared/utils/time';
+import { isAppleAuthAvailable, confirmAppleForDeletion } from '../shared/services/appleAuth';
+
+/**
+ * The code of a fresh Apple confirmation, when the account being deleted signs
+ * in with Apple: the server revokes that sign-in with it (T-279, App Review
+ * 5.1.1(v)). Null otherwise — and also when the person closes Apple's sheet,
+ * Apple fails or the providers cannot be read: the account is deleted all the
+ * same, and Apple is only an attempt.
+ */
+async function appleCodeForDeletion(): Promise<string | null> {
+  try {
+    const { data } = await authAPI.getAuthProviders();
+    const providers: { providerType?: string }[] = data?.providers ?? [];
+    if (!providers.some((p) => p.providerType === 'apple')) return null;
+    if (!(await isAppleAuthAvailable())) return null;
+    return await confirmAppleForDeletion();
+  } catch (error) {
+    logger.warn('[Auth] Apple confirmation for the deletion failed; deleting without it:', error);
+    return null;
+  }
+}
 
 /** What the profile may change in place. The address is not here: it takes a code to each address. */
 type ProfileUpdate = Parameters<typeof authAPI.updateMe>[0];
@@ -554,11 +575,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setUser]);
 
   const deleteAccount = useCallback(async () => {
+    // Before loading goes up: while it is true the navigator swaps the screens
+    // for a spinner, and Apple's sheet would open over nothing.
+    const appleAuthorizationCode = await appleCodeForDeletion();
     try {
       setLoading(true);
 
       // Call delete account API
-      const response = await authAPI.deleteMe();
+      const response = await authAPI.deleteMe(appleAuthorizationCode ?? undefined);
       const { deletedProjects } = response.data;
       // The session is over, as at a sign-out: nothing answered later writes it back.
       forgetPendingSignIn();

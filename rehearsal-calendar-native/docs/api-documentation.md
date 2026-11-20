@@ -12,6 +12,39 @@ The Rehearsal Calendar Native App API is a RESTful API built for managing theate
 
 **Response Format:** JSON
 
+## App Build and Forced Updates
+
+Every request of the app names its build (T-265), set by the one request
+interceptor in `src/shared/services/api.ts`, from the binary itself:
+
+```
+X-App-Version: 1.0.0
+X-App-Build: 6
+```
+
+When the server's `MIN_IOS_BUILD` is a whole number above 0, a request under
+`/api/native` or `/api/auth` whose `X-App-Build` is lower — or missing, which
+counts as build 0 (TestFlight builds 1–5 send none) — is refused before
+anything else is done, the database included:
+
+```
+426 Upgrade Required
+{ "error": "Update required", "code": "UPDATE_REQUIRED" }
+```
+
+The app shows "Update Required" instead of everything and keeps the session.
+Unset, 0 or not a whole number (that is logged), nobody is refused. Pages,
+`/invite/*`, `/admin`, `/api/cron`, `/api/health` and `/api/ready` are never
+checked.
+
+#### Check the Build
+
+**Endpoint:** `GET /api/native/app-version` — no sign-in. Asked by the app on
+launch and on every return to the foreground.
+
+**Response (200):** `{ "minIosBuild": 6 }` (0 when no minimum is set). A build
+below the minimum gets the 426 above instead.
+
 ## Authentication
 
 The API uses JWT (JSON Web Token) based authentication with separate access and refresh tokens.
@@ -83,7 +116,9 @@ server startup alone does not confirm it.
 
 `POST /auth/google` and `POST /auth/apple` decide the account in one locked
 transaction. The provider's address counts as proof only when the provider says
-it is verified; it is trimmed and lower-cased like every other address.
+it is verified; it is trimmed and lower-cased like every other address. Of the
+profile only the name is kept: Google's profile photo is not stored (the app
+draws initials, T-273).
 
 - **Already linked provider**: signs in to that account — for Apple even when the
   token carries no address. Google refuses a token whose address it has not
@@ -384,7 +419,7 @@ Retrieve the authenticated user's profile information.
   "firstName": "John",
   "lastName": "Doe",
   "phone": "+1234567890",
-  "avatarUrl": "https://example.com/avatar.jpg",
+  "avatarUrl": null,
   "timezone": "Asia/Jerusalem",
   "locale": "en",
   "notificationsEnabled": true,
@@ -545,6 +580,10 @@ Permanently delete the authenticated user's account.
 **Notes:**
 - This action is irreversible
 - All user data and project memberships will be deleted
+- So are the notices in other people's inboxes that name the account — "joined",
+  "is now an administrator", "has seen" — in the same transaction (T-278). Each
+  such notice keeps whom it names in its `data.aboutUserId`. A push already shown
+  on someone's phone stays there: the server cannot reach it
 
 `POST /auth/logout` revokes every session of the account. A session revoked while
 its logout was under way changes nothing more: bumping the version again would
@@ -1506,9 +1545,7 @@ Retrieve all active members of a project.
       "status": "active",
       "joinedAt": "2024-01-15T10:30:00.000Z",
       "firstName": "John",
-      "lastName": "Doe",
-      "email": "john@example.com",
-      "avatarUrl": "https://example.com/avatar.jpg"
+      "lastName": "Doe"
     },
     {
       "id": "2",
@@ -1518,9 +1555,7 @@ Retrieve all active members of a project.
       "status": "active",
       "joinedAt": "2024-01-16T14:00:00.000Z",
       "firstName": "Jane",
-      "lastName": "Smith",
-      "email": "jane@example.com",
-      "avatarUrl": null
+      "lastName": "Smith"
     }
   ]
 }
@@ -1535,8 +1570,6 @@ Retrieve all active members of a project.
 - `joinedAt` (string): When the user joined the project
 - `firstName` (string): User's first name
 - `lastName` (string): User's last name
-- `email` (string): User's email
-- `avatarUrl` (string|null): User's avatar URL
 
 **Error Responses:**
 - `403 Forbidden`: User is not a project member
@@ -1547,6 +1580,8 @@ Retrieve all active members of a project.
 **Notes:**
 - Members are sorted by role (owner, admin, member) and then by join date
 - Only returns active members
+- No member's email address or photo is returned: the app shows a member by
+  name, and nobody is handed what nobody shows (T-273)
 
 ---
 
@@ -1871,7 +1906,7 @@ interface User {
   firstName: string;
   lastName: string;
   phone: string | null;
-  avatarUrl: string | null;
+  avatarUrl: string | null;      // null: nothing stores a photo (T-273)
   timezone: string;              // IANA timezone (e.g., "America/New_York")
   locale: string;                // Locale code (e.g., "en")
   notificationsEnabled: boolean;
@@ -1972,8 +2007,7 @@ interface ProjectMember {
   joinedAt: string;              // ISO 8601 timestamp
   firstName: string;
   lastName: string;
-  email: string;
-  avatarUrl: string | null;
+  // No email and no avatarUrl: nobody is handed another's address or photo (T-273)
 }
 ```
 

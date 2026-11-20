@@ -23,7 +23,7 @@ export const ru: { notifications: NotificationsTranslations } = {
   notifications: {
     title: 'Уведомления',
     empty: 'Пока тихо',
-    emptyHint: 'Здесь появятся напоминания о репетициях и всё, что происходит в ваших проектах.',
+    emptyHint: 'Здесь появится всё, что происходит в ваших проектах.',
     markAllRead: 'Прочитать все',
     delete: 'Удалить',
     clearAll: 'Очистить',
@@ -44,7 +44,7 @@ export const en: { notifications: NotificationsTranslations } = {
   notifications: {
     title: 'Notifications',
     empty: 'No Notifications Yet',
-    emptyHint: 'Rehearsal reminders and anything happening in your projects will show up here.',
+    emptyHint: 'Everything happening in your projects will show up here.',
     markAllRead: 'Mark All Read',
     delete: 'Delete',
     clearAll: 'Clear All',
@@ -65,7 +65,7 @@ export const es: { notifications: NotificationsTranslations } = {
   notifications: {
     title: 'Notificaciones',
     empty: 'Todavía nada',
-    emptyHint: 'Aquí verás los recordatorios de ensayos y todo lo que pase en tus proyectos.',
+    emptyHint: 'Aquí verás todo lo que pase en tus proyectos.',
     markAllRead: 'Marcar como leídas',
     delete: 'Eliminar',
     clearAll: 'Borrar todo',
@@ -86,7 +86,7 @@ export const de: { notifications: NotificationsTranslations } = {
   notifications: {
     title: 'Mitteilungen',
     empty: 'Noch nichts',
-    emptyHint: 'Hier erscheinen Probenerinnerungen und alles, was in deinen Projekten passiert.',
+    emptyHint: 'Hier erscheint alles, was in deinen Projekten passiert.',
     markAllRead: 'Alle gelesen',
     delete: 'Löschen',
     clearAll: 'Alle löschen',

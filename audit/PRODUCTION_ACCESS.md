@@ -62,8 +62,14 @@ Actions по конкретному commit; историческое NOT_RUN в 
 
 ## OPS-IA01 — проверка APPLE_CLIENT_ID человеком
 
-**Статус:** NOT_RUN. **Finding:** IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md):
-локальный guard и проверки завершены на `0dc7666`, deployment condition ещё не подтверждён.
+**Статус:** PASS, 20.11.2026. **Finding:** IA01 — [VERIFIED](REMEDIATION_IA01.md):
+локальный guard и проверки завершены на `0dc7666`, deployment condition подтвердил Вадим.
+
+**Результат, 20.11.2026.** Проверял Вадим, результат передан через сессию-гида App Store.
+- **project/environment:** Vercel `fertvads-projects/server`, Production; deployment — работающий на rehearsly.me.
+- **present: yes.** Переменная есть в Production. Она помечена Sensitive, значение в интерфейсе не показывается.
+- **nonempty: yes; expected audience matches: yes.** Вход через Apple в сборке 1.0.0 (7) из TestFlight на production прошёл. `verifyAppleToken` принимает токен, только если `APPLE_CLIENT_ID` задана одним точным id, равным его `aud` (`com.rehearsal.app`). Без переменной он отвечает 503.
+- **active deployment binding: confirmed** — тем же входом, на работающем деплое.
 **Исполнитель:** Вадим или уполномоченный им человек с доступом к Vercel.
 **Когда:** перед закрытием deployment-части IA01, после отдельного решения Вадима.
 Карточка готова к ручной проверке после решения Вадима. Менять переменные,

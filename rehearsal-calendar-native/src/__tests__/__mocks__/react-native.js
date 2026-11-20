@@ -198,6 +198,11 @@ module.exports = {
   KeyboardAvoidingView,
   Modal,
 
+  // Opening another app (the App Store, T-265); a test spies on it.
+  Linking: {
+    openURL: () => Promise.resolve(true),
+  },
+
   // Whether the app is in the foreground.
   //
   // Added because automatic calendar sync hangs off this and had no test — the

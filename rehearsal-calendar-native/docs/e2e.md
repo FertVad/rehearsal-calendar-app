@@ -375,7 +375,10 @@ by its admin elsewhere: `e2e/scripts/move-rehearsal.js` with `API_URL`,
 saves it that many hours later, title and place as they were (flow 73). A
 person put on a rehearsal there: `e2e/scripts/add-to-rehearsal.js` with the
 same and `MEMBER` (an address in its project) saves it as it is, its cast
-kept and the member added (flow 79). A code the server
+kept and the member added (flow 79). A member removed there:
+`e2e/scripts/remove-member.js` with `API_URL`, `EMAIL` (the owner),
+`PASSWORD`, `PROJECT` and `MEMBER` (a full name) deletes the member's row; no
+push reaches the simulator, so the page he has open stays (flow 101). A code the server
 mailed is read the same way: `e2e/scripts/read-code.js` with `MAIL_URL`
 (`${MAIL_URL}`), `TO` and `NAME` puts it in `${output.<NAME>}` (flows 11, 12).
 
@@ -457,6 +460,14 @@ sees it: an answer the server gives in a state the stand cannot reach — its
 mail provider down is `FAIL: "503"`, `CODE: EMAIL_UNAVAILABLE`, as
 `passwordReset.js` answers then — or a refusal the app has no words of its own
 for, a 400 with no code (flow 93, T-256).
+
+A build the server no longer answers: `e2e/scripts/require-update.js` with
+`MAIL_URL` and `ON: "1"` raises the server's `MIN_IOS_BUILD` to the app's
+build (`app.json`) plus one, and the server's own middleware refuses the app
+with 426 `UPDATE_REQUIRED`; `ON: "0"` unsets it. The stand runs with none, and
+a raised one lapses after three minutes; the flow lowers it in
+`onFlowComplete` too, so a failure half-way refuses no flow after it (flow 97,
+T-265).
 
 `EXPECT` on `release-answers.js` is how many answers must have been held: a
 flow whose point is a late answer fails when there was none (flow 38).

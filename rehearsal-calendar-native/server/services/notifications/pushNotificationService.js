@@ -185,12 +185,16 @@ export async function sendPushNotification(userIds, notification, { executor = d
   // reads later; whether a phone was reachable at this instant is a separate
   // question.
   const notificationIds = await recordNotifications(ids, notification, { executor });
-  const tokenData = await getUserPushTokens(ids, executor);
+  // A notice that names someone goes out only where its row was written: none
+  // is written once that person has deleted their account (recordNotifications),
+  // and a push would carry the name of someone no longer here (T-278).
+  const namesSomeone = notification.data?.aboutUserId != null;
+  const tokenData = await getUserPushTokens(namesSomeone ? ids.filter((id) => notificationIds.has(id)) : ids, executor);
   const reachable = new Set(tokenData.map(({ user_id }) => Number(user_id)));
   const outcome = {
     delivered: [],
     undelivered: [],
-    unreachable: ids.filter((id) => !reachable.has(id)),
+    unreachable: ids.filter((id) => !reachable.has(id) && !(namesSomeone && !notificationIds.has(id))),
     notificationIds,
     sent: 0,
     failed: 0,
@@ -545,18 +549,40 @@ export async function notifyRemovedFromRehearsal(rehearsal, projectName, members
 }
 
 /**
+ * Who a notice names, as its `data` keeps it: `aboutUserId`, the id of the
+ * person whose name the text carries (T-278).
+ *
+ * Three notices put a member's name into other people's inboxes — joined, made
+ * an administrator, has seen a rehearsal — and a row belongs to its reader:
+ * nothing in it said whose name it held, so deleting an account could not reach
+ * them. Now each one says who, and DELETE /me removes every row naming the
+ * account (routes/auth.js). Taken as { id, name } together, so a caller cannot
+ * hand over a name without saying whose it is.
+ */
+function named(person) {
+  const id = Number(person?.id);
+  if (!Number.isSafeInteger(id) || id <= 0 || typeof person?.name !== 'string') {
+    throw new TypeError('A notice that names someone takes { id, name }: whose name it is, too');
+  }
+  return { id, name: person.name };
+}
+
+/**
  * Notify admins when a member responds to a rehearsal — which one, and when it
  * is: "responded to a rehearsal" left an admin of several guessing (T-023).
+ * @param {{id: number, name: string}} responder - who has seen it
  */
-export async function notifyMemberResponse(rehearsal, projectName, responderName, adminIds, options) {
+export async function notifyMemberResponse(rehearsal, projectName, responder, adminIds, options) {
+  const { id, name: responderName } = named(responder);
   return sendAboutRehearsal(rehearsal, adminIds, (locale, when) => {
     const tr = t(locale, 'memberResponse');
     return { title: tr.title, body: tr.body({ responderName, projectName, rehearsalTitle: rehearsal.title, when }) };
-  }, { type: 'member_response', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }, options);
+  }, { type: 'member_response', rehearsalId: rehearsal.id, projectId: rehearsal.project_id, aboutUserId: id }, options);
 }
 
 /**
  * Tell the people responsible for a project that somebody has joined it.
+ * `member` is { id, name }: the notice records whose name it carries (T-278).
  *
  * This used to tell the person who had just joined, who had tapped Join a
  * moment earlier and knew. The owner — whose invite link it was, and who
@@ -565,17 +591,19 @@ export async function notifyMemberResponse(rehearsal, projectName, responderName
  * The project's id goes with it, so a tap opens the project on its members;
  * with the name alone the tap opened nothing (T-023).
  */
-export async function notifyMemberJoined(projectName, memberName, recipientIds, projectId) {
+export async function notifyMemberJoined(projectName, member, recipientIds, projectId) {
+  const { id, name: memberName } = named(member);
   await sendLocalizedNotification(
     recipientIds,
     'memberJoined',
     { memberName, projectName },
-    { type: 'member_joined', projectName, projectId }
+    { type: 'member_joined', projectName, projectId, aboutUserId: id }
   );
 }
 
 /**
  * Tell everyone who runs a project that it has another administrator.
+ * `member` is { id, name }, as for "joined" (T-278).
  *
  * Administrators may appoint administrators here, so this is not something the
  * owner can assume they did themselves.
@@ -584,12 +612,30 @@ export async function notifyMemberJoined(projectName, memberName, recipientIds, 
  * on its members. With the name alone neither the push nor the inbox card
  * opened anything (T-252).
  */
-export async function notifyAdminAppointed(projectName, memberName, recipientIds, projectId) {
+export async function notifyAdminAppointed(projectName, member, recipientIds, projectId) {
+  const { id, name: memberName } = named(member);
   await sendLocalizedNotification(
     recipientIds,
     'adminAppointed',
     { memberName, projectName },
-    { type: 'admin_appointed', projectName, projectId }
+    { type: 'admin_appointed', projectName, projectId, aboutUserId: id }
+  );
+}
+
+/**
+ * Tell the people responsible for a project that somebody is no longer in it:
+ * left of their own accord, or was removed (`removed`). The same people who
+ * hear "New member" (T-271) — several can remove members and anyone can leave,
+ * so the owner cannot assume they did it. `member` is { id, name }, as for
+ * "joined" (T-278). A tap opens the project on its members.
+ */
+export async function notifyMemberLeft(projectName, member, recipientIds, projectId, { removed = false } = {}) {
+  const { id, name: memberName } = named(member);
+  await sendLocalizedNotification(
+    recipientIds,
+    removed ? 'memberWasRemoved' : 'memberLeft',
+    { memberName, projectName },
+    { type: 'member_left', projectName, projectId, aboutUserId: id }
   );
 }
 

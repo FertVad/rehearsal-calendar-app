@@ -32,6 +32,12 @@ const DYNAMIC: Array<{ keys: string[]; file: string; reads: string; why: string 
     reads: 't.profile[option.labelKey]',
     why: 'each week-start option carries the key of its label',
   },
+  {
+    keys: ['calendarSync.eventTitle', 'calendarSync.eventNotes'],
+    file: 'src/shared/services/calendar/export.ts',
+    reads: 'translations[await appLanguage()].calendarSync',
+    why: "the phone calendar's event, written outside the screens in the app's language (T-276)",
+  },
 ];
 
 function codeFiles(dir: string): string[] {

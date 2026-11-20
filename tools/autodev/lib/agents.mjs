@@ -1,17 +1,19 @@
 /**
- * The two agents, run headless: Claude Code as the developer, Codex as the
- * reviewer ("Astra"). Each call streams JSON events to a log as they come,
- * and answers what the supervisor needs to go on: the session to resume, the
- * last message, whether it failed, and whether a subscription limit stopped it.
+ * The two agents, run headless, both Claude Code: the developer, and the
+ * reviewer on a model of its own (Fable, the owner's choice of 19.11.2026; it
+ * replaced Codex, "Astra"). Each call streams JSON events to a log as they
+ * come, and answers what the supervisor needs to go on: the session to resume,
+ * the last message, whether it failed, and whether a subscription limit
+ * stopped it.
  *
- * Codex gets no model or reasoning flags: those are the owner's settings in
- * ~/.codex/config.toml and stay there. Claude gets a whitelist and dontAsk —
- * never a permission bypass.
+ * Each gets a whitelist and dontAsk — never a permission bypass — and runs
+ * under an OS sandbox profile: agent.sb for the developer, review.sb for the
+ * reviewer, which also cannot write outside its own tree.
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { limitFromClaudeEvents, limitFromCodexEvents } from './limits.mjs';
+import { limitFromClaudeEvents } from './limits.mjs';
 
 // Agents still running. The supervisor stops them when it is stopped: one
 // left behind keeps working the session the restarted supervisor resumes,
@@ -65,7 +67,7 @@ function runJsonLines(command, args, { cwd, env, log, timeoutMs }) {
  * One developer turn. A new session is started with `sessionId`, an existing
  * one continued with `resume`.
  */
-export async function runClaude({ bin, cwd, prompt, sessionId, resume, model, settingsFile, sandboxProfile, systemPrompt, log, timeoutMs, env }) {
+export async function runClaude({ bin, cwd, prompt, sessionId, resume, model, settingsFile, sandboxProfile, sandboxParams = {}, addDirs = [], systemPrompt, log, timeoutMs, env }) {
   // Only our settings: the repository's .claude/settings.json (102 allows and
   // the main tree as a working directory) and the user's own would otherwise
   // be merged in, and the whitelist would mean little. No MCP servers either —
@@ -75,12 +77,22 @@ export async function runClaude({ bin, cwd, prompt, sessionId, resume, model, se
   if (resume) args.push('--resume', resume);
   else if (sessionId) args.push('--session-id', sessionId);
   if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
+  // Folders the session may work in besides its own: Claude Code refuses a
+  // command that writes outside them whatever the rules allow (the reviewer's
+  // copy of the base commit, probed 19.11.2026).
+  for (const dir of addDirs) args.push('--add-dir', dir);
   // The owner's model, which dropping their settings would drop with them.
   if (model) args.push('--model', model);
-  // And under the OS sandbox (agent.sb), so no command it runs can read a
-  // secret's contents, whatever Claude Code's rules allow.
+  // And under the OS sandbox (agent.sb, review.sb), so no command it runs can
+  // read a secret's contents, whatever Claude Code's rules allow. The
+  // reviewer's profile also names the trees it may not write (sandboxParams).
+  // The sandbox compares real paths: a rule naming a path through a symbolic
+  // link (/var → /private/var, as os.tmpdir() gives) matches nothing, and the
+  // write it was to stop goes through. Every path goes in resolved.
+  const real = (value) => { try { return fs.realpathSync(value); } catch { return value; } };
+  const params = Object.entries({ HOME: env.HOME, ...sandboxParams }).flatMap(([key, value]) => ['-D', `${key}=${real(value)}`]);
   const run = sandboxProfile
-    ? await runJsonLines('/usr/bin/sandbox-exec', ['-f', sandboxProfile, '-D', `HOME=${env.HOME}`, bin, ...args], { cwd, env, log, timeoutMs })
+    ? await runJsonLines('/usr/bin/sandbox-exec', ['-f', sandboxProfile, ...params, bin, ...args], { cwd, env, log, timeoutMs })
     : await runJsonLines(bin, args, { cwd, env, log, timeoutMs });
   const results = run.events.filter((event) => event.type === 'result');
   const result = results.at(-1);
@@ -99,48 +111,5 @@ export async function runClaude({ bin, cwd, prompt, sessionId, resume, model, se
     // Resuming a session that never got created (a crash between choosing
     // its id and starting it) is told apart from a real failure.
     missingSession: /No conversation found/i.test(`${result?.result ?? ''}\n${run.stderr}`),
-  };
-}
-
-/**
- * What the reviewer's commands may touch: read anything, write the review tree
- * and /private/tmp, and never the contents of a secret. A permission profile,
- * not --sandbox workspace-write: that one reads everything, and a probe read a
- * dummy .env and listed ~/.ssh through it. The profile is enforced by the
- * sandbox itself (`codex sandbox` → "Operation not permitted"), not by the
- * model choosing to stay away. Sandbox only — no model or reasoning settings.
- */
-export const REVIEW_PERMISSIONS = [
-  '-c', 'default_permissions="autodev_review"',
-  '-c', `permissions.autodev_review.filesystem={${[
-    '"/"="read"', '":project_roots"="write"', '"/private/tmp"="write"',
-    '"~/**/.env"="deny"', '"~/**/.env.local"="deny"', '"~/**/.env.production"="deny"',
-    '"~/.ssh"="deny"', '"~/.aws"="deny"', '"~/.appstoreconnect"="deny"', '"~/.config/gh"="deny"',
-    '"~/.netrc"="deny"', '"~/.npmrc"="deny"',
-  ].join(', ')}}`,
-];
-
-/**
- * One reviewer turn in `cwd` (the review worktree). A new thread, or `resume`
- * to continue one. The last message is also written to `lastMessageFile`.
- */
-export async function runCodex({ bin, cwd, prompt, resume, lastMessageFile, log, timeoutMs, env }) {
-  const common = [...REVIEW_PERMISSIONS, '--json', '--output-last-message', lastMessageFile];
-  const args = resume
-    ? ['exec', 'resume', resume, prompt, ...common]
-    : ['exec', ...common, prompt];
-  const run = await runJsonLines(bin, args, { cwd, env, log, timeoutMs });
-  const started = run.events.find((event) => event.type === 'thread.started');
-  const failure = [...run.events].reverse().find((event) => event.type === 'turn.failed' || event.type === 'error');
-  const limit = limitFromCodexEvents(run.events.length ? run.events : [{ type: 'error', message: run.stderr }]);
-  let text = '';
-  try { text = fs.readFileSync(lastMessageFile, 'utf8'); } catch { /* no last message: the turn failed */ }
-  return {
-    threadId: started?.thread_id ?? resume,
-    text,
-    failed: Boolean(failure) || run.code !== 0,
-    limit,
-    exit: run.code,
-    signal: run.signal,
   };
 }

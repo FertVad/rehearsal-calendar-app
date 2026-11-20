@@ -7,6 +7,7 @@ import { emitDataChanged } from '../utils/dataChanged';
 import { gotNoAnswer } from '../utils/noAnswer';
 import { currentSession,isCurrentSession, reportSessionExpired, SessionEndedError, SessionStamp } from './session';
 import { renewConnections } from './connections';
+import { appBuildHeaders, setUpdateRequired } from './appUpdate';
 
 /**
  * API Configuration
@@ -145,6 +146,9 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Every request names this build; the server refuses one older than its
+    // minimum with 426 (T-265, appUpdate.ts).
+    for (const [name, value] of Object.entries(appBuildHeaders)) config.headers[name] = value;
     logger.debug(`Request: ${config.method?.toUpperCase()} ${config.url}`, config.params);
     return config;
   },
@@ -178,7 +182,10 @@ async function refreshSession(): Promise<string> {
   }
   let response;
   try {
-    response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken }, { timeout: REQUEST_TIMEOUT_MS });
+    // Outside `api`, so as not to refresh a refresh: it names the build itself,
+    // or the server would take it for an old one (T-265). A 426 here is no
+    // refusal of the session.
+    response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken }, { timeout: REQUEST_TIMEOUT_MS, headers: { ...appBuildHeaders } });
   } catch (error: any) {
     if (refusesSession(error?.response?.status) && isCurrentSession(session)) reportSessionExpired();
     // Not sent again: the server rotates the pair, and a refresh it handled
@@ -209,6 +216,9 @@ function refreshOnce(): Promise<string> {
 api.interceptors.response.use(
   (response) => {
     logger.debug(`Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    // The server answered this build: it is not too old, or no longer
+    // (T-265). The one place the update screen is put up and taken down.
+    setUpdateRequired(false);
     return response;
   },
   async (error) => {
@@ -216,6 +226,14 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = originalRequest?.url || '';
     logger.error(`Response Error: ${status || 'Network Error'} ${originalRequest?.method?.toUpperCase()} ${url}`, error.response?.data);
+
+    // This build is older than the server's minimum: the update screen goes up
+    // over everything. The session is kept — nothing is refreshed, nothing
+    // signed out — so the updated app opens signed in (T-265).
+    if (status === 426 && error.response?.data?.code === 'UPDATE_REQUIRED') {
+      setUpdateRequired(true);
+      return Promise.reject(error);
+    }
 
     // Only a request sent with a session has one to refresh: a refused
     // password at sign-in is a 401 too.
@@ -320,7 +338,10 @@ export const authAPI = {
     onboardingCompleted?: boolean;
   }) => api.put('/auth/me', data),
 
-  deleteMe: () => api.delete('/auth/me'),
+  // With the code of a fresh Apple confirmation when the account signs in with
+  // Apple: the server revokes that sign-in with it (T-279).
+  deleteMe: (appleAuthorizationCode?: string) =>
+    api.delete('/auth/me', appleAuthorizationCode ? { data: { appleAuthorizationCode } } : undefined),
 
   logout: () => api.post('/auth/logout'),
 
@@ -577,6 +598,13 @@ export const notificationsAPI = {
   remove: (id: number) => api.delete(`/native/notifications/${id}`),
 
   removeAll: () => api.delete('/native/notifications'),
+};
+
+// Whether this build is still answered: asked without signing in, on launch and
+// on every return to the foreground (useAppVersionCheck, T-265). The answer is
+// read by the response interceptor; the caller needs nothing from it.
+export const appVersionAPI = {
+  check: () => api.get('/native/app-version'),
 };
 
 // Bug Reports API

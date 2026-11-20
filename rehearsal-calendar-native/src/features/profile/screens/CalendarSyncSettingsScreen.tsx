@@ -26,6 +26,14 @@ type CalendarSyncSettingsScreenProps = NativeStackScreenProps<any, 'CalendarSync
 
 type CalendarProvider = 'google' | 'apple' | null;
 
+/** Auto Sync off, both directions: what the switch saves, and what a removal saves first. */
+const SYNC_OFF: Partial<CalendarSyncSettings> = {
+  exportEnabled: false,
+  importEnabled: false,
+  importCalendarIds: [],
+  importInterval: 'manual',
+};
+
 export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncSettingsScreenProps) {
   const { t } = useI18n();
   const {
@@ -37,6 +45,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     updateSettings,
     synchronize,
     removeAll,
+    clearImported,
     isImporting,
     syncedCount,
   } = useCalendarSync();
@@ -47,7 +56,10 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
   // the tap on screen (HP05, cause fix 18).
   const [selectedProvider, setSelectedProvider] = useState<CalendarProvider>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const syncEnabled = settings.exportEnabled && settings.importEnabled;
+  // Either direction left on would run again and put back what a removal took.
+  const syncWouldRun = settings.exportEnabled || settings.importEnabled;
   const selectedCalendarId = settings.exportCalendarId;
 
   // Determine current provider from settings
@@ -234,11 +246,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     }
 
     if (enabled && !selectedProvider) {
-      // Ask user to select provider first
-      Alert.alert(
-        t.calendarSync.selectCalendar || 'Select Calendar',
-        'Please select Google Calendar or Apple Calendar first'
-      );
+      Alert.alert(t.calendarSync.selectCalendar, t.calendarSync.chooseProviderFirst);
       return;
     }
 
@@ -259,19 +267,25 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         });
       }
     } else {
-      await save({
-        exportEnabled: false,
-        importEnabled: false,
-        importCalendarIds: [],
-        importInterval: 'manual',
-      });
+      await save(SYNC_OFF);
     }
+  };
+
+  /**
+   * A removal does not stay done while Auto Sync is on: the next run exports
+   * every rehearsal again, or imports every event again (T-270). So it turns
+   * Auto Sync off first, as the switch does, and the question says so. False:
+   * that could not be saved, it was said, and nothing should be removed.
+   */
+  const turnSyncOffForRemoval = async (): Promise<boolean> => {
+    if (!syncWouldRun) return true;
+    return save(SYNC_OFF);
   };
 
   const handleRemoveAll = () => {
     Alert.alert(
       t.calendarSync.removeAllConfirm,
-      '',
+      syncWouldRun ? t.calendarSync.autoSyncTurnsOff : '',
       [
         { text: t.common.cancel, style: 'cancel' },
         {
@@ -280,6 +294,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
           onPress: async () => {
             try {
               setIsRemoving(true);
+              if (!(await turnSyncOffForRemoval())) return;
               const result = await removeAll();
               logger.debug('[Sync] Removed exported events:', result);
               // Signed out before its turn: nothing was done, and nobody to tell.
@@ -309,26 +324,47 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     );
   };
 
+  /**
+   * What the privacy policy promises (T-270): every busy time that came from
+   * a calendar, from all of the person's devices — the server's rows, so no
+   * calendar access is needed. What they marked themselves stays. How many
+   * went is not said.
+   */
+  const handleClearImported = () => {
+    Alert.alert(
+      t.calendarSync.clearImportedConfirm,
+      syncWouldRun
+        ? `${t.calendarSync.clearImportedMessage}\n\n${t.calendarSync.autoSyncTurnsOff}`
+        : t.calendarSync.clearImportedMessage,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.calendarSync.clearImported,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsClearing(true);
+              if (!(await turnSyncOffForRemoval())) return;
+              const result = await clearImported();
+              // Signed out before its turn: nothing was done, and nobody to tell.
+              if (!result) return;
+              Alert.alert(t.calendarSync.clearImportedSuccess, '');
+            } catch (error: any) {
+              logger.error('[Sync] Failed to remove imported busy times:', error);
+              Alert.alert(t.common.error, requestErrorMessage(t, error, t.calendarSync.syncError));
+            } finally {
+              setIsClearing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Pressed only from "Sync Now", which is there only with calendar access,
+  // Auto Sync on and its calendar on this phone: nothing to check first.
   const handleSynchronize = async () => {
     logger.debug('[Sync] 🔄 handleSynchronize called');
-
-    if (!hasPermission) {
-      logger.debug('[Sync] ❌ No calendar permission');
-      Alert.alert(t.calendarSync.permissionDenied, t.calendarSync.permissionDeniedMessage);
-      return;
-    }
-
-    if (!syncEnabled || !selectedProvider) {
-      logger.debug('[Sync] ❌ Sync not enabled or no provider selected:', {
-        syncEnabled,
-        selectedProvider,
-      });
-      Alert.alert(
-        t.calendarSync.noCalendarsSelected || 'No calendar selected',
-        'Please enable sync and select a calendar first'
-      );
-      return;
-    }
 
     logger.debug('[Sync] ✅ Starting synchronization...');
     logger.debug('[Sync] 📊 Current settings:', {
@@ -351,7 +387,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       run = await synchronize();
     } catch (error: any) {
       logger.error('[Sync] ❌ Error during synchronization:', error);
-      Alert.alert(t.calendarSync.syncError || 'Sync Error', requestErrorMessage(t, error, t.auth.requestFailed));
+      Alert.alert(t.calendarSync.syncError, requestErrorMessage(t, error, t.auth.requestFailed));
       return;
     }
     // Ended with the session: there is nobody to tell.
@@ -375,22 +411,17 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       problems.push(requestErrorMessage(t, run.export.error, t.calendarSync.syncError));
     }
 
-    if (run.export.status === 'done' && run.export.result.rehearsals === 0 && problems.length === 0) {
-      Alert.alert(
-        t.calendarSync.syncSuccess || 'Sync Complete',
-        'No rehearsals found to sync. Create some rehearsals first!'
-      );
-      return;
-    }
-
     // The real counts. `syncResult?.success || allRehearsals.length` read
     // zero as "no answer" and fell back to the total, so the one run where
-    // nothing exported at all was reported as everything exporting.
-    const counts = `${t.calendarSync.imported || 'Imported'}: ${imported}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${exported}`;
+    // nothing exported at all was reported as everything exporting. A run
+    // with no rehearsals says so by its "0" too: an English sentence of its
+    // own told a participant, who cannot create any, to create some, and hid
+    // what was imported (T-270).
+    const counts = `${t.calendarSync.imported}: ${imported}\n${t.calendarSync.exportedRehearsals}: ${exported}`;
     if (problems.length > 0) {
-      Alert.alert(t.calendarSync.syncError || 'Sync Error', `${counts}\n\n${problems.join('\n')}`);
+      Alert.alert(t.calendarSync.syncError, `${counts}\n\n${problems.join('\n')}`);
     } else {
-      Alert.alert(t.calendarSync.syncSuccess || 'Sync Complete', counts);
+      Alert.alert(t.calendarSync.syncSuccess, counts);
     }
   };
 
@@ -474,11 +505,11 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                       <Ionicons name="logo-google" size={24} color="#fff" />
                     </View>
                     <View style={styles.calendarPickerText}>
-                      <Text style={styles.calendarPickerLabel}>Google Calendar</Text>
+                      <Text style={styles.calendarPickerLabel}>{t.onboarding.calendarSync.google}</Text>
                       <Text style={styles.calendarPickerSubtext}>
-                        {(selectedProvider === 'google' && selectedCalendarId
+                        {selectedProvider === 'google' && selectedCalendarId
                           ? calendars.find(c => c.id === selectedCalendarId)?.title
-                          : getProviderCalendar('google')?.title) || 'Gmail'}
+                          : getProviderCalendar('google')?.title}
                       </Text>
                     </View>
                   </View>
@@ -503,11 +534,11 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                       <Ionicons name="logo-apple" size={24} color="#fff" />
                     </View>
                     <View style={styles.calendarPickerText}>
-                      <Text style={styles.calendarPickerLabel}>Apple Calendar</Text>
+                      <Text style={styles.calendarPickerLabel}>{t.onboarding.calendarSync.apple}</Text>
                       <Text style={styles.calendarPickerSubtext}>
-                        {(selectedProvider === 'apple' && selectedCalendarId
+                        {selectedProvider === 'apple' && selectedCalendarId
                           ? calendars.find(c => c.id === selectedCalendarId)?.title
-                          : getProviderCalendar('apple')?.title) || 'iCloud'}
+                          : getProviderCalendar('apple')?.title}
                       </Text>
                     </View>
                   </View>
@@ -520,9 +551,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               {!hasGoogleCalendar && !hasAppleCalendar && (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="calendar-outline" size={48} color={Colors.text.tertiary} />
-                  <Text style={styles.emptyText}>
-                    {t.calendarSync.noCalendarsFound || 'No calendars found'}
-                  </Text>
+                  <Text style={styles.emptyText}>{t.calendarSync.noCalendarsFound}</Text>
                 </View>
               )}
             </View>
@@ -579,29 +608,51 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                   loading={isImporting || isSyncing}
                   style={styles.actionButton}
                 />
-
-                {/* Turning sync off only stops new writes — everything already
-                    exported stays in the user's own calendar. This is the way
-                    to take it back. */}
-                <TouchableOpacity
-                  testID="calendar-sync-remove-all"
-                  style={styles.removeAllButton}
-                  onPress={handleRemoveAll}
-                  disabled={isImporting || isSyncing || isRemoving}
-                >
-                  {isRemoving ? (
-                    <ActivityIndicator size="small" color={Colors.accent.red} />
-                  ) : (
-                    <>
-                      <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-                      <Text style={styles.removeAllText}>{t.calendarSync.removeAll}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
               </View>
             )}
           </>
         )}
+
+        {/* Taking back what sync did, whatever the switch says: turning it
+            off only stops new runs, and what was exported stays in the
+            phone's calendar, what was imported in Rehearsly (T-270). The
+            imported busy times are the server's, so their button needs no
+            calendar access; the exported events are in this phone's calendar,
+            so theirs does. */}
+        <View style={styles.section}>
+          {hasPermission && (
+            <TouchableOpacity
+              testID="calendar-sync-remove-all"
+              style={styles.removeAllButton}
+              onPress={handleRemoveAll}
+              disabled={isImporting || isSyncing || isRemoving || isClearing}
+            >
+              {isRemoving ? (
+                <ActivityIndicator size="small" color={Colors.accent.red} />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
+                  <Text style={styles.removeAllText}>{t.calendarSync.removeAll}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            testID="calendar-sync-clear-imported"
+            style={styles.removeAllButton}
+            onPress={handleClearImported}
+            disabled={isImporting || isSyncing || isRemoving || isClearing}
+          >
+            {isClearing ? (
+              <ActivityIndicator size="small" color={Colors.accent.red} />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
+                <Text style={styles.removeAllText}>{t.calendarSync.clearImported}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

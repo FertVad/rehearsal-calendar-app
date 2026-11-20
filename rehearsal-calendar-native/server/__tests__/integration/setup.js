@@ -64,6 +64,7 @@ export async function setupIntegrationDb() {
       project_id INTEGER NOT NULL REFERENCES native_projects(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
       role TEXT DEFAULT 'member',
+      character_name VARCHAR(100),
       status TEXT DEFAULT 'active',
       invited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -286,7 +287,7 @@ export async function setupIntegrationDb() {
         // Row locks: SQLite has one writer, so there is nothing to lock. What
         // FOR UPDATE or FOR SHARE buys against a second connection is proven on
         // PostgreSQL.
-        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|SHARE)\b/gi, '')
+        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|(?:KEY\s+)?SHARE)\b/gi, '')
         // SET LOCAL tunes the PostgreSQL session for one transaction — a
         // timeout, a lock wait — and SQLite has nothing to tune.
         .replace(/^\s*SET\s+LOCAL\s+[\s\S]*$/i, 'SELECT 1')

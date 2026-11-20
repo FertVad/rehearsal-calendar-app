@@ -135,7 +135,7 @@ tags:
       EMAIL: ${CAPULET_EMAIL}
       PASSWORD: ${PASSWORD}
       PROJECT: "Feud Ball"
-      MEMBER: ${TYBALT_EMAIL}
+      MEMBER: Tybalt Capulet
       ROLE: member
 - pressKey: Home
 - launchApp:

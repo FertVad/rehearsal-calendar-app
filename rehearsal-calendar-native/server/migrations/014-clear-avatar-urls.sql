@@ -1,0 +1,19 @@
+-- 014: no Google profile photos kept (T-273). PREPARED, NOT APPLIED.
+--
+-- A Google sign-in stored the link to the account's Google profile photo in
+-- native_users.avatar_url, and the members list handed it to everyone in the
+-- account's projects. The app never showed it: an avatar is initials. Since
+-- T-273 a sign-in stores no photo and the list gives none; this clears the
+-- links stored before. No other path ever wrote the column, so every non-NULL
+-- value is such a link.
+--
+-- Data only: the column stays (dropping it is a schema change — snapshot,
+-- catalog and inspector — and a separate decision). One statement, no
+-- transaction control; it is idempotent, and a rerun changes nothing.
+-- updated_at is left alone: nobody edited a profile.
+--
+-- Not in database/schema/manifest.mjs: the runner executes only structural
+-- steps keyed on what the catalog lacks, and has no slot for a data step.
+-- Whether, when and how to apply this to production is the owner's decision
+-- (audit/PRODUCTION_ACCESS.md).
+UPDATE native_users SET avatar_url = NULL WHERE avatar_url IS NOT NULL;

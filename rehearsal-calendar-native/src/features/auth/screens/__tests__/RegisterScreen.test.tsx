@@ -31,6 +31,11 @@ jest.mock('../../../../shared/components', () => {
   };
 });
 
+const mockPrivacyPageUrl = (language: string) => `http://127.0.0.1:3001/privacy?lang=${language}`;
+jest.mock('../../../../shared/services/api', () => ({
+  privacyPageUrl: (language: string) => mockPrivacyPageUrl(language),
+}));
+
 const navigation: any = { navigate: jest.fn(), popTo: jest.fn(), addListener: jest.fn(() => () => undefined) };
 const form = () => render(<RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} />);
 // The fields by their place in the form, the button by its title: the form
@@ -179,6 +184,18 @@ it('leaves the flow from its own button, not only on unmount (review R3-28)', ()
   expect(mockAuth.forgetPendingSignIn).toHaveBeenCalledTimes(1);
   expect(navigation.popTo).toHaveBeenCalledWith('Login');
   expect(navigation.navigate).not.toHaveBeenCalled();
+});
+
+// T-272: the form takes a name and an address, and the policy that says what
+// is done with them was nowhere before an account existed (App Review 5.1.1(i)).
+it('opens the privacy policy, in the app language, from under the form (T-272)', () => {
+  const { Linking } = require('react-native');
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  const view = form();
+  fireEvent.press(view.getByText(t.profile.privacyPolicy));
+  expect(open).toHaveBeenCalledWith(mockPrivacyPageUrl('ru'));
+  expect(mockAuth.register).not.toHaveBeenCalled();
+  open.mockRestore();
 });
 
 it('drops a registration in flight when the form is left', () => {

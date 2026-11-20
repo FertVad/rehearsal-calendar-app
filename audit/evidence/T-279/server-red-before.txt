@@ -1,0 +1,54 @@
+T-279 — server, red before the fix.
+Base: 47bb43f (routes/auth.js unchanged; services/appleRevocation.js not yet used by the route).
+Command: cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/accountDeletionAppleRevocation.test.js
+
+FAIL __tests__/routes/accountDeletionAppleRevocation.test.js
+  ✕ exchanges the code with a client secret signed by our key and revokes exactly the token Apple returned
+  ✕ without the key variables deletes the account, asks Apple nothing and logs one line that revocation is off
+  ✕ deletes the account when Apple is down, and logs why it was not revoked
+  ✕ deletes the account when Apple refuses the code, and logs why it was not revoked
+  ✕ deletes the account when Apple cannot be reached, and logs why it was not revoked
+  ✕ deletes the account when Apple refuses the revocation, and logs why it was not revoked
+  ✕ deletes the account when the person closed Apple’s sheet and no code came
+  ✕ does not revoke a different Apple ID than the one linked to the account
+  ✓ an account without Apple is deleted as before: no request to Apple, no Apple line
+  ✓ a revoked session deletes nothing and revokes nothing
+
+  ● exchanges the code with a client secret signed by our key and revokes exactly the token Apple returned
+    - Expected  - 4
+    + Received  + 1
+    - Array [
+    -   "https://appleid.apple.com/auth/token",
+    -   "https://appleid.apple.com/auth/revoke",
+    - ]
+    + Array []
+      > 148 |   expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
+
+  ● without the key variables deletes the account, asks Apple nothing and logs one line that revocation is off
+    - Array [
+    -   StringMatching /revocation is off.*APPLE_TEAM_ID/,
+    - ]
+    + Array []
+
+  ● deletes the account when Apple is down / refuses the code / cannot be reached
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+    Expected number of calls: 1
+    Received number of calls: 0
+
+  ● deletes the account when Apple refuses the revocation
+    Expected number of calls: 2
+    Received number of calls: 0
+
+  ● deletes the account when the person closed Apple’s sheet and no code came
+    - Array [
+    -   StringMatching /not revoked.*no authorization code/,
+    - ]
+    + Array []
+
+  ● does not revoke a different Apple ID than the one linked to the account
+    (no request to Apple at all)
+
+Tests:       8 failed, 2 passed, 10 total
+
+The two that pass are the "as before" guards: an account without Apple and a
+revoked session must not reach Apple, and before the fix nothing did.

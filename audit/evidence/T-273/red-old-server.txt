@@ -1,0 +1,21 @@
+$ git restore --source=HEAD -- routes/native/members.js routes/auth.js utils/accountLinking.js utils/oauthVerification.js   # (HEAD = d4af1c1, the fix uncommitted)
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/othersPersonalData.test.js
+
+FAIL __tests__/routes/othersPersonalData.test.js
+    ✕ names everyone, and gives nobody another's address or photo (90 ms)
+    ✕ creates the account without the Google photo (63 ms)
+    ✕ links an existing account without the Google photo (16 ms)
+  ● the members list › names everyone, and gives nobody another's address or photo
+    expect(received).not.toHaveProperty(path)
+    Expected path: not "email"
+    Received value: "admin@test.com"
+    > 64 |       expect(member).not.toHaveProperty('email');
+  ● a Google sign-in › creates the account without the Google photo
+    expect(received).toBeNull()
+    Received: "https://lh3.googleusercontent.com/a/someones-face=s96-c"
+    > 87 |     expect(avatarOf('nina@example.com')).toBeNull();
+  ● a Google sign-in › links an existing account without the Google photo
+    expect(received).toBeNull()
+    Received: "https://lh3.googleusercontent.com/a/someones-face=s96-c"
+    > 96 |     expect(avatarOf('member@test.com')).toBeNull();
+Tests:       3 failed, 3 total

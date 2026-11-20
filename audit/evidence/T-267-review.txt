@@ -1,0 +1,113 @@
+T-267 review (Astra): the e2e flow for the invite page, and each language read by its editor.
+
+== 1. Flow 98 (e2e/flows/98-invite-page-in-safari.yaml, tags: invite) ==
+
+Opens the local server's /invite/${TWELFTH_INVITE}?lang=en in Safari, answers
+Safari's 'Open this page in "Rehearsly"?' with Cancel (the app is on the
+simulator), and reads, in EN and then RU, ES, DE by the page's own switcher:
+the heading, step 1 "Install Rehearsly from the App Store.", the App Store
+button, step 2 "Come back ... Open invitation", the Open invitation button; and
+no "Rehearsal App".
+
+The App Store button is seen, not followed: the first version tapped it and
+waited for apps.apple.com, and Safari on the simulator (no App Store app)
+answered "Safari cannot open the page because the address is invalid".
+Where it leads (apps.apple.com/app/id6830809401) is the route test's.
+
+RED - server/app.js, server/routes/invitePage.js, server/public/invite-page/
+invite.js and invite.css restored from 7f7e2a2 (before T-267):
+
+  $ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml
+  [Failed] Invite page in Safari reads Rehearsly and its App Store steps in every language (40s) (Assertion is false: "Open in the App Store" is visible)
+  1/1 Flow Failed
+  screen: "🎭 Rehearsal App", "App didn't open automatically?", "Open App",
+  "If the app is not installed, install Rehearsly and return to this invitation."
+  (e2e/out/artifacts/2026-11-16_225912/.../screenshots/step-009-assertCondition-Open_in_the_App_Store.png)
+
+GREEN - files back from HEAD (and again after the editors' wording, below):
+
+  $ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml
+  [Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (36s)
+  1/1 Flow Passed in 36s
+  (screenshots 98-invite-en/ru/es/de: e2e/out/artifacts/2026-11-16_233003/.../takeScreenshot/)
+
+Existing invite flows, on HEAD:
+
+  $ npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml e2e/flows/09-invite-during-onboarding.yaml e2e/flows/43-invite-cold-start-close.yaml
+  [Passed] Invite link before sign-in (2m 44s)
+  [Passed] Invite link during onboarding (58s)
+  [Passed] Invite link at a cold start, turned down (1m 57s)
+  3/3 Flows Passed in 5m 39s
+
+  $ npm run e2e -- e2e/flows/63-project-new-rehearsal.yaml e2e/flows/80-invite-no-network-language.yaml e2e/flows/97-update-required.yaml
+  [Passed] Project's card, and a new rehearsal from its page (1m 51s)
+  [Passed] An invite with no network says so in the account's language (40s)
+  [Passed] Update required, then not (1m 14s)
+  3/3 Flows Passed in 3m 45s
+
+== 2. Each language read by its editor ==
+
+Each language was read on its own by an editor working as a native speaker
+of it. The standard is the one the app's native speakers set in T-256 and
+T-261 (src/i18n/__tests__/proofreadingEdits.test.ts): the same voice and terms
+as the app, one Spanish for every country, no "Ensemble" in German, a no-break
+space before the German ellipsis, « » in Russian and Spanish, „ “ in German.
+Reading the page's words only (server/routes/invitePage.js, TEXT).
+
+EN - editor's verdict: reads naturally; one edit.
+  - lead: "when the whole cast is free" -> "when everyone in the project is
+    free". "Cast" is a theatre word, the app names the people "participants"/
+    "everyone in the project", and a band or choir is not a cast.
+  - Kept: "You’ve been invited to a project", "Open in the App Store",
+    "Come back to this page and tap “Open invitation”.", the note.
+
+RU - editor's verdict: grammatical, idiomatic; one edit, for the same term.
+  - lead: "когда свободна вся команда" -> "когда свободны все участники
+    проекта" (the app's "участники").
+  - Kept: «Вас пригласили в проект», «Установите Rehearsly из App Store.»,
+    «Открыть в App Store», «Вернитесь на эту страницу и нажмите «Открыть
+    приглашение».» (quotes as the app's), the note.
+
+ES - editor's verdict: three edits for a Spanish every country reads alike.
+  - heading: "Te invitaron a un proyecto" (Latin American preterite; Spain
+    says "Te han invitado") -> "Tienes una invitación a un proyecto".
+  - lead: "todo el elenco" -> "todos los participantes" (the app's term since
+    T-256: "Todos los participantes"; "elenco" is the theatre's only).
+  - note: "Pasa directo al paso 2. Al instalarla, la invitación no se abre
+    sola" ("directo" as an adverb is regional; "al instalarla" dangled with
+    "la invitación" as subject) -> "Pasa directamente al paso 2. Instalarla no
+    abre la invitación".
+  - Kept: "Instala Rehearsly desde el App Store.", "Abrir en el App Store"
+    ("el App Store", as Apple and the landing write it), «Abrir invitación».
+
+DE - editor's verdict: du throughout, as the app and the landing; two edits.
+  - lead: "wann das ganze Ensemble frei ist" -> "wann alle im Projekt Zeit
+    haben" (T-256 took "Ensemble" out of the app).
+  - status: "Rehearsly wird geöffnet …" with a plain space -> a no-break
+    space before the ellipsis, so it cannot wrap alone (the app's rule).
+  - Kept: "Du wurdest zu einem Projekt eingeladen", "Installiere Rehearsly aus
+    dem App Store.", "Im App Store öffnen", „Einladung öffnen“, the note.
+
+Held by server/__tests__/routes/invitePage.test.js (EDITS: the new wording in
+its language, the old nowhere in it).
+
+RED - server/routes/invitePage.js restored from df7f3f8 (before the reading):
+  ✕ en reads as its editor left it: "shows when everyone in the project is free", not "whole cast"
+  ✕ ru reads as its editor left it: "когда свободны все участники проекта", not "свободна вся команда"
+  ✕ es reads as its editor left it: "Tienes una invitación a un proyecto", not "Te invitaron"
+  ✕ es reads as its editor left it: "cuándo están libres todos los participantes", not "elenco"
+  ✕ es reads as its editor left it: "Pasa directamente al paso 2. Instalarla no abre la invitación", not "directo al paso"
+  ✕ de reads as its editor left it: "wann alle im Projekt Zeit haben", not "Ensemble"
+  ✕ de reads as its editor left it: "Rehearsly wird geöffnet …", not "Rehearsly wird geöffnet …"
+  Tests:       7 failed, 6 passed, 13 total
+
+GREEN - HEAD:
+  Tests:       13 passed, 13 total
+  npm run test:invite-browser: tests 15, pass 15, fail 0
+
+== Server Jest, whole ==
+  Test Suites: 1 failed, 79 passed, 80 total
+  Tests:       8 failed, 1183 passed, 1191 total
+  The one failing suite is __tests__/startup/runtimeStartup.test.js ("import-failed"
+  in its copied server). It fails the same 8 with server/app.js, routes/invitePage.js
+  and public/invite-page/* restored from 7f7e2a2, before T-267: not this task's.

@@ -1,0 +1,34 @@
+T-264 red before: flow 86 on auto/main 96b44af (server, src, shared, e2e/flows identical to d1c1be1;
+only e2e runner files differ), unchanged flow.
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[e2e] native inputs 836f6eaa3311 (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] Rehearsal notices read right in Spanish, German and Russian (1m 54s) (No visible element found: ".*Ya no estás en el proyecto.*Ya no formas parte del proyecto Fuenteovejuna.*")
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The cards on screen in the nightly red run (full-e2e-d1c1be1-2026-11-16T06-43-29-117Z,
+screen-hierarchy step-092), Spanish inbox:
+  Ya no estás en el proyecto, Ya no formas parte del proyecto «Fuenteovejuna»
+  Cambio de rol, Ahora administras el proyecto «Fuenteovejuna»
+The flow looks for "proyecto Fuenteovejuna" and "Ahora administras Fuenteovejuna" — the
+wording before 2bc021e (T-261 second native reading: "Spanish project pushes in quotes"),
+server/i18n/pushNotifications.js:
+  -  (admin ? `Ahora administras ${projectName}` : ...)
+  +  (admin ? `Ahora administras el proyecto ${es(projectName)}` : ...)
+  -  `Ya no formas parte del proyecto ${projectName}`,
+  +  `Ya no formas parte del proyecto ${es(projectName)}`,

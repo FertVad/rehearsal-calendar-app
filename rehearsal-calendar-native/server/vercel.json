@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "codex/systematic-repair": false,
       "claude/systematic-repair": false,
-      "auto/main": false
+      "auto/main": false,
+      "claude/server-for-app-review": false
     }
   },
   "builds": [

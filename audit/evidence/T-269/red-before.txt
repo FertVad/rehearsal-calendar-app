@@ -1,0 +1,29 @@
+T-269: privacyPage.test.js on the pages of 621d3a5 (test from 9a1b77b)
+cd rehearsal-calendar-native/server
+NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/privacyPage.test.js --silent
+
+Tests:       39 failed, 5 passed, 44 total
+
+Failed, for each of en, ru, es, de:
+  privacy policy › confirms that the providers protect the data as this policy does
+  privacy policy › names sign-in times, the notification inbox and the seen marks
+  privacy policy › says what happens to the IP address and how long the history lasts
+  privacy policy › names no button the app does not have
+  privacy policy › says that switching Auto Sync off keeps what was imported
+  privacy policy › promises no card payment: the app is free, with no purchases
+  Google and Apple sign-in data › has its own section, saying what is received, why, where it goes and how it is removed
+  Google and Apple sign-in data › carries the Limited Use statement word for word, with the link to the policy
+
+Failed, for each of ru, es, de:
+  privacy policy › sends people to the calendar screen by its name in the app (de only; en, ru and es passed)
+  privacy page does not guess the reader's gender
+  support page does not guess the reader's gender
+
+The first-person check on the support page, with support.html of a3197de~1 (before T-268):
+  Tests: 1 failed, 43 skipped, 44 total
+  Expected pattern: not /[а-яё]{3,}[аеиыя]лся(?![а-яё])/i
+
+On the fix (9a1b77b):
+  privacyPage + supportPage + privacyProcessors: all 82 passed
+  whole server Jest: 1256 passed, 8 failed, all 8 in startup/runtimeStartup.test.js
+  runtimeStartup.test.js on the pages of 621d3a5: the same 8 of 11 failed

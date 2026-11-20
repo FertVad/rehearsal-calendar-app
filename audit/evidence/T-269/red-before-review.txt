@@ -1,0 +1,20 @@
+T-269, review round 1. server/__tests__/routes/privacyPage.test.js, through /privacy and /support.
+
+Page at d9deca1, new checks added:
+  Tests: 20 failed, 44 passed, 64 total
+  Failed, in each of en, ru, es, de (5 x 4):
+    says the name stays in notifications already sent, and for how long
+    promises no complete removal the server does not perform
+    names the delivery services that carry the name
+    does not claim the sign-in token's photo and language are never read
+    separates what Apple sends at every sign-in from the name it sends once
+
+Page with the fix:
+  privacyPage, supportPage, privacyProcessors, legalPageLanguage
+  Test Suites: 4 passed, 4 total
+  Tests: 105 passed, 105 total
+
+Whole server Jest with the fix:
+  Test Suites: 1 failed, 82 passed, 83 total
+  Tests: 8 failed, 1276 passed, 1284 total
+  The 8 are all in startup/runtimeStartup.test.js, the same 8 recorded on the base in privacy-policy.md.

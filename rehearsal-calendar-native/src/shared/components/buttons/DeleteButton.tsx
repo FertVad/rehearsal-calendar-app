@@ -7,17 +7,20 @@ interface DeleteButtonProps {
   title: string;
   onPress: () => void;
   testID?: string;
+  /** Leaving a project is no deletion: it goes out by a door, not to the bin (T-271). */
+  icon?: 'trash-outline' | 'exit-outline';
 }
 
 /**
  * The button that deletes something whole — a project, the account. One look
  * for both, last on its screen (T-024): the account's was a red row among
- * Help and the bug report, 8 pt from Help.
+ * Help and the bug report, 8 pt from Help. Leaving a project looks the same,
+ * with its own icon: what is lost to the person who taps it is as whole.
  */
-export function DeleteButton({ title, onPress, testID }: DeleteButtonProps) {
+export function DeleteButton({ title, onPress, testID, icon = 'trash-outline' }: DeleteButtonProps) {
   return (
     <TouchableOpacity style={styles.button} testID={testID} onPress={onPress} activeOpacity={0.7}>
-      <Ionicons name="trash-outline" size={20} color={Colors.accent.red} />
+      <Ionicons name={icon} size={20} color={Colors.accent.red} />
       <Text style={styles.text}>{title}</Text>
     </TouchableOpacity>
   );

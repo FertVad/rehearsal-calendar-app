@@ -26,6 +26,7 @@ import { formatDate } from '../../../shared/utils/dateFormat';
 import { useI18n } from '../../../contexts/I18nContext';
 import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
 import type { Rehearsal as RehearsalInterval } from '../../../shared/types';
@@ -54,8 +55,6 @@ interface Member {
   characterName?: string;
   firstName: string;
   lastName?: string;
-  email: string;
-  avatarUrl?: string;
   joinedAt: string;
 }
 
@@ -133,6 +132,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId, section } = route.params;
   const { t } = useI18n();
   const { refreshProjects } = useProjects();
+  const { user } = useAuth();
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -405,6 +405,38 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
     );
   }, [project, projectId, navigation, t, refreshProjects]);
 
+  // Leaving is removing oneself: the same DELETE on one's own membership,
+  // which the server has allowed anyone but the owner since 2026-09-05. The app
+  // had no way to ask it, so whoever came in by an invite could not get out
+  // (T-271). Those who run the project are told; the owner deletes it instead.
+  const handleLeaveProject = useCallback(() => {
+    if (!project || !user) return;
+
+    Alert.alert(
+      t.projects.leaveProjectConfirm,
+      t.projects.leaveProjectMessage(project.name),
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.projects.leaveProject,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsDeleting(true);
+              await projectsAPI.removeMember(projectId, String(user.id));
+              // Off the list before it shows again, as after a deletion.
+              await refreshProjects();
+              navigation.replace('ProjectsMain');
+            } catch (err: any) {
+              setIsDeleting(false);
+              Alert.alert(t.common.error, requestErrorMessage(t, err, t.projects.leaveProjectError));
+            }
+          },
+        },
+      ]
+    );
+  }, [project, user, projectId, navigation, t, refreshProjects]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -639,13 +671,23 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
           </View>
         </View>
 
-        {/* Delete Project Button (owner only) */}
-        {isOwner && (
+        {/* The owner deletes the project; everyone else may leave it */}
+        {isOwner ? (
           <View style={styles.section}>
             <DeleteButton
               title={t.projects.deleteProject}
               testID="project-delete"
               onPress={handleDeleteProject}
+            />
+          </View>
+        ) : (
+          // Everyone else may leave; the owner cannot — the server answers 403.
+          <View style={styles.section}>
+            <DeleteButton
+              title={t.projects.leaveProject}
+              testID="project-leave"
+              icon="exit-outline"
+              onPress={handleLeaveProject}
             />
           </View>
         )}
