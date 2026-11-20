@@ -1,0 +1,496 @@
+/* ============================================================
+   Rehearsly — cinematic landing, prototype.
+   The canvas is fixed behind everything; each beat is a tall
+   section whose words stick while the camera moves (cinema.js).
+   Palette from the app (src/shared/constants/colors.ts).
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+  --bg:       #07080c;
+  --fg:       #e9eef5;
+  --fg-2:     #9aa3ae;
+  --fg-3:     #6a727c;
+  --accent:   #a855f7;
+  --accent-2: #9333ea;
+  --free:     #10b981;
+  --partial:  #f59e0b;
+  --busy:     #ef4444;
+  --line:     rgba(139, 148, 158, .22);
+
+  --sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gutter: clamp(16px, 5vw, 72px);
+}
+/* Instrument Sans has no Cyrillic; Inter Tight has both alphabets. */
+:root:lang(ru) { --sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+:root:lang(ru) .display { letter-spacing: -.035em; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+[data-l] { font-weight: inherit; font-style: inherit; }
+.nw { white-space: nowrap; }
+/* Headings wrap into even lines; running text avoids a lone last word. */
+h1, h2, h3, .eyebrow { text-wrap: balance; }
+.lede, .body, .pains li, .perks p, .mini p { text-wrap: pretty; }
+
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ── The stage ─────────────────────────────────────────── */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+/* Film grain and a vignette, in CSS: no post-processing pass on the GPU. */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: .07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 1s steps(4) infinite;
+}
+@keyframes grain {
+  25% { transform: translate(-4%, 3%); }
+  50% { transform: translate(3%, -5%); }
+  75% { transform: translate(-2%, -3%); }
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0, 0, 0, .55) 100%);
+}
+
+/* Labels the scene projects onto the screen: names, hours, the free window. */
+.labels { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+.label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: rgba(233, 238, 245, .85);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .8);
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.label--name { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.ava {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  color: #fff;
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, calc(var(--pop, 0) * .35)), 0 0 18px rgba(168, 85, 247, calc(var(--pop, 0) * .8));
+  transform: scale(calc(1 + var(--pop, 0) * .25));
+}
+/* Not yet in the project: an outline waiting for the link. */
+.label--name.is-out .ava { background: transparent; box-shadow: inset 0 0 0 1px rgba(168, 85, 247, .6); color: rgba(241, 228, 255, .6); }
+.label--name.is-out .nm { opacity: .5; }
+
+/* A production's name over its panel, and what the panels say. */
+.label--proj {
+  width: var(--w, 140px);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -.005em;
+  line-height: 1.2;
+  white-space: normal;
+  text-align: center;
+  color: rgba(233, 238, 245, .9);
+}
+.label--note {
+  padding: 7px 10px;
+  border: 1px solid rgba(239, 68, 68, .5);
+  border-radius: 8px;
+  background: rgba(7, 8, 12, .62);
+  color: #ffd0d0;
+  line-height: 1.45;
+}
+.label--note.is-violet { border-color: rgba(168, 85, 247, .6); color: #ecdcff; }
+.label--note small { display: block; font-size: 11px; color: rgba(233, 238, 245, .6); }
+.nm { font-size: 11px; color: rgba(233, 238, 245, .72); letter-spacing: .02em; }
+.label--hour { color: rgba(233, 238, 245, .55); }
+.label--gap {
+  padding: 7px 10px;
+  border: 1px solid rgba(16, 185, 129, .55);
+  border-radius: 8px;
+  background: rgba(7, 8, 12, .62);
+  color: #b9f5dd;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+.label--gap small { display: block; color: var(--free); font-size: 11px; }
+
+/* ── Header ────────────────────────────────────────────── */
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px var(--gutter);
+  background: linear-gradient(180deg, rgba(7, 8, 12, .8), rgba(7, 8, 12, 0));
+}
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand__mark { width: 22px; height: auto; }
+.brand__name { font-weight: 600; font-size: 18px; letter-spacing: -.01em; }
+.lang {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(7, 8, 12, .5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.lang button {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-3);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.lang button[aria-pressed="true"] { background: rgba(168, 85, 247, .22); color: var(--fg); }
+
+/* ── Beats ─────────────────────────────────────────────── */
+
+main { position: relative; z-index: 4; }
+
+.beat { position: relative; height: 150vh; }
+.beat--hero { height: 170vh; }
+/* A screen of room after the last beat, so that beat can play to its end. */
+.beat--outro { height: 100vh; }
+
+/* The words of every beat sit in one place over the scene; cinema.js shows
+   the beat being scrolled and fades the rest. The sections are only the
+   distance the scroll travels. */
+.beat__copy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  width: min(520px, 44vw);
+  margin-left: var(--gutter);
+  padding: 80px 0 40px;
+}
+.beat__copy > * { margin: 0; }
+.beat--hero .beat__copy { width: min(640px, 48vw); }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.display {
+  font-size: clamp(44px, 6.4vw, 92px);
+  line-height: .98;
+  letter-spacing: -.045em;
+  font-weight: 600;
+}
+.display > [data-l] > b { display: block; font-weight: inherit; }
+.muted { color: var(--fg-3); }
+.grad {
+  background: linear-gradient(96deg, var(--fg) 30%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lede { font-size: 19px; line-height: 1.5; color: var(--fg-2); max-width: 30em; }
+.step-num { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+.step-num span { color: var(--fg-3); }
+h2 { font-size: clamp(30px, 3.6vw, 50px); line-height: 1.05; letter-spacing: -.035em; font-weight: 600; }
+.body { font-size: 18px; line-height: 1.55; color: var(--fg-2); max-width: 28em; }
+.t-free { color: var(--free); }
+.t-partial { color: var(--partial); }
+.t-busy { color: var(--busy); }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 6px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.btn--primary { background: var(--accent); color: #0b0d12; }
+.btn--ghost { border: 1px solid var(--line); background: rgba(7, 8, 12, .45); }
+
+/* A soft dark field behind the words, so they read over any frame. */
+.beat__copy::before {
+  content: '';
+  position: absolute;
+  inset: 0 -12vw 0 calc(-1 * var(--gutter));
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(7, 8, 12, .78) 0%, rgba(7, 8, 12, .5) 60%, transparent 100%);
+}
+
+/* Lists inside the beats. */
+.pains { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; max-width: 30em; }
+.pains li { position: relative; padding-left: 20px; font-size: 17px; line-height: 1.5; color: var(--fg-2); }
+.pains li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: .62em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--busy);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, .14);
+}
+.perks { display: grid; gap: 18px; padding: 0; margin: 0; list-style: none; max-width: 30em; }
+.perks h3 { margin: 0 0 4px; font-size: 19px; letter-spacing: -.02em; font-weight: 600; }
+.perks p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--fg-2); }
+/* The first perk of the notifications beat is its headline. */
+.perks--lead li:first-child h3 { font-size: clamp(30px, 3.6vw, 50px); line-height: 1.05; letter-spacing: -.035em; margin-bottom: 14px; }
+.perks--lead li:first-child p { font-size: 18px; line-height: 1.55; }
+.perks--lead li + li { padding-top: 18px; border-top: 1px solid var(--line); }
+#projects .lede { color: var(--fg); font-weight: 500; }
+
+/* The pictures the scene draws in 3D are HTML too, shown only without it. */
+.beat__media { display: none; }
+
+/* ── Beats that scroll as a page does: details and the call ── */
+
+.beat--flow { height: auto; }
+/* The details are a page sliding over the scene: dark from just below
+   their top edge, so nothing of the scene shows through the cards. */
+#details { background: linear-gradient(180deg, transparent 0, var(--bg) 200px); }
+/* Long enough that its notifications land before the details arrive. */
+#notify { height: 220vh; }
+.beat--flow .beat__copy {
+  position: relative;
+  height: auto;
+  width: auto;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 140px var(--gutter) 120px;
+}
+.beat--flow .beat__copy::before { display: none; }
+.minis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 0;
+  margin: 18px 0 0;
+  list-style: none;
+}
+.mini {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(13, 17, 23, .72);
+}
+.mini h3 { margin: 0 0 8px; font-size: 19px; letter-spacing: -.02em; font-weight: 600; }
+.mini p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--fg-2); }
+
+.beat--get .beat__copy {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: min(620px, 46vw);
+  max-width: none;
+  margin: 0 0 0 var(--gutter);
+  padding: 80px 0;
+}
+.beat--get .display { font-size: clamp(44px, 5.6vw, 84px); }
+.beat--get .display .muted { display: block; }
+.soon { align-self: center; font-family: var(--mono); font-size: 12px; color: var(--fg-3); }
+
+/* ── Footer ────────────────────────────────────────────── */
+
+.foot {
+  position: relative;
+  z-index: 5;
+  padding: 64px var(--gutter) 40px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.foot .wrap { max-width: 1160px; margin: 0 auto; }
+.foot__grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 40px; }
+.foot__brand { display: flex; flex-direction: column; gap: 14px; }
+.foot__brand p { margin: 0; max-width: 280px; font-size: 14px; line-height: 1.6; color: var(--fg-2); }
+.foot__col { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; font-size: 14px; color: var(--fg-2); }
+.foot__title { margin: 0 0 4px; font-size: 12px; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); font-weight: 500; }
+.foot__base { display: flex; justify-content: space-between; margin-top: 48px; font-size: 13px; color: var(--fg-3); }
+
+/* ── A phone held upright: words on top, the scene under them ── */
+
+@media (max-aspect-ratio: 3/4) {
+  .beat__copy {
+    right: 0;
+    width: auto;
+    margin: 0 var(--gutter);
+    justify-content: flex-start;
+    padding-top: 92px;
+    gap: 14px;
+  }
+  .beat__copy::before {
+    inset: 0 calc(-1 * var(--gutter)) 40% calc(-1 * var(--gutter));
+    background: linear-gradient(180deg, rgba(7, 8, 12, .85) 0%, rgba(7, 8, 12, .6) 65%, transparent 100%);
+  }
+  .display { font-size: clamp(38px, 11vw, 56px); }
+  .lede, .body { font-size: 16px; }
+  h2 { font-size: clamp(26px, 7.4vw, 34px); }
+  .label { font-size: 10px; }
+  .nm { display: none; }
+  .ava { width: 22px; height: 22px; font-size: 8.5px; }
+
+  /* The first screen is the words alone, in the middle; the phone waits
+     under them and rises as they leave (cinema.js). */
+  .beat--hero .beat__copy {
+    width: auto;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 64px 0 17vh;
+    gap: 18px;
+  }
+  .beat--hero .beat__copy::before { display: none; }
+  .beat--hero .display { font-size: clamp(40px, 12.4vw, 62px); }
+  .beat--hero .lede { font-size: 17px; color: #b8c0ca; }
+  .beat--hero .btn-row { justify-content: center; }
+
+  .pains { gap: 8px; }
+  .pains li { font-size: 15px; }
+  .perks { gap: 12px; }
+  .perks h3 { font-size: 17px; }
+  .perks p { font-size: 15px; }
+  .perks--lead li:first-child h3 { font-size: clamp(26px, 7.4vw, 34px); margin-bottom: 10px; }
+  .perks--lead li:first-child p { font-size: 16px; }
+  .perks--lead li + li { padding-top: 12px; }
+  #projects .lede { font-size: 17px; }
+  #projects .body { font-size: 15px; }
+  .label--proj { font-size: 10px; letter-spacing: -.01em; }
+
+  .beat--flow .beat__copy { padding: 110px var(--gutter) 90px; }
+  .minis { grid-template-columns: 1fr; }
+  .beat--get .beat__copy {
+    width: auto;
+    margin: 0 var(--gutter);
+    justify-content: flex-start;
+    align-items: center;
+    text-align: center;
+    padding: 108px 0 0;
+  }
+  .beat--get .display { font-size: clamp(40px, 12vw, 60px); }
+  .beat--get .btn-row { justify-content: center; }
+  .foot__grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+  .foot__brand { grid-column: 1 / -1; }
+}
+
+/* ── Without the scene ─────────────────────────────────── */
+
+.no-3d .stage,
+.no-3d .labels,
+.no-3d .grain { display: none; }
+.no-3d .beat,
+.no-3d .beat--hero { height: auto; }
+.no-3d .beat__copy { position: static; height: auto; padding: 120px 0 40px; opacity: 1 !important; visibility: visible !important; transform: none !important; }
+.no-3d .beat__media { display: block; margin: 0 var(--gutter) 40px; max-width: 400px; }
+.no-3d .chat > [data-l]:not([hidden]),
+.no-3d .lock > [data-l]:not([hidden]) { display: flex; flex-direction: column; gap: 8px; }
+.no-3d .chat__head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.no-3d .chat__head b, .no-3d .chat__head small { display: block; }
+.no-3d .chat__head small { font-size: 12px; color: var(--fg-3); }
+.no-3d .chat__avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #2a1f40; color: var(--accent); }
+.no-3d .msg, .no-3d .note { align-self: flex-start; max-width: 86%; margin: 0; padding: 9px 13px; border-radius: 16px; background: #21262d; }
+.no-3d .msg--out { align-self: flex-end; background: var(--accent-2); }
+.no-3d .msg__who { display: block; font-size: 12px; font-weight: 600; }
+.no-3d .msg__who--1 { color: #fbbf24; }
+.no-3d .msg__who--2 { color: #34d399; }
+.no-3d .msg__who--3 { color: #60a5fa; }
+.no-3d .msg__who--4 { color: #f472b6; }
+.no-3d .chat__pin { align-self: center; margin: 0; font-size: 12px; color: var(--fg-3); }
+.no-3d .chat__seen { align-self: flex-end; margin: 0; font-family: var(--mono); font-size: 11px; color: var(--fg-3); }
+.no-3d .lock__time { margin: 0; text-align: center; font-size: 52px; font-weight: 600; }
+.no-3d .lock__date { margin: 0 0 8px; text-align: center; color: var(--fg-2); }
+.no-3d .note { display: flex; gap: 11px; align-self: stretch; max-width: none; }
+.no-3d .note > div { flex: 1; }
+.no-3d .note p { margin: 0; }
+.no-3d .note__icon { flex: none; width: 34px; height: 34px; border-radius: 8px; }
+.no-3d .note__meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-2); }
+.no-3d .note__title { font-weight: 600; }
+.no-3d .note__body { font-size: 14px; color: var(--fg-2); }
+
+/* ── The audience pages (variant.js) ───────────────────── */
+
+/* "Link copied" in the button's own place, at the button's own width. */
+.btn.is-done { position: relative; }
+.btn.is-done > [data-l] { visibility: hidden; }
+.btn.is-done::after {
+  content: attr(data-done);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Their headlines run longer than the general page's ("«когда можешь?»"
+   cannot break), so one size down keeps each row inside its column on
+   wide screens; tall screens keep their own sizes from above. */
+@media not all and (max-aspect-ratio: 3/4) {
+  .beat--hero .display--long { font-size: clamp(40px, 5.6vw, 76px); }
+  .beat--get .display--long { font-size: clamp(40px, 5vw, 72px); }
+}
+/* On a phone the call's shot needs the details to be a screen and a half
+   long: the phone flies to it behind them, with the lock screen still on.
+   Three cards are shorter than that and would let the call arrive
+   mid-flight; six already are about that long. */
+@media (max-aspect-ratio: 3/4) {
+  #details.details--few { min-height: 155vh; min-height: 155svh; }
+  /* Their last headline's second row is a block of its own, and a word
+     like "Probenleitung." alone ran past both edges at 12vw; and
+     "“¿cuándo puedes?”" cannot break either. */
+  .beat--get .display--long { font-size: clamp(34px, 10.5vw, 56px); }
+  .beat--hero .display--long { font-size: clamp(36px, 11.6vw, 58px); }
+  /* Spanish quotes the question in «», wider than “”, and the row still
+     cannot break: one step down keeps it inside the 16px gutter. */
+  :root:lang(es) .beat--hero .display--long { font-size: clamp(32px, 10.6vw, 54px); }
+}
+/* The seen marker inside a sentence, drawn as the app draws it. */
+.eye-ic { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -.3em; color: var(--accent); }

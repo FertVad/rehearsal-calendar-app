@@ -105,30 +105,52 @@ use, or Universal Links will not work.
 
 ```
 server/public/
-├── index.html           # Landing — all four locales in the markup
-├── styles.css           # Landing design system (dark theme, glass morphism)
-├── i18n.js              # Language toggle, reveals, and the phone scroll
+├── index.html           # Landing, at / — the general one; all four locales in the markup
+├── lead.html            # /lead — for whoever books the rehearsals (noindex, a variant)
+├── cast.html            # /cast — for the people who rehearse (noindex, a variant)
+├── cinema.css           # The three pages' design (dark, cinematic)
+├── cinema.js            # The page as one 3D scene: three.js from vendor/, phones with the app's screens
+├── lang.js              # The language, settled in <head> before the first layout
+├── i18n.js              # Language toggle; tells the scene with a langchange event
+├── variant.js           # What tells /lead and /cast apart, without any analytics
+├── vendor/              # three.module.min.js (r186, MIT), served from here, never a CDN
 ├── privacy.html         # Privacy Policy — EN/RU/ES/DE
 ├── support.html         # Support — EN/RU/ES/DE
 ├── legal.css            # Shared styling for the two pages above
 ├── legal.js             # Their language toggle (4 locales, shared storage key)
-└── assets/              # Phone frames and screen strips (WebP), logo, favicons
+└── assets/              # Each language's screens ({en,ru,es,de}/*.webp), status bar, logo, favicons
 ```
-- **Stack**: Pure HTML/CSS/JS, no build tools, no third-party scripts
-- **Routes**: `/` → landing, `/privacy`, `/support` (the `extensions: ['html']`
-  option on `express.static` is what makes the extensionless paths work)
+- **Stack**: Pure HTML/CSS/JS, no build tools. Every script is served from
+  here, three.js included; the only outside request is Google Fonts, which the
+  CSP allows (`middleware/securityHeaders.js`).
+- **Routes**: `/` → landing, `/lead`, `/cast`, `/privacy`, `/support` (the
+  `extensions: ['html']` option on `express.static` is what makes the
+  extensionless paths work)
+- **The CSP holds for these pages too**: no inline `<script>`, no `on…=`
+  handlers and no `style="…"` attributes — `style-src` has no
+  `'unsafe-inline'`, so the browser drops them without a word. A page checked
+  from a file or a plain static server never sees this; check it through the
+  app's own headers.
+- **A module script goes through CORS**: the browser fetches `cinema.js` and
+  three.js with an `Origin` header, even from the page's own address. The page
+  must therefore be on an origin `app.js` allows — `BASE_URL` in production
+  (exactly `https://rehearsly.me`), `http://localhost:3001` locally; anywhere
+  else the server answers 500 for the script and the scene never starts.
 - **i18n**: every language ships in the markup and one is hidden, so the pages
   stay readable without JavaScript — all four on every page. Each language is
   written on its own terms rather than translated slot by slot, which is why
   there is no dictionary in `i18n.js`. The choice is stored under
   `rehearsly-lang`, shared with `legal.js`; `?lang=de` overrides it for a link.
-- **Phone mock-ups**: a frame pins to the middle of the viewport (CSS `sticky`)
-  while its screenshot scrolls inside, so a whole app screen can be read
-  without leaving the section. `assets/` is generated from the raw simulator
-  shots by `screens/build-assets.py`, which lifts the status bar, tab bar and
-  the planner's own pinned header out of the images and stitches the frames of
-  one screen into a single strip by matching row signatures. Reshoot a screen
-  and rerun it.
+- **Two audiences, one scene**: `/lead` and `/cast` say the same thing to the
+  two sides of a rehearsal. `variant.js` puts the page's name in the subject of
+  the access request, and "send it to your director" on `/cast` hands on
+  `/lead`. The pages read the same if it never runs.
+- **The phones' screens**: `assets/{en,ru,es,de}/` is generated from the raw
+  simulator shots in `screens/shots/` by `screens/build-assets.py`, which lifts
+  the status bar, tab bar and a screen's own pinned header out of the images
+  and stitches the frames of one screen into a single strip by matching row
+  signatures. Each language is shot in its own demo world
+  (`screens/shots/README.md`). Reshoot a screen and rerun it.
 - **To preview**: run the server and open `http://localhost:3001/`
 - **Deployment gotcha**: `vercel.json` needs `includeFiles: "public/**"` —
   `express.static` resolves paths at runtime, so the bundler cannot infer the
