@@ -1,4 +1,4 @@
-# App Store screenshots (T-274) and preview video (T-275)
+# App Store screenshots (T-274) and preview video (T-275, T-285)
 
 Eight screenshots of the real app, taken on the local e2e stand and made into
 the App Store's pictures: a two-line caption at the top, the screenshot under
@@ -39,56 +39,115 @@ What comes out, outside git (`.gitignore`):
 The pages are `en-US`, `en-GB`, `ru`, `es-ES` (uploaded for es-MX too) and
 `de-DE`. PNG without alpha, which App Store Connect refuses.
 
-## The preview video (T-275)
+## The preview video (T-275, made anew by T-285)
 
 ```bash
 cd rehearsal-calendar-native
-node e2e/store/record.mjs ru          # one page; about eight minutes
+node e2e/store/montage.mjs            # the cut, from the last recordings; every page
+node e2e/store/montage.mjs ru --preview=../audit/evidence/<task>   # one page, and three frames of it
+node e2e/store/record.mjs ru          # record a page again; about eight minutes
 node e2e/store/record.mjs             # every page, one after another
-node e2e/store/montage.mjs            # only the cut again, from the last recordings
-node e2e/store/record.mjs ru --preview=../audit/evidence/<task>   # and a preview frame sheet of it
 ```
 
-The same stand, simulator and hours as the screenshots (seeded before 20:00 in
-the page's country; record.mjs refuses up front as shoot.mjs does). Needs
-ffmpeg (`brew install ffmpeg`). Then watch every video before it is uploaded.
+Run by hand, never in the ordinary e2e run. Recording takes the same stand,
+simulator and hours as the screenshots (seeded before 20:00 in the page's
+country; record.mjs refuses up front as shoot.mjs does). Needs ffmpeg (`brew
+install ffmpeg`). Then watch every video before it is uploaded.
 
 What comes out, outside git: `e2e/store/out/video/<locale>.mp4` — 886×1920, 30
-fps, H.264 High at 10 Mb/s, a silent stereo AAC track at 48 kHz (App Store
-Connect refuses a preview without sound), 29.8 s; and the recordings it was
-cut from, `e2e/store/out/clips/<locale>/01.mov…07.mov`, each with the flow's
-pauses beside it (`01.json`). Upload es-ES's for es-MX too.
+fps, H.264 High at 10 Mb/s, 27.2 s, and a silent stereo AAC track at 48 kHz;
+and the recordings it was cut from, `e2e/store/out/clips/<locale>/01.mov…07.mov`,
+each with the flow's pauses beside it (`01.json`). Upload es-ES's for es-MX too,
+and set each preview's poster frame (`previewFrameTimeCode`) to **00:00:02:15**:
+montage.mjs prints it.
 
-- `video.yaml` — the storyboard, played at a person's pace: 1 the Planner
-  filling (the cover; set the poster frame to it in App Store Connect), 2 two
-  days marked busy, 3 Calendar Sync on, 4 three people picked in the Planner,
-  5 the form naming who is busy and its save asking about it, 6 the seen count
-  to 12 of 12 (seven of the cast mark it through the API while it is on
-  screen, `scripts/seen.js`), 7 the week, then the landing's mark and name.
-  Each shot is recorded on its own (`xcrun simctl io <udid> recordVideo
+### The preview video's rules
+
+Apple's (developer.apple.com/app-store/app-previews; App Review 2.3.4), and
+what App Review has refused previews for ("Includes device images and/or
+device frames", "Includes framing around the video screen capture of the
+app"). Keep to them whatever the next storyboard is:
+
+1. **The whole frame is the app.** The recording fills all 886×1920: scaled
+   down to it and no more (no zoom), the simulator's hair of extra height cut
+   evenly off the top and the bottom. No device frame, no rounded window, no
+   landing background, no band above the recording, no border, no shadow.
+   Shots are joined by a cut, or by a dissolve to the closing card.
+2. **Captions over the recording.** Bold SF Pro in white, one size for the
+   language (its widest line sets it), lines broken only where captions.json
+   breaks them — never by the composer. Under the lines a soft dark band, only
+   as tall as the text: solid enough under them that white reads at 4.5:1 or
+   more over anything, fading out above and below. Each caption on screen at
+   least 2 s. Its place, the top or the bottom, is chosen for each shot so the
+   band does not cover what the caption is about (below).
+3. **Sign-in, said.** Rehearsly does nothing without signing in, and Apple
+   asks an app that needs it to say so in the preview. The closing card says
+   it (captions.json `signIn`) under the mark and the name for the whole card,
+   about 3 s, at 40 px or more; when one line would be smaller, it breaks
+   after its colon (ru after «Нужен вход»).
+4. **The poster frame** is the end of the hook's shot: the Planner's windows
+   come, the hook still on. Its time code goes to App Store Connect.
+5. **No sound** but a silent track: App Store Connect refuses a preview with
+   no audio track at all.
+
+**Why the video does not look like the screenshots.** A screenshot may be a
+picture about the app — a caption band, the screen in a rounded window on the
+landing's background (T-274). A preview may not: it must show the app as it
+will be on the whole screen. So the screenshots keep their frame, and the
+video has its own look: the full screen, captions on it.
+
+### The storyboard
+
+Eight shots from video.yaml's seven recordings (`SHOTS` in montage.mjs), the
+captions captions.json's `hook` and `video`:
+
+| shot | on screen | caption | where | why there |
+|---|---|---|---|---|
+| 0 | the Planner as recording 01 starts, darkened; after 1.5 s the darkness lifts and the windows come | `hook` | bottom | the title and first windows stay clear; the poster frame |
+| 1 | the Planner's windows | `video[0]` | bottom | the same |
+| 2 | two days marked busy | `video[1]` | top | the days are mid-screen, the sheet and Save at the bottom |
+| 3 | Calendar Sync on | `video[2]` | bottom | the whole screen is in its top half |
+| 4 | three picked, the windows weighed again | `video[3]` | bottom | "3 of 12" is in the upper third |
+| 5 | the form's conflict alert | `video[4]` | bottom | the alert's title and who cannot are mid-screen |
+| 6 | the seen count to 12 of 12 — its caption only once it is there | `video[5]` | bottom | the count is under the week strip |
+| 7 | the week, then the mark, "Rehearsly", the sign-in line | `video[6]` | bottom | the week strip is at the top |
+
+The recordings are cut to their action: any stillness — Maestro finding its
+next tap, the flow's own pauses — is cut to 0.2 s. A recording still longer
+than its shot is played faster, up to 2× (`MAX_SPEEDUP`); beyond that
+montage.mjs refuses it: shoot that scene again with less in it, under the e2e
+lock (record.mjs), rather than race it.
+
+- `video.yaml` — the scenes, played at a person's pace: 1 the Planner
+  filling, 2 two days marked busy, 3 Calendar Sync on, 4 three people picked
+  in the Planner, 5 the form naming who is busy and its save asking about it,
+  6 the seen count to 12 of 12 (seven of the cast mark it through the API
+  while it is on screen, `scripts/seen.js`; the recording stops once it reads
+  12/12, so the caption comes when the recording has played out), 7 the week.
+  Each is recorded on its own (`xcrun simctl io <udid> recordVideo
   --codec=h264`), started and stopped by the flow through record.mjs's
   recorder on 127.0.0.1:3003 (`scripts/recorder.js`), which also holds the
   flow's pauses: Maestro has no command for one.
 - `record.mjs` — runs `node e2e/run.mjs --store=<locale> e2e/store/video.yaml`
   (the e2e lock, the store's simulator) with the recorder listening, then the cut.
-- `montage.mjs` — the cut, with ffmpeg: each shot as long as the storyboard
-  gives it (`SLOTS`), in the screenshots' look (compose.swift `card`: the
-  caption as captions.json's `video` breaks it, SF Pro, one size for the
-  language; the recording in the window under it). The screen standing still
-  while Maestro finds its next tap is cut to 0.2 s, the flow's own pauses kept;
-  a shot still longer is played faster, up to 2×, and beyond that refused. Test:
+- `montage.mjs` — the cut, with ffmpeg; the captions, the hook's darkness and
+  the closing card drawn by compose.swift `video`. Test:
   `node --test e2e/__tests__/store-video.test.mjs` (in `npm test`).
 
 Only the app's own screen and the captions: no device frame, hands, prices or
 reminders. The availability legend's "Free" (and its translations) is the
-app's word for a free hour, not a price.
+app's word for a free hour, not a price. No touch marks are drawn: Maestro
+does not say where on the screen its taps land, and they are not guessed.
 
 ## What does what
 
 - `captions.json` — the captions as the native editors approved them (version
-  2, 17.11.2026), `screenshots` for these pictures, `video` for the preview
-  video (T-275). A line break is where the caption breaks; the composer adds
-  none and takes none away. Change a caption here and run `compose.mjs`.
+  2, 17.11.2026), `screenshots` for these pictures; for the preview video
+  `hook`, `video` and `signIn`, as the native editors read them on 20.11.2026
+  (T-285, `audit/evidence/T-285/`). A line break is where the caption breaks;
+  the composer adds none and takes none away. "12 of 12" and its translations
+  hold together with no-break spaces. Change a caption here and run
+  `compose.mjs`, or `montage.mjs` for the video.
 - `shoot.mjs` — for each locale runs `node e2e/run.mjs --store=<locale>
   e2e/store/shots.yaml`, which stands up the e2e stand under the e2e lock (never
   beside an e2e run) on its own simulator, "Rehearsly Store" (iPhone 17 Pro Max,

@@ -12,7 +12,8 @@
  * on it at a person's pace. The flow asks this script, on RECORDER, to start
  * and stop recording around each of the seven shots: `xcrun simctl io <udid>
  * recordVideo --codec=h264`, kept in e2e/store/out/clips/<locale>/01.mov…07.mov,
- * with the flow's pauses during each beside it (01.json…), which the cut keeps.
+ * with the flow's pauses during each beside it (01.json…), to see where the
+ * time went: since T-285 the cut takes them out like any other stillness.
  * Then montage.mjs cuts them into e2e/store/out/video/<locale>.mp4.
  *
  * The recorder answers on 127.0.0.1 only, and only while the run is on:
@@ -29,7 +30,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LOCALES, OUT } from './compose.mjs';
-import { clipsOf, describe, montage, preview } from './montage.mjs';
+import { clipsOf, describe, montage, preview, report } from './montage.mjs';
 import { LAST_HOUR, latePages } from './seed.mjs';
 
 const STORE = path.dirname(fileURLToPath(import.meta.url));
@@ -167,6 +168,6 @@ for (const locale of locales) {
   }
   const made = await montage({ locale, clips });
   console.log(`[store] ${describe(made.file)}`);
-  console.log(`[store] ${locale}: shots ${made.shots.map((s) => `${s.recorded.toFixed(1)}→${s.length}s`).join(', ')}`);
-  if (previewDir) console.log(`[store] ${locale}: preview ${preview(locale, previewDir, made.file)}`);
+  for (const line of report(locale, made)) console.log(`[store] ${line}`);
+  if (previewDir) console.log(`[store] ${locale}: preview ${preview(locale, previewDir, made)}`);
 }

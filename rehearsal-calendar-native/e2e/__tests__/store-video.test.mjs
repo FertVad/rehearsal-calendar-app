@@ -1,17 +1,22 @@
-// The App Store's preview video (T-275): what e2e/store/montage.mjs makes of
-// seven screen recordings and captions.json's `video` captions. Read back by
-// ffprobe as App Store Connect reads it: 886×1920, 30 frames a second, H.264,
-// 15 to 30 seconds, with a silent stereo AAC track at 48 kHz (it refuses a
-// preview without sound). The caption of each shot is in the band at the top,
-// broken where captions.json breaks it, read back off the video's own frames;
-// the recording is in the window under it, and the last shot closes on the mark.
+// The App Store's preview video (T-275, made anew by T-285): what
+// e2e/store/montage.mjs makes of seven screen recordings and captions.json.
+//
+// Apple's rules for a preview (App Review 2.3.4): the app as it is on the
+// whole screen — a preview with a device frame, or "framing around the video
+// screen capture", is refused — and an app that needs signing in says so. So:
+// the recording fills the whole 886×1920 frame, its edges and corners too;
+// the captions go over it, on a dark band only under the text, white on it at
+// least 4.5:1; the closing card says how to sign in. Read back by ffprobe as
+// App Store Connect reads it: 886×1920, 30 frames a second, H.264, 20 to 28
+// seconds, a silent stereo AAC track at 48 kHz (it refuses one without).
 //
 // The video is made on a Mac only: its captions are drawn by compose.swift
 // (xcrun swiftc, Core Graphics) and read back by macOS's text recognition, its
 // recordings come from the simulator. On any other system, GitHub's Linux
 // runner among them, the tests that make it are skipped and say why; the
-// arithmetic of the cut runs everywhere. On a Mac they run, and a Mac without
-// ffmpeg or Xcode fails them: that machine is broken (T-282).
+// captions' file and the arithmetic of the cut are checked everywhere. On a Mac
+// they run, and a Mac without ffmpeg or Xcode fails them: that machine is
+// broken (T-282).
 import { describe, test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -19,128 +24,236 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { readPng } from '../ink.mjs';
-import { CAPTIONS, readText } from '../store/compose.mjs';
-import { STILL, SLOTS, VIDEO, frameAt, montage, probe, stillness, tool } from '../store/montage.mjs';
+import { CAPTIONS, LOCALES, readText } from '../store/compose.mjs';
+// As a namespace: on the montage before T-285 the tests still run, and fail on what they check.
+import * as M from '../store/montage.mjs';
 
 const captions = JSON.parse(fs.readFileSync(CAPTIONS, 'utf8'));
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'store-video-'));
 /** False on a Mac; elsewhere, why the tests that make the video do not run. */
 const MAC_ONLY = process.platform === 'darwin' ? false : 'needs macOS: the captions are drawn by compose.swift, built by xcrun swiftc';
 
-/**
- * A recording as the simulator makes one, H.264, `seconds` long, one colour a
- * clip: at half the 1320×2868 the simulator records, which is scaled the same
- * way and makes faster.
- */
-function recording(file, seconds, rgb, rate = 60) {
-  const colour = `0x${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
-  execFileSync(tool('ffmpeg'), ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=${colour}:s=660x1434:r=${rate}:d=${seconds}`,
-    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file]);
-  return file;
-}
+const nbsp = (text) => text.replace(/ /g, ' ');
+/** The phrases a line must never break inside. */
+const WHOLE = ['12 of 12', '12 из 12', '12 de 12', '12 von 12', 'iPhone-Kalender'];
 
-const COLOURS = [[40, 120, 200], [200, 60, 60], [60, 180, 90], [220, 180, 40], [150, 70, 200], [40, 190, 190], [230, 120, 40]];
-
-test('the format App Store Connect takes, and seven shots of 15 to 30 seconds in all', () => {
-  assert.deepEqual(VIDEO, { width: 886, height: 1920, fps: 30 });
-  assert.equal(SLOTS.length, 7);
-  const total = SLOTS.reduce((a, b) => a + b, 0);
-  assert.ok(total >= 15 && total <= 30, `${total} s`);
+describe('captions.json for the video', () => {
+  for (const locale of LOCALES) {
+    test(`${locale}: a hook, seven captions and a sign-in line, within their lengths, broken only where the file breaks them`, () => {
+      const { hook, video, signIn } = captions[locale];
+      assert.equal(typeof hook, 'string');
+      assert.ok(!hook.includes('\n') && hook.length <= 26, `hook ${JSON.stringify(hook)}`);
+      assert.equal(typeof signIn, 'string');
+      assert.ok(!signIn.includes('\n') && signIn.length <= 48, `signIn ${JSON.stringify(signIn)}`);
+      assert.equal(video?.length, 7);
+      for (const caption of video) {
+        const lines = caption.split('\n');
+        assert.ok(lines.length <= 2 && lines.every((l) => l.length > 0 && l.length <= 26), JSON.stringify(caption));
+        // "12 of 12" and the like are one, and hold together with no-break spaces.
+        for (const phrase of WHOLE) {
+          if (nbsp(caption).replace(/\n/g, ' ').includes(phrase)) {
+            assert.ok(lines.some((l) => nbsp(l).includes(phrase)), `${phrase} broken in ${JSON.stringify(caption)}`);
+            if (/^12 /.test(phrase)) assert.ok(caption.includes(phrase.replace(/ /g, ' ')), `${phrase} without no-break spaces`);
+          }
+        }
+      }
+    });
+  }
+  test('en-GB is en-US', () => {
+    const { screenshots: a, ...gb } = captions['en-GB'];
+    const { screenshots: b, ...us } = captions['en-US'];
+    assert.deepEqual(gb, us);
+    assert.ok(a && b);
+  });
 });
 
-test('stillness is cut to STILL, the flow\'s own pauses kept whole', () => {
-  const { cuts, length } = stillness([0, 1, 2, 3, 4], 5, [{ from: 0.5, to: 1.5 }]);
+test('the format App Store Connect takes, and eight shots from seven recordings', () => {
+  assert.deepEqual(M.VIDEO, { width: 886, height: 1920, fps: 30 });
+  assert.equal(M.SHOTS?.length, 8);
+  assert.equal(M.RECORDINGS, 7);
+  assert.deepEqual(M.SHOTS.map((s) => s.caption), ['hook', 0, 1, 2, 3, 4, 5, 6]);
+  assert.ok(M.SHOTS.every((s) => s.length === null || s.length >= M.MIN_CAPTION), 'every caption on screen at least MIN_CAPTION');
+  assert.ok(M.SHOTS.every((s) => s.place === 'top' || s.place === 'bottom'));
+  assert.equal(M.MAX_SPEEDUP, 2);
+  assert.ok(M.HOOK_DARK >= 1 && M.HOOK_DARK < M.SHOTS[0].length);
+});
+
+test('stillness is cut to STILL, the flow\'s pauses too', () => {
+  const { cuts, length } = M.stillness([0, 1, 2, 3, 4], 5, [{ from: 0.5, to: 1.5 }]);
   const round = (v) => Math.round(v * 100) / 100;
-  assert.equal(STILL, 0.2);
-  assert.deepEqual(cuts.map(({ at, by }) => [at, round(by)]), [[1, 0.5], [2, 1], [3, 1.8], [4, 2.6]]);
-  assert.equal(round(length), 2.4);
+  assert.equal(M.STILL, 0.2);
+  assert.deepEqual(cuts.map(({ at, by }) => [at, round(by)]), [[1, 0.8], [2, 1.6], [3, 2.4], [4, 3.2]]);
+  assert.equal(round(length), 1.8);
   // A screen that keeps changing is not cut at all.
-  assert.deepEqual(stillness([0, 0.1, 0.2, 0.3], 0.4, []), { cuts: [], length: 0.4 });
+  assert.deepEqual(M.stillness([0, 0.1, 0.2, 0.3], 0.4), { cuts: [], length: 0.4 });
+});
+
+test('the poster frame\'s time code, as App Store Connect writes it', () => {
+  assert.equal(M.timeCode(2.5), '00:00:02:15');
+  assert.equal(M.timeCode(0), '00:00:00:00');
+  assert.equal(M.timeCode(61 + 29 / 30), '00:01:01:29');
 });
 
 test('too few recordings, or a missing one, are refused before anything is made', async () => {
-  const none = SLOTS.map((_, i) => path.join(TMP, `none-${i + 1}.mp4`));
-  await assert.rejects(montage({ locale: 'en-US', clips: none.slice(0, 6), out: path.join(TMP, 'refused') }), /7 recordings/);
-  await assert.rejects(montage({ locale: 'en-US', clips: none, out: path.join(TMP, 'refused') }), /no recording/);
+  const none = Array.from({ length: 7 }, (_, i) => path.join(TMP, `none-${i + 1}.mp4`));
+  await assert.rejects(M.montage({ locale: 'en-US', clips: none.slice(0, 6), out: path.join(TMP, 'refused') }), /7 recordings/);
+  await assert.rejects(M.montage({ locale: 'en-US', clips: none, out: path.join(TMP, 'refused') }), /no recording/);
 });
+
+/** sRGB's relative luminance of [r, g, b] (0–255). */
+function luminance(rgb) {
+  const [r, g, b] = rgb.map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+describe('every language\'s captions as compose.swift draws them', { skip: MAC_ONLY }, () => {
+  for (const locale of LOCALES) {
+    test(`${locale}: each caption's lines as the file has them, none wider than the frame; the sign-in line at 40 px or more`, () => {
+      const dir = fs.mkdtempSync(path.join(TMP, `${locale}-`));
+      const words = M.videoCaptions(locale);
+      const drawn = M.overlays(words, dir);
+      const want = M.SHOTS.map((s) => (s.caption === 'hook' ? words.hook : words.video[s.caption]));
+      assert.equal(drawn.overlays.length, 8);
+      for (const [k, overlay] of drawn.overlays.entries()) {
+        assert.deepEqual(overlay.lines, want[k].split('\n'), `shot ${k}`);
+        assert.ok(overlay.widths.every((w) => w <= M.VIDEO.width - 96 + 0.5), `shot ${k}: ${overlay.widths}`);
+        assert.equal(overlay.place, M.SHOTS[k].place);
+        // The band stays off the frame's edges: there the recording shows, untouched.
+        assert.ok(overlay.band.top > 4 && overlay.band.bottom < M.VIDEO.height - 4, JSON.stringify(overlay.band));
+      }
+      assert.ok(drawn.fontSize >= 40, `type ${drawn.fontSize}`);
+      assert.ok(drawn.signIn.fontSize >= 40, `sign-in ${drawn.signIn.fontSize}`);
+      // One line, or two where the language's editor said: after the colon, ru after «Нужен вход».
+      const lines = drawn.signIn.lines;
+      if (lines.length === 2) assert.ok(/:$/.test(lines[0]) || lines[0] === 'Нужен вход', JSON.stringify(lines));
+      assert.equal(lines.join(' '), words.signIn);
+    });
+  }
+});
+
+/**
+ * A recording as the simulator makes one, H.264, at its 1320×2868: one colour,
+ * or `then` for its last `thenFor` seconds.
+ */
+function recording(file, seconds, rgb, { rate = 60, then, thenFor = 0 } = {}) {
+  const hex = (c) => `0x${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+  const source = (c, d) => `color=c=${hex(c)}:s=1320x2868:r=${rate}:d=${d}`;
+  const args = then
+    ? ['-f', 'lavfi', '-i', source(rgb, seconds - thenFor), '-f', 'lavfi', '-i', source(then, thenFor), '-filter_complex', '[0:v][1:v]concat=n=2:v=1[v]', '-map', '[v]']
+    : ['-f', 'lavfi', '-i', source(rgb, seconds)];
+  execFileSync(M.tool('ffmpeg'), ['-v', 'error', '-y', ...args, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file]);
+  return file;
+}
+
+// The first white: the worst a caption's band can be over.
+const COLOURS = [[255, 255, 255], [200, 60, 60], [60, 180, 90], [220, 180, 40], [150, 70, 200], [40, 190, 190], [230, 120, 40]];
+const COUNTED = [250, 250, 120];
 
 describe('made by ffmpeg, its captions by compose.swift', { skip: MAC_ONLY }, () => {
   const clips = [];
   let made;
+  const pixel = (png, x, y) => { const at = (y * png.width + x) * png.channels; return [...png.data.subarray(at, at + 3)]; };
+  const near = (got, want, by = 14) => got.every((v, c) => Math.abs(v - want[c]) <= by);
+  const frame = (seconds, name) => readPng(M.frameAt(made.file, seconds, path.join(TMP, `${name}.png`)));
   before(async () => {
-    // Shorter than their shots, most of them, and the fourth longer: held, and sped up.
-    const lengths = [1.5, 2, 1, 9, 2.5, 1, 1.2];
+    // Most shorter than their shots, and held; the fifth longer, and sped up.
+    const lengths = [1.5, 2, 1, 2, 6, 1.5, 1.2];
     for (const [i, seconds] of lengths.entries()) clips.push(recording(path.join(TMP, `clip-${i + 1}.mp4`), seconds, COLOURS[i]));
-    // The second as the simulator records a screen standing still between taps:
-    // a frame a second for nine, the flow pausing on purpose for its first three.
-    clips[1] = recording(path.join(TMP, 'clip-2.mp4'), 9, COLOURS[1], 1);
-    fs.writeFileSync(path.join(TMP, 'clip-2.json'), JSON.stringify({ waits: [{ from: 0, to: 3 }] }));
-    made = await montage({ locale: 'en-US', clips, out: path.join(TMP, 'out') });
+    // The seen count's: its last half second the count at 12 of 12.
+    clips[5] = recording(path.join(TMP, 'clip-6.mp4'), 1.5, COLOURS[5], { then: COUNTED, thenFor: 0.5 });
+    made = await M.montage({ locale: 'en-US', clips, out: path.join(TMP, 'out') });
   });
 
-  test('886×1920 at 30 fps, H.264, 15 to 30 seconds, with a silent stereo AAC track at 48 kHz', () => {
+  test('886×1920 at 30 fps, H.264, 20 to 28 seconds, with a silent stereo AAC track at 48 kHz', () => {
     assert.equal(made.file, path.join(TMP, 'out', 'en-US.mp4'));
-    const p = probe(made.file);
+    const p = M.probe(made.file);
     assert.deepEqual(
       { codec: p.video.codec, width: p.video.width, height: p.video.height, fps: p.video.fps, pixFmt: p.video.pixFmt },
       { codec: 'h264', width: 886, height: 1920, fps: '30/1', pixFmt: 'yuv420p' });
     assert.deepEqual({ codec: p.audio.codec, sampleRate: p.audio.sampleRate, channels: p.audio.channels },
       { codec: 'aac', sampleRate: 48000, channels: 2 });
-    assert.ok(p.duration >= 15 && p.duration <= 30, `${p.duration} s`);
-    assert.ok(Math.abs(p.duration - SLOTS.reduce((a, b) => a + b, 0)) < 0.1, `${p.duration} s for shots of ${SLOTS.join(' + ')}`);
-    assert.ok(p.video.duration <= 30 && p.audio.duration <= 30, `video ${p.video.duration} s, audio ${p.audio.duration} s`);
-  });
-
-  test('silent: the audio track carries no sound', () => {
-    const { stderr } = spawnSync(tool('ffmpeg'), ['-hide_banner', '-nostats', '-i', made.file, '-map', '0:a', '-af', 'volumedetect', '-f', 'null', '-'],
+    assert.ok(p.duration >= 20 && p.duration <= 28, `${p.duration} s`);
+    assert.ok(Math.abs(p.duration - made.length) < 0.1, `${p.duration} s for a cut of ${made.length}`);
+    const { stderr } = spawnSync(M.tool('ffmpeg'), ['-hide_banner', '-nostats', '-i', made.file, '-map', '0:a', '-af', 'volumedetect', '-f', 'null', '-'],
       { encoding: 'utf8' });
     const loudest = /max_volume:\s*(-?[\d.]+|-inf) dB/.exec(stderr)?.[1];
     assert.ok(loudest === '-inf' || Number(loudest) <= -90, `max_volume ${loudest}`);
   });
 
-  test('seven shots, each as long as the storyboard gives it: a short recording held, a long one sped up', () => {
-    assert.deepEqual(made.shots.map((s) => s.length), SLOTS);
-    assert.ok(Math.abs(made.shots[3].speed - 9 / SLOTS[3]) < 0.02, `${made.shots[3].speed}`);
-    assert.ok(made.shots.filter((_, i) => i !== 3).every((s) => s.speed === 1));
-    // Nine seconds as recorded, five once the stillness Maestro left is cut: not sped up.
-    assert.ok(Math.abs(made.shots[1].recorded - 9) < 0.05 && Math.abs(made.shots[1].kept - 5) < 0.05, JSON.stringify(made.shots[1]));
-  });
-
-  test('each shot shows its recording in the window, its caption above it as captions.json breaks it', () => {
-    const want = captions['en-US'].video;
-    const files = made.shots.map((shot, i) => frameAt(made.file, shot.start + shot.length / 2 - 0.2, path.join(TMP, `frame-${i + 1}.png`)));
-    const read = readText(files, { locale: 'en-US', bottom: made.captionBottom });
-    const letters = (text) => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-    for (const [i, caption] of want.entries()) {
-      assert.deepEqual(read[i].map(letters), caption.split('\n').map(letters), `${i + 1}: ${JSON.stringify(read[i])}`);
-      // The middle of the window is that shot's recording, as far as H.264 keeps a colour.
-      const png = readPng(files[i]);
-      const { left, top, width, height } = made.hole;
-      const x = Math.round(left + width / 2), y = Math.round(top + height / 3);
-      const at = (y * png.width + x) * png.channels;
-      const got = [...png.data.subarray(at, at + 3)];
-      assert.ok(got.every((v, c) => Math.abs(v - COLOURS[i][c]) <= 14), `${i + 1}: ${got} for ${COLOURS[i]}`);
+  test('no frame round the recording: its edges and corners are the recording\'s, in every shot', () => {
+    const { width: w, height: h } = M.VIDEO;
+    const points = [[2, 2], [w - 3, 2], [2, h - 3], [w - 3, h - 3], [2, h / 2], [w - 3, h / 2], [w / 2, 2], [w / 2, h - 3], [w / 2, h / 2]];
+    for (const [k, shot] of made.shots.entries()) {
+      // Mid-shot; the hook's once its darkness has lifted, the last before its card comes.
+      const at = k === 0 ? shot.length - 0.15 : k === made.shots.length - 1 ? shot.start + 0.6 : shot.start + shot.length / 2;
+      const png = frame(k === 0 ? at : at, `edges-${k}`);
+      const want = k === 6 ? COUNTED : COLOURS[[0, 0, 1, 2, 3, 4, 5, 6][k]];
+      for (const [x, y] of points) {
+        assert.ok(near(pixel(png, x, y), want), `shot ${k} at ${x},${y}: ${pixel(png, x, y)} for the recording's ${want}`);
+      }
     }
-    // Two-line captions too: the last breaks where the file does.
-    assert.ok(want[6].includes('\n'));
   });
 
-  test('the window is under the band, whole, and the last shot closes on the mark', () => {
-    const { left, top, width, height } = made.hole;
-    assert.ok(top > made.captionBottom && top + height <= VIDEO.height && left >= 0 && left + width <= VIDEO.width);
-    assert.equal(Math.round(width / height * 100), Math.round(1320 / 2868 * 100));
-    const last = SLOTS.reduce((a, b) => a + b, 0) - 0.1;
-    const png = readPng(frameAt(made.file, last, path.join(TMP, 'end.png')));
-    const at = ((top + height / 2) * png.width + Math.round(left + width / 2)) * png.channels;
-    // Not the recording's orange any more: the card is over it.
-    const got = [...png.data.subarray(at, at + 3)];
-    assert.ok(Math.abs(got[0] - COLOURS[6][0]) > 60, `${got}`);
+  test('each caption over its shot as captions.json breaks it, on a band white reads on at 4.5:1 or more', () => {
+    const want = ['hook', ...captions['en-US'].video.map((_, i) => i)].map((c) => (c === 'hook' ? captions['en-US'].hook : captions['en-US'].video[c]));
+    const letters = (text) => nbsp(text).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const files = made.shots.map((shot, k) => M.frameAt(made.file, shot.start + shot.length - 0.3, path.join(TMP, `caption-${k}.png`)));
+    for (const [k, overlay] of made.overlays.entries()) {
+      const [read] = readText([files[k]], { locale: 'en-US', top: overlay.band.top, bottom: overlay.band.bottom });
+      assert.deepEqual(read.map(letters), want[k].split('\n').map(letters), `shot ${k}: ${JSON.stringify(read)}`);
+    }
+    // Over white (shot 1's recording), the band beside the text, where no letter is.
+    const { band } = made.overlays[1];
+    const png = readPng(files[1]);
+    const y = Math.round((band.coreTop + band.coreBottom) / 2);
+    const contrast = 1.05 / (luminance(pixel(png, 4, y)) + 0.05);
+    assert.ok(contrast >= 4.5, `white on the band over white: ${contrast.toFixed(2)}:1 (${pixel(png, 4, y)})`);
+  });
+
+  test('the hook over the Planner darkened, lifting before the poster frame; the hook still on it', () => {
+    const dark = frame(0.5, 'hook-dark');
+    assert.ok(luminance(pixel(dark, 443, 960)) < 0.25, `${pixel(dark, 443, 960)}`);
+    assert.ok(made.poster.seconds > M.HOOK_DARK + 0.5 && made.poster.seconds < made.shots[1].start, `${made.poster.seconds}`);
+    assert.equal(made.poster.timeCode, M.timeCode(made.poster.seconds));
+    const poster = frame(made.poster.seconds, 'poster');
+    assert.ok(near(pixel(poster, 443, 960), COLOURS[0]), `${pixel(poster, 443, 960)}`);
+    const [read] = readText([path.join(TMP, 'poster.png')], { locale: 'en-US', top: made.overlays[0].band.top, bottom: made.overlays[0].band.bottom });
+    assert.match(read.join(' '), /Tuesday/);
+  });
+
+  test('the seen count\'s caption comes only once the count is at 12 of 12, and stays 2 s', () => {
+    const shot = made.shots[6];
+    const { band } = made.overlays[6];
+    const y = Math.round((band.coreTop + band.coreBottom) / 2);
+    const early = frame(shot.start + 0.3, 'seen-early');
+    assert.ok(near(pixel(early, 4, y), COLOURS[5]), `no caption before 12 of 12: ${pixel(early, 4, y)}`);
+    const late = frame(shot.start + shot.captionAt + 0.1, 'seen-late');
+    assert.ok(near(pixel(late, 443, 960), COUNTED), `12 of 12 on screen: ${pixel(late, 443, 960)}`);
+    assert.ok(luminance(pixel(late, 4, y)) < 0.25, `the caption's band: ${pixel(late, 4, y)}`);
+    assert.ok(shot.length - shot.captionAt >= M.MIN_CAPTION);
+  });
+
+  test('the last shot closes on the mark, the name and the sign-in line, held about 3 s', () => {
+    const end = made.length - 0.1;
+    const png = frame(end, 'end');
+    assert.ok(!near(pixel(png, 443, 300), COLOURS[6], 60), `${pixel(png, 443, 300)}`);
+    const { top, bottom } = made.signIn;
+    const [read] = readText([path.join(TMP, 'end.png')], { locale: 'en-US', top: Math.floor(top - 20), bottom: Math.ceil(bottom + 20) });
+    const letters = (text) => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    assert.equal(letters(read.join(' ')), letters(captions['en-US'].signIn));
+    // The slogan stays on, where it was over the week.
+    const { band } = made.overlays[7];
+    const [slogan] = readText([path.join(TMP, 'end.png')], { locale: 'en-US', top: band.top, bottom: band.bottom });
+    assert.equal(letters(slogan.join(' ')), letters(captions['en-US'].video[6]));
+    const card = made.shots[7];
+    // From the dissolve's start (the week's 2 s) to the end: about 3 s.
+    assert.ok(card.length - 2 >= 2.8 && card.length - 2 <= 3.6, `${card.length}`);
   });
 
   test('a recording far longer than its shot is refused, not raced through', async () => {
     const long = [...clips];
-    long[0] = recording(path.join(TMP, 'long.mp4'), 10, COLOURS[0]);
-    await assert.rejects(montage({ locale: 'en-US', clips: long, out: path.join(TMP, 'refused') }), /shot 1/);
+    long[3] = recording(path.join(TMP, 'long.mp4'), 10, COLOURS[3]);
+    await assert.rejects(M.montage({ locale: 'en-US', clips: long, out: path.join(TMP, 'refused') }), /recording 04/);
   });
 });
 

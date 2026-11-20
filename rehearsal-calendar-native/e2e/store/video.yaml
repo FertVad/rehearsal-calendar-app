@@ -7,14 +7,15 @@
 #
 # Each shot is recorded on its own, from "start" to "stop"; what leads up to
 # it — opening a screen, a sheet closed — is not. montage.mjs cuts the seven
-# into the storyboard's times (SLOTS), a shot shorter held on its last frame:
-#   1 the Planner filling with its levels (3 s, the cover)
-#   2 busy days marked in the month (5 s)
-#   3 Calendar Sync switched on (4 s)
-#   4 three people picked, the windows weighed again (6 s)
-#   5 the form naming who is busy, saved (5 s)
-#   6 the seen count running to 12 of 12 (4 s)
-#   7 the week in the calendar, then the mark (3 s)
+# into the storyboard's eight shots (SHOTS; README "The storyboard"), their
+# stillness and pauses cut, a shot shorter held on its last frame:
+#   1 the Planner filling with its levels (the hook, then its first caption)
+#   2 busy days marked in the month
+#   3 Calendar Sync switched on
+#   4 three people picked, the windows weighed again
+#   5 the form naming who is busy, its save asking about it
+#   6 the seen count running to 12 of 12 — stopped once it reads 12/12
+#   7 the week in the calendar, then the mark
 # Only the app's screen and its captions: no hands, no prices, no reminders.
 appId: ${APP_ID}
 name: App Store preview video

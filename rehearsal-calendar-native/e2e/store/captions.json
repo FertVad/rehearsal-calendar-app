@@ -10,15 +10,17 @@
    "Invite everyone\nwith one link",
    "Four languages,\nyour time zone"
   ],
+  "hook": "Who can make Tuesday?",
   "video": [
-   "Who can make Tuesday?",
+   "See when everyone\ncan make it",
    "Mark your week once",
-   "…or sync your iPhone calendar",
-   "Only need three? Select them",
-   "Conflicts, right in the form",
-   "Seen by everyone: 12 of 12",
+   "…or sync\nyour iPhone calendar",
+   "Only need three?\nSelect them",
+   "Conflicts,\nright in the form",
+   "Seen by everyone:\n12 of 12",
    "In a minute, not a night\nin the group chat"
-  ]
+  ],
+  "signIn": "Sign-in required: Apple, Google or email"
  },
  "en-GB": {
   "screenshots": [
@@ -31,15 +33,17 @@
    "Invite everyone\nwith one link",
    "Four languages,\nyour time zone"
   ],
+  "hook": "Who can make Tuesday?",
   "video": [
-   "Who can make Tuesday?",
+   "See when everyone\ncan make it",
    "Mark your week once",
-   "…or sync your iPhone calendar",
-   "Only need three? Select them",
-   "Conflicts, right in the form",
-   "Seen by everyone: 12 of 12",
+   "…or sync\nyour iPhone calendar",
+   "Only need three?\nSelect them",
+   "Conflicts,\nright in the form",
+   "Seen by everyone:\n12 of 12",
    "In a minute, not a night\nin the group chat"
-  ]
+  ],
+  "signIn": "Sign-in required: Apple, Google or email"
  },
  "ru": {
   "screenshots": [
@@ -52,15 +56,17 @@
    "Позови всех\nодной ссылкой",
    "Четыре языка\nи твой часовой пояс"
   ],
+  "hook": "Кто может во вторник?",
   "video": [
-   "Planner показывает окна",
-   "Отметь неделю один раз",
-   "…или из календаря iPhone",
-   "Нужны трое? Выбери троих",
-   "Накладки видны сразу",
-   "Все в курсе: 12 из 12",
-   "За минуту, а не за вечер в чате"
-  ]
+   "Planner\nпоказывает окна",
+   "Отметь неделю\nодин раз",
+   "…или\nиз календаря iPhone",
+   "Нужны трое?\nВыбери троих",
+   "Накладки\nвидны сразу",
+   "Все в курсе:\n12 из 12",
+   "За минуту,\nа не за вечер в чате"
+  ],
+  "signIn": "Нужен вход через Apple, Google или почту"
  },
  "es-ES": {
   "screenshots": [
@@ -73,15 +79,17 @@
    "Invita a todos\ncon un solo enlace",
    "Cuatro idiomas\ny tu zona horaria"
   ],
+  "hook": "¿Quién puede el martes?",
   "video": [
-   "Planner te muestra los horarios",
+   "Planner te muestra\nlos horarios",
    "Marca tu semana una vez",
-   "…o con el calendario del iPhone",
-   "¿Te bastan tres? Selecciónalos",
-   "Choques de horario, a la vista",
-   "Ya lo han visto todos: 12 de 12",
+   "…o con el calendario\ndel iPhone",
+   "¿Te bastan tres?\nSelecciónalos",
+   "Choques de horario,\na la vista",
+   "Ya lo han visto todos:\n12 de 12",
    "En un minuto,\nno en una noche de chat"
-  ]
+  ],
+  "signIn": "Requiere iniciar sesión: Apple, Google o correo"
  },
  "de-DE": {
   "screenshots": [
@@ -94,14 +102,16 @@
    "Alle per Link\nins Projekt einladen",
    "Vier Sprachen,\ndeine Ortszeit"
   ],
+  "hook": "Wer kann am Dienstag?",
   "video": [
    "Der Planner zeigt\ndie Zeitfenster",
-   "Trag deine Woche einmal ein",
-   "… oder aus dem iPhone-Kalender",
-   "Nur drei nötig? Hak sie an",
+   "Trag deine Woche\neinmal ein",
+   "… oder aus dem\niPhone-Kalender",
+   "Nur drei nötig?\nHak sie an",
    "Überschneidungen\ndirekt im Formular",
-   "Alle haben’s gesehen: 12 von 12",
-   "Eine Minute – kein Abend im Chat"
-  ]
+   "Alle haben’s gesehen:\n12 von 12",
+   "Eine Minute –\nkein Abend im Chat"
+  ],
+  "signIn": "Anmeldung nötig: Apple, Google oder E-Mail"
  }
 }

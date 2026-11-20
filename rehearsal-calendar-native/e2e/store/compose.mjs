@@ -98,9 +98,9 @@ export async function compose({ locale, shots, out = OUT, captionsFile = CAPTION
 /** The language macOS's text recognition reads a locale's captions in. */
 const READ_AS = { 'en-US': 'en-US', 'en-GB': 'en-GB', ru: 'ru-RU', 'es-ES': 'es-ES', 'de-DE': 'de-DE' };
 
-/** For each of `files`, its lines of text above `bottom` px, top first, as macOS reads them (the test's check). */
-export function readText(files, { locale, bottom }) {
-  return JSON.parse(execFileSync(binary(), ['read', String(bottom), READ_AS[locale] ?? 'en-US', ...files], { encoding: 'utf8' }));
+/** For each of `files`, its lines of text between `top` and `bottom` px, top first, as macOS reads them (the test's check). */
+export function readText(files, { locale, top = 0, bottom }) {
+  return JSON.parse(execFileSync(binary(), ['read', `${top}:${bottom}`, READ_AS[locale] ?? 'en-US', ...files], { encoding: 'utf8' }));
 }
 
 /** The locales captions.json has, in its order. */

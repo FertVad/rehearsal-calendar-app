@@ -2,9 +2,9 @@
 // what to draw in a job file; nothing here reads captions.json or styles.css.
 //
 //   compose draw <job.json>                    the pictures; prints what it drew, as JSON
-//   compose read <bottom> <lang> <picture.png>…  each picture's lines of text above `bottom`, as JSON
+//   compose read [<top>:]<bottom> <lang> <picture.png>…  each picture's lines of text between top and bottom, as JSON
 //   compose sheet <out.png> <height> <#bg> <picture.png>…  the pictures in a row, small, to look over
-//   compose card <card.json>                   the preview video's overlays (T-275); prints them, as JSON
+//   compose video <video.json>                 the preview video's overlays (T-285); prints them, as JSON
 //
 // Every picture is laid out on the 1320×2868 of the iPhone 17 Pro Max and drawn
 // at each size the job asks for, scaled — not drawn once and resampled — so
@@ -116,41 +116,78 @@ func drawCaption(_ context: CGContext, _ lines: [String], font: CTFont, size: CG
 }
 
 /**
- * The preview video's pictures (T-275), each `width`×`height` (886×1920): for
- * every caption an overlay — the screenshots' look, its background, glow and
- * caption, with a hole where the screen recording shows through, its corners
- * rounded, a hairline round it — and the closing card: the landing's mark and
- * name filling that hole, to fade in over the last shot. The hole is in whole,
- * even pixels of the output, so the recording is scaled to it exactly.
+ * The preview video's pictures (T-285), each `width`×`height` (886×1920), laid
+ * out in the output's own pixels. Not the screenshots' look: the recording
+ * fills the whole frame, and these go over it.
+ *
+ * - For every caption an overlay, clear but for the caption: its lines exactly
+ *   as given (no line is ever broken here), bold SF Pro in white, one size for
+ *   the language, at the top or the bottom of the frame as the shot asks, on a
+ *   soft dark band only as tall as the text — solid under the lines, so white
+ *   on it is at least 4.5:1 whatever the recording shows, fading out above and
+ *   below.
+ * - `dim.png`: the whole frame darkened, for the hook's shot to lift.
+ * - `end.png`: the closing card, opaque: the landing's background and glow,
+ *   its mark, the app's name and under it the sign-in line, and the last
+ *   caption (the slogan) just where its overlay has it, without the band — to
+ *   dissolve in over the last shot and its caption.
  */
-struct Card: Codable {
-  let captions: [String]; let width: Int; let height: Int; let dir: String
+struct VideoCaption: Codable { let text: String; let place: String }
+struct VideoJob: Codable {
+  let captions: [VideoCaption]; let signIn: String; let signInBreak: String
+  let width: Int; let height: Int; let dir: String
   let font: String; let colours: Colours; let mark: String; let name: String
 }
 
-func card(_ job: Card) {
+// The video's layout, in its own pixels (886 wide).
+let videoMargin: CGFloat = 48             // the text's least distance from the frame's sides
+let videoPreferred: CGFloat = 72          // the caption's type when every line fits at it
+let videoTop: CGFloat = 150               // a top caption's first line starts here: under the status bar
+let videoBottom: CGFloat = 1740           // a bottom caption's last line ends here: over the home indicator
+let bandAlpha: CGFloat = 0.85             // the band under the lines: white on it ≥ 4.5:1 even over white
+let signInPreferred: CGFloat = 46, signInLeast: CGFloat = 40
+
+/**
+ * The largest whole size, `most` at most, at which every one of `lines` fits
+ * `width` — measured at that size: SF Pro's widths do not scale exactly with it.
+ */
+func fittingSize(_ lines: [String], font file: String, width limit: CGFloat, most: CGFloat) -> CGFloat {
+  let white = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+  let widest = { (size: CGFloat) -> CGFloat in
+    let font = boldFont(file, size: size)
+    return lines.map { width(line($0, font: font, colour: white)) }.max() ?? 0
+  }
+  var size = min(most, floor(limit * 100 / max(widest(100), 1)))
+  while size > 1 && widest(size) > limit { size -= 1 }
+  return size
+}
+
+/** The band's solid part and its whole extent, for a block of text from `top` to `bottom`. */
+func band(top: CGFloat, bottom: CGFloat, size: CGFloat) -> (core: ClosedRange<CGFloat>, all: ClosedRange<CGFloat>) {
+  let pad = size * 0.35, feather = size * 1.0
+  return ((top - pad)...(bottom + pad), (top - pad - feather)...(bottom + pad + feather))
+}
+
+func video(_ job: VideoJob) {
   let c = job.colours
-  let size = typeSize(job.captions, font: job.font, colour: colour(c.text))
+  let w = CGFloat(job.width), h = CGFloat(job.height)
+  let white = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+  let textWidth = w - 2 * videoMargin
+  // One size for the language: the widest line of every caption sets it.
+  let allLines = job.captions.flatMap { $0.text.components(separatedBy: "\n") }
+  let size = fittingSize(allLines, font: job.font, width: textWidth, most: videoPreferred)
   let font = boldFont(job.font, size: size)
-  let scale = CGFloat(job.width) / W
-  // The screenshots' frame for the shot, in the output's even pixels.
-  let even = { (v: CGFloat) -> CGFloat in (v / 2).rounded() * 2 }
-  let shotHeight = H - shotTop - shotBottomMargin
-  let holeH = even(shotHeight * scale), holeW = even(holeH * 1320 / 2868)
-  let holeTop = even(shotTop * scale), holeLeft = even((CGFloat(job.width) - holeW) / 2)
-  guard holeTop + holeH <= CGFloat(job.height) else { fail("no room for the recording in \(job.width)×\(job.height)") }
-  // The hole back in the 1320-wide frame the drawing is laid out in.
-  let hole = CGRect(x: holeLeft / scale, y: holeTop / scale, width: holeW / scale, height: holeH / scale)
-  let radius = hole.width * cornerShare
-  let rounded = CGPath(roundedRect: hole, cornerWidth: radius, cornerHeight: radius, transform: nil)
+  let lh = size * lineHeight
+  let ascent = CTFontGetAscent(font), descent = CTFontGetDescent(font)
   try? FileManager.default.createDirectory(atPath: job.dir, withIntermediateDirectories: true)
 
   func canvas() -> CGContext {
     guard let context = CGContext(data: nil, width: job.width, height: job.height, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpace(name: CGColorSpace.sRGB)!,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { fail("no context") }
-    context.translateBy(x: 0, y: CGFloat(job.height))
-    context.scaleBy(x: scale, y: -scale)
+    // Top-down coordinates.
+    context.translateBy(x: 0, y: h)
+    context.scaleBy(x: 1, y: -1)
     context.interpolationQuality = .high
     return context
   }
@@ -160,61 +197,112 @@ func card(_ job: Card) {
     writePng(picture, to: file)
     return file
   }
-
-  var overlays: [String] = []
-  for (index, caption) in job.captions.enumerated() {
-    let context = canvas()
-    drawBackground(context, c)
-    drawCaption(context, caption.components(separatedBy: "\n"), font: font, size: size, colour: colour(c.text))
-    // The hole, cleared to nothing: the recording under it shows.
+  func drawLine(_ context: CGContext, _ l: CTLine, x: CGFloat, baseline: CGFloat) {
     context.saveGState()
-    context.setBlendMode(.clear)
-    context.addPath(rounded)
-    context.fillPath()
+    context.translateBy(x: x, y: baseline)
+    context.scaleBy(x: 1, y: -1)
+    context.textPosition = .zero
+    CTLineDraw(l, context)
     context.restoreGState()
-    context.addPath(rounded)
-    context.setStrokeColor(colour(c.line))
-    context.setLineWidth(3)
-    context.strokePath()
-    overlays.append(save(context, String(format: "%02d.png", index + 1)))
   }
 
-  // The closing card: the hole filled with the background, the landing's mark
-  // and the app's name in the middle of it; clear around the hole.
+  var overlays: [[String: Any]] = []
+  var lastCaption: (lines: [String], top: CGFloat) = ([], 0)
+  for (index, caption) in job.captions.enumerated() {
+    guard caption.place == "top" || caption.place == "bottom" else { fail("a caption goes at the top or the bottom: \(caption.place)") }
+    let lines = caption.text.components(separatedBy: "\n")
+    let blockHeight = lh * CGFloat(lines.count)
+    let top = caption.place == "top" ? videoTop : videoBottom - blockHeight
+    let (core, all) = band(top: top, bottom: top + blockHeight, size: size)
+    let context = canvas()
+    // The band: clear, rising to bandAlpha under the lines, falling back to clear.
+    let black = { (a: CGFloat) in CGColor(srgbRed: 0, green: 0, blue: 0, alpha: a) }
+    let span = all.upperBound - all.lowerBound
+    let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+                              colors: [black(0), black(bandAlpha), black(bandAlpha), black(0)] as CFArray,
+                              locations: [0, (core.lowerBound - all.lowerBound) / span, (core.upperBound - all.lowerBound) / span, 1])!
+    context.saveGState()
+    context.clip(to: CGRect(x: 0, y: all.lowerBound, width: w, height: span))
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0, y: all.lowerBound), end: CGPoint(x: 0, y: all.upperBound), options: [])
+    context.restoreGState()
+    var widths: [CGFloat] = []
+    for (i, string) in lines.enumerated() {
+      let l = line(string, font: font, colour: white)
+      widths.append(width(l))
+      drawLine(context, l, x: (w - width(l)) / 2, baseline: top + CGFloat(i) * lh + (lh - ascent - descent) / 2 + ascent)
+    }
+    lastCaption = (lines, top)
+    let file = save(context, String(format: "%02d.png", index + 1))
+    overlays.append(["file": file, "place": caption.place, "lines": lines, "widths": widths,
+                     "text": ["top": top, "bottom": top + blockHeight],
+                     "band": ["top": all.lowerBound.rounded(.down), "bottom": all.upperBound.rounded(.up),
+                              "coreTop": core.lowerBound.rounded(.up), "coreBottom": core.upperBound.rounded(.down)]])
+  }
+
+  // The hook's darkness.
+  let dim = canvas()
+  dim.setFillColor(CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.62))
+  dim.fill(CGRect(x: 0, y: 0, width: w, height: h))
+  let dimFile = save(dim, "dim.png")
+
+  // The closing card. The sign-in line in one line if it fits at signInLeast
+  // or more, else broken where signInBreak says (after its colon; ru after
+  // «Нужен вход») — never anywhere else.
   let end = canvas()
-  end.saveGState()
-  end.addPath(rounded)
-  end.clip()
-  drawBackground(end, c)
+  end.setFillColor(colour(c.background))
+  end.fill(CGRect(x: 0, y: 0, width: w, height: h))
+  let glow = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+                        colors: [colour(c.accent).copy(alpha: 0.22)!, colour(c.accent).copy(alpha: 0)!] as CFArray, locations: [0, 1])!
+  end.drawRadialGradient(glow, startCenter: CGPoint(x: w / 2, y: h * 0.38), startRadius: 0,
+                         endCenter: CGPoint(x: w / 2, y: h * 0.38), endRadius: w * 0.85, options: [])
+  let fits = { (lines: [String]) -> CGFloat in fittingSize(lines, font: job.font, width: textWidth, most: signInPreferred) }
+  var signLines = [job.signIn]
+  var signSize = fits(signLines)
+  if signSize < signInLeast {
+    guard let regex = try? NSRegularExpression(pattern: job.signInBreak),
+          let match = regex.firstMatch(in: job.signIn, range: NSRange(job.signIn.startIndex..., in: job.signIn)),
+          let at = Range(match.range, in: job.signIn) else { fail("the sign-in line does not fit and has no place to break: \(job.signIn)") }
+    signLines = [String(job.signIn[..<at.upperBound]).trimmingCharacters(in: .whitespaces),
+                 String(job.signIn[at.upperBound...]).trimmingCharacters(in: .whitespaces)]
+    signSize = fits(signLines)
+  }
+  guard signSize >= signInLeast else { fail("the sign-in line is under \(signInLeast) px even broken: \(signLines)") }
+  let signFont = boldFont(job.font, size: signSize)
   let mark = loadImage(job.mark)
-  let markHeight = hole.height * 0.2
+  let markHeight: CGFloat = 220
   let markWidth = markHeight * CGFloat(mark.width) / CGFloat(mark.height)
-  let nameSize = markHeight * 0.42
+  let nameSize: CGFloat = 96
   let nameFont = boldFont(job.font, size: nameSize)
   let nameLine = line(job.name, font: nameFont, colour: colour(c.text))
-  let gap = markHeight * 0.18
-  let blockTop = hole.midY - (markHeight + gap + nameSize) / 2
+  let signLh = signSize * 1.25
+  // Mark, name, sign-in: one block, its middle a little above the frame's.
+  let blockHeight = markHeight + 36 + nameSize * 1.1 + 40 + signLh * CGFloat(signLines.count)
+  var y = h * 0.42 - blockHeight / 2
   end.saveGState()
-  end.translateBy(x: hole.midX - markWidth / 2, y: blockTop + markHeight)
+  end.translateBy(x: (w - markWidth) / 2, y: y + markHeight)
   end.scaleBy(x: 1, y: -1)
   end.draw(mark, in: CGRect(x: 0, y: 0, width: markWidth, height: markHeight))
   end.restoreGState()
-  end.saveGState()
-  end.translateBy(x: hole.midX - width(nameLine) / 2, y: blockTop + markHeight + gap + CTFontGetAscent(nameFont))
-  end.scaleBy(x: 1, y: -1)
-  end.textPosition = .zero
-  CTLineDraw(nameLine, end)
-  end.restoreGState()
-  end.restoreGState()
-  end.addPath(rounded)
-  end.setStrokeColor(colour(c.line))
-  end.setLineWidth(3)
-  end.strokePath()
+  y += markHeight + 36
+  drawLine(end, nameLine, x: (w - width(nameLine)) / 2, baseline: y + CTFontGetAscent(nameFont))
+  y += nameSize * 1.1 + 40
+  let signTop = y
+  for string in signLines {
+    let l = line(string, font: signFont, colour: colour(c.text))
+    drawLine(end, l, x: (w - width(l)) / 2, baseline: y + CTFontGetAscent(signFont))
+    y += signLh
+  }
+  // The slogan, the last caption, where its overlay has it — but on the
+  // card's own background, without the band: the card dissolves in over it.
+  for (i, string) in lastCaption.lines.enumerated() {
+    let l = line(string, font: font, colour: white)
+    drawLine(end, l, x: (w - width(l)) / 2, baseline: lastCaption.top + CGFloat(i) * lh + (lh - ascent - descent) / 2 + ascent)
+  }
   let endFile = save(end, "end.png")
 
   let manifest: [String: Any] = [
-    "fontSize": size * scale, "captionBottom": (captionBottom * scale).rounded(.up), "overlays": overlays, "end": endFile,
-    "hole": ["left": Int(holeLeft), "top": Int(holeTop), "width": Int(holeW), "height": Int(holeH)],
+    "fontSize": size, "overlays": overlays, "dim": dimFile, "end": endFile,
+    "signIn": ["lines": signLines, "fontSize": signSize, "top": signTop, "bottom": y],
   ]
   let data = try! JSONSerialization.data(withJSONObject: manifest, options: [.sortedKeys])
   FileHandle.standardOutput.write(data)
@@ -278,11 +366,11 @@ func draw(_ job: Job) {
   FileHandle.standardOutput.write(data)
 }
 
-/** For each picture, the lines of text above `bottom` (px from the top), top first. */
-func read(_ files: [String], bottom: CGFloat, language: String) {
+/** For each picture, the lines of text between `top` and `bottom` (px from the top), top first. */
+func read(_ files: [String], top: CGFloat, bottom: CGFloat, language: String) {
   let all: [[String]] = files.map { file in
     let image = loadImage(file)
-    guard let band = image.cropping(to: CGRect(x: 0, y: 0, width: CGFloat(image.width), height: bottom)) else { fail("cannot crop") }
+    guard let band = image.cropping(to: CGRect(x: 0, y: top, width: CGFloat(image.width), height: bottom - top)) else { fail("cannot crop") }
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = .accurate
     request.recognitionLanguages = [language]
@@ -323,14 +411,16 @@ case "draw" where args.count == 3:
   guard let data = FileManager.default.contents(atPath: args[2]),
         let job = try? JSONDecoder().decode(Job.self, from: data) else { fail("cannot read the job \(args[2])") }
   draw(job)
-case "card" where args.count == 3:
+case "video" where args.count == 3:
   guard let data = FileManager.default.contents(atPath: args[2]),
-        let job = try? JSONDecoder().decode(Card.self, from: data) else { fail("cannot read the card job \(args[2])") }
-  card(job)
+        let job = try? JSONDecoder().decode(VideoJob.self, from: data) else { fail("cannot read the video job \(args[2])") }
+  video(job)
 case "sheet" where args.count >= 6:
   sheet(args[2], height: Int(args[3]) ?? 600, background: args[4], files: Array(args[5...]))
 case "read" where args.count >= 5:
-  read(Array(args[4...]), bottom: CGFloat(Double(args[2]) ?? 0), language: args[3])
+  // <bottom>, or <top>:<bottom>
+  let edges = args[2].split(separator: ":").map { CGFloat(Double($0) ?? 0) }
+  read(Array(args[4...]), top: edges.count > 1 ? edges[0] : 0, bottom: edges.last ?? 0, language: args[3])
 default:
-  fail("usage: compose draw <job.json> | compose card <card.json> | compose read <bottom> <language> <picture.png>… | compose sheet …")
+  fail("usage: compose draw <job.json> | compose video <video.json> | compose read [<top>:]<bottom> <language> <picture.png>… | compose sheet …")
 }
