@@ -1,0 +1,25 @@
+T-286 — red before: store-video.test.mjs (with T-286's tests) on montage.mjs as T-285 left it
+(git restore --source=d788455 -- e2e/store/montage.mjs; the rest of the tree T-286's)
+
+$ cd rehearsal-calendar-native && node --test e2e/__tests__/store-video.test.mjs
+…
+  ✔ the hook over the Planner darkened, lifting before the poster frame; the hook still on it (2003.176083ms)
+  ✖ the hook's shot shows no frame of the Planner loading, from its very first: only the Planner with its windows (379.252625ms)
+  ✖ a hook's recording without its "ready" mark is refused: where the loading ends is not guessed (54187.06ms)
+  ✔ the seen count's caption comes only once the count is at 12 of 12, and stays 2 s (1221.93425ms)
+  ✔ the last shot closes on the mark, the name and the sign-in line, held about 3 s (3144.622292ms)
+  ✔ a recording far longer than its shot is refused, not raced through (20129.564625ms)
+✖ made by ffmpeg, its captions by compose.swift (203208.292917ms)
+ℹ tests 24
+ℹ pass 22
+ℹ fail 2
+
+✖ the hook's shot shows no frame of the Planner loading, from its very first: only the Planner with its windows (379.252625ms)
+  AssertionError [ERR_ASSERTION]: 69 of shot 0's 78 frames show the Planner loading
+✖ a hook's recording without its "ready" mark is refused: where the loading ends is not guessed (54187.06ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+
+The test recording 01 is the Planner loading (blue) for 0.8 s, then its
+windows (white), marked ready at 1.0 s in its 01.json, as record.mjs keeps it.
+The old cut starts the hook's shot on the recording's first frame and holds it
+darkened for 1.5 s: 69 of the shot's 78 frames are the loading screen.
