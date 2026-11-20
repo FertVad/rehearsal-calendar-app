@@ -249,8 +249,19 @@ export function useSmartPlanner({
     return groupSlotsByDate(filteredSlots);
   }, [filteredSlots]);
 
+  // The roster as the participants row must tell it (T-287). Until this
+  // project's members are in, an empty list is not "nobody in the project":
+  // it is still on its way, or its load failed (CLAUDE.md §10). A reload of
+  // the same project's period keeps the members it has, so only a project not
+  // yet loaded is either.
+  const membersReady = membersProjectId === projectId;
+  const membersFailed = !membersReady && failure != null;
+  const membersLoading = !membersReady && !membersFailed;
+
   return {
     loading: loading && !rangeError,
+    membersLoading,
+    membersFailed,
     error: rangeError || error,
     project,
     members,

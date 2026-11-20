@@ -34,6 +34,12 @@ interface ParticipantPickerProps {
   selectedIds: string[];
   onChange: (selectedIds: string[]) => void;
   loading?: boolean;
+  /**
+   * The people could not be loaded: not a project with nobody in it
+   * (CLAUDE.md §10; T-287). The planner's row says so; the form's row says
+   * nothing in its place, its note under the row says why, with Retry.
+   */
+  failed?: boolean;
   /** What the row says with nobody picked, where that means everyone (the planner). */
   noneLabel?: string;
   /** A second line under the row, for someone picked who is busy then. */
@@ -74,6 +80,7 @@ export function ParticipantPicker({
   selectedIds,
   onChange,
   loading = false,
+  failed = false,
   noneLabel,
   conflict,
   faces = false,
@@ -86,12 +93,14 @@ export function ParticipantPicker({
   const picked = selectedIds.length;
   const value = loading
     ? t.rehearsals.loadingMembers
-    : people.length === 0
-      ? t.rehearsals.noMembers
-      : picked === 0 && noneLabel
-        ? noneLabel
-        : t.rehearsals.participantsCount(picked, people.length);
-  const disabled = loading || people.length === 0;
+    : failed
+      ? (faces ? t.rehearsals.loadMembersError : '')
+      : people.length === 0
+        ? t.rehearsals.noMembers
+        : picked === 0 && noneLabel
+          ? noneLabel
+          : t.rehearsals.participantsCount(picked, people.length);
+  const disabled = loading || failed || people.length === 0;
   // Everyone, or nobody where that means everyone: "All participants · 4".
   const everyone = !disabled && (picked === people.length || (picked === 0 && !!noneLabel));
 
