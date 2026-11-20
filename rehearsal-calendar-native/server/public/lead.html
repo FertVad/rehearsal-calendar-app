@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Rehearsly — for directors, choreographers and anyone who schedules rehearsals</title>
+  <meta name="description" content="No polls, no spreadsheets. The cast marks when they’re busy, you see the window that works, book it — and it’s on everyone’s calendar.">
+  <meta name="robots" content="noindex">
+
+  <!-- Open Graph: one language for the preview; the page itself switches -->
+  <meta property="og:title" content="Rehearsly — a time the whole cast can make, in a minute">
+  <meta property="og:description" content="No polls, no spreadsheets. The cast marks when they’re busy, you see the window that works, book it — and it’s on everyone’s calendar.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rehearsly.me/lead">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ru_RU">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:locale:alternate" content="de_DE">
+  <meta name="theme-color" content="#07080c">
+  <link rel="icon" href="assets/icon-64.png" sizes="64x64">
+  <link rel="apple-touch-icon" href="assets/icon-180.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&family=Inter+Tight:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="cinema.css">
+  <script src="lang.js"></script>
+</head>
+<body>
+
+<!--
+  The cinematic landing for whoever books the rehearsals, at /lead (index.html,
+  at /, is the general one; cast.html, at /cast, the one for the people who
+  rehearse).
+  Same scene and the same chat, its own words.
+
+  A prototype of the cinematic landing: the whole page as one 3D scene the
+  scroll moves the camera through (cinema.js). The words are HTML over the
+  canvas in all four languages, as on the landing; the chat and the lock
+  screen are HTML too, read by the scene and drawn into it. Without WebGL or
+  with reduced motion the page is the words and those two pictures.
+-->
+
+<canvas class="stage" aria-hidden="true"></canvas>
+<div class="labels" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="brand" href="/" aria-label="Rehearsly">
+    <img class="brand__mark" src="assets/mark.webp" alt="" width="215" height="256">
+    <span class="brand__name">Rehearsly</span>
+  </a>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-lang="en" lang="en">EN</button>
+    <button type="button" data-lang="ru" lang="ru">RU</button>
+    <button type="button" data-lang="es" lang="es">ES</button>
+    <button type="button" data-lang="de" lang="de">DE</button>
+  </div>
+</header>
+
+<main>
+  <section class="beat beat--hero" id="top">
+    <div class="beat__copy">
+      <p class="eyebrow"><b data-l="en">For&nbsp;directors, choreographers and&nbsp;anyone who schedules&nbsp;rehearsals</b><b data-l="ru" hidden>Для&nbsp;режиссёров, хореографов и&nbsp;всех, кто&nbsp;назначает&nbsp;репетиции</b><b data-l="es" hidden>Para dirección, coreografía y&nbsp;cualquiera que&nbsp;programe&nbsp;ensayos</b><b data-l="de" hidden>Für&nbsp;Regie, Choreografie und&nbsp;alle, die&nbsp;Proben&nbsp;planen</b></p>
+      <h1 class="display display--long">
+        <span data-l="en"><b>A&nbsp;time the&nbsp;whole cast can make&nbsp;—</b> <b class="grad">in&nbsp;a&nbsp;minute,</b> <b class="muted">not a&nbsp;night in&nbsp;the&nbsp;group chat.</b></span>
+        <span data-l="ru" hidden><b>Свободный&nbsp;слот для&nbsp;всего состава&nbsp;—</b> <b class="grad">за&nbsp;минуту,</b> <b class="muted">а&nbsp;не&nbsp;за&nbsp;вечер в&nbsp;чате.</b></span>
+        <span data-l="es" hidden><b>Un&nbsp;horario libre para&nbsp;todos,</b> <b class="grad">en&nbsp;un&nbsp;minuto,</b> <b class="muted">no&nbsp;en&nbsp;toda una&nbsp;noche de&nbsp;chat.</b></span>
+        <span data-l="de" hidden><b>Ein&nbsp;Termin, der&nbsp;allen passt&nbsp;–</b> <b class="grad">in&nbsp;einer Minute,</b> <b class="muted">nicht nach einem Abend im&nbsp;Chat.</b></span>
+      </h1>
+      <p class="lede"><b data-l="en">No&nbsp;polls, no&nbsp;spreadsheets. The&nbsp;cast marks when they’re busy. You see the&nbsp;window that works, book it&nbsp;— and&nbsp;it’s on&nbsp;everyone’s&nbsp;calendar.</b><b data-l="ru" hidden>Без&nbsp;опросов и&nbsp;таблиц. Состав отмечает время сам, ты&nbsp;видишь общее окно, назначаешь&nbsp;— и&nbsp;репетиция у&nbsp;всех в&nbsp;календаре.</b><b data-l="es" hidden>Sin&nbsp;encuestas ni&nbsp;Excel. Cada uno marca cuándo no&nbsp;puede, tú&nbsp;ves en&nbsp;qué horario coinciden, programas el&nbsp;ensayo y&nbsp;ya&nbsp;está en&nbsp;el&nbsp;calendario&nbsp;de&nbsp;todos.</b><b data-l="de" hidden>Keine Umfragen, keine Tabellen. Alle tragen selbst ein, wann sie keine Zeit haben, du&nbsp;siehst das&nbsp;gemeinsame Zeitfenster, setzt die&nbsp;Probe an&nbsp;– und&nbsp;sie steht bei&nbsp;allen im&nbsp;Kalender.</b></p>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="#invite"><b data-l="en">See how it&nbsp;works</b><b data-l="ru" hidden>Как это работает</b><b data-l="es" hidden>Ver cómo funciona</b><b data-l="de" hidden>So funktioniert’s</b></a>
+        <a class="btn btn--ghost" href="mailto:support@rehearsly.me?subject=TestFlight" data-mail="lead"><b data-l="en">Request access</b><b data-l="ru" hidden>Запросить доступ</b><b data-l="es" hidden>Pedir acceso</b><b data-l="de" hidden>Zugang anfragen</b></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="beat" id="problem">
+    <div class="beat__copy">
+      <p class="eyebrow"><b data-l="en">How it usually&nbsp;goes</b><b data-l="ru" hidden>Как обычно бывает</b><b data-l="es" hidden>Lo de&nbsp;siempre</b><b data-l="de" hidden>Wie es&nbsp;meistens&nbsp;läuft</b></p>
+      <h2>
+      <b data-l="en">Twenty messages, one of&nbsp;them pinned&nbsp;— and&nbsp;someone still misses&nbsp;rehearsal.</b><b data-l="ru" hidden>Двадцать сообщений, закреп в&nbsp;чате&nbsp;— и&nbsp;<span class="nw"><span class="nw">кто-то</span></span> всё&nbsp;равно пропустил&nbsp;репетицию.</b><b data-l="es" hidden>Veinte mensajes, el&nbsp;horario fijado en&nbsp;el&nbsp;chat y&nbsp;alguien igual se&nbsp;pierde el&nbsp;ensayo.</b><b data-l="de" hidden>Zwanzig Nachrichten, die&nbsp;Uhrzeit oben angepinnt&nbsp;– und&nbsp;trotzdem verpasst einer die&nbsp;Probe.</b>
+      </h2>
+      <ul class="pains">
+      <li><b data-l="en">You ask in&nbsp;the&nbsp;chat. An&nbsp;hour later, three people have&nbsp;answered.</b><b data-l="ru" hidden>Спрашиваешь в&nbsp;чате. Через час ответили&nbsp;трое.</b><b data-l="es" hidden>Preguntas en&nbsp;el&nbsp;grupo. Una&nbsp;hora después, han contestado&nbsp;tres.</b><b data-l="de" hidden>Du&nbsp;fragst im&nbsp;Chat. Nach einer Stunde haben drei geantwortet.</b></li>
+      <li><b data-l="en">The&nbsp;rest reply in&nbsp;DMs, in&nbsp;voice messages, with “what about Thursday?” You piece it&nbsp;together in&nbsp;your&nbsp;notes.</b><b data-l="ru" hidden>Остальные&nbsp;— в&nbsp;личке, голосовым, «а&nbsp;четверг?». Сводишь всё&nbsp;в&nbsp;заметках.</b><b data-l="es" hidden>Los&nbsp;demás, por&nbsp;privado, por&nbsp;audio, «¿y&nbsp;el&nbsp;jueves?». Lo&nbsp;juntas todo en&nbsp;tus&nbsp;notas.</b><b data-l="de" hidden>Der&nbsp;Rest antwortet privat, per Sprachnachricht, mit&nbsp;„und&nbsp;Donnerstag?“. Du&nbsp;sammelst alles in&nbsp;deinen&nbsp;Notizen.</b></li>
+      <li><b data-l="en">You find an&nbsp;evening&nbsp;— and&nbsp;Maria’s in&nbsp;another show that night. Back to&nbsp;square&nbsp;one.</b><b data-l="ru" hidden>Находишь вечер&nbsp;— а&nbsp;у&nbsp;Кости там спектакль в&nbsp;другом проекте. Начинаешь&nbsp;заново.</b><b data-l="es" hidden>Encuentras una&nbsp;noche y&nbsp;Diego tiene función en&nbsp;otro proyecto. A&nbsp;empezar&nbsp;de&nbsp;nuevo.</b><b data-l="de" hidden>Du&nbsp;findest einen Abend&nbsp;– und&nbsp;Paul hat da eine&nbsp;Vorstellung in&nbsp;einem anderen Projekt. Alles&nbsp;von&nbsp;vorn.</b></li>
+      <li><b data-l="en">You move it, and&nbsp;spend half an&nbsp;hour telling everyone it’s Wednesday&nbsp;now.</b><b data-l="ru" hidden>Переносишь&nbsp;— и&nbsp;полчаса пишешь каждому, что&nbsp;теперь&nbsp;в&nbsp;среду.</b><b data-l="es" hidden>Lo&nbsp;cambias y&nbsp;te&nbsp;pasas media hora avisando a&nbsp;cada uno que&nbsp;ahora es&nbsp;el&nbsp;miércoles.</b><b data-l="de" hidden>Du&nbsp;verschiebst auf&nbsp;Mittwoch&nbsp;– und&nbsp;schreibst es&nbsp;eine&nbsp;halbe Stunde lang jedem&nbsp;einzeln.</b></li>
+      </ul>
+    </div>
+    <!-- Without the scene this thread is the picture; with it, cinema.js
+         reads its words and floats them in the dark. -->
+    <div class="beat__media">
+<div class="chat">
+          <div data-l="en">
+            <div class="chat__head"><span class="chat__avatar" aria-hidden="true">H</span><span><b>Hamlet&nbsp;— cast</b><small>8&nbsp;members</small></span></div>
+            <p class="msg msg--out">Who can do Tuesday, 6&nbsp;to&nbsp;9?</p>
+            <p class="msg"><span class="msg__who msg__who--1">Alex</span>on&nbsp;a&nbsp;shoot till&nbsp;7</p>
+            <p class="msg"><span class="msg__who msg__who--2">Yuki</span>Tuesday’s out. Wednesday&nbsp;works</p>
+            <p class="msg"><span class="msg__who msg__who--3">Daniel</span>what about&nbsp;Thursday?</p>
+            <p class="msg msg--out">ok, Wednesday 6pm&nbsp;then</p>
+            <p class="chat__pin">📌 You pinned a&nbsp;message</p>
+            <p class="msg"><span class="msg__who msg__who--4">Maria</span>hang on, I’ve got a&nbsp;show&nbsp;Wednesday</p>
+            <p class="msg"><span class="msg__who msg__who--1">Alex</span>wait, so when’s&nbsp;rehearsal?</p>
+            <p class="chat__seen">Seen by&nbsp;5&nbsp;of&nbsp;8</p>
+          </div>
+          <div data-l="ru" hidden>
+            <div class="chat__head"><span class="chat__avatar" aria-hidden="true">Г</span><span><b>Гамлет&nbsp;— состав</b><small>8&nbsp;участников</small></span></div>
+            <p class="msg msg--out">Кто может во&nbsp;вторник с&nbsp;18&nbsp;до&nbsp;21?</p>
+            <p class="msg"><span class="msg__who msg__who--1">Аня</span>до&nbsp;семи на&nbsp;съёмке</p>
+            <p class="msg"><span class="msg__who msg__who--2">Дима</span>во&nbsp;вторник никак, в&nbsp;среду&nbsp;могу</p>
+            <p class="msg"><span class="msg__who msg__who--3">Лера</span>а&nbsp;четверг?</p>
+            <p class="msg msg--out">Ок, тогда среда,&nbsp;18:00</p>
+            <p class="chat__pin">📌 Вы закрепили&nbsp;сообщение</p>
+            <p class="msg"><span class="msg__who msg__who--4">Костя</span>стоп, у&nbsp;меня в&nbsp;среду&nbsp;спектакль</p>
+            <p class="msg"><span class="msg__who msg__who--1">Аня</span>так во&nbsp;сколько репа в&nbsp;итоге?</p>
+            <p class="chat__seen">Прочитали 5&nbsp;из&nbsp;8</p>
+          </div>
+          <div data-l="es" hidden>
+            <div class="chat__head"><span class="chat__avatar" aria-hidden="true">H</span><span><b>Hamlet&nbsp;— elenco</b><small>8&nbsp;participantes</small></span></div>
+            <p class="msg msg--out">¿Quién puede el&nbsp;martes de&nbsp;18&nbsp;a&nbsp;21?</p>
+            <p class="msg"><span class="msg__who msg__who--1">Sofi</span>estoy en&nbsp;un&nbsp;rodaje hasta las&nbsp;7</p>
+            <p class="msg"><span class="msg__who msg__who--2">Mateo</span>martes imposible, miércoles&nbsp;sí</p>
+            <p class="msg"><span class="msg__who msg__who--3">Cami</span>¿y&nbsp;el&nbsp;jueves?</p>
+            <p class="msg msg--out">Ok, miércoles a&nbsp;las&nbsp;18</p>
+            <p class="chat__pin">📌 Fijaste un&nbsp;mensaje</p>
+            <p class="msg"><span class="msg__who msg__who--4">Diego</span>ojo, el&nbsp;miércoles tengo&nbsp;función</p>
+            <p class="msg"><span class="msg__who msg__who--1">Sofi</span>o&nbsp;sea, ¿a&nbsp;qué hora al&nbsp;final?</p>
+            <p class="chat__seen">Leído por&nbsp;5&nbsp;de&nbsp;8</p>
+          </div>
+          <div data-l="de" hidden>
+            <div class="chat__head"><span class="chat__avatar" aria-hidden="true">H</span><span><b>Hamlet&nbsp;–&nbsp;Proben</b><small>8&nbsp;Mitglieder</small></span></div>
+            <p class="msg msg--out">Wer kann Dienstag von&nbsp;18&nbsp;bis&nbsp;21?</p>
+            <p class="msg"><span class="msg__who msg__who--1">Lena</span>bin bis 19&nbsp;Uhr beim&nbsp;Dreh</p>
+            <p class="msg"><span class="msg__who msg__who--2">Jonas</span>Dienstag geht nicht, Mittwoch&nbsp;schon</p>
+            <p class="msg"><span class="msg__who msg__who--3">Mia</span>und&nbsp;Donnerstag?</p>
+            <p class="msg msg--out">Ok, dann Mittwoch, 18&nbsp;Uhr</p>
+            <p class="chat__pin">📌 Du hast eine&nbsp;Nachricht&nbsp;angeheftet</p>
+            <p class="msg"><span class="msg__who msg__who--4">Paul</span>Moment, Mittwoch hab ich&nbsp;Vorstellung</p>
+            <p class="msg"><span class="msg__who msg__who--1">Lena</span>also wann ist jetzt&nbsp;Probe?</p>
+            <p class="chat__seen">Gelesen: 5&nbsp;von&nbsp;8</p>
+          </div>
+        </div>
+    </div>
+  </section>
+
+  <section class="beat" id="invite">
+    <div class="beat__copy">
+      <p class="step-num">01 <span>/ 04</span></p>
+      <h2><b data-l="en">Set up a&nbsp;production, drop the&nbsp;link in&nbsp;the&nbsp;cast&nbsp;chat</b><b data-l="ru" hidden>Создай проект и&nbsp;кинь ссылку в&nbsp;чат&nbsp;состава</b><b data-l="es" hidden>Crea el&nbsp;proyecto y&nbsp;pasa el&nbsp;enlace al&nbsp;chat&nbsp;del&nbsp;grupo</b><b data-l="de" hidden>Projekt anlegen, Link in&nbsp;den Gruppenchat</b></h2>
+      <p class="body"><b data-l="en">One tap, and&nbsp;they’re&nbsp;in.</b><b data-l="ru" hidden>Один тап&nbsp;— и&nbsp;человек&nbsp;в&nbsp;проекте.</b><b data-l="es" hidden>Un&nbsp;toque y&nbsp;ya&nbsp;están&nbsp;dentro.</b><b data-l="de" hidden>Einmal tippen&nbsp;– schon sind sie&nbsp;dabei.</b></p>
+    </div>
+  </section>
+
+  <section class="beat" id="mark">
+    <div class="beat__copy">
+      <p class="step-num">02 <span>/ 04</span></p>
+      <h2><b data-l="en">The&nbsp;cast fills in&nbsp;their own availability</b><b data-l="ru" hidden>Состав отмечает&nbsp;сам</b><b data-l="es" hidden>Cada uno marca su&nbsp;disponibilidad</b><b data-l="de" hidden>Alle tragen ihre Zeiten selbst&nbsp;ein</b></h2>
+      <p class="body"><b data-l="en">By&nbsp;hand in&nbsp;a&nbsp;minute, or&nbsp;from Apple or&nbsp;Google Calendar, and&nbsp;it&nbsp;keeps itself up to&nbsp;date. No&nbsp;chasing&nbsp;anyone.</b><b data-l="ru" hidden>Руками за&nbsp;минуту&nbsp;— или&nbsp;из&nbsp;Apple или&nbsp;Google Календаря, дальше всё&nbsp;обновляется само. Догонять никого&nbsp;не&nbsp;нужно.</b><b data-l="es" hidden>A&nbsp;mano en&nbsp;un&nbsp;minuto, o&nbsp;desde Apple o&nbsp;Google Calendar, y&nbsp;se&nbsp;actualiza sola. No&nbsp;tienes que&nbsp;perseguir&nbsp;a&nbsp;nadie.</b><b data-l="de" hidden>Von&nbsp;Hand in&nbsp;einer Minute&nbsp;– oder aus&nbsp;dem&nbsp;Apple- oder <span class="nw">Google-Kalender</span>, dann aktualisiert sich alles automatisch. Hinterherlaufen musst&nbsp;du&nbsp;keinem.</b></p>
+    </div>
+  </section>
+
+  <section class="beat" id="windows">
+    <div class="beat__copy">
+      <p class="step-num">03 <span>/ 04</span></p>
+      <h2><b data-l="en">Planner shows&nbsp;the&nbsp;windows</b><b data-l="ru" hidden>Planner показывает&nbsp;окна</b><b data-l="es" hidden>Planner te&nbsp;muestra los&nbsp;horarios</b><b data-l="de" hidden>Der&nbsp;Planner zeigt die&nbsp;Zeitfenster</b></h2>
+      <p class="body"><b data-l="en">Pick the&nbsp;dates and&nbsp;the&nbsp;people. A&nbsp;<span class="nw">put-in</span> for&nbsp;a&nbsp;new cast member, and&nbsp;you only need three? Select them, and&nbsp;you’ll see when they can all make it. <span class="t-free">Green</span>: everyone’s free. <span class="t-partial">Amber</span>: you see who’s out. <span class="t-busy">Red</span>: move&nbsp;on.</b><b data-l="ru" hidden>Выбери даты и&nbsp;тех, кто&nbsp;нужен. Ввод новой актрисы, нужны трое? Отметь троих&nbsp;— Planner покажет их&nbsp;окна. <span class="t-free">Зелёное</span>&nbsp;— свободны все, <span class="t-partial">жёлтое</span>&nbsp;— видно, кто&nbsp;занят, <span class="t-busy">красное</span>&nbsp;—&nbsp;мимо.</b><b data-l="es" hidden>Elige las&nbsp;fechas y&nbsp;a&nbsp;quiénes necesitas. ¿Entra una&nbsp;actriz nueva y&nbsp;bastan tres? Márcalos y&nbsp;verás cuándo coinciden. <span class="t-free">Verde</span>: todos libres. <span class="t-partial">Amarillo</span>: sabes quién no&nbsp;puede. <span class="t-busy">Rojo</span>: ni&nbsp;lo&nbsp;pienses.</b><b data-l="de" hidden>Wähl die&nbsp;Tage und&nbsp;die&nbsp;Leute, die&nbsp;du&nbsp;brauchst. Umbesetzungsprobe mit&nbsp;nur&nbsp;drei? Hak sie an&nbsp;– schon steht da, wann genau sie können. <span class="t-free">Grün</span>: alle frei. <span class="t-partial">Gelb</span>: Du&nbsp;siehst, wer&nbsp;fehlt. <span class="t-busy">Rot</span>: Vergiss&nbsp;es.</b></p>
+    </div>
+  </section>
+
+  <section class="beat" id="book">
+    <div class="beat__copy">
+      <p class="step-num">04 <span>/ 04</span></p>
+      <h2><b data-l="en">Book it&nbsp;— everyone&nbsp;knows</b><b data-l="ru" hidden>Назначь репу&nbsp;— и&nbsp;все&nbsp;в&nbsp;курсе</b><b data-l="es" hidden>Programa el&nbsp;ensayo y&nbsp;todos se&nbsp;enteran</b><b data-l="de" hidden>Probe ansetzen&nbsp;– alle wissen&nbsp;Bescheid</b></h2>
+      <p class="body"><b data-l="en">The&nbsp;rehearsal shows up on&nbsp;the&nbsp;calendars of&nbsp;the&nbsp;people you called, and&nbsp;they get a&nbsp;notification. Everyone else is&nbsp;left alone. A&nbsp;counter shows how many have seen it:&nbsp;5&nbsp;of&nbsp;8.</b><b data-l="ru" hidden>Репетиция появляется в&nbsp;календаре у&nbsp;тех, кого ты&nbsp;зовёшь, и&nbsp;им приходит уведомление. Остальных не&nbsp;дёргаешь. Счётчик покажет, кто&nbsp;уже&nbsp;видел:&nbsp;5&nbsp;из&nbsp;8.</b><b data-l="es" hidden>Aparece en&nbsp;el&nbsp;calendario de&nbsp;quienes convocaste y&nbsp;les&nbsp;llega un&nbsp;aviso. Al&nbsp;resto no&nbsp;lo&nbsp;molestas. Un&nbsp;contador muestra cuántos ya&nbsp;lo&nbsp;han&nbsp;visto:&nbsp;5&nbsp;de&nbsp;8.</b><b data-l="de" hidden>Jeder, den&nbsp;du&nbsp;eingeladen hast, hat die&nbsp;Probe im&nbsp;Kalender&nbsp;– samt Benachrichtigung. Den&nbsp;Rest lässt du&nbsp;in&nbsp;Ruhe. Ein&nbsp;Zähler zeigt, wie viele sie schon gesehen haben:&nbsp;5&nbsp;von&nbsp;8.</b></p>
+    </div>
+  </section>
+
+  <section class="beat" id="projects">
+    <div class="beat__copy">
+      <p class="eyebrow"><b data-l="en">More than one&nbsp;show</b><b data-l="ru" hidden>Несколько&nbsp;проектов</b><b data-l="es" hidden>Varios&nbsp;proyectos</b><b data-l="de" hidden>Mehrere&nbsp;Projekte</b></p>
+      <h2><b data-l="en">Your&nbsp;cast has other productions&nbsp;too.</b><b data-l="ru" hidden>У&nbsp;твоего состава есть и&nbsp;другие&nbsp;проекты.</b><b data-l="es" hidden>Tu&nbsp;gente también está en&nbsp;otros&nbsp;proyectos.</b><b data-l="de" hidden>Deine Leute proben nicht nur&nbsp;bei&nbsp;dir.</b></h2>
+      <p class="lede"><b data-l="en">A&nbsp;rehearsal in&nbsp;any of&nbsp;them blocks those hours right away. You see it&nbsp;in&nbsp;Planner before you book&nbsp;— not when Maria writes “hang&nbsp;on.”</b><b data-l="ru" hidden>Репетиция в&nbsp;любом из&nbsp;них сразу занимает эти часы. Ты&nbsp;видишь это&nbsp;в&nbsp;Planner ещё до&nbsp;того, как&nbsp;назначишь, а&nbsp;не&nbsp;когда Костя напишет&nbsp;«стоп».</b><b data-l="es" hidden>Un&nbsp;ensayo en&nbsp;cualquiera de&nbsp;ellos ocupa esas horas al&nbsp;instante. Lo&nbsp;ves en&nbsp;Planner antes de&nbsp;programar, no&nbsp;cuando Diego te&nbsp;escriba «espera».</b><b data-l="de" hidden>Eine Probe in&nbsp;einem anderen Projekt blockt die&nbsp;Zeit sofort auch bei&nbsp;dir. Du&nbsp;siehst das&nbsp;im&nbsp;Planner, bevor du&nbsp;dich&nbsp;festlegst&nbsp;– nicht erst, wenn Paul „Moment“&nbsp;schreibt.</b></p>
+    </div>
+  </section>
+
+  <section class="beat" id="cast">
+    <div class="beat__copy">
+      <p class="eyebrow"><b data-l="en">For&nbsp;the&nbsp;cast</b><b data-l="ru" hidden>Участникам</b><b data-l="es" hidden>Para el&nbsp;grupo</b><b data-l="de" hidden>Für alle, die&nbsp;mitproben</b></p>
+      <h2><b data-l="en">Your&nbsp;cast has nothing to&nbsp;set&nbsp;up.</b><b data-l="ru" hidden>Составу ничего настраивать&nbsp;не&nbsp;надо.</b><b data-l="es" hidden>No&nbsp;tienen que&nbsp;configurar&nbsp;nada.</b><b data-l="de" hidden>Einrichten muss niemand etwas.</b></h2>
+      <ul class="perks">
+        <li>
+        <h3><b data-l="en">In&nbsp;under&nbsp;a&nbsp;minute</b><b data-l="ru" hidden>Вход&nbsp;за&nbsp;минуту</b><b data-l="es" hidden>Dentro en&nbsp;un&nbsp;minuto</b><b data-l="de" hidden>In&nbsp;einer Minute&nbsp;dabei</b></h3>
+        <p><b data-l="en">They download the&nbsp;app, open your&nbsp;link, and&nbsp;that’s&nbsp;it.</b><b data-l="ru" hidden>Скачали приложение, открыли ссылку&nbsp;— и&nbsp;уже&nbsp;в&nbsp;проекте.</b><b data-l="es" hidden>Descargan la&nbsp;app, abren el&nbsp;enlace y&nbsp;ya&nbsp;están en&nbsp;el&nbsp;proyecto.</b><b data-l="de" hidden>App laden, Link öffnen&nbsp;– schon&nbsp;im&nbsp;Projekt.</b></p>
+        </li>
+        <li>
+        <h3><b data-l="en">Private stays&nbsp;private</b><b data-l="ru" hidden>Личное остаётся&nbsp;личным</b><b data-l="es" hidden>Lo&nbsp;privado sigue&nbsp;privado</b><b data-l="de" hidden>Privates bleibt&nbsp;privat</b></h3>
+        <p><b data-l="en">Only the&nbsp;hours leave the&nbsp;calendar. Nobody sees what the&nbsp;events are&nbsp;— not even&nbsp;you.</b><b data-l="ru" hidden>Из&nbsp;календаря уходят только часы. Названия событий не&nbsp;видит никто, даже&nbsp;ты.</b><b data-l="es" hidden>Del&nbsp;calendario solo salen las&nbsp;horas. Nadie ve los&nbsp;nombres de&nbsp;los&nbsp;eventos, ni&nbsp;siquiera&nbsp;tú.</b><b data-l="de" hidden>Aus&nbsp;dem&nbsp;Kalender gehen nur&nbsp;die&nbsp;Zeiten raus. Die&nbsp;Namen der&nbsp;Termine sieht keiner&nbsp;– nicht mal&nbsp;du.</b></p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="beat" id="notify">
+    <div class="beat__copy">
+      <ul class="perks perks--lead">
+        <li>
+        <h3><b data-l="en">Nobody misses&nbsp;it</b><b data-l="ru" hidden>Никто не&nbsp;пропустит</b><b data-l="es" hidden>Nadie se&nbsp;entera&nbsp;tarde</b><b data-l="de" hidden>Keiner verpasst mehr&nbsp;was</b></h3>
+        <p><b data-l="en">Booked, moved or&nbsp;canceled&nbsp;— everyone affected gets a&nbsp;notification. No&nbsp;more “guys, check the&nbsp;pinned&nbsp;message.”</b><b data-l="ru" hidden>Назначаешь, переносишь, отменяешь&nbsp;— уведомление получит каждый, кого это&nbsp;касается. Без&nbsp;«ребят, смотрите закреп».</b><b data-l="es" hidden>Programas, cambias o&nbsp;cancelas: a&nbsp;cada persona convocada le&nbsp;llega un&nbsp;aviso. Se&nbsp;acabó el&nbsp;«¿nadie ha visto el&nbsp;mensaje&nbsp;fijado?».</b><b data-l="de" hidden>Angesetzt, verschoben, abgesagt: Alle, die&nbsp;es&nbsp;betrifft, bekommen eine&nbsp;Benachrichtigung. Kein „Leute, steht doch oben angepinnt!“&nbsp;mehr.</b></p>
+        </li>
+        <li>
+        <h3><b data-l="en">Share&nbsp;the&nbsp;load</b><b data-l="ru" hidden>Не&nbsp;в&nbsp;одиночку</b><b data-l="es" hidden>En&nbsp;equipo</b><b data-l="de" hidden>Nicht&nbsp;allein</b></h3>
+        <p><b data-l="en">Make your&nbsp;stage manager or&nbsp;assistant choreographer an&nbsp;admin, and&nbsp;the&nbsp;two of&nbsp;you can book&nbsp;rehearsals.</b><b data-l="ru" hidden>Сделай помрежа или&nbsp;второго хореографа админом, и&nbsp;ставить репетиции сможете&nbsp;вдвоём.</b><b data-l="es" hidden>Haz admin a&nbsp;quien te&nbsp;ayuda con la&nbsp;dirección o&nbsp;la&nbsp;coreografía, y&nbsp;cualquiera de&nbsp;los&nbsp;dos podrá programar&nbsp;ensayos.</b><b data-l="de" hidden>Mach deine Regieassistenz oder die&nbsp;<span class="nw">Co-Choreografie</span> zum&nbsp;Admin&nbsp;– dann setzt ihr die&nbsp;Proben zu&nbsp;zweit&nbsp;an.</b></p>
+        </li>
+      </ul>
+    </div>
+    <!-- The notifications follow the server's own wording
+         (server/i18n/pushNotifications.js, as of T-256; the German cancel's
+         title has no "Probe" in it, since the push puts that word in front).
+         cinema.js draws them on the
+         phone's lock screen; without the scene this is the picture. -->
+    <div class="beat__media">
+<div class="lock">
+          <div data-l="en">
+            <p class="lock__time">9:41</p><p class="lock__date">Friday, August 21</p>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>now</span></p><p class="note__title">New Rehearsal</p><p class="note__body">Hamlet: Fight scene scheduled tomorrow at&nbsp;6:00&nbsp;PM</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>12m ago</span></p><p class="note__title">Rehearsal Updated</p><p class="note__body">Swan Lake: Corps de ballet&nbsp;— moved to today at&nbsp;7:00&nbsp;PM</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>1h ago</span></p><p class="note__title">Rehearsal Canceled</p><p class="note__body">New Year’s Eve Live: Camera rehearsal, on Tue, Aug&nbsp;25 at&nbsp;10:00&nbsp;AM&nbsp;— canceled</p></div></div>
+          </div>
+          <div data-l="ru" hidden>
+            <p class="lock__time">9:41</p><p class="lock__date">пятница, 21&nbsp;августа</p>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>сейчас</span></p><p class="note__title">Новая репетиция</p><p class="note__body">Гамлет: Репетиция «Сцена дуэли» назначена на&nbsp;завтра в&nbsp;18:00</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>12&nbsp;мин назад</span></p><p class="note__title">Изменена репетиция</p><p class="note__body">Лебединое озеро: Кордебалет&nbsp;— теперь сегодня в&nbsp;19:00</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>1&nbsp;ч назад</span></p><p class="note__title">Отменена репетиция</p><p class="note__body">Новогодний эфир: Репетиция «Прогон&nbsp;с&nbsp;камерами» на&nbsp;вт, 25&nbsp;авг. в&nbsp;10:00 отменена</p></div></div>
+          </div>
+          <div data-l="es" hidden>
+            <p class="lock__time">9:41</p><p class="lock__date">viernes, 21&nbsp;de&nbsp;agosto</p>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>ahora</span></p><p class="note__title">Nuevo ensayo</p><p class="note__body">Hamlet: Ensayo «Escena del&nbsp;duelo» programado para&nbsp;mañana a&nbsp;las&nbsp;18:00</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>hace 12&nbsp;min</span></p><p class="note__title">Ensayo actualizado</p><p class="note__body">El lago de&nbsp;los&nbsp;cisnes: Cuerpo de&nbsp;baile, pasa a&nbsp;hoy a&nbsp;las&nbsp;19:00</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>hace&nbsp;1&nbsp;h</span></p><p class="note__title">Ensayo cancelado</p><p class="note__body">Especial de&nbsp;Año Nuevo: Cancelado el&nbsp;ensayo «Pase&nbsp;con&nbsp;cámaras» previsto para el&nbsp;martes 25&nbsp;de&nbsp;agosto a&nbsp;las&nbsp;10:00</p></div></div>
+          </div>
+          <div data-l="de" hidden>
+            <p class="lock__time">9:41</p><p class="lock__date">Freitag, 21. August</p>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>jetzt</span></p><p class="note__title">Neue Probe</p><p class="note__body">Hamlet: Probe „Fechtszene“ morgen um&nbsp;18:00&nbsp;angesetzt</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>vor&nbsp;12&nbsp;Min.</span></p><p class="note__title">Probe geändert</p><p class="note__body">Schwanensee: Probe „Corps&nbsp;de&nbsp;ballet“&nbsp;– verlegt auf&nbsp;heute, 19:00</p></div></div>
+            <div class="note"><img class="note__icon" src="assets/icon-64.png" alt="" width="64" height="64"><div><p class="note__meta"><span>Rehearsly</span><span>vor&nbsp;1&nbsp;Std.</span></p><p class="note__title">Probe abgesagt</p><p class="note__body">Silvestergala: Probe „Durchlauf&nbsp;mit&nbsp;Kamera“ am&nbsp;Di., 25.&nbsp;Aug. um&nbsp;10:00 abgesagt</p></div></div>
+          </div>
+        </div>
+    </div>
+  </section>
+
+  <section class="beat beat--flow" id="details">
+    <div class="beat__copy">
+      <p class="eyebrow"><b data-l="en">And the details</b><b data-l="ru" hidden>И&nbsp;мелочи</b><b data-l="es" hidden>Y los&nbsp;detalles</b><b data-l="de" hidden>Und die&nbsp;Details</b></p>
+      <h2><b data-l="en">Little things that save you&nbsp;an&nbsp;evening.</b><b data-l="ru" hidden>Мелочи, которые экономят вечер.</b><b data-l="es" hidden>Pequeñas cosas que&nbsp;te&nbsp;ahorran horas&nbsp;de&nbsp;chat.</b><b data-l="de" hidden>Kleinigkeiten, die&nbsp;dir&nbsp;ganze Abende&nbsp;sparen.</b></h2>
+      <ul class="minis">
+      <li class="mini">
+      <h3><b data-l="en">Conflicts, right&nbsp;in&nbsp;the&nbsp;form</b><b data-l="ru" hidden>Занятость прямо в&nbsp;форме</b><b data-l="es" hidden>Choques de&nbsp;horario,&nbsp;a&nbsp;la&nbsp;vista</b><b data-l="de" hidden>Überschneidungen</b></h3>
+      <p><b data-l="en">Next to&nbsp;each name: when they’re busy. Up top: the&nbsp;times that work for&nbsp;everyone.</b><b data-l="ru" hidden>В&nbsp;форме у&nbsp;каждого подписано, когда он занят, а&nbsp;сверху&nbsp;— время, которое подходит&nbsp;всем.</b><b data-l="es" hidden>En&nbsp;el&nbsp;formulario ves cuándo está ocupado cada uno y, arriba, los&nbsp;horarios que&nbsp;les&nbsp;sirven&nbsp;a&nbsp;todos.</b><b data-l="de" hidden>Wenn du&nbsp;eine&nbsp;Probe ansetzt, steht bei&nbsp;jedem Namen, wann die&nbsp;Person schon verplant ist&nbsp;– und&nbsp;ganz oben die&nbsp;Zeiten, die&nbsp;allen&nbsp;passen.</b></p>
+      </li>
+      <li class="mini">
+      <h3><b data-l="en">Who’s seen it</b><b data-l="ru" hidden>Кто видел</b><b data-l="es" hidden>Quién está&nbsp;al&nbsp;tanto</b><b data-l="de" hidden>Wer es&nbsp;gesehen&nbsp;hat</b></h3>
+      <p><b data-l="en">Every rehearsal has an&nbsp;<svg class="eye-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg> for&nbsp;the&nbsp;cast to&nbsp;tap once they’ve read it, and&nbsp;a&nbsp;count:&nbsp;5&nbsp;of&nbsp;8.</b><b data-l="ru" hidden>На&nbsp;каждой репетиции есть индикатор просмотра&nbsp;<svg class="eye-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg> и&nbsp;счётчик: видели&nbsp;5&nbsp;из&nbsp;8.</b><b data-l="es" hidden>Cada ensayo tiene un&nbsp;indicador&nbsp;<svg class="eye-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg> y&nbsp;un&nbsp;contador: 5&nbsp;de&nbsp;8 ya&nbsp;lo&nbsp;han&nbsp;visto.</b><b data-l="de" hidden>Jede Probe hat ein&nbsp;Augensymbol&nbsp;<svg class="eye-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg> und&nbsp;einen Zähler: 5&nbsp;von&nbsp;8&nbsp;sind&nbsp;im&nbsp;Bild.</b></p>
+      </li>
+      <li class="mini">
+      <h3><b data-l="en">Apple &amp; Google&nbsp;Calendar</b><b data-l="ru" hidden>Apple и&nbsp;Google&nbsp;Календарь</b><b data-l="es" hidden>Apple y&nbsp;Google&nbsp;Calendar</b><b data-l="de" hidden>Apple- und&nbsp;<span class="nw">Google-Kalender</span></b></h3>
+      <p><b data-l="en">Synced automatically, both ways: busy hours come into Rehearsly, rehearsals go out to&nbsp;your&nbsp;calendar.</b><b data-l="ru" hidden>Синхронизируются сами и&nbsp;в&nbsp;обе стороны: занятые часы приходят в&nbsp;Rehearsly, репетиции уходят в&nbsp;календарь.</b><b data-l="es" hidden>Se&nbsp;sincronizan solos, en&nbsp;las&nbsp;dos direcciones: las&nbsp;horas ocupadas llegan a&nbsp;Rehearsly; los&nbsp;ensayos, a&nbsp;tu&nbsp;calendario.</b><b data-l="de" hidden>Automatisch in&nbsp;beide Richtungen: Belegte Zeiten kommen rein, Proben gehen&nbsp;raus.</b></p>
+      </li>
+      <li class="mini">
+      <h3><b data-l="en">Nothing gets&nbsp;lost</b><b data-l="ru" hidden>Уведомления не&nbsp;теряются</b><b data-l="es" hidden>Los&nbsp;avisos no&nbsp;se&nbsp;pierden</b><b data-l="de" hidden>Nichts geht&nbsp;verloren</b></h3>
+      <p><b data-l="en">Every notification stays in&nbsp;the&nbsp;app’s inbox, even with alerts turned off on&nbsp;your&nbsp;phone.</b><b data-l="ru" hidden>Все они остаются во&nbsp;входящих в&nbsp;приложении, даже если на&nbsp;телефоне уведомления&nbsp;выключены.</b><b data-l="es" hidden>Quedan guardados en&nbsp;la&nbsp;bandeja de&nbsp;la&nbsp;app, aunque tengas las&nbsp;notificaciones&nbsp;apagadas.</b><b data-l="de" hidden>Jede Benachrichtigung bleibt in&nbsp;der&nbsp;App&nbsp;– auch wenn Mitteilungen auf&nbsp;dem&nbsp;Handy aus&nbsp;sind.</b></p>
+      </li>
+      <li class="mini">
+      <h3><b data-l="en">Roles</b><b data-l="ru" hidden>Роли</b><b data-l="es" hidden>Roles</b><b data-l="de" hidden>Rollen</b></h3>
+      <p><b data-l="en">Owner, admins, members. The owner and admins book and edit&nbsp;rehearsals.</b><b data-l="ru" hidden>Владелец, админы, участники. Назначать и&nbsp;менять репетиции могут владелец и&nbsp;админы.</b><b data-l="es" hidden>Admin principal, admins, miembros. El&nbsp;admin principal y&nbsp;los&nbsp;admins programan y&nbsp;editan los&nbsp;ensayos.</b><b data-l="de" hidden>Eigentümer, Admins, Mitglieder. Proben ansetzen und&nbsp;ändern dürfen Eigentümer und&nbsp;Admins.</b></p>
+      </li>
+      <li class="mini">
+      <h3><b data-l="en">Four languages, your time&nbsp;zone</b><b data-l="ru" hidden>Четыре языка и&nbsp;твой&nbsp;пояс</b><b data-l="es" hidden>Cuatro idiomas, tu&nbsp;zona&nbsp;horaria</b><b data-l="de" hidden>Vier Sprachen, deine&nbsp;Ortszeit</b></h3>
+      <p><b data-l="en">English, Russian, Spanish, German. Time zone and&nbsp;first day of&nbsp;the week, per&nbsp;person.</b><b data-l="ru" hidden>Русский, английский, испанский, немецкий. Часовой пояс и&nbsp;начало недели&nbsp;— у&nbsp;каждого&nbsp;свои.</b><b data-l="es" hidden>Español, inglés, ruso y&nbsp;alemán. Cada persona elige su&nbsp;zona&nbsp;horaria y&nbsp;el&nbsp;primer día de&nbsp;la&nbsp;semana.</b><b data-l="de" hidden>Deutsch, Englisch, Russisch, Spanisch. Zeitzone und&nbsp;Wochenbeginn stellt jeder selbst&nbsp;ein.</b></p>
+      </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="beat beat--flow beat--get" id="get">
+    <div class="beat__copy">
+      <h2 class="display">
+      <span data-l="en">Set up&nbsp;your <span class="muted">first&nbsp;production.</span></span>
+      <span data-l="ru" hidden>Заведи <span class="muted">первый&nbsp;проект.</span></span>
+      <span data-l="es" hidden>Crea&nbsp;tu <span class="muted">primer&nbsp;proyecto.</span></span>
+      <span data-l="de" hidden>Leg&nbsp;dein <span class="muted">erstes Projekt&nbsp;an.</span></span>
+      </h2>
+      <p class="lede"><b data-l="en">Rehearsly is&nbsp;coming soon to&nbsp;the&nbsp;App Store. Email us, and&nbsp;we’ll get you into the&nbsp;TestFlight&nbsp;beta.</b><b data-l="ru" hidden>Rehearsly скоро в&nbsp;App Store. Напиши&nbsp;— откроем доступ в&nbsp;TestFlight.</b><b data-l="es" hidden>Rehearsly llega pronto al&nbsp;App Store. Escríbenos y&nbsp;te&nbsp;damos acceso en&nbsp;TestFlight.</b><b data-l="de" hidden>Rehearsly kommt bald in&nbsp;den&nbsp;App Store. Schreib uns&nbsp;– wir laden dich&nbsp;zu&nbsp;TestFlight&nbsp;ein.</b></p>
+      <div class="btn-row">
+      <a class="btn btn--primary" href="mailto:support@rehearsly.me?subject=TestFlight" data-mail="lead"><b data-l="en">Request access</b><b data-l="ru" hidden>Запросить доступ</b><b data-l="es" hidden>Pedir acceso</b><b data-l="de" hidden>Zugang anfragen</b></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__grid">
+      <div class="foot__brand">
+        <a class="brand" href="/" aria-label="Rehearsly">
+          <img class="brand__mark" src="assets/mark.webp" alt="" width="215" height="256">
+          <span class="brand__name">Rehearsly</span>
+        </a>
+        <p>
+          <b data-l="en">Rehearsal planning for theaters, ballet companies and&nbsp;production&nbsp;crews.</b>
+          <b data-l="ru" hidden>Планирование репетиций для театров, балетных трупп и&nbsp;съёмочных&nbsp;групп.</b><b data-l="es" hidden>Planificación de&nbsp;ensayos para teatros, compañías de&nbsp;danza y&nbsp;equipos&nbsp;de&nbsp;rodaje.</b><b data-l="de" hidden>Probenplanung für&nbsp;Theater, Ballettkompanien und&nbsp;Drehteams.</b>
+        </p>
+      </div>
+
+      <nav class="foot__col" aria-label="Product">
+        <h2 class="foot__title"><b data-l="en">Product</b><b data-l="ru" hidden>Продукт</b><b data-l="es" hidden>Producto</b><b data-l="de" hidden>Produkt</b></h2>
+        <a href="#invite"><b data-l="en">How it works</b><b data-l="ru" hidden>Как это работает</b><b data-l="es" hidden>Cómo funciona</b><b data-l="de" hidden>So geht’s</b></a>
+        <a href="#projects"><b data-l="en">Productions</b><b data-l="ru" hidden>Проекты</b><b data-l="es" hidden>Proyectos</b><b data-l="de" hidden>Projekte</b></a>
+        <a href="#cast"><b data-l="en">For the cast</b><b data-l="ru" hidden>Участникам</b><b data-l="es" hidden>Para el&nbsp;grupo</b><b data-l="de" hidden>Mitproben</b></a>
+      </nav>
+
+      <nav class="foot__col" aria-label="Legal">
+        <h2 class="foot__title"><b data-l="en">Legal</b><b data-l="ru" hidden>Документы</b><b data-l="es" hidden>Legal</b><b data-l="de" hidden>Rechtliches</b></h2>
+        <a href="/privacy"><b data-l="en">Privacy Policy</b><b data-l="ru" hidden>Политика конфиденциальности</b><b data-l="es" hidden>Política de&nbsp;privacidad</b><b data-l="de" hidden>Datenschutz</b></a>
+      </nav>
+
+      <nav class="foot__col" aria-label="Support">
+        <h2 class="foot__title"><b data-l="en">Support</b><b data-l="ru" hidden>Поддержка</b><b data-l="es" hidden>Soporte</b><b data-l="de" hidden>Support</b></h2>
+        <a href="/support"><b data-l="en">Help Center</b><b data-l="ru" hidden>Справка</b><b data-l="es" hidden>Ayuda</b><b data-l="de" hidden>Hilfe</b></a>
+        <a href="mailto:support@rehearsly.me">support@rehearsly.me</a>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" data-lang="en" lang="en">EN</button>
+          <button type="button" data-lang="ru" lang="ru">RU</button>
+          <button type="button" data-lang="es" lang="es">ES</button>
+          <button type="button" data-lang="de" lang="de">DE</button>
+        </div>
+      </nav>
+    </div>
+
+    <div class="foot__base">
+      <span>© 2026&nbsp;Rehearsly</span>
+      <span>rehearsly.me</span>
+    </div>
+  </div>
+</footer>
+
+<script src="i18n.js" defer></script>
+<script src="variant.js" defer></script>
+<script type="module" src="cinema.js"></script>
+</body>
+</html>

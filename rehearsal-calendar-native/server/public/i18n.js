@@ -11,11 +11,10 @@
      language is authored on its own terms rather than translated phrase by
      phrase, and any of them reads fine if this script never runs. */
 
-  var STORE_KEY = 'rehearsly-lang';   // shared with legal.js
-  var LANGS = ['en', 'ru', 'es', 'de'];   // same four the app itself speaks
+  var STORE_KEY = 'rehearsly-lang';   // shared with lang.js and legal.js
 
   var blocks = [].slice.call(document.querySelectorAll('[data-l]'));
-  var buttons = [].slice.call(document.querySelectorAll('[data-lang]'));
+  var buttons = [].slice.call(document.querySelectorAll('button[data-lang]'));
 
   function setLang(lang) {
     blocks.forEach(function (el) {
@@ -24,29 +23,19 @@
     buttons.forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang));
     });
+    document.documentElement.setAttribute('data-lang', lang);
     document.documentElement.lang = lang;
     try { localStorage.setItem(STORE_KEY, lang); } catch (e) { /* private mode */ }
-  }
-
-  function initialLang() {
-    // ?lang=de wins over everything, so a link can be shared in one language
-    // regardless of what the reader's browser or last visit says.
-    var q = /[?&]lang=([a-z]{2})/i.exec(location.search);
-    if (q && LANGS.indexOf(q[1].toLowerCase()) >= 0) return q[1].toLowerCase();
-
-    var saved = null;
-    try { saved = localStorage.getItem(STORE_KEY); } catch (e) { /* private mode */ }
-    // legal.js writes the same key but knows four locales; anything this page
-    // cannot show falls back to English rather than to the browser's guess.
-    if (saved) return LANGS.indexOf(saved) >= 0 ? saved : 'en';
-    var prefix = (navigator.language || 'en').toLowerCase().slice(0, 2);
-    return LANGS.indexOf(prefix) >= 0 ? prefix : 'en';
+    // The phones hold each language's own screenshots, and those differ in
+    // length, so whatever measured a strip measures it again.
+    document.dispatchEvent(new CustomEvent('langchange', { detail: lang }));
   }
 
   buttons.forEach(function (b) {
     b.addEventListener('click', function () { setLang(b.getAttribute('data-lang')); });
   });
-  setLang(initialLang());
+  // lang.js decided it in <head>, before the first layout.
+  setLang(document.documentElement.getAttribute('data-lang') || 'en');
 
   /* ── Reveal on scroll ─────────────────────────────────────
      The `js` class is what hides these in the first place, so a page whose
@@ -169,5 +158,6 @@
   window.addEventListener('scroll', request, { passive: true });
   window.addEventListener('resize', layout);
   window.addEventListener('load', layout);
+  document.addEventListener('langchange', layout);
   layout();
 })();
