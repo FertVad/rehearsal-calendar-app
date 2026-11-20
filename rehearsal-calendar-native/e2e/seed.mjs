@@ -332,6 +332,20 @@ const ISLANDERS = [
   ['Trinculo', 'Jester'], ['Stephano', 'Butler'], ['Iris', 'Rainbow'], ['Juno', 'Queen'],
 ];
 
+/**
+ * Whom the inbox flows' notices name (61, 62, 86, 88): a notice that names
+ * someone is written only while their account exists (T-278), so each is an
+ * account, found by the stand by this full name (server-with-mailbox.mjs). In
+ * no project and never signed in: only the notice is sent, nobody joins or
+ * sees anything. Not Kabanikha, whose account 89 deletes: 86's Russian woman
+ * is Varvara.
+ */
+const NAMED = [
+  ['malcolm', 'Malcolm', 'Prince'], ['banquo.thane', 'Banquo', 'Thane'],
+  ['jacinta', 'Jacinta', 'Labradora'], ['marthe', 'Marthe', 'Schwerdtlein'],
+  ['varvara', 'Варвара', 'Кабанова'],
+];
+
 const pad = (n) => String(n).padStart(2, '0');
 
 /** A local day `offset` days from today, as YYYY-MM-DD. */
@@ -530,6 +544,12 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE) RETURNING id`,
       [`${firstName.toLowerCase()}@e2e.test`, hash, firstName, lastName, timezone]);
     islanders.push(islander.id);
+  }
+  for (const [mailbox, firstName, lastName] of NAMED) {
+    await client.query(
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE)`,
+      [`${mailbox}@e2e.test`, hash, firstName, lastName, timezone]);
   }
   const prosperoProject = async (name, description, members) => {
     const { rows: [made] } = await client.query(

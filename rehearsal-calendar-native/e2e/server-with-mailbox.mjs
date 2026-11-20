@@ -113,6 +113,12 @@
  *                                                  or of being removed, and
  *                                                  nothing more (flow 86)
  *
+ * <who> is a full name, as the server says it (utils/names.js), of exactly one
+ * account: a notice that names someone is written as { id, name } and only
+ * while that account exists (T-278), so the stand names a real one, as the
+ * join, a role given and a "seen" do. A name no account has, or more than one
+ * has, is answered 404 or 409, and nothing is written.
+ *
  * It measures an icon on a screenshot a flow took, which Maestro cannot: a
  * button that is only an icon is one element, the size of its target (ink.mjs):
  *
@@ -169,6 +175,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
+import { fullName } from '../server/utils/names.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
 import {
@@ -437,6 +444,19 @@ http.createServer((request, response) => {
   console.log('[e2e] server listening');
 });
 
+/**
+ * The one account whose full name, as the server says it, is `name`, as the
+ * { id, name } a notice that names someone takes (T-278); or `{ status, error }`
+ * when no account or more than one has it.
+ */
+async function namedAccount(name) {
+  const accounts = (await db.all('SELECT id, first_name, last_name FROM native_users'))
+    .filter((account) => fullName(account) === name);
+  if (accounts.length === 0) return { status: 404, error: `no account named ${JSON.stringify(name)}` };
+  if (accounts.length > 1) return { status: 409, error: `${accounts.length} accounts named ${JSON.stringify(name)}` };
+  return { person: { id: accounts[0].id, name } };
+}
+
 http.createServer((request, response) => {
   const url = new URL(request.url, 'http://mailbox');
   const answer = (status, body) => {
@@ -469,18 +489,22 @@ http.createServer((request, response) => {
   if (request.method === 'GET' && url.pathname === '/notify' && ['member_joined', 'admin_appointed', 'role_changed', 'member_removed'].includes(told)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const projectName = url.searchParams.get('project') || '';
-    const member = url.searchParams.get('member') || 'Somebody';
+    const member = url.searchParams.get('member') || '';
     (async () => {
       const user = await db.get('SELECT id FROM native_users WHERE email = $1', [to]);
       if (!user) return answer(404, { error: `no account ${to}` });
       const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
       if (!project) return answer(404, { error: `no project ${projectName}` });
+      // Whom a join or a role given names: a real account, as the server
+      // names the one who joined or was made an admin (T-278).
+      const named = told === 'member_joined' || told === 'admin_appointed' ? await namedAccount(member) : null;
+      if (named?.error) return answer(named.status, { error: named.error });
       // As the join, a role given (to them, or to another, told to those who
       // run the project) and a removal tell them (inviteRedemption.js,
       // routes/native/members.js), the server's own words and data. Only the
       // notice: the role and the membership stay as they are.
-      if (told === 'member_joined') await notifyMemberJoined(project.name, member, [user.id], project.id);
-      else if (told === 'admin_appointed') await notifyAdminAppointed(project.name, member, [user.id], project.id);
+      if (told === 'member_joined') await notifyMemberJoined(project.name, named.person, [user.id], project.id);
+      else if (told === 'admin_appointed') await notifyAdminAppointed(project.name, named.person, [user.id], project.id);
       else if (told === 'role_changed') await notifyRoleChanged(project.name, user.id, url.searchParams.get('role') || 'admin');
       else await notifyMemberRemoved(project.name, user.id);
       console.log(`[e2e] told ${to} of ${told} in ${project.name}`);
@@ -512,7 +536,10 @@ http.createServer((request, response) => {
         // Only the notice: the rehearsal stays.
         await notifyRehearsalDeleted(rehearsal, project.name, [{ user_id: user.id }]);
       } else {
-        await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
+        // Who has seen it: a real account, as the server names them (T-278).
+        const named = await namedAccount(url.searchParams.get('member') || '');
+        if (named.error) return answer(named.status, { error: named.error });
+        await notifyMemberResponse(rehearsal, project.name, named.person, [user.id]);
       }
       console.log(`[e2e] told ${to} of ${about} on ${title}`);
       return answer(200, { recorded: 1 });

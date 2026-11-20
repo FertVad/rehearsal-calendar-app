@@ -8,7 +8,9 @@
 # reader switches them. (A second link opened into the running Safari, closed
 # or not, left the page in English.) Each language is written on its own, so
 # each is read on its own: the line is matched by its words, not only the name,
-# since "Resend" in bold is an element of its own.
+# since "Resend" in bold is an element of its own. The words are the native
+# editors' (T-269, 64d7860): "sends our emails: your codes for signing up",
+# "Versand unserer E-Mails: Codes für Registrierung" (T-284).
 appId: com.apple.mobilesafari
 name: Privacy policy lists Resend in every language
 tags:
@@ -21,7 +23,7 @@ tags:
     visible: "Privacy Policy"
     timeout: 30000
 - scrollUntilVisible:
-    element: ".*sends the emails with your codes.*Ireland.*"
+    element: ".*sends our emails: your codes for signing up.*Ireland.*"
     direction: DOWN
     timeout: 60000
 - takeScreenshot: 70-privacy-en
@@ -69,7 +71,7 @@ tags:
       SEE: "Datenschutzerklärung"
       WAIT_MS: 10000
 - scrollUntilVisible:
-    element: ".*Versand der E-Mails mit Codes.*Irland.*"
+    element: ".*Versand unserer E-Mails: Codes für Registrierung.*Irland.*"
     direction: DOWN
     timeout: 60000
 - takeScreenshot: 70-privacy-de
