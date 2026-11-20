@@ -18,17 +18,24 @@ import UniformTypeIdentifiers
 import Vision
 
 struct Size: Codable { let dir: String; let width: Int; let height: Int }
-struct Colours: Codable { let background: String; let text: String; let accent: String; let line: String }
-struct Job: Codable { let captions: [String]; let shots: [String]; let outputs: [Size]; let font: String; let colours: Colours }
+/** The landing's colours, and `emphasis`: the main word's, the app's lilac. */
+struct Colours: Codable { let background: String; let text: String; let accent: String; let line: String; let emphasis: String }
+/** Literata's two files, upright and italic: variable, with `opsz` and `wght` axes (e2e/store/fonts). */
+struct PlayFonts: Codable { let roman: String; let italic: String }
+struct Job: Codable { let captions: [String]; let shots: [String]; let outputs: [Size]; let fonts: PlayFonts; let colours: Colours }
 
 // The layout, in the 1320×2868 frame.
 let W: CGFloat = 1320, H: CGFloat = 2868
-let textWidth: CGFloat = 1140            // 90 each side
 let captionTop: CGFloat = 110, captionBottom: CGFloat = 420
 let preferredSize: CGFloat = 104         // the type when every line fits at it
-let lineHeight: CGFloat = 1.16           // of the type's size
+let lineHeight: CGFloat = 1.1            // of the type's size
 let shotTop: CGFloat = 470, shotBottomMargin: CGFloat = 80
 let cornerShare: CGFloat = 0.12          // the screenshot's corner radius, of its width
+
+// The captions' type (T-288, «Пьеса»): Literata at 600, its italic at 600
+// for the main word, the optical size as the type's, up to the font's 72.
+let wghtAxis: UInt32 = 0x7767_6874, opszAxis: UInt32 = 0x6F70_737A
+let playWeight: CGFloat = 600, opszMost: CGFloat = 72
 
 func fail(_ text: String) -> Never {
   FileHandle.standardError.write((text + "\n").data(using: .utf8)!)
@@ -47,12 +54,90 @@ func colour(_ css: String) -> CGColor {
   return CGColor(srgbRed: parts[0] / 255, green: parts[1] / 255, blue: parts[2] / 255, alpha: parts.count > 3 ? parts[3] : 1)
 }
 
-/** SF Pro from the system's own file, bold: its weight axis at 700. */
-func boldFont(_ file: String, size: CGFloat) -> CTFont {
+/** A variable font from its file — the repository's, never the system's — its axes set as `axes` says. */
+func variableFont(_ file: String, size: CGFloat, axes: [UInt32: CGFloat]) -> CTFont {
   guard let descriptors = CTFontManagerCreateFontDescriptorsFromURL(URL(fileURLWithPath: file) as CFURL) as? [CTFontDescriptor],
-        let first = descriptors.first else { fail("no font in \(file)") }
-  let bold = CTFontDescriptorCreateCopyWithVariation(first, NSNumber(value: 0x7767_6874) as CFNumber, 700)
-  return CTFontCreateWithFontDescriptor(bold, size, nil)
+        var descriptor = descriptors.first else { fail("no font in \(file)") }
+  for (tag, value) in axes.sorted(by: { $0.key < $1.key }) {
+    descriptor = CTFontDescriptorCreateCopyWithVariation(descriptor, NSNumber(value: tag) as CFNumber, value)
+  }
+  return CTFontCreateWithFontDescriptor(descriptor, size, nil)
+}
+
+/** Inter Tight, bold: the video's type until T-289. */
+func boldFont(_ file: String, size: CGFloat) -> CTFont { variableFont(file, size: size, axes: [wghtAxis: 700]) }
+
+/** Literata (or its italic) at 600, its optical size the type's, 72 at most. */
+func playFont(_ file: String, size: CGFloat) -> CTFont {
+  variableFont(file, size: size, axes: [wghtAxis: playWeight, opszAxis: min(size, opszMost)])
+}
+
+/** The file a font was made from: what the manifest says was drawn with. */
+func fontFile(_ font: CTFont) -> String {
+  (CTFontCopyAttribute(font, kCTFontURLAttribute) as? URL)?.path ?? "?"
+}
+
+/**
+ * A caption's line and its main word: `[` and `]` round the word in
+ * captions.json, never printed. At most one pair a caption, within one line.
+ */
+func marked(_ caption: String) -> [(text: String, emphasis: NSRange?)] {
+  let opens = caption.filter { $0 == "[" }.count, closes = caption.filter { $0 == "]" }.count
+  guard opens == closes, opens <= 1 else { fail("a caption marks one main word at most, in one pair of brackets: \(caption)") }
+  return caption.components(separatedBy: "\n").map { line in
+    guard let open = line.firstIndex(of: "[") else {
+      guard !line.contains("]") else { fail("a main word's brackets in one line: \(caption)") }
+      return (line, nil)
+    }
+    guard let close = line.firstIndex(of: "]"), open < close else { fail("a main word's brackets in one line: \(caption)") }
+    let before = String(line[..<open]), word = String(line[line.index(after: open)..<close])
+    let text = before + word + String(line[line.index(after: close)...])
+    return (text, NSRange(location: (before as NSString).length, length: (word as NSString).length))
+  }
+}
+
+/** The ink of `character` in `font`: from its origin, and its advance. */
+func ink(_ character: unichar, _ font: CTFont) -> (bounds: CGRect, advance: CGFloat) {
+  var c = character, glyph: CGGlyph = 0
+  guard CTFontGetGlyphsForCharacters(font, &c, &glyph, 1) else { return (.zero, 0) }
+  var bounds = CGRect.zero, advance = CGSize.zero
+  CTFontGetBoundingRectsForGlyphs(font, .horizontal, &glyph, &bounds, 1)
+  CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
+  return (bounds, advance.width)
+}
+
+/**
+ * One line of a caption: upright in `text`, its main word italic in
+ * `emphasis`. Where the slanted word meets upright type — «el martes?» — the
+ * italic's overhang is given back as space (an italic correction), so the
+ * "?" never runs into the "s"; never before a space, which has its own.
+ */
+func playLine(_ string: String, emphasis: NSRange?, roman: CTFont, italic: CTFont, text: CGColor, accent: CGColor) -> CTLine {
+  let fontKey = NSAttributedString.Key(kCTFontAttributeName as String)
+  let colourKey = NSAttributedString.Key(kCTForegroundColorAttributeName as String)
+  let kernKey = NSAttributedString.Key(kCTKernAttributeName as String)
+  let a = NSMutableAttributedString(string: string, attributes: [fontKey: roman, colourKey: text])
+  if let r = emphasis, r.length > 0 {
+    a.addAttributes([fontKey: italic, colourKey: accent], range: r)
+    let s = string as NSString
+    let isSpace = { (i: Int) in CharacterSet.whitespaces.contains(Unicode.Scalar(s.character(at: i)) ?? " ") }
+    if r.upperBound < s.length, !isSpace(r.upperBound) {
+      let last = ink(s.character(at: r.upperBound - 1), italic)
+      let over = last.bounds.maxX - last.advance
+      if over > 0 { a.addAttribute(kernKey, value: over, range: NSRange(location: r.upperBound - 1, length: 1)) }
+    }
+    if r.location > 0, !isSpace(r.location - 1) {
+      let first = ink(s.character(at: r.location), italic)
+      if first.bounds.minX < 0 { a.addAttribute(kernKey, value: -first.bounds.minX, range: NSRange(location: r.location - 1, length: 1)) }
+    }
+  }
+  return CTLineCreateWithAttributedString(a)
+}
+
+/** Where a line's ink starts and ends, from its origin. */
+func inkSpan(_ l: CTLine) -> (left: CGFloat, right: CGFloat) {
+  let b = CTLineGetBoundsWithOptions(l, .useGlyphPathBounds)
+  return (b.minX, b.maxX)
 }
 
 func line(_ text: String, font: CTFont, colour: CGColor) -> CTLine {
@@ -78,12 +163,25 @@ func writePng(_ image: CGImage, to file: String) {
   guard CGImageDestinationFinalize(destination) else { fail("cannot write \(file)") }
 }
 
-/** One size of type for a language: the largest at which every line of every caption fits, never above the preferred one. */
-func typeSize(_ captions: [String], font file: String, colour text: CGColor) -> CGFloat {
-  let probe = boldFont(file, size: 100)
-  let widest = captions.flatMap { $0.components(separatedBy: "\n") }
-    .map { width(line($0, font: probe, colour: text)) }.max() ?? 1
-  return min(preferredSize, floor(textWidth * 100 / widest))
+/**
+ * One size of type for a language: the largest whole one at which every line
+ * of every caption — its main word italic — fits `limit` (the window's width),
+ * never above the preferred one. Measured at that size: the optical size
+ * changes the letters' widths with it.
+ */
+func typeSize(_ captions: [String], fonts: PlayFonts, limit: CGFloat) -> CGFloat {
+  let lines = captions.flatMap(marked)
+  let white = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+  let widest = { (size: CGFloat) -> CGFloat in
+    let roman = playFont(fonts.roman, size: size), italic = playFont(fonts.italic, size: size)
+    return lines.map { l -> CGFloat in
+      let span = inkSpan(playLine(l.text, emphasis: l.emphasis, roman: roman, italic: italic, text: white, accent: white))
+      return span.right - span.left
+    }.max() ?? 0
+  }
+  var size = min(preferredSize, floor(limit * 100 / max(widest(100), 1)) + 2)
+  while size > 1 && widest(size) > limit { size -= 1 }
+  return size
 }
 
 /** The landing's background and its glow: its accent, faint, behind the top of the screenshot. In the 1320-wide frame. */
@@ -97,22 +195,46 @@ func drawBackground(_ context: CGContext, _ c: Colours) {
                              endCenter: CGPoint(x: W / 2, y: shotTop + 200), endRadius: 1100, options: [])
 }
 
-/** The caption, its lines centred, the block centred in its band, the lines where the caption breaks them. */
-func drawCaption(_ context: CGContext, _ lines: [String], font: CTFont, size: CGFloat, colour text: CGColor) {
+/**
+ * The caption: its lines flush left, each one's first letter's ink on `left`
+ * (the window's left edge), the block centred in its band, the lines where the
+ * caption breaks them, the main word italic in the lilac. Returns each line's
+ * box (cap height to baseline) and the main word's box, for the manifest.
+ */
+func drawCaption(_ context: CGContext, _ caption: String, fonts: PlayFonts, size: CGFloat, left: CGFloat, colours c: Colours)
+  -> (lines: [[String: CGFloat]], emphasis: [String: CGFloat]?) {
+  let roman = playFont(fonts.roman, size: size), italic = playFont(fonts.italic, size: size)
+  let lines = marked(caption)
   let lh = size * lineHeight
-  let ascent = CTFontGetAscent(font), descent = CTFontGetDescent(font)
+  let ascent = CTFontGetAscent(roman), descent = CTFontGetDescent(roman)
   let blockTop = captionTop + (captionBottom - captionTop - lh * CGFloat(lines.count)) / 2
-  for (i, string) in lines.enumerated() {
-    let l = line(string, font: font, colour: text)
+  var boxes: [[String: CGFloat]] = [], emphasis: [String: CGFloat]? = nil
+  for (i, marked) in lines.enumerated() {
+    let l = playLine(marked.text, emphasis: marked.emphasis, roman: roman, italic: italic,
+                     text: colour(c.text), accent: colour(c.emphasis))
     let baseline = blockTop + CGFloat(i) * lh + (lh - ascent - descent) / 2 + ascent
+    let x = left - inkSpan(l).left
     context.saveGState()
     // Text the right way up in the flipped frame.
-    context.translateBy(x: (W - width(l)) / 2, y: baseline)
+    context.translateBy(x: x, y: baseline)
     context.scaleBy(x: 1, y: -1)
     context.textPosition = .zero
     CTLineDraw(l, context)
     context.restoreGState()
+    // The line's rows: from its ink's top (an italic b's serif rises above the capitals) to its baseline.
+    let inkTop = baseline - CTLineGetBoundsWithOptions(l, .useGlyphPathBounds).maxY
+    boxes.append(["capTop": baseline - CTFontGetCapHeight(roman), "inkTop": inkTop, "baseline": baseline])
+    if let r = marked.emphasis {
+      // The word's advance, and the italic's ink beyond it at either end.
+      let s = marked.text as NSString
+      let first = ink(s.character(at: r.location), italic), last = ink(s.character(at: r.upperBound - 1), italic)
+      emphasis = ["line": CGFloat(i),
+                  "left": x + CTLineGetOffsetForStringIndex(l, r.location, nil) + min(0, first.bounds.minX),
+                  "right": x + CTLineGetOffsetForStringIndex(l, r.upperBound, nil) + max(0, last.bounds.maxX - last.advance),
+                  "top": baseline - ascent, "bottom": baseline + descent]
+    }
   }
+  return (boxes, emphasis)
 }
 
 /**
@@ -121,7 +243,9 @@ func drawCaption(_ context: CGContext, _ lines: [String], font: CTFont, size: CG
  * fills the whole frame, and these go over it.
  *
  * - For every caption an overlay, clear but for the caption: its lines exactly
- *   as given (no line is ever broken here), bold SF Pro in white, one size for
+ *   as given (no line is ever broken here; compose.mjs has taken the main
+ *   word's brackets out), bold Inter Tight from e2e/store/fonts in white
+ *   (until T-289 sets the video as the screenshots are), one size for
  *   the language, at the top or the bottom of the frame as the shot asks, on a
  *   soft dark band only as tall as the text — solid under the lines, so white
  *   on it is at least 4.5:1 whatever the recording shows, fading out above and
@@ -149,7 +273,7 @@ let signInPreferred: CGFloat = 46, signInLeast: CGFloat = 40
 
 /**
  * The largest whole size, `most` at most, at which every one of `lines` fits
- * `width` — measured at that size: SF Pro's widths do not scale exactly with it.
+ * `width` — measured at that size: a variable font's widths need not scale exactly with it.
  */
 func fittingSize(_ lines: [String], font file: String, width limit: CGFloat, most: CGFloat) -> CGFloat {
   let white = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
@@ -245,9 +369,10 @@ func video(_ job: VideoJob) {
   dim.fill(CGRect(x: 0, y: 0, width: w, height: h))
   let dimFile = save(dim, "dim.png")
 
-  // The closing card. The sign-in line in one line if it fits at signInLeast
-  // or more, else broken where signInBreak says (after its colon; ru after
-  // «Нужен вход») — never anywhere else.
+  // The closing card. The sign-in line broken where captions.json breaks it
+  // (T-288: after its colon, as the editors asked); one not broken there in
+  // one line if it fits at signInLeast or more, else broken where signInBreak
+  // says (after its colon; ru after «Нужен вход») — never anywhere else.
   let end = canvas()
   end.setFillColor(colour(c.background))
   end.fill(CGRect(x: 0, y: 0, width: w, height: h))
@@ -256,9 +381,9 @@ func video(_ job: VideoJob) {
   end.drawRadialGradient(glow, startCenter: CGPoint(x: w / 2, y: h * 0.38), startRadius: 0,
                          endCenter: CGPoint(x: w / 2, y: h * 0.38), endRadius: w * 0.85, options: [])
   let fits = { (lines: [String]) -> CGFloat in fittingSize(lines, font: job.font, width: textWidth, most: signInPreferred) }
-  var signLines = [job.signIn]
+  var signLines = job.signIn.components(separatedBy: "\n")
   var signSize = fits(signLines)
-  if signSize < signInLeast {
+  if signLines.count == 1 && signSize < signInLeast {
     guard let regex = try? NSRegularExpression(pattern: job.signInBreak),
           let match = regex.firstMatch(in: job.signIn, range: NSRange(job.signIn.startIndex..., in: job.signIn)),
           let at = Range(match.range, in: job.signIn) else { fail("the sign-in line does not fit and has no place to break: \(job.signIn)") }
@@ -311,19 +436,19 @@ func video(_ job: VideoJob) {
 func draw(_ job: Job) {
   guard job.captions.count == job.shots.count else { fail("captions and screenshots differ in number") }
   let c = job.colours
-  // One size of type for the language: the largest at which every line of
-  // every caption fits, never above the preferred one.
-  let size = typeSize(job.captions, font: job.font, colour: colour(c.text))
-  let font = boldFont(job.font, size: size)
   let shotHeight = H - shotTop - shotBottomMargin
   let shotWidth = (shotHeight * 1320 / 2868).rounded()
   let shot = CGRect(x: ((W - shotWidth) / 2).rounded(), y: shotTop, width: shotWidth, height: shotHeight)
+  // One size of type for the language: the largest at which every line of
+  // every caption fits the window's width, never above the preferred one.
+  let size = typeSize(job.captions, fonts: job.fonts, limit: shot.width)
+  let drawnWith = [playFont(job.fonts.roman, size: size), playFont(job.fonts.italic, size: size)].map(fontFile)
 
   var pictures: [[String: Any]] = []
   for size in job.outputs { try? FileManager.default.createDirectory(atPath: size.dir, withIntermediateDirectories: true) }
   for (index, caption) in job.captions.enumerated() {
     let image = loadImage(job.shots[index])
-    let lines = caption.components(separatedBy: "\n")
+    let lines = marked(caption).map(\.text)
     for (n, out) in job.outputs.enumerated() {
       guard let context = CGContext(data: nil, width: out.width, height: out.height, bitsPerComponent: 8, bytesPerRow: 0,
                                     space: CGColorSpace(name: CGColorSpace.sRGB)!,
@@ -335,7 +460,7 @@ func draw(_ job: Job) {
       context.interpolationQuality = .high
 
       drawBackground(context, c)
-      drawCaption(context, lines, font: font, size: size, colour: colour(c.text))
+      let laid = drawCaption(context, caption, fonts: job.fonts, size: size, left: shot.minX, colours: c)
 
       // The screenshot, whole, its corners rounded, a hairline round it.
       let radius = shot.width * cornerShare
@@ -356,12 +481,16 @@ func draw(_ job: Job) {
       let file = (out.dir as NSString).appendingPathComponent(String(format: "%02d.png", index + 1))
       writePng(picture, to: file)
       if n == 0 {
-        pictures.append(["file": file, "width": out.width, "height": out.height, "lines": lines, "fontSize": size,
-                         "shot": ["left": shot.minX, "top": shot.minY, "width": shot.width, "height": shot.height]])
+        var picture: [String: Any] = ["file": file, "width": out.width, "height": out.height, "lines": lines, "fontSize": size,
+                                      "lineBoxes": laid.lines,
+                                      "shot": ["left": shot.minX, "top": shot.minY, "width": shot.width, "height": shot.height]]
+        if let emphasis = laid.emphasis { picture["emphasis"] = emphasis }
+        pictures.append(picture)
       }
     }
   }
-  let manifest: [String: Any] = ["fontSize": size, "captionBottom": captionBottom, "pictures": pictures]
+  let manifest: [String: Any] = ["fontSize": size, "lineHeight": lineHeight, "fonts": drawnWith,
+                                 "captionBottom": captionBottom, "pictures": pictures]
   let data = try! JSONSerialization.data(withJSONObject: manifest, options: [.sortedKeys])
   FileHandle.standardOutput.write(data)
 }

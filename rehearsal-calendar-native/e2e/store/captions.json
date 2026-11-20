@@ -1,117 +1,187 @@
 {
  "en-US": {
   "screenshots": [
-   "A time the whole cast\ncan make",
-   "Everyone adds\ntheir availability",
-   "See who’s busy\nbefore you book",
-   "Sync both ways with\nyour iPhone calendar",
-   "Who’s seen it:\n5 of 8",
-   "All your rehearsals\nin one calendar",
-   "Invite everyone\nwith one link",
-   "Four languages,\nyour time zone"
+   "A time the [whole cast]\ncan make",
+   "[Everyone] adds\ntheir availability",
+   "See who’s busy\n[before you book]",
+   "Sync [both ways] with\nyour iPhone calendar",
+   "Who’s seen it:\n[5 of 8]",
+   "All your rehearsals\nin [one calendar]",
+   "Invite everyone\nwith [one link]",
+   "[Four languages,]\nyour time zone"
   ],
-  "hook": "Who can make Tuesday?",
+  "hook": "Who can make\n[Tuesday?]",
+  "hookByDay": {
+   "mon": "Who can make\n[Monday?]",
+   "tue": "Who can make\n[Tuesday?]",
+   "wed": "Who can make\n[Wednesday?]",
+   "thu": "Who can make\n[Thursday?]",
+   "fri": "Who can make\n[Friday?]",
+   "sat": "Who can make\n[Saturday?]",
+   "sun": "Who can make\n[Sunday?]"
+  },
   "video": [
-   "See when everyone\ncan make it",
-   "Mark your week once",
-   "…or sync\nyour iPhone calendar",
-   "Only need three?\nSelect them",
-   "Conflicts,\nright in the form",
-   "Seen by everyone:\n12 of 12",
+   "See when [everyone]\ncan make it",
+   "Mark your week [once]",
+   "…or [sync]\nyour iPhone calendar",
+   "Only need three?\n[Select them]",
+   "Conflicts,\n[right] in the form",
+   "Seen by everyone:\n[12 of 12]",
    "In a minute, not a night\nin the group chat"
   ],
-  "signIn": "Sign-in required: Apple, Google or email"
+  "finale": {
+   "line": "Booked in the group chat",
+   "struck": "the group chat",
+   "insert": "a minute"
+  },
+  "signIn": "Sign-in required:\nApple, Google or email"
  },
  "en-GB": {
   "screenshots": [
-   "A time the whole cast\ncan make",
-   "Everyone adds\ntheir availability",
-   "See who’s busy\nbefore you book",
-   "Sync both ways with\nyour iPhone calendar",
-   "Who’s seen it:\n5 of 8",
-   "All your rehearsals\nin one calendar",
-   "Invite everyone\nwith one link",
-   "Four languages,\nyour time zone"
+   "A time the [whole cast]\ncan make",
+   "[Everyone] adds\ntheir availability",
+   "See who’s busy\n[before you book]",
+   "Sync [both ways] with\nyour iPhone calendar",
+   "Who’s seen it:\n[5 of 8]",
+   "All your rehearsals\nin [one calendar]",
+   "Invite everyone\nwith [one link]",
+   "[Four languages,]\nyour time zone"
   ],
-  "hook": "Who can make Tuesday?",
+  "hook": "Who can make\n[Tuesday?]",
+  "hookByDay": {
+   "mon": "Who can make\n[Monday?]",
+   "tue": "Who can make\n[Tuesday?]",
+   "wed": "Who can make\n[Wednesday?]",
+   "thu": "Who can make\n[Thursday?]",
+   "fri": "Who can make\n[Friday?]",
+   "sat": "Who can make\n[Saturday?]",
+   "sun": "Who can make\n[Sunday?]"
+  },
   "video": [
-   "See when everyone\ncan make it",
-   "Mark your week once",
-   "…or sync\nyour iPhone calendar",
-   "Only need three?\nSelect them",
-   "Conflicts,\nright in the form",
-   "Seen by everyone:\n12 of 12",
+   "See when [everyone]\ncan make it",
+   "Mark your week [once]",
+   "…or [sync]\nyour iPhone calendar",
+   "Only need three?\n[Select them]",
+   "Conflicts,\n[right] in the form",
+   "Seen by everyone:\n[12 of 12]",
    "In a minute, not a night\nin the group chat"
   ],
-  "signIn": "Sign-in required: Apple, Google or email"
+  "finale": {
+   "line": "Booked in the group chat",
+   "struck": "the group chat",
+   "insert": "a minute"
+  },
+  "signIn": "Sign-in required:\nApple, Google or email"
  },
  "ru": {
   "screenshots": [
-   "Свободный слот\nдля всего состава",
-   "Каждый отмечает,\nкогда не может",
-   "Накладки видны сразу,\nпока ставишь время",
-   "Календарь iPhone —\nв обе стороны",
-   "Уже в курсе:\n5 из 8",
-   "Все репетиции\nв одном месте",
-   "Позови всех\nодной ссылкой",
-   "Четыре языка\nи твой часовой пояс"
+   "Свободный слот\nдля [всего состава]",
+   "[Каждый] отмечает,\nкогда не может",
+   "Накладки видны [сразу,]\nпока ставишь время",
+   "Календарь iPhone —\nв [обе стороны]",
+   "Уже в курсе:\n[5 из 8]",
+   "Все репетиции\nв [одном месте]",
+   "Позови всех\n[одной ссылкой]",
+   "[Четыре языка]\nи твой часовой пояс"
   ],
-  "hook": "Кто может во вторник?",
+  "hook": "Кто может\nво [вторник?]",
+  "hookByDay": {
+   "mon": "Кто может\nв [понедельник?]",
+   "tue": "Кто может\nво [вторник?]",
+   "wed": "Кто может\nв [среду?]",
+   "thu": "Кто может\nв [четверг?]",
+   "fri": "Кто может\nв [пятницу?]",
+   "sat": "Кто может\nв [субботу?]",
+   "sun": "Кто может\nв [воскресенье?]"
+  },
   "video": [
-   "Planner\nпоказывает окна",
-   "Отметь неделю\nодин раз",
-   "…или\nиз календаря iPhone",
-   "Нужны трое?\nВыбери троих",
-   "Накладки\nвидны сразу",
-   "Все в курсе:\n12 из 12",
+   "Planner\nпоказывает [окна]",
+   "Отметь неделю\n[один раз]",
+   "…или\nиз [календаря iPhone]",
+   "Нужны трое?\nВыбери [троих]",
+   "Накладки\nвидны [сразу]",
+   "Все в курсе:\n[12 из 12]",
    "За минуту,\nа не за вечер в чате"
   ],
-  "signIn": "Нужен вход через Apple, Google или почту"
+  "finale": {
+   "line": "За вечер в чате",
+   "struck": "вечер в чате",
+   "insert": "минуту"
+  },
+  "signIn": "Нужен вход: Apple, Google или почта"
  },
  "es-ES": {
   "screenshots": [
-   "Las horas que\nles sirven a todos",
-   "Cada uno marca\ncuándo no puede",
-   "Choques de horario,\na la vista",
-   "Tu calendario del iPhone,\nen las dos direcciones",
-   "Quién lo ha visto:\n5 de 8",
-   "Todos tus ensayos\nen un solo lugar",
-   "Invita a todos\ncon un solo enlace",
-   "Cuatro idiomas\ny tu zona horaria"
+   "Las horas que\nles sirven a [todos]",
+   "Cada uno marca\ncuándo [no puede]",
+   "Choques de horario,\n[a la vista]",
+   "Tu calendario del iPhone,\nen las [dos direcciones]",
+   "Quién lo ha visto:\n[5 de 8]",
+   "Todos tus ensayos\nen [un solo lugar]",
+   "Invita a todos\ncon [un solo enlace]",
+   "Cuatro idiomas\ny [tu zona horaria]"
   ],
-  "hook": "¿Quién puede el martes?",
+  "hook": "¿Quién puede\nel [martes]?",
+  "hookByDay": {
+   "mon": "¿Quién puede\nel [lunes]?",
+   "tue": "¿Quién puede\nel [martes]?",
+   "wed": "¿Quién puede\nel [miércoles]?",
+   "thu": "¿Quién puede\nel [jueves]?",
+   "fri": "¿Quién puede\nel [viernes]?",
+   "sat": "¿Quién puede\nel [sábado]?",
+   "sun": "¿Quién puede\nel [domingo]?"
+  },
   "video": [
-   "Planner te muestra\nlos horarios",
-   "Marca tu semana una vez",
-   "…o con el calendario\ndel iPhone",
-   "¿Te bastan tres?\nSelecciónalos",
-   "Choques de horario,\na la vista",
-   "Ya lo han visto todos:\n12 de 12",
+   "Planner te muestra\nlos [horarios]",
+   "Marca tu semana\n[una vez]",
+   "…o con el [calendario]\ndel iPhone",
+   "¿Te bastan tres?\n[Selecciónalos]",
+   "Choques de horario,\n[a la vista]",
+   "Ya lo han visto todos:\n[12 de 12]",
    "En un minuto,\nno en una noche de chat"
   ],
-  "signIn": "Requiere iniciar sesión: Apple, Google o correo"
+  "finale": {
+   "line": "En una noche de chat",
+   "struck": "una noche de chat",
+   "insert": "un minuto"
+  },
+  "signIn": "Requiere iniciar sesión:\nApple, Google o correo"
  },
  "de-DE": {
   "screenshots": [
-   "Ein Termin,\nder allen passt",
-   "Alle tragen ein,\nwann sie keine Zeit haben",
-   "Überschneidungen\ndirekt im Formular",
-   "iPhone-Kalender:\nSync in beide Richtungen",
-   "Wer es gesehen hat:\n5 von 8",
-   "Alle Proben\nan einem Ort",
-   "Alle per Link\nins Projekt einladen",
-   "Vier Sprachen,\ndeine Ortszeit"
+   "Ein Termin,\nder [allen] passt",
+   "Alle tragen ein,\nwann sie [keine Zeit] haben",
+   "Überschneidungen\n[direkt] im Formular",
+   "iPhone-Kalender:\nSync in [beide Richtungen]",
+   "Wer es gesehen hat:\n[5 von 8]",
+   "Alle Proben\nan [einem Ort]",
+   "Alle per [Link]\nins Projekt einladen",
+   "Vier Sprachen,\ndeine [Ortszeit]"
   ],
-  "hook": "Wer kann am Dienstag?",
+  "hook": "Wer kann\nam [Dienstag?]",
+  "hookByDay": {
+   "mon": "Wer kann\nam [Montag?]",
+   "tue": "Wer kann\nam [Dienstag?]",
+   "wed": "Wer kann\nam [Mittwoch?]",
+   "thu": "Wer kann\nam [Donnerstag?]",
+   "fri": "Wer kann\nam [Freitag?]",
+   "sat": "Wer kann\nam [Samstag?]",
+   "sun": "Wer kann\nam [Sonntag?]"
+  },
   "video": [
-   "Der Planner zeigt\ndie Zeitfenster",
-   "Trag deine Woche\neinmal ein",
-   "… oder aus dem\niPhone-Kalender",
-   "Nur drei nötig?\nHak sie an",
-   "Überschneidungen\ndirekt im Formular",
-   "Alle haben’s gesehen:\n12 von 12",
+   "Der Planner zeigt\ndie [Zeitfenster]",
+   "Trag deine Woche\n[einmal] ein",
+   "… oder aus dem\n[iPhone-Kalender]",
+   "Nur drei nötig?\n[Hak sie an]",
+   "Überschneidungen\n[direkt] im Formular",
+   "Alle haben’s gesehen:\n[12 von 12]",
    "Eine Minute –\nkein Abend im Chat"
   ],
-  "signIn": "Anmeldung nötig: Apple, Google oder E-Mail"
+  "finale": {
+   "line": "Eine Ewigkeit im Chat",
+   "struck": "Ewigkeit im Chat",
+   "insert": "Minute"
+  },
+  "signIn": "Anmeldung nötig:\nApple, Google oder E-Mail"
  }
 }

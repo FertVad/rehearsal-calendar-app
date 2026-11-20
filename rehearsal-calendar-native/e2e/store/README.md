@@ -6,6 +6,42 @@ it with rounded corners, on the landing's dark background. Nothing real is
 reached: the database, the server and Metro are the e2e runner's own
 (`docs/e2e.md`).
 
+## The captions' look: «Пьеса» (T-288)
+
+The owner's choice of 20.11.2026: the captions set as the text of a printed
+play, the screenshots and the video in one type and one style (the video from
+T-289; until then it keeps its own, below).
+
+- **Type.** Literata at weight 600, its optical size (`opsz`) the type's size,
+  72 at most. One size for a language — the largest at which its widest line
+  fits the window's width, 104 px at most — and lines 1.1 of it apart.
+- **The main word.** One word, or two or three in a row, in each caption is set
+  in Literata's italic, also 600, the same size, in the app's lilac `#C084FC`;
+  the rest upright in the landing's text colour. In captions.json it stands in
+  square brackets: `"Planner\nпоказывает [окна]"`. One pair a caption at most,
+  within one line; the brackets are never printed. Where the italic word meets
+  upright type with no space between (es «el *martes*?»), the italic's
+  overhang is given back as space, so the "?" never runs into it.
+- **Place.** Flush left: each line's first letter's ink on the window's left
+  edge (x 127 of 1320). The block centred in the band above the window, as
+  before; the background, the glow, the window and its corners as before.
+- **Fonts, in the repository.** `fonts/` — Literata (upright and italic,
+  variable, axes `opsz` and `wght`), Caveat (the video's handwritten finale,
+  T-289) and Inter Tight (the video's closing card, T-289; its captions until
+  then), from github.com/google/fonts (`ofl/literata`, `ofl/caveat`,
+  `ofl/intertight`), each family's `OFL.txt` beside it. The SIL Open Font
+  License lets them be kept here and set in pictures and videos. compose.swift
+  takes fonts from here only; no picture of the store uses a font of the
+  system's (SF Pro) any more.
+- **The words.** captions.json is the native editors' ready blocks of T-288
+  (`audit/evidence/T-288/T-288-natives-*.md`): `screenshots`, `hook`,
+  `hookByDay` (the hook for each day of the week, `mon`…`sun`, for the day
+  the video is shot), `video`, `finale` (the line the video's pencil strikes
+  through, the struck part and the word written over it) and `signIn`. es
+  keeps the "?" of its hook outside the brackets — the pair «¿…?» upright, as
+  the RAE has it. `video[6]`, the old slogan, stays until T-289: today's
+  video reads it.
+
 ## For a new version
 
 ```bash
@@ -73,7 +109,9 @@ app"). Keep to them whatever the next storyboard is:
    evenly off the top and the bottom. No device frame, no rounded window, no
    landing background, no band above the recording, no border, no shadow.
    Shots are joined by a cut, or by a dissolve to the closing card.
-2. **Captions over the recording.** Bold SF Pro in white, one size for the
+2. **Captions over the recording.** Bold Inter Tight in white (until T-289
+   sets them as the screenshots are; the main word's brackets taken out, not
+   printed), one size for the
    language (its widest line sets it), lines broken only where captions.json
    breaks them — never by the composer. Under the lines a soft dark band, only
    as tall as the text: solid enough under them that white reads at 4.5:1 or
@@ -83,8 +121,9 @@ app"). Keep to them whatever the next storyboard is:
 3. **Sign-in, said.** Rehearsly does nothing without signing in, and Apple
    asks an app that needs it to say so in the preview. The closing card says
    it (captions.json `signIn`) under the mark and the name for the whole card,
-   about 3 s, at 40 px or more; when one line would be smaller, it breaks
-   after its colon (ru after «Нужен вход»).
+   about 3 s, at 40 px or more; broken where captions.json breaks it (en, es,
+   de after the colon, T-288), and one not broken there breaks after its
+   colon when one line would be smaller (ru after «Нужен вход» if it has none).
 4. **The poster frame** is the end of the hook's shot: the Planner's windows
    lit, the hook still on. Its time code goes to App Store Connect.
 5. **Never the app loading.** A preview plays by itself from its first frame,
@@ -100,7 +139,9 @@ app"). Keep to them whatever the next storyboard is:
 picture about the app — a caption band, the screen in a rounded window on the
 landing's background (T-274). A preview may not: it must show the app as it
 will be on the whole screen. So the screenshots keep their frame, and the
-video has its own look: the full screen, captions on it.
+video has its own look: the full screen, captions on it. The type and the
+style of the captions are the same in both (T-288, «Пьеса»; the video's from
+T-289).
 
 ### The storyboard
 
@@ -150,7 +191,9 @@ does not say where on the screen its taps land, and they are not guessed.
 - `captions.json` — the captions as the native editors approved them (version
   2, 17.11.2026), `screenshots` for these pictures; for the preview video
   `hook`, `video` and `signIn`, as the native editors read them on 20.11.2026
-  (T-285, `audit/evidence/T-285/`). A line break is where the caption breaks;
+  (T-285, `audit/evidence/T-285/`); their main words in [brackets], and
+  `hookByDay` and `finale`, by the native editors of T-288
+  (`audit/evidence/T-288/`). A line break is where the caption breaks;
   the composer adds none and takes none away. "12 of 12" and its translations
   hold together with no-break spaces. Change a caption here and run
   `compose.mjs`, or `montage.mjs` for the video.
@@ -179,10 +222,11 @@ does not say where on the screen its taps land, and they are not guessed.
 - `shots.yaml` — the Maestro flow: signs in as the director, then each frame
   from a fresh launch with the country's language, region and clock (12-hour
   for en-US, 24-hour elsewhere).
-- `compose.mjs` and `compose.swift` — the pictures: SF Pro from
-  `/System/Library/Fonts/SFNS.ttf`, the colours read from
-  `server/public/styles.css`. When a caption is too wide, the type gets smaller
-  for the whole language. The Swift is compiled once into `out/.bin`; the app's
+- `compose.mjs` and `compose.swift` — the pictures: the fonts from `fonts/`
+  (above, «Пьеса»), the colours read from `server/public/styles.css`, the
+  main word's lilac `#C084FC`. When a caption is too wide, the type gets smaller
+  for the whole language.
+- `fonts/` — Literata, Caveat, Inter Tight and their `OFL.txt` (above). The Swift is compiled once into `out/.bin`; the app's
   packages are not touched. Test: `node --test e2e/__tests__/store-compose.test.mjs`
   (in `npm test`).
 

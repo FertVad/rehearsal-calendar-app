@@ -43,13 +43,21 @@ const WHOLE = ['12 of 12', '12 из 12', '12 de 12', '12 von 12', 'iPhone-Kalend
 describe('captions.json for the video', () => {
   for (const locale of LOCALES) {
     test(`${locale}: a hook, seven captions and a sign-in line, within their lengths, broken only where the file breaks them`, () => {
+      // As they read: the main word's brackets (T-288) are not printed.
+      const unmarked = (text) => text.replace(/[[\]]/g, '');
       const { hook, video, signIn } = captions[locale];
       assert.equal(typeof hook, 'string');
-      assert.ok(!hook.includes('\n') && hook.length <= 26, `hook ${JSON.stringify(hook)}`);
+      // The hook in two lines (T-288), the second its day.
+      const hookLines = unmarked(hook).split('\n');
+      assert.ok(hookLines.length <= 2 && hookLines.every((l) => l.length > 0 && l.length <= 26), `hook ${JSON.stringify(hook)}`);
       assert.equal(typeof signIn, 'string');
-      assert.ok(!signIn.includes('\n') && signIn.length <= 48, `signIn ${JSON.stringify(signIn)}`);
+      const signLines = signIn.split('\n');
+      assert.ok(signLines.length <= 2 && signIn.length <= 48, `signIn ${JSON.stringify(signIn)}`);
+      // Broken, if at all, only after its colon (T-288, the editors').
+      if (signLines.length === 2) assert.match(signLines[0], /:$/, `signIn ${JSON.stringify(signIn)}`);
       assert.equal(video?.length, 7);
-      for (const caption of video) {
+      for (const marked of video) {
+        const caption = unmarked(marked);
         const lines = caption.split('\n');
         assert.ok(lines.length <= 2 && lines.every((l) => l.length > 0 && l.length <= 26), JSON.stringify(caption));
         // "12 of 12" and the like are one, and hold together with no-break spaces.
@@ -129,7 +137,11 @@ describe('every language\'s captions as compose.swift draws them', { skip: MAC_O
       // One line, or two where the language's editor said: after the colon, ru after «Нужен вход».
       const lines = drawn.signIn.lines;
       if (lines.length === 2) assert.ok(/:$/.test(lines[0]) || lines[0] === 'Нужен вход', JSON.stringify(lines));
-      assert.equal(lines.join(' '), words.signIn);
+      assert.equal(lines.join(' '), words.signIn.replace(/\n/g, ' '));
+      // Where captions.json breaks it, there and nowhere else (T-288).
+      if (words.signIn.includes('\n')) assert.deepEqual(lines, words.signIn.split('\n'));
+      // And no bracket of the main words' markup printed (T-288): the video's words are as they read.
+      for (const overlay of drawn.overlays) assert.doesNotMatch(overlay.lines.join('\n'), /[[\]]/);
     });
   }
 });

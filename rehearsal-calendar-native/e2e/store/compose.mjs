@@ -11,11 +11,14 @@
  * shots of an earlier run, when only a caption changed.
  *
  * Each picture: the caption at the top, two lines exactly as captions.json
- * breaks them, and the screenshot under it, whole, its corners rounded. The
- * landing's look — its background, text and accent colours read from
- * server/public/styles.css, SF Pro from the system's own file. A caption too
- * wide makes the type smaller for the whole language, so the eight read as a
- * set. PNG without alpha, which App Store Connect refuses.
+ * breaks them, flush left on the window's left edge, and the screenshot under
+ * it, whole, its corners rounded. The landing's background, text and accent
+ * colours, read from server/public/styles.css. The type is «Пьеса» (T-288):
+ * Literata at 600 from e2e/store/fonts, never a font of the system's; the
+ * caption's main word — in [brackets] in captions.json, which are never
+ * printed — in Literata's italic, in the app's lilac. A caption too wide makes
+ * the type smaller for the whole language, so the eight read as a set. PNG
+ * without alpha, which App Store Connect refuses.
  *
  * Drawn by compose.swift (CoreText, CoreGraphics), compiled once into
  * e2e/store/out/.bin — the app's packages stay as package-lock.json has them.
@@ -32,8 +35,30 @@ const ROOT = path.resolve(STORE, '..', '..');
 export const OUT = path.join(STORE, 'out');
 export const CAPTIONS = path.join(STORE, 'captions.json');
 const STYLES = path.join(ROOT, 'server', 'public', 'styles.css');
-const FONT = '/System/Library/Fonts/SFNS.ttf';
 const SOURCE = path.join(STORE, 'compose.swift');
+
+/**
+ * The store's fonts (T-288), from github.com/google/fonts, each family's
+ * OFL.txt beside it: the SIL Open Font License lets them be kept here and set
+ * in pictures and videos. Variable: Literata's axes are opsz and wght.
+ */
+const FONT_DIR = path.join(STORE, 'fonts');
+export const FONTS = {
+  /** The captions: Literata, upright. */
+  play: path.join(FONT_DIR, 'literata', 'Literata[opsz,wght].ttf'),
+  /** A caption's main word: Literata's italic. */
+  playItalic: path.join(FONT_DIR, 'literata', 'Literata-Italic[opsz,wght].ttf'),
+  /** The video's handwritten finale (T-289): Caveat. */
+  hand: path.join(FONT_DIR, 'caveat', 'Caveat[wght].ttf'),
+  /** The video's closing card (T-289), and its captions until then: Inter Tight. */
+  brand: path.join(FONT_DIR, 'intertight', 'InterTight[wght].ttf'),
+};
+
+/** The main word's colour: the app's lilac, as the storyboard has it. */
+const EMPHASIS = '#C084FC';
+
+/** A caption as it reads: its main word's brackets taken out. */
+export const plain = (text) => text.replace(/[[\]]/g, '');
 
 /** The 6.9" display App Store Connect asks for, and the 6.3" one beside it. */
 export const SIZES = [
@@ -50,7 +75,7 @@ export function landingColours() {
     return match[1].trim();
   };
   // The hairline round the screenshot: the landing's line, a little stronger on a picture this size.
-  return { background: value('bg'), text: value('fg'), accent: value('accent'), line: 'rgba(139, 148, 158, .35)' };
+  return { background: value('bg'), text: value('fg'), accent: value('accent'), line: 'rgba(139, 148, 158, .35)', emphasis: EMPHASIS };
 }
 
 /** compose.swift, compiled once for each version of it. */
@@ -68,7 +93,9 @@ export function binary() {
 /**
  * Draws `locale`'s eight pictures from `shots` (eight PNGs of the app, in
  * order) into `out`/<locale> and `out`/<locale>-6.3. Returns what was drawn:
- * { fontSize, captionBottom, pictures: [{ file, width, height, lines, fontSize, shot }] },
+ * { fontSize, lineHeight, fonts (the files drawn with), captionBottom,
+ * pictures: [{ file, width, height, lines (as printed), fontSize, lineBoxes:
+ * [{ capTop, inkTop, baseline }], emphasis: { line, left, right, top, bottom }, shot }] },
  * the full-size ones, in px of the full size.
  */
 export async function compose({ locale, shots, out = OUT, captionsFile = CAPTIONS }) {
@@ -83,7 +110,7 @@ export async function compose({ locale, shots, out = OUT, captionsFile = CAPTION
     captions,
     shots,
     outputs: SIZES.map(({ suffix, width, height }) => ({ dir: path.join(out, `${locale}${suffix}`), width, height })),
-    font: FONT,
+    fonts: { roman: FONTS.play, italic: FONTS.playItalic },
     colours: landingColours(),
   };
   const jobFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'store-job-')), 'job.json');

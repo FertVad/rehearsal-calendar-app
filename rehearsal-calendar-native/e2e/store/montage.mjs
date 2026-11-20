@@ -41,11 +41,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CAPTIONS, LOCALES, OUT, binary, landingColours } from './compose.mjs';
+import { CAPTIONS, FONTS, LOCALES, OUT, binary, landingColours, plain } from './compose.mjs';
 
 const STORE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(STORE, '..', '..');
-const FONT = '/System/Library/Fonts/SFNS.ttf';
+/** The repository's Inter Tight, never the system's SF Pro (T-288); T-289 sets the video as the screenshots are. */
+const FONT = FONTS.brand;
 const MARK = path.join(ROOT, 'server', 'public', 'assets', 'mark.png');
 
 /** The preview's frame, as App Store Connect asks for the 6.9" and 6.7" displays. */
@@ -242,13 +243,17 @@ export function timeCode(seconds) {
   return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}:${pad(frames % VIDEO.fps)}`;
 }
 
-/** A locale's captions for the video: the hook, the seven, the sign-in line. */
+/**
+ * A locale's captions for the video: the hook, the seven, the sign-in line —
+ * as they read, their main word's brackets (T-288) taken out: until T-289 the
+ * video does not set the main word apart.
+ */
 export function videoCaptions(locale, captionsFile = CAPTIONS) {
   const all = JSON.parse(fs.readFileSync(captionsFile, 'utf8'))[locale];
   if (!all?.hook || !all?.signIn || all?.video?.length !== 7) {
     throw new Error(`${captionsFile} needs a hook, seven video captions and a signIn for ${locale}`);
   }
-  return { hook: all.hook, video: all.video, signIn: all.signIn };
+  return { hook: plain(all.hook), video: all.video.map(plain), signIn: plain(all.signIn) };
 }
 
 /**
