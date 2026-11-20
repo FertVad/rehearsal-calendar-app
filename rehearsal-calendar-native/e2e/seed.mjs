@@ -317,6 +317,12 @@ export const PEOPLE = {
   // company of their own, as 101's.
   quince: { email: 'quince@e2e.test', firstName: 'Peter', lastName: 'Quince', onboarded: true },
   starveling: { email: 'starveling@e2e.test', firstName: 'Robin', lastName: 'Starveling', onboarded: true, locale: 'ru' },
+  // Peaseblossom, whose app speaks Russian, is an admin of Oberon's company and
+  // has its page open when Oberon takes the role back from another device; she
+  // taps "Показать код" and is told the rule in the natives' words (103,
+  // T-283). A company of their own, so 102's stays as it is.
+  oberon: { email: 'oberon@e2e.test', firstName: 'Oberon', lastName: 'Fairy', onboarded: true },
+  peaseblossom: { email: 'peaseblossom@e2e.test', firstName: 'Peaseblossom', lastName: 'Fairy', onboarded: true, locale: 'ru' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -921,6 +927,15 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
     [players.id, ids.quince, ids.starveling]);
+
+  // Oberon's company (103), the same way, with Peaseblossom an admin in it.
+  const { rows: [fairies] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Fairy Court', 'The wood near Athens', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW())`,
+    [fairies.id, ids.oberon, ids.peaseblossom]);
 
   // Juliet's two (74), made as the server makes them: the sign-ins are spent.
   // Tomorrow a titled one with a place, one with no place, one with no title;
