@@ -131,7 +131,7 @@ describe('useInviteLink Hook', () => {
         await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Это может сделать только админ проекта.');
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Это может сделать только администратор проекта.');
     });
 
     it('should show default error message when error has no message', async () => {

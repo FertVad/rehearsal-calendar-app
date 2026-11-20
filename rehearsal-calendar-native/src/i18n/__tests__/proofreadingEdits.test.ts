@@ -342,6 +342,17 @@ const EDITS: Edit[] = [
   ['en', 'profile.avatarHint', null, 'Your avatar is created automatically from your initials.', 'Your avatar shows the initials of your first and last name.'],
   ['es', 'profile.avatarHint', null, 'El avatar se crea automáticamente a partir de tus iniciales.', 'Tu avatar muestra las iniciales de tu nombre y apellido.'],
   ['de', 'profile.avatarHint', null, 'Der Avatar wird automatisch aus deinen Initialen erstellt.', 'Dein Avatar zeigt die Initialen deines Vor- und Nachnamens.'],
+  // T-283: the native speakers' reading of T-281 (a server's refusal in the
+  // person's language); "before" is the wording they read (19ae506).
+  ['ru', 'errors.memberNotFound', null, 'Этого человека уже нет в проекте.', 'Этого участника уже нет в проекте.'],
+  ['ru', 'errors.adminOnly', null, 'Это может сделать только админ проекта.', 'Это может сделать только администратор проекта.'],
+  ['en', 'errors.notProjectMember', null, 'You’re no longer a member of this project, or it has been deleted.', 'You are no longer a member of this project, or it has been deleted.'],
+  ['en', 'errors.alreadyMember', null, 'You’re already a member of this project.', 'You are already a member of this project.'],
+  ['en', 'errors.availabilityTooLarge', null, 'Too much to load for this range. Choose fewer days or members.', 'Too much to load at once. Choose fewer days or participants.'],
+  ['es', 'errors.adminOnly', null, 'Solo un admin del proyecto puede hacerlo.', 'Solo quienes administran el proyecto pueden hacerlo.'],
+  ['es', 'errors.ownerOnly', null, 'Solo el admin principal del proyecto puede hacerlo.', 'Solo quien es admin principal del proyecto puede hacerlo.'],
+  ['es', 'errors.availabilityTooLarge', null, 'Hay demasiados datos para este período. Elige menos días o menos miembros.', 'No se puede cargar tanto de una vez. Elige menos días o menos participantes.'],
+  ['de', 'errors.availabilityTooLarge', null, 'Zu viele Daten für diesen Zeitraum. Wähle weniger Tage oder Mitglieder.', 'Zu viele Daten für diesen Zeitraum. Wähle weniger Tage oder Teilnehmer.'],
 ];
 
 // [file, key, before (3b16cd5), after] — iOS's own permission prompts.

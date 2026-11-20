@@ -26,8 +26,8 @@ export interface ErrorsTranslations {
 export const ru = {
   errors: {
     notProjectMember: 'Вы больше не участник этого проекта, или проект удалён.',
-    memberNotFound: 'Этого человека уже нет в проекте.',
-    adminOnly: 'Это может сделать только админ проекта.',
+    memberNotFound: 'Этого участника уже нет в проекте.',
+    adminOnly: 'Это может сделать только администратор проекта.',
     ownerOnly: 'Это может сделать только владелец проекта.',
     alreadyMember: 'Вы уже участник этого проекта.',
     rateLimited: 'Слишком много запросов. Подождите немного и попробуйте снова.',
@@ -37,13 +37,13 @@ export const ru = {
 
 export const en = {
   errors: {
-    notProjectMember: 'You’re no longer a member of this project, or it has been deleted.',
+    notProjectMember: 'You are no longer a member of this project, or it has been deleted.',
     memberNotFound: 'This person is no longer in the project.',
     adminOnly: 'Only a project admin can do this.',
     ownerOnly: 'Only the project owner can do this.',
-    alreadyMember: 'You’re already a member of this project.',
+    alreadyMember: 'You are already a member of this project.',
     rateLimited: 'Too many requests. Wait a moment and try again.',
-    availabilityTooLarge: 'Too much to load for this range. Choose fewer days or members.',
+    availabilityTooLarge: 'Too much to load at once. Choose fewer days or participants.',
   },
 };
 
@@ -51,11 +51,11 @@ export const es = {
   errors: {
     notProjectMember: 'Ya no formas parte de este proyecto, o se ha eliminado.',
     memberNotFound: 'Esta persona ya no está en el proyecto.',
-    adminOnly: 'Solo un admin del proyecto puede hacerlo.',
-    ownerOnly: 'Solo el admin principal del proyecto puede hacerlo.',
+    adminOnly: 'Solo quienes administran el proyecto pueden hacerlo.',
+    ownerOnly: 'Solo quien es admin principal del proyecto puede hacerlo.',
     alreadyMember: 'Ya formas parte de este proyecto.',
     rateLimited: 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.',
-    availabilityTooLarge: 'Hay demasiados datos para este período. Elige menos días o menos miembros.',
+    availabilityTooLarge: 'No se puede cargar tanto de una vez. Elige menos días o menos participantes.',
   },
 };
 
@@ -67,6 +67,6 @@ export const de = {
     ownerOnly: 'Das kann nur der Eigentümer des Projekts.',
     alreadyMember: 'Du bist bereits Mitglied dieses Projekts.',
     rateLimited: 'Zu viele Anfragen. Warte kurz und versuche es noch einmal.',
-    availabilityTooLarge: 'Zu viele Daten für diesen Zeitraum. Wähle weniger Tage oder Mitglieder.',
+    availabilityTooLarge: 'Zu viele Daten für diesen Zeitraum. Wähle weniger Tage oder Teilnehmer.',
   },
 };
