@@ -141,7 +141,7 @@ shots, 29 s (`SHOTS` in montage.mjs), from video.yaml's seven recordings:
 | 1 | 0–2.5 | the Planner (01, from `ready`), shade 0.86 | at 1.6 s today's first window, everyone free (`planner-row-<today>-…`), shade 0.64 | — | the hook, typed, 24 % |
 | 2 | 2.5–5 | the Planner | today's card (`planner-card-<today>`) | — | `video[0]`, 79 % |
 | 3 | 5–8 | the month (02): two days, Busy | the two days (`day-…`); then the modes (`mode-selector`) | day A, day B, Busy | `video[1]`, 13 % |
-| 4 | 8–10.5 | Calendar Sync (03) | the iPhone's calendar (`calendar-provider-apple`); then with Auto Sync (`calendar-sync-row`) | the calendar, the switch | `video[2]`, 63 % |
+| 4 | 8–10.5 | Calendar Sync (03) | the iPhone's calendar (`calendar-provider-apple`); then with Auto Sync (`calendar-sync-row`) | the calendar (Auto Sync switches itself on when a calendar is chosen: no touch, no mark) | `video[2]`, 63 % |
 | 5 | 10.5–14 | the picker (04): three, Done; a cut to the Planner weighed again | All participants and the three (`participants-all`, `participant-<id>`); then Done; after the cut the first two windows | three names, Done | `video[3]`, 82 % |
 | 6 | 14–17.5 | the form (05): Save, the conflict alert | Save (`rehearsal-submit`), shade 0.82; the alert, shade 0.6 | Save | `video[4]`, 80 % |
 | 7 | 17.5–22.5 | the rehearsal of all twelve (06): 4 → 7 → 9 → 11 → 12 | its row (`rehearsal-item-<id>`) | the eye | `video[5]` on the frame 12/12 came in, 74 % |
@@ -162,6 +162,23 @@ element not on screen fails the recording. The alert is read 0.45 s after the
 finger lifts off Save (`AFTER: up`): the button's spinner keeps the screen
 moving under it, and Maestro sees the alert seconds later; the form's
 recording ends a second after it was read.
+
+- **A hole follows its element** as long as it is lit. After every tap in a
+  lit scene, once the screen stands (`waitForAnimationToEnd`), the flow reads
+  the lit elements again under the same name: the month's day panel pushes the
+  month down some 62 points, the picker's rows, Auto Sync, the list after a
+  pull. montage.mjs takes every reading of a light, each next one a move
+  (0.3 s) to where the elements then were, starting when it was read — at
+  once in the video, as the stillness after it is cut (T-289, 21.11).
+- **The light on an element comes no later than the tap on it.** The cut keeps
+  the order of the recording: a moment later in it is never earlier in the
+  video (`keeping`). A move ends by the first tap in its holes — moved earlier
+  if need be, but not before the tap before it, nor the previous move, nor a
+  cut it was read after.
+- **No video with a touch mark outside the light.** In this storyboard every
+  tap is on a lit element; a mark outside every hole of the light that has
+  begun by then (`touchesOutside`) is a light left behind or come late, and
+  montage.mjs refuses to make the video, naming the recording and the touch.
 
 **The touch marks.** A mark is where and when a real touch was, taken from
 the recording itself, not guessed and not from the storyboard: *when* from
@@ -192,11 +209,16 @@ the app, *where* from Maestro's driver.
 main word in its italic in `#C084FC`, the rest white; flush left, each line's
 ink from x 42 of 886, the app's margin; lines broken only where captions.json
 breaks them. One size for a language, the largest up to 70 px at which every
-caption fits; the hook and the finale up to 88 px. No band: under the lines a
-soft shadow of `#04030A`, a rectangle round them blurred by 28 px, 55 % dense
-or more — as dense as white and the lilac need to read at 4.5:1 over a white
-recording where it is weakest, with the light as it is there (compose.swift
-works it out and says so; montage.mjs prints the worst). Each line comes in
+caption fits; the hook and the finale up to 88 px. No band, but no word of
+the app beside or between the lines either: round the lines' rectangle (and
+16 px more) the shade itself is 0.97 dense, so the app's white comes through
+no brighter than 20 of 255 — as under the hook at 0.86 with its old shadow —
+and from there it eases back to the shot's shade (0.62, 0.8, 0.86…) over
+80 px, no edge to see. It is the shade's, so a hole is never darkened by it;
+elsewhere the shade is the storyboard's. White and the lilac read at 4.5:1 or
+more over a white recording where it is weakest, with the light as it is
+there; compose.swift works it out and refuses otherwise, and says how bright
+the white comes through (`under`; montage.mjs prints the worst). Each line comes in
 from below, fading, 0.14 s after the one before; its main word 0.22 s after
 its line. A caption comes 0.12 s into its shot and stays to its end.
 
@@ -216,7 +238,8 @@ recording's stillness is kept 0.5 s here, so each number stays a moment.
 **The finale.** captions.json `finale`: its `line` in Literata 600 at up to
 88 px; at 0.8 s a pencil stroke in `#C084FC`, uneven, drawn in 0.45 s through
 the `struck` part; then `insert` over it in Caveat 700, tilted −5°, in 0.3 s,
-and the struck part fades to 45 %. No light, the shade at 0.8.
+and the struck part fades to 45 %. No light, the shade at 0.8, denser round
+the line and the word over it as round a caption.
 
 **The closing card.** Dissolves in over 0.5 s and stays 3 s more. The
 landing's background and glow; the mark (`server/public/assets/mark.png`) and

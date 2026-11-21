@@ -26,12 +26,14 @@
  * - the light: the screen in a shade (SHADE, `dim` of it), rounded holes with
  *   a soft edge where what matters is — each hole the frame of elements read
  *   from the screen's hierarchy by testID while the recording ran (record.mjs
- *   `/light`), never placed by eye; moving to its next place in LIGHT_MOVE;
+ *   `/light`), never placed by eye; read again after a tap moved the screen,
+ *   so it follows its element; moving to its next place in LIGHT_MOVE;
  * - the touch marks: where and when the app itself said a finger went down
  *   (record.mjs `/touch`, e2e/device/App.js) — none where it said none; a
- *   finger that moved (a list pulled) is no tap and gets none;
+ *   finger that moved (a list pulled) is no tap and gets none; every one in
+ *   the light that has begun by then, or no video is made (touchesOutside);
  * - the captions in «Пьеса», as the screenshots' (T-288): flush left on the
- *   app's margin, no band, a soft shadow under the text;
+ *   app's margin, no band, the shade denser round the lines, softly;
  * - the hook typed out (captions.json `hookByDay`, the day recording 01 was
  *   shot on in the page's country — the Planner's first card's day);
  * - the finale, struck through in pencil, the right word written over it;
@@ -78,6 +80,9 @@ export const DIM = 0.62;
 export const HOLE_PAD = 8;
 const HOLE_RADIUS = 28;
 
+/** A hole moves to its next place in this long (compose.swift lightMove). */
+export const LIGHT_MOVE = 0.3;
+
 /** A finger that moved more than this many points went somewhere: no tap, no mark. */
 export const SWIPE = 10;
 
@@ -93,8 +98,9 @@ const DISSOLVE = 0.5;
  * (`hook`, `finale`, or captions.json's `video` index) and the caption's
  * centre, of the frame's height; its light: in order, the holes recorded under
  * `name` (record.mjs `/light`) — at the moment they were read, or `at` seconds
- * into the shot — and the shade's `dim`. A shot's first light is there from its
- * first frame; the next move to their place. `still`: the stillness kept in its
+ * into the shot; read again under the same name, moving there — and the
+ * shade's `dim`. A shot's first light is there from its first frame; the next
+ * move to their place, whole by the tap on them. `still`: the stillness kept in its
  * recording (the seen count's numbers stay a moment each).
  */
 export const SHOTS = [
@@ -180,9 +186,12 @@ export function keeping(times, duration, { from = 0, spans = [], still = STILL }
     const n = frames.find((f) => f.at > t + 1e-6);
     const d1 = Math.max(0, t - p.at);
     if (!n) return Math.min(length, p.shown + Math.min(d1, still));
-    const d2 = n.at - t, gap = n.shown - p.shown;
-    // In a gap cut short, a moment keeps its distance to the nearer frame.
-    return d2 < d1 ? Math.max(p.shown, n.shown - Math.min(d2, gap)) : Math.min(n.shown, p.shown + Math.min(d1, gap));
+    const d2 = n.at - t, half = (n.shown - p.shown) / 2;
+    // In a gap cut short, a moment keeps its distance to the nearer frame, up
+    // to the gap's middle: so a moment later in the recording is never earlier
+    // in the video — a light read early in a still gap stays before the tap
+    // that ends it (T-289: the picker's Done was lit after it was tapped).
+    return d2 < d1 ? n.shown - Math.min(d2, half) : p.shown + Math.min(d1, half);
   };
   return { frames, length, map };
 }
@@ -328,6 +337,28 @@ export function holeOf(frame, screen, size, { round = false, radius = HOLE_RADIU
   return [x - HOLE_PAD, y - HOLE_PAD, w, h, round ? Math.min(w, h) / 2 : Math.min(radius, w / 2, h / 2)];
 }
 
+/** Whether (x, y) is in a hole [x, y, w, h, radius] — its rounded rectangle, the soft edge not counted. */
+function inHole([hx, hy, hw, hh, hr], x, y) {
+  const r = Math.min(hr, hw / 2, hh / 2);
+  const qx = Math.abs(x - (hx + hw / 2)) - (hw / 2 - r), qy = Math.abs(y - (hy + hh / 2)) - (hh / 2 - r);
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r <= 0;
+}
+
+/**
+ * The touch marks outside the light that has begun by their time: the last
+ * light keyframe at or before a mark (`lights`, `taps` in the video's time and
+ * px) has no hole round it. In the storyboard every tap is on a lit element,
+ * so one outside is the light left where the element was (T-289, 21.11: the
+ * month pushed down under its two days' holes) or lit after the tap.
+ */
+export function touchesOutside(lights, taps) {
+  const inOrder = [...lights].sort((a, b) => a.t - b.t);
+  return taps.filter((tap) => {
+    const light = inOrder.filter((l) => l.t <= tap.t + 1e-6).at(-1);
+    return light !== undefined && !light.holes.some((h) => inHole(h, tap.x, tap.y));
+  });
+}
+
 /** App Store Connect's time code of a frame (previewFrameTimeCode): hours:minutes:seconds:frames at VIDEO.fps. */
 export function timeCode(seconds) {
   const frames = Math.round(seconds * VIDEO.fps);
@@ -413,24 +444,8 @@ function plan(clips) {
     return k === null ? null : rec.start + k / rec.speed;
   };
 
-  // The light: keyframes in the video's time.
-  const lights = [];
-  for (const shot of shots) {
-    if (shot.card) continue;
-    const rec = recordings[shot.clip];
-    for (const [i, l] of (shot.light ?? []).entries()) {
-      let holes = [];
-      let t = shot.start + (l.at ?? 0);
-      if (l.name) {
-        const kept = (rec.log.lights ?? []).find((x) => x.name === l.name);
-        if (!kept) throw new Error(`${rec.log.file}: no light "${l.name}" (video.yaml); record the scene again`);
-        holes = kept.holes.map((f) => holeOf(f, kept.screen, rec.size, l));
-        if (l.at === undefined && i > 0) t = Math.min(shot.end - 0.3, Math.max(shot.start, when(rec, kept.at) ?? shot.start));
-      }
-      // A shot's first light is there on its first frame — a cut changes the screen at once; the rest move.
-      lights.push({ t, holes, dim: l.dim ?? DIM, instant: i === 0 && !l.move });
-    }
-  }
+  // A moment of a recording in the video; one in what was cut out, where the cut ends.
+  const whenShown = (rec, t) => when(rec, t) ?? when(rec, (rec.log.spans ?? []).find((s) => t >= s.from - 1e-6 && t < s.to)?.to ?? t);
 
   // The touch marks: when the app said a finger went down and came up near
   // where it went down, where on the window Maestro's driver put it
@@ -449,10 +464,59 @@ function plan(clips) {
           + 'takes it from Maestro\'s driver); record the scene again');
       }
       const [x, y] = toVideo(rec.size, touch.screen).point(touch.windowX, touch.windowY);
-      taps.push({ t, x, y });
+      taps.push({ t, x, y, file: rec.log.file, at: touch.at });
     }
   }
   taps.sort((a, b) => a.t - b.t);
+
+  // The light: keyframes in the video's time. Each light of a shot is every
+  // reading the flow made of it (record.mjs `/light`, the same name again
+  // after a tap moved the screen): the first where the shot says, each next
+  // one a move to where its elements then were — a hole follows its element.
+  const lights = [];
+  for (const shot of shots) {
+    if (shot.card) continue;
+    const rec = recordings[shot.clip];
+    const mine = [];
+    for (const [i, l] of (shot.light ?? []).entries()) {
+      const reads = l.name ? (rec.log.lights ?? []).filter((x) => x.name === l.name) : [null];
+      if (!reads.length) throw new Error(`${rec.log.file}: no light "${l.name}" (video.yaml); record the scene again`);
+      for (const [j, read] of reads.entries()) {
+        const holes = read ? read.holes.map((f) => holeOf(f, read.screen, rec.size, l)) : [];
+        let t = shot.start + (l.at ?? 0);
+        // Moved to when it was read; the shot's very first is there on its first frame.
+        if (read && (j > 0 || (l.at === undefined && i > 0))) t = Math.min(shot.end - LIGHT_MOVE, Math.max(shot.start, whenShown(rec, read.at)));
+        // A shot's first light is there on its first frame — a cut changes the screen at once; the rest move.
+        mine.push({ name: l.name, t, holes, dim: l.dim ?? DIM, instant: i === 0 && j === 0 && !l.move, read: read?.at });
+      }
+    }
+    mine.sort((a, b) => a.t - b.t);
+    // The light on an element is whole when the finger comes down on it: a
+    // move ends by the first tap in its holes, if the tap before that one —
+    // in the holes before — and the previous move allow (T-289, 21.11: the
+    // flow reads Done a moment before tapping it).
+    const inShot = taps.filter((tap) => tap.t >= shot.start && tap.t < shot.end);
+    for (const [k, light] of mine.entries()) {
+      if (k === 0 || light.instant) continue;
+      const target = inShot.find((tap) => tap.t >= light.t - 1e-6 && light.holes.some((h) => inHole(h, tap.x, tap.y)));
+      if (!target) continue;
+      const before = inShot.filter((tap) => tap.t < target.t - 1e-6).at(-1);
+      // Never before a cut it was read after, or in: the screen changed there.
+      const cut = (rec.log.spans ?? []).filter((s) => light.read !== undefined && s.from <= light.read).map((s) => whenShown(rec, s.to));
+      const least = Math.max(shot.start, mine[k - 1].t + 0.01, before ? before.t + 0.05 : -Infinity, ...cut);
+      light.t = Math.max(least, Math.min(light.t, target.t - LIGHT_MOVE));
+    }
+    lights.push(...mine);
+  }
+
+  // Every tap of the storyboard is on a lit element: one outside the light
+  // that has begun by then is a light gone wrong, and no video is made of it.
+  const astray = touchesOutside(lights, taps);
+  if (astray.length) {
+    throw new Error(astray.map((tap) => `${tap.file}: a touch at ${tap.at.toFixed(2)} s (${tap.t.toFixed(2)} s of the video, `
+      + `${Math.round(tap.x)}, ${Math.round(tap.y)} px) outside the light that has begun`).join('; ')
+      + ' — read the light again where its element is (video.yaml) and record the scene again');
+  }
 
   for (const shot of shots) {
     if (shot.card || shot.caption === undefined) continue;
@@ -622,11 +686,17 @@ export const clipsOf = (locale) => Array.from({ length: RECORDINGS }, (_, i) => 
  */
 export function looks(made) {
   const month = made.shots[2], seen = made.shots[6], finale = made.shots[7], card = made.shots[8];
-  const tap = made.taps.find((t) => t.t >= month.start && t.t < month.start + month.length);
+  const taps = made.taps.filter((t) => t.t >= month.start && t.t < month.start + month.length);
+  // The second day pressed, its hole where the month pushed it, before the modes are lit (T-289, 21.11).
+  const modes = made.lights.find((l) => l.name === 'modes' && l.t >= month.start);
+  const second = taps[1] ? Math.min(taps[1].t + 0.15, (modes?.t ?? Infinity) - 0.02) : month.start + 1.4;
   return [
     { name: 'hook', at: 1.0 },
     { name: 'poster', at: made.poster.seconds },
-    { name: 'tap', at: tap ? tap.t + 0.12 : month.start + 0.8 },
+    { name: 'tap', at: taps[0] ? taps[0].t + 0.12 : month.start + 0.8 },
+    { name: 'second-day', at: second },
+    // Each caption, risen, a moment before its shot ends.
+    ...[1, 2, 3, 4, 5].map((k) => ({ name: `caption-${k + 1}`, at: made.shots[k].start + made.shots[k].length - 0.25 })),
     { name: 'counted', at: Math.min(seen.start + seen.length - 0.1, seen.captionAt + 0.8) },
     { name: 'finale', at: finale.start + 2.0 },
     { name: 'card', at: card.start + 1.5 },
@@ -666,13 +736,14 @@ export function report(locale, made) {
   return [
     `${locale}: ${made.length.toFixed(2)} s, shot on ${made.day}; captions ${drawn.fontSize} px, hook ${drawn.hookSize} px, `
       + `finale ${drawn.finale.fontSize} px; sign-in ${drawn.signIn.fontSize} px in ${drawn.signIn.lines.length} line(s); `
-      + `worst contrast over white: text ${drawn.contrast.white.toFixed(2)}:1, lilac ${drawn.contrast.lilac.toFixed(2)}:1`,
+      + `worst contrast over white: text ${drawn.contrast.white.toFixed(2)}:1, lilac ${drawn.contrast.lilac.toFixed(2)}:1; `
+      + `the app's white round the captions at most ${Math.max(...[...drawn.captions, drawn.finale].map((c) => c.under)).toFixed(1)} of 255`,
     ...made.shots.map((s) => {
       const taps = made.taps.filter((t) => t.t >= s.start && t.t < s.start + s.length);
       const lights = made.lights.filter((l) => l.t >= s.start - 1e-6 && l.t < s.start + s.length);
       return `${locale}: shot ${s.index + 1} ${s.start.toFixed(2)}–${(s.start + s.length).toFixed(2)} s`
         + `${s.captionAt !== undefined ? `, caption from ${s.captionAt.toFixed(2)} s` : ''}`
-        + `, light ${lights.map((l) => `${l.t.toFixed(2)} s ${l.holes.length} hole(s) shade ${l.dim}`).join(' / ') || '—'}`
+        + `, light ${lights.map((l) => `${l.t.toFixed(2)} s ${l.name ?? 'none'} ${l.holes.length} hole(s) shade ${l.dim}`).join(' / ') || '—'}`
         + `, touches ${taps.map((t) => `${t.t.toFixed(2)} s (${Math.round(t.x)}, ${Math.round(t.y)})`).join(' ') || '—'}`
         + `; ${s.recorded.toFixed(1)} s recorded → ${s.kept.toFixed(1)} s kept, ×${s.speed.toFixed(2)}`;
     }),

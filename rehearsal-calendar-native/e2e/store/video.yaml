@@ -105,6 +105,12 @@ tags:
     env: { ACTION: wait, MS: "400" }
 - tapOn:
     id: day-${BUSY_A_DAY}
+# The day's panel opens and pushes the month down some 62 points: the two days
+# read again where they now are, the holes follow them (T-289, 21.11).
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: days, HOLES: "day-${BUSY_A_DAY};day-${BUSY_B_DAY}", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "300" }
@@ -123,6 +129,10 @@ tags:
     env: { ACTION: wait, MS: "400" }
 - tapOn:
     id: mode-busy
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: modes, HOLES: "mode-selector", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "900" }
@@ -195,6 +205,11 @@ tags:
       id: calendar-sync-toggle
       checked: true
     timeout: 15000
+# Sync on: whatever it moved, the two read again where they are.
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: both, HOLES: "calendar-provider-apple;calendar-sync-row", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "1200" }
@@ -233,12 +248,22 @@ tags:
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "300" }
+# After each pick the lit rows read again where they are.
 - tapOn:
     id: participant-${PICK_0_ID_LABEL}
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: pick, HOLES: "participants-all;participant-${PICK_0_ID_LABEL},participant-${PICK_1_ID_LABEL},participant-${PICK_2_ID_LABEL}", APP: "${APP_ID}" }
 - tapOn:
     id: participant-${PICK_1_ID_LABEL}
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: pick, HOLES: "participants-all;participant-${PICK_0_ID_LABEL},participant-${PICK_1_ID_LABEL},participant-${PICK_2_ID_LABEL}", APP: "${APP_ID}" }
 - tapOn:
     id: participant-${PICK_2_ID_LABEL}
+- waitForAnimationToEnd
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: light, NAME: done, HOLES: "participants-all;participants-done", APP: "${APP_ID}" }
@@ -371,6 +396,10 @@ tags:
       text: "7/12"
     timeout: 15000
 - waitForAnimationToEnd
+# The row read again before the cut ends: the hole is where the list put it.
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: card, HOLES: "rehearsal-item-${EVERYONE_REHEARSAL}", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: mark, NAME: resume }
@@ -392,6 +421,9 @@ tags:
 - waitForAnimationToEnd
 - runScript:
     file: scripts/recorder.js
+    env: { ACTION: light, NAME: card, HOLES: "rehearsal-item-${EVERYONE_REHEARSAL}", APP: "${APP_ID}" }
+- runScript:
+    file: scripts/recorder.js
     env: { ACTION: mark, NAME: resume }
 - runScript:
     file: scripts/seen.js
@@ -409,6 +441,9 @@ tags:
       text: "11/12"
     timeout: 15000
 - waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: card, HOLES: "rehearsal-item-${EVERYONE_REHEARSAL}", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: mark, NAME: resume }

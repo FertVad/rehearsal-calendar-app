@@ -116,6 +116,36 @@ test('a recording\'s stillness is cut to STILL; what lies between "cut" and "res
   assert.equal(cut.map(1.05), null, 'a touch in what was cut out is no touch of the video');
 });
 
+test('the cut never swaps two moments: one later in the recording is never earlier in the video (a light read, then the tap)', () => {
+  // The picker's Done (T-289, 21.11): its light read 0.4 s into a still second
+  // and a half, the tap 0.03 s before the next frame — the cut put the light after the tap.
+  const { map } = M.keeping([0, 1, 2.5, 3], 3.2);
+  let last = -Infinity;
+  for (let t = 0; t <= 3.2 + 1e-9; t += 0.01) {
+    const at = map(t);
+    assert.ok(at >= last - 1e-9, `${t.toFixed(2)} s of the recording at ${at.toFixed(3)} s, before ${last.toFixed(3)} s of a moment before it`);
+    last = at;
+  }
+  assert.ok(map(1.4) < map(2.47), `the light read at 1.4 s (${map(1.4)}) before the tap at 2.47 s (${map(2.47)})`);
+});
+
+test('a touch mark outside the light that has begun is found: the storyboard has every tap on a lit element', () => {
+  const lights = [
+    { t: 5, holes: [[100, 100, 100, 100, 20]], dim: 0.62 },
+    { t: 6, holes: [[100, 300, 100, 100, 20], [400, 100, 100, 100, 20]], dim: 0.62 },
+    { t: 8, holes: [], dim: 0.8 },
+  ];
+  const taps = [
+    { t: 5.5, x: 150, y: 150 },   // in the first hole
+    { t: 6.2, x: 150, y: 150 },   // the hole has moved on to 300: outside — the month's day 30 (T-289, 21.11)
+    { t: 6.4, x: 450, y: 150 },   // in the second hole
+    { t: 8.1, x: 450, y: 150 },   // no hole at all
+    { t: 4, x: 0, y: 0 },         // before any light: none to be outside of
+  ];
+  assert.deepEqual(M.touchesOutside(lights, taps).map((tap) => tap.t), [6.2, 8.1]);
+  assert.deepEqual(M.touchesOutside(lights, taps.filter((tap) => [5.5, 6.4].includes(tap.t))), []);
+});
+
 test('the poster frame\'s time code, as App Store Connect writes it', () => {
   assert.equal(M.timeCode(2.5), '00:00:02:15');
   assert.equal(M.timeCode(2.5 - 1 / 30), '00:00:02:14');
@@ -245,7 +275,16 @@ const shot = { recordedAt: WEDNESDAY, zone: 'America/New_York', waits: [], marks
 /** The touch the test makes in recording 04, and the swipe beside it, in points. */
 // On a sheet the app's y starts below the window's top: the mark goes where
 // Maestro's driver tapped on the window (windowX, windowY; placeTouches).
-const TAP = { at: 0.6, x: 220, y: 440, windowX: 220, windowY: 500 };
+const TAP = { at: 0.3, x: 220, y: 440, windowX: 220, windowY: 500 };
+/** A tap of the test's, as record.mjs keeps it: at `at` s, on the window's (x, y). */
+const touch = (at, x, y) => ({ id: '0', at, x, y, screen: SCREEN, upAt: at + 0.1, upX: x, upY: y, windowX: x, windowY: y });
+/** The month's day A before and after the sheet's day panel pushed it down (points); day B, after. */
+const DAY_A = [280, 400, 120, 50], DAY_A_MOVED = [280, 462, 120, 50];
+/** Done in the picker: read 0.75 s in, tapped 0.1 s later. */
+const DONE = { read: 0.75, tap: 0.85, frame: [340, 150, 90, 44] };
+/** From px of the video to points of SCREEN, on the recording's 1320×2868. */
+const K = 886 / 1320 * 3, OFF_Y = (2868 * 886 / 1320 - 1920) / 2;
+const toPoints = (y) => (y + OFF_Y) / K;
 
 describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () => {
   const clips = [];
@@ -255,22 +294,31 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
   const frame = (seconds, name) => readPng(M.frameAt(made.file, seconds, path.join(TMP, `${name}.png`)));
   /** The recording's colour under the shade at `dim`. */
   const shaded = (rgb, dim) => rgb.map((v, c) => Math.round(v * (1 - dim) + [4, 3, 10][c] * dim));
+  /** Where compose.swift puts shot 4's caption (video[2]), in px: a hole is lit just under it. */
+  let syncCaption;
   before(async () => {
     const at = (i) => path.join(TMP, `clip-${i + 1}.mp4`);
+    syncCaption = M.layout(M.videoCaptions('en-US', 'wed'), fs.mkdtempSync(path.join(TMP, 'laid-'))).captions[3].box;
     // 01: the Planner loading, then its windows; ready at 1.0; the answer and today's card.
     clips.push(recording(at(0), [[LOADING, 0.8], [WHITE, 1.2]]));
     log(clips[0], { ...shot, marks: { ready: 1.0 }, lights: [hole('answer', 1.2, [20, 420, 400, 56]), hole('day', 1.3, [20, 392, 400, 250])] });
-    // 02: the month — white, the worst a caption's shadow is over; two days lit
-    // (one hole round both, as record.mjs joins them), then the modes.
+    // 02: the month — white, the worst a caption's shadow is over. Day A lit
+    // and tapped; the day's panel pushes the month down 62 points, and the
+    // flow reads the day again where it now is: tapped there; then the modes, Busy.
     clips.push(recording(at(1), [[WHITE, 2]]));
-    log(clips[1], { ...shot, lights: [hole('days', 0.05, [280, 400, 120, 50]), hole('modes', 1.4, [20, 560, 400, 70])] });
-    // 03: Calendar Sync, white.
+    log(clips[1], { ...shot, lights: [hole('days', 0.05, DAY_A), hole('days', 0.8, DAY_A_MOVED), hole('modes', 1.4, [20, 560, 400, 70])],
+      touches: [touch(0.55, 340, 425), touch(1.1, 340, 487), touch(1.7, 220, 595)] });
+    // 03: Calendar Sync, white: the iPhone's calendar tapped; then a hole just
+    // under the caption — its darkness never reaches into a hole.
     clips.push(recording(at(2), [[WHITE, 1.5]]));
-    log(clips[2], { ...shot, lights: [hole('apple', 0.05, [20, 300, 400, 80]), hole('both', 0.8, [20, 300, 400, 80], [20, 180, 400, 70])] });
-    // 04: the picker, black: a tap at 0.6 s, and a finger dragged — no tap.
+    const under = [20, toPoints(syncCaption.bottom + 24 + M.HOLE_PAD), 400, 60];
+    log(clips[2], { ...shot, lights: [hole('apple', 0.05, [20, 300, 400, 80]), hole('both', 0.8, [20, 300, 400, 80], under)],
+      touches: [touch(0.4, 220, 340)] });
+    // 04: the picker, black: a tap at 0.3 s, Done read and tapped 0.1 s later, and a finger dragged — no tap.
     clips.push(recording(at(3), [[BLACK, 2]]));
-    log(clips[3], { ...shot, lights: [hole('pick', 0.05, [8, 200, 424, 46]), hole('done', 0.4, [340, 150, 90, 44]), hole('windows', 1.5, [12, 120, 416, 60])],
+    log(clips[3], { ...shot, lights: [hole('pick', 0.05, [8, 480, 424, 46]), hole('done', DONE.read, DONE.frame), hole('windows', 1.5, [12, 120, 416, 60])],
       touches: [{ id: '1', ...TAP, screen: SCREEN, upAt: TAP.at + 0.08, upX: TAP.x + 2, upY: TAP.y },
+        touch(DONE.tap, DONE.frame[0] + 45, DONE.frame[1] + 22),
         { id: '2', at: 1.2, x: 220, y: 330, screen: SCREEN, upAt: 1.6, upX: 220, upY: 700 }] });
     // 05: the form, black, no touch at all.
     clips.push(recording(at(4), [[BLACK, 1.5]]));
@@ -278,8 +326,8 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
     // 06: the count — grey; pulled (cut out); grey; 12 of 12 from 1.0 s, seen by the flow at 1.3 s.
     clips.push(recording(at(5), [[GREY, 0.3], [PULLED, 0.3], [[120, 120, 120], 0.4], [COUNTED, 1.0]], { changes: true }));
     log(clips[5], { ...shot, marks: { counted: 1.3 }, spans: [{ from: 0.3, to: 0.6 }], lights: [hole('card', 0.05, [16, 200, 408, 70])] });
-    // 07: the week, black.
-    clips.push(recording(at(6), [[BLACK, 1.2]]));
+    // 07: the week, white: the finale's darkness over the worst.
+    clips.push(recording(at(6), [[WHITE, 1.2]]));
     log(clips[6], { ...shot });
     made = await M.montage({ locale: 'en-US', clips, out: path.join(TMP, 'out') });
   });
@@ -339,7 +387,7 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
       assert.ok(near(pixel(png, px, py), shaded(WHITE, 0.62), 8), `beside it, ${px},${py}: ${pixel(png, px, py)}`);
     }
     // The next light at the moment it was read, moving there.
-    const modes = made.lights.find((l) => l.t > month.start + 0.01 && l.t < month.start + month.length);
+    const modes = made.lights.findLast((l) => l.t > month.start + 0.01 && l.t < month.start + month.length);
     assert.ok(Math.abs(modes.t - (month.start + 1.4)) < 0.05, `the modes lit at ${modes.t - month.start} s into the shot`);
     // No frame round the recording: its edges as shaded as its middle.
     for (const [px, py] of [[2, 2], [883, 2], [2, 1917], [883, 1917]]) {
@@ -347,10 +395,39 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
     }
   });
 
+  test('a hole follows its element: the month pushed down after the first tap, the hole is where the day now is within 0.35 s of it being read there', () => {
+    const month = made.shots[2];
+    const size = { width: 1320, height: 2868 };
+    const moved = M.holeOf({ x: DAY_A_MOVED[0], y: DAY_A_MOVED[1], w: DAY_A_MOVED[2], h: DAY_A_MOVED[3] }, SCREEN, size, { round: true });
+    const known = month.start + 0.8;
+    const there = made.lights.find((l) => l.holes.some((h) => Math.abs(h[1] - moved[1]) < 0.5));
+    assert.ok(there, `no light at the day's new place: ${JSON.stringify(made.lights.filter((l) => l.t >= month.start && l.t < month.start + month.length))}`);
+    assert.ok(there.t <= known + 1e-6, `moving there at ${(there.t - month.start).toFixed(3)} s into the shot, read there at 0.8 s`);
+    const png = frame(known + 0.35, 'followed');
+    const [nx, ny] = M.toVideo(size, SCREEN).point(DAY_A_MOVED[0] + 60, DAY_A_MOVED[1] + 25);
+    const [ox, oy] = M.toVideo(size, SCREEN).point(DAY_A[0] + 30, DAY_A[1] + 10);
+    assert.ok(near(pixel(png, nx, ny), WHITE, 8), `the day where it now is: ${pixel(png, nx, ny)}`);
+    assert.ok(near(pixel(png, ox, oy), shaded(WHITE, 0.62), 10), `where it was: ${pixel(png, ox, oy)}`);
+    // Each of the month's taps on a lit day: none outside the light.
+    assert.deepEqual(M.touchesOutside(made.lights, made.taps), []);
+  });
+
+  test('the light on Done comes before the tap on it, whole by then, though the flow read it 0.1 s before the tap', () => {
+    const picker = made.shots[4];
+    const tap = made.taps.find((t) => t.t > picker.start + DONE.tap - 0.05 && t.t < picker.start + DONE.tap + 0.05);
+    assert.ok(tap, JSON.stringify(made.taps));
+    const done = M.holeOf({ x: DONE.frame[0], y: DONE.frame[1], w: DONE.frame[2], h: DONE.frame[3] }, SCREEN, { width: 1320, height: 2868 });
+    const lit = made.lights.find((l) => l.holes.some((h) => Math.abs(h[1] - done[1]) < 0.5));
+    assert.ok(lit.t <= tap.t - 0.3 + 1e-6, `Done lit at ${(lit.t - picker.start).toFixed(3)} s, tapped at ${(tap.t - picker.start).toFixed(3)} s`);
+    // But after the tap before it, on the three, which Done's light leaves in the shade.
+    const pick = made.taps.find((t) => Math.abs(t.t - (picker.start + TAP.at)) < 0.05);
+    assert.ok(lit.t > pick.t, `Done lit at ${lit.t}, the pick tapped at ${pick.t}`);
+  });
+
   test('a touch mark where and when the app said the finger went down; none for a finger dragged; none where there was no touch', () => {
     const picker = made.shots[4];
     const marks = made.taps.filter((t) => t.t >= picker.start && t.t < picker.start + picker.length);
-    assert.equal(marks.length, 1, JSON.stringify(marks));
+    assert.equal(marks.length, 2, JSON.stringify(marks));
     const [x, y] = M.toVideo({ width: 1320, height: 2868 }, SCREEN).point(TAP.windowX, TAP.windowY);
     assert.ok(Math.abs(marks[0].t - (picker.start + TAP.at)) < 1 / 60, `at ${marks[0].t - picker.start} s into the shot`);
     assert.ok(Math.abs(marks[0].x - x) < 0.01 && Math.abs(marks[0].y - y) < 0.01, `at ${marks[0].x}, ${marks[0].y}`);
@@ -373,14 +450,78 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
     assert.ok(brightest < 0.01, `something bright on a recording with no touch: ${brightest}`);
   });
 
-  test('no band under a caption; white and lilac read at 4.5:1 or more over white where its shadow is weakest', () => {
+  /**
+   * The brightest the white recording comes through in a caption's rectangle of
+   * lines, outside its letters (each line's ink, a little round it; the hook's
+   * caret; the finale's word over it) and outside the holes of light.
+   */
+  function brightestUnder(png, c, { also = [] } = {}) {
+    const skip = [...c.inks.map((k) => ({ left: k.left - 5, right: k.right + 0.25 * c.size, top: k.top - 5, bottom: k.bottom + 5 })), ...also];
+    const holes = made.lights.filter((l) => l.t <= c.end).at(-1)?.holes ?? [];
+    let worst = { v: 0 };
+    for (let y = Math.ceil(c.box.top); y < c.box.bottom; y += 2) {
+      for (let x = Math.ceil(c.box.left); x < c.box.right; x += 2) {
+        if (skip.some((r) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom)) continue;
+        if (holes.some(([hx, hy, hw, hh]) => x >= hx - 24 && x <= hx + hw + 24 && y >= hy - 24 && y <= hy + hh + 24)) continue;
+        const v = Math.max(...pixel(png, x, y));
+        if (v > worst.v) worst = { v, x, y };
+      }
+    }
+    return worst;
+  }
+
+  test('round every caption and the finale the app\'s white comes through no brighter than 20 of 255, outside the letters', () => {
+    // Over the white recordings: the hook on the poster, the first three captions, the finale.
+    const looks = [
+      { c: made.drawn.captions[0], at: made.poster.seconds, name: 'under-hook' },
+      ...[1, 2, 3].map((k) => ({ c: made.drawn.captions[k], at: made.shots[k].start + made.shots[k].length - 0.2, name: `under-${k}` })),
+      { c: made.drawn.finale, at: made.shots[7].start + 2.0, name: 'under-finale' },
+    ];
+    for (const { c, at, name } of looks) {
+      const png = frame(at, name);
+      const f = made.drawn.finale;
+      const also = c === f ? [{ left: f.insert.x - f.insert.width / 2 - 12, right: f.insert.x + f.insert.width / 2 + 12,
+        top: f.insert.y - f.insertSize * 0.75, bottom: f.insert.y + f.insertSize * 0.6 }] : [];
+      const worst = brightestUnder(png, c, { also });
+      assert.ok(worst.v <= 20, `${JSON.stringify(c.text ?? c.lines)} at ${at.toFixed(2)} s: ${worst.v} of 255 at ${worst.x},${worst.y}`);
+    }
+    // As compose.swift works it out for every one of them, over white, outside the holes.
+    for (const c of [...made.drawn.captions, made.drawn.finale]) assert.ok(c.under <= 20, `${JSON.stringify(c.lines)}: ${c.under} of 255`);
+  });
+
+  test('the darkness round a caption: its edge soft, 40 px or more; the shade beyond it as the storyboard has it; none in a hole', () => {
+    const shot = made.shots[1];
+    const caption = made.drawn.captions[1];
+    const png = frame(shot.start + shot.length - 0.2, 'caption-edge');
+    // Up from the caption's top, beside its first letters: dark, then softly the plain shade.
+    const x = Math.round(caption.box.left + 20);
+    const plain = shaded(WHITE, 0.62)[1];
+    let dark = null, light = null;
+    for (let y = Math.floor(caption.box.top); y > caption.box.top - 300; y--) {
+      const v = pixel(png, x, y)[1];
+      if (dark === null && v > 22) dark = y;
+      if (Math.abs(v - plain) <= 4) { light = y; break; }
+    }
+    assert.ok(dark !== null && light !== null, `from ${dark} to ${light}`);
+    assert.ok(dark - light >= 40, `from dark to the plain shade in ${dark - light} px (${dark} → ${light})`);
+    // Far from it (below it; above it is today's card, lit), the shade alone, as the storyboard has it.
+    const far = Math.min(1915, caption.box.bottom + 250);
+    assert.ok(near(pixel(png, 443, far), shaded(WHITE, 0.62), 8), `${far}: ${pixel(png, 443, far)}`);
+    // Shot 4: a hole just under its caption: lit as it is, the caption's darkness not in it.
+    const sync = made.shots[3];
+    const holed = frame(sync.start + sync.length - 0.2, 'caption-hole');
+    const hole = made.lights.filter((l) => l.t < sync.start + sync.length).at(-1).holes.find((h) => h[1] > syncCaption.bottom);
+    assert.ok(hole, JSON.stringify(made.lights.at(-1)));
+    for (const px of [100, 443, 780]) {
+      const inside = pixel(holed, px, hole[1] + 30);
+      assert.ok(near(inside, WHITE, 5), `in the hole under the caption, ${px},${Math.round(hole[1] + 30)}: ${inside}`);
+    }
+  });
+
+  test('white and lilac read at 4.5:1 or more over white where the darkness under a caption is weakest; its main word lilac', () => {
     const shot = made.shots[1];
     const caption = made.drawn.captions.find((c) => c.start === shot.captionAt);
     const png = frame(shot.start + shot.length - 0.2, 'caption');
-    // No band: beside the caption, on its rows, the recording only shaded, as far above and below it.
-    const middle = (caption.box.top + caption.box.bottom) / 2;
-    const beside = pixel(png, 882, middle), elsewhere = pixel(png, 882, middle - 400);
-    assert.ok(near(beside, elsewhere, 6) && near(beside, shaded(WHITE, 0.62), 8), `beside the caption ${beside}, elsewhere ${elsewhere}`);
     for (const { x, y } of caption.samples.slice(0, 2)) {
       const L = luminance(pixel(png, x, y));
       const white = 1.05 / (L + 0.05), lilac = (LILAC + 0.05) / (L + 0.05);
@@ -456,6 +597,13 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
     const picked = JSON.parse(fs.readFileSync(clips[3].replace(/\.mp4$/, '.json'), 'utf8'));
     log(unplaced[3], { ...picked, touches: picked.touches.map((t) => ({ ...t, windowX: undefined, windowY: undefined })) });
     await assert.rejects(M.montage({ locale: 'en-US', clips: unplaced, out: path.join(TMP, 'refused') }), /no place on the window/);
+    // A tap beside the light that has begun — as day 30 in the month was, its hole left where the day had been: refused.
+    const astray = [...clips];
+    astray[2] = path.join(TMP, 'astray.mp4');
+    fs.copyFileSync(clips[2], astray[2]);
+    const sync = JSON.parse(fs.readFileSync(clips[2].replace(/\.mp4$/, '.json'), 'utf8'));
+    log(astray[2], { ...sync, touches: [touch(0.4, 220, 700)] });
+    await assert.rejects(M.montage({ locale: 'en-US', clips: astray, out: path.join(TMP, 'refused') }), /astray\.json: a touch at 0\.40 s .*outside the light/);
     const long = [...clips];
     long[3] = recording(path.join(TMP, 'long.mp4'), [[BLACK, 10]]);
     log(long[3], JSON.parse(fs.readFileSync(clips[3].replace(/\.mp4$/, '.json'), 'utf8')));

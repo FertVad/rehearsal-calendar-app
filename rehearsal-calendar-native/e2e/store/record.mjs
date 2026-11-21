@@ -30,7 +30,10 @@
  *                                           frames of the elements named, read
  *                                           from the screen's hierarchy now, as
  *                                           Maestro's own driver sees it; kept in
- *                                           `lights` (lightHoles says how to name them)
+ *                                           `lights` (findHoles says how to name
+ *                                           them); read again under the same
+ *                                           name after a tap moved the screen,
+ *                                           the hole follows (montage.mjs)
  *   GET /touch?phase=down|up&id=&x=&y=&at=&w=&h=
  *                                           a touch, as the app itself reports it
  *                                           (e2e/device/App.js, launched with

@@ -493,7 +493,6 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               {/* Google Calendar Option */}
               {hasGoogleCalendar && (
                 <TouchableOpacity
-                  testID="calendar-provider-google"
                   style={[
                     styles.calendarPickerButton,
                     selectedProvider === 'google' && styles.calendarPickerButtonSelected,
