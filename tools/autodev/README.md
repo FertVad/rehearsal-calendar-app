@@ -69,6 +69,15 @@ their own: red twice is a `T-2NN Полный e2e красный: …` task, gre
 second time a `Нестабильный тест`, either naming its flows, so its checks run
 them.
 
+**Neither runs when the app is the one the last green run passed** (owner,
+21.11.2026: «если в коде аппки ничего не правили, зачем тесты?»). Since that
+commit only what the set never reads changed — the App Store's tools
+(`e2e/store`), tests, Markdown, `audit/`, `screens/`, `.github/`, the
+supervisor itself (`seenByE2e`) — and the log says so once for that code,
+naming the groups. One file of anything else, `e2e/device` and the landing's
+pages included, and the set runs; so does it with no green run to compare to
+or a diff git cannot give.
+
 **What the supervisor finds waits behind what people queued** (owner,
 07.11.2026: bugs found in the app go first). A flaky test or a red full run
 goes behind every waiting task a person put in `TASKS.md`, ahead of the
