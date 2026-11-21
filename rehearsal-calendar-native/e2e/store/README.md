@@ -167,9 +167,28 @@ recording ends a second after it was read.
   lit scene, once the screen stands (`waitForAnimationToEnd`), the flow reads
   the lit elements again under the same name: the month's day panel pushes the
   month down some 62 points, the picker's rows, Auto Sync, the list after a
-  pull. montage.mjs takes every reading of a light, each next one a move
-  (0.3 s) to where the elements then were, starting when it was read — at
-  once in the video, as the stillness after it is cut (T-289, 21.11).
+  pull. A reading in the same place again changes nothing; one somewhere else
+  is an element that moved, and *when and how* it moved is taken from the
+  recording itself, not from when it was read (the screen has stood still a
+  while by then): montage.mjs decodes the recording's frames from the reading
+  before to this one (grey, halved, only round the two places), takes the
+  element's picture from the last of them, where it was read, and seeks it in
+  each frame along its way from the old place to the new, a pixel at a time —
+  the patch nearest to the picture (`track`; a light's holes together, so the
+  month's two days go as one). The hole goes there on that very frame of the
+  video, at once — the app's own move, not an easing of ours: the month glides
+  down over some 0.27 s, the modes' row jumps in one frame as the sheet lays
+  itself out again (T-290). A frame where the element is not to be told — the
+  day just tapped still fading to chosen — keeps the place before it.
+  Matching, not the frames' difference: a difference says that something
+  changed (the day's panel opening changes as much as the month moving), not
+  where the element is.
+- **No video with a light behind its element.** From the frame a followed
+  element sets off in to half a second after it comes to rest (or the light
+  goes on to the next element), its hole's centre is within 8 px (the hole's
+  room round it) of the element's, as the recording shows it, or montage.mjs
+  refuses the video when it is off for more than two frames in a row
+  (`lightLags`), naming the light and the frames.
 - **The light on an element comes no later than the tap on it.** The cut keeps
   the order of the recording: a moment later in it is never earlier in the
   video (`keeping`). A move ends by the first tap in its holes — moved earlier
@@ -215,7 +234,13 @@ the app beside or between the lines either: round the lines' rectangle (and
 dense, so the app's white comes through no brighter than 20 of 255 — as under
 the hook at 0.86 with its old shadow — and from there it eases back to the
 shot's shade (0.62, 0.8, 0.86…) over 80 px up and down and 180 px to the
-sides, where the app's rows run on past a short line; no edge to see. It is the shade's, so a hole is never darkened by it;
+sides, where the app's rows run on past a short line; no edge to see. And on
+each line's own height the 0.97 runs on 300 px past its last letter before it
+eases the same way: the app's words never read as the line going on
+(«Все в курсе:» once did as «Все в курсе: …онный зал», T-290). compose.swift
+measures it — on each line's ink height, from its last letter 300 px on,
+outside the holes, the white comes through no brighter than 25 of 255
+(`beside`, printed by montage.mjs beside `under`), or it refuses. It is the shade's, so a hole is never darkened by it;
 elsewhere the shade is the storyboard's. White and the lilac read at 4.5:1 or
 more over a white recording where it is weakest, with the light as it is
 there; compose.swift works it out and refuses otherwise, and says how bright

@@ -286,9 +286,15 @@ let lightFeather: CGFloat = 20           // a hole's soft edge, either side of i
 // wider to either side, where the app's rows run on past a short line ("…зал"
 // after «Все в курсе:»). It is the shade's, so a hole lets the app through as
 // it is: never darkened.
+// And on each line's own height its darkness runs on `darkRun` past its last
+// letter before it eases (T-290: «Все в курсе:» read on into "…онный зал" of
+// the card beside it, 53–62 of 255, past a rectangle as wide as the longer line).
 let captionDark: Double = 0.97
 let darkPad = CGSize(width: 40, height: 16)
 let darkFeather = CGSize(width: 180, height: 80)
+let darkRun: CGFloat = 300
+/** The brightest the app's white may come through beside a line, of 255 (`beside`). */
+let besideMost: CGFloat = 25
 let leastContrast: CGFloat = 4.5
 let signInSize: CGFloat = 40             // the sign-in line: 40 px of 886, never smaller
 
@@ -354,15 +360,25 @@ func lit(_ h: Hole, _ x: Double, _ y: Double) -> Double {
   return open * (1 - s * s * (3 - 2 * s))
 }
 
-/** The darkness round a caption: its lines' rectangle `rect`, and how far in it has faded (0…1). */
-struct Dark { let rect: CGRect; let on: Double }
+/**
+ * The darkness round a caption: its rectangles — the lines' together, and each
+ * line's row run on `darkRun` past its last letter — and how far in it has faded (0…1).
+ */
+struct Dark {
+  let rects: [CGRect]; let on: Double
+  var bounds: CGRect { rects.reduce(CGRect.null) { $0.union($1) } }
+}
 
-/** How much of a caption's darkness reaches (x, y): 1 in its rectangle and `darkPad` round it, easing to 0 over `darkFeather`. */
+/** How much of a caption's darkness reaches (x, y): 1 in its rectangles and `darkPad` round them, easing to 0 over `darkFeather`. */
 func darkness(_ d: Dark, _ x: Double, _ y: Double) -> Double {
-  let r = d.rect.insetBy(dx: -darkPad.width, dy: -darkPad.height)
-  let dx = max(Double(r.minX) - x, 0, x - Double(r.maxX)), dy = max(Double(r.minY) - y, 0, y - Double(r.maxY))
-  let s = clamp01(hypot(dx / Double(darkFeather.width), dy / Double(darkFeather.height)))
-  return d.on * (1 - s * s * (3 - 2 * s))
+  var most = 0.0
+  for rect in d.rects {
+    let r = rect.insetBy(dx: -darkPad.width, dy: -darkPad.height)
+    let dx = max(Double(r.minX) - x, 0, x - Double(r.maxX)), dy = max(Double(r.minY) - y, 0, y - Double(r.maxY))
+    let s = clamp01(hypot(dx / Double(darkFeather.width), dy / Double(darkFeather.height)))
+    most = max(most, 1 - s * s * (3 - 2 * s))
+  }
+  return d.on * most
 }
 
 /** The shade's alpha at (x, y) in a light state, the captions' darkness `darks` in it; none in a hole. */
@@ -374,12 +390,20 @@ func shadeAlpha(_ s: LightState, _ darks: [Dark], _ x: Double, _ y: Double) -> D
 }
 
 /** A caption's lines, laid out: each twice — the upright part alone, the main word alone — so each fades on its own. */
-struct LaidLine { let upright: CTLine; let key: CTLine; let x: CGFloat; let baseline: CGFloat; let text: String; let emphasis: NSRange?; let ink: CGRect }
+struct LaidLine {
+  let upright: CTLine; let key: CTLine; let x: CGFloat; let baseline: CGFloat; let text: String; let emphasis: NSRange?; let ink: CGRect
+  /** The line's row, ascent to descent, from the margin to its last letter. */
+  let row: CGRect
+}
 struct LaidCaption {
   let job: VCaption; let size: CGFloat; let lines: [LaidLine]; let box: CGRect
   var contrast: (white: CGFloat, lilac: CGFloat) = (0, 0); var samples: [CGPoint] = []
   /** The brightest the app's white comes through in its rectangle, outside the holes, of 255. */
   var under: CGFloat = 255
+  /** The brightest it comes through on any line's height from its last letter `darkRun` on, outside the holes, of 255. */
+  var beside: CGFloat = 255
+  /** Where it is dark: the lines' rectangle, and each line's row run on past its last letter. */
+  var darkRects: [CGRect] { [box] + lines.map { CGRect(x: $0.row.minX, y: $0.row.minY, width: $0.row.width + darkRun, height: $0.row.height) } }
 }
 
 func video(_ job: VideoJob) {
@@ -417,7 +441,8 @@ func video(_ job: VideoJob) {
       let x = videoMargin - bounds.minX
       // The line's ink, top-down.
       let ink = CGRect(x: videoMargin, y: baseline - bounds.maxY, width: bounds.width, height: bounds.height)
-      lines.append(LaidLine(upright: upright, key: key, x: x, baseline: baseline, text: m.text, emphasis: m.emphasis, ink: ink))
+      lines.append(LaidLine(upright: upright, key: key, x: x, baseline: baseline, text: m.text, emphasis: m.emphasis, ink: ink,
+                            row: CGRect(x: videoMargin, y: baseline - ascent, width: bounds.width, height: ascent + descent)))
       box = box.union(CGRect(x: videoMargin, y: baseline - ascent, width: bounds.width, height: ascent + descent))
     }
     return LaidCaption(job: caption, size: size, lines: lines, box: box)
@@ -432,7 +457,7 @@ func video(_ job: VideoJob) {
    */
   let lilacL = { () -> CGFloat in let k = components(lilac); return luminance(k[0], k[1], k[2]) }()
   func settle(_ laid: inout LaidCaption, until end: Double) {
-    let dark = [Dark(rect: laid.box, on: 1)]
+    let dark = [Dark(rects: laid.darkRects, on: 1)]
     // Where a line's ink is least covered: its corners; and, for the test to
     // read, just beside its first and last letters, where no letter is.
     var corners: [CGPoint] = []
@@ -477,6 +502,26 @@ func video(_ job: VideoJob) {
       }
     }
     laid.under = under
+    // Beside each line, on its height: from its last letter `darkRun` on, the app's words never read as the line's (T-290).
+    var beside: CGFloat = 0
+    for s in states {
+      for l in laid.lines {
+        var y = l.ink.minY
+        while y <= l.ink.maxY {
+          var x = l.ink.maxX
+          while x <= min(W, l.ink.maxX + darkRun) {
+            if s.holes.allSatisfy({ lit($0, Double(x), Double(y)) == 0 }) {
+              let a = CGFloat(shadeAlpha(s, dark, Double(x), Double(y)))
+              beside = max(beside, (0..<3).map { 255 * ((1 - a) + a * shadeRGB[$0]) }.max()!)
+            }
+            x += 4
+          }
+          y += 4
+        }
+      }
+    }
+    guard beside <= besideMost else { fail("the app's white comes through at \(beside) of 255 beside a line, over \(besideMost): \(laid.job.text)") }
+    laid.beside = beside
   }
 
   var captions = job.captions.map { lay($0, size: $0.kind == "typed" ? hookSize : size) }
@@ -593,7 +638,7 @@ func video(_ job: VideoJob) {
   /** The shade of a frame: its light state, the captions' darkness in it — worked out pixel by pixel only round the holes and the captions. */
   func drawShade(_ s: LightState, _ darks: [Dark]) {
     let key = s.holes.map { String(format: "%.1f,%.1f,%.1f,%.1f,%.1f", $0.x, $0.y, $0.w, $0.h, $0.r) }.joined(separator: ";") + String(format: "|%.4f", s.dim)
-      + darks.map { String(format: "|%.1f,%.1f,%.1f,%.1f,%.3f", $0.rect.minX, $0.rect.minY, $0.rect.width, $0.rect.height, $0.on) }.joined()
+      + darks.map { d in d.rects.map { String(format: "|%.1f,%.1f,%.1f,%.1f", $0.minX, $0.minY, $0.width, $0.height) }.joined() + String(format: ":%.3f", d.on) }.joined()
     if key == shadeKey { return }
     shadeKey = key
     let a = s.dim
@@ -607,7 +652,7 @@ func video(_ job: VideoJob) {
     let f = Double(lightFeather)
     let reachX = Double(darkPad.width + darkFeather.width), reachY = Double(darkPad.height + darkFeather.height)
     let regions = s.holes.filter { min($0.w, $0.h) > 0 }.map { (x: $0.x - f, y: $0.y - f, r: $0.x + $0.w + f, b: $0.y + $0.h + f) }
-      + darks.filter { $0.on > 0 }.map { (x: Double($0.rect.minX) - reachX, y: Double($0.rect.minY) - reachY, r: Double($0.rect.maxX) + reachX, b: Double($0.rect.maxY) + reachY) }
+      + darks.filter { $0.on > 0 }.map { d in let b = d.bounds; return (x: Double(b.minX) - reachX, y: Double(b.minY) - reachY, r: Double(b.maxX) + reachX, b: Double(b.maxY) + reachY) }
     for region in regions {
       let x0 = max(0, Int(region.x)), x1 = min(w - 1, Int(region.r))
       let y0 = max(0, Int(region.y)), y1 = min(h - 1, Int(region.b))
@@ -754,9 +799,9 @@ func video(_ job: VideoJob) {
     // The darkness round each caption on screen, fading in with it; the finale's with its line.
     var darks: [Dark] = []
     for laid in captions where t >= laid.job.start && t < laid.job.end {
-      darks.append(Dark(rect: laid.box, on: ease(clamp01((t - laid.job.start) / 0.25))))
+      darks.append(Dark(rects: laid.darkRects, on: ease(clamp01((t - laid.job.start) / 0.25))))
     }
-    if t >= f.start + 0.15 && t < f.end { darks.append(Dark(rect: finaleLaid.box, on: ease(clamp01((t - f.start - 0.15) / 0.25)))) }
+    if t >= f.start + 0.15 && t < f.end { darks.append(Dark(rects: finaleLaid.darkRects, on: ease(clamp01((t - f.start - 0.15) / 0.25)))) }
     drawShade(lightAt(job.lights, t), darks)
     frame.copyMemory(from: shadeBuffer, byteCount: bytes)
     for tap in job.taps { drawTap(tap, t) }
@@ -789,7 +834,7 @@ func video(_ job: VideoJob) {
        let a = l.x + CTLineGetOffsetForStringIndex(l.upright, r.location, nil), b = l.x + CTLineGetOffsetForStringIndex(l.upright, r.upperBound, nil)
        return ["left": a, "right": b, "top": l.ink.minY, "bottom": l.ink.maxY]
      },
-     "dark": captionDark, "under": laid.under, "contrast": ["white": laid.contrast.white, "lilac": laid.contrast.lilac],
+     "dark": captionDark, "under": laid.under, "beside": laid.beside, "contrast": ["white": laid.contrast.white, "lilac": laid.contrast.lilac],
      "samples": laid.samples.map { ["x": $0.x, "y": $0.y] }]
   }
   let all = captions + [finaleLaid]

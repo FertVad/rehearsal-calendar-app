@@ -257,6 +257,25 @@ function recording(file, parts, { changes = false } = {}) {
     ...(changes ? ['-fps_mode', 'vfr'] : []), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file]);
   return file;
 }
+/**
+ * A white recording at 50 frames a second (none on a frame of the video's 30
+ * or between two: the cut never has to round a tie) with a black bar — the
+ * element — at `bar` ({ x, y, w, h }, points of SCREEN) that moves `by` points
+ * down over `frames` frames from frame `first` on, and stays there.
+ */
+function movingRecording(file, seconds, { bar, by, first, frames }) {
+  const k = 3, rate = 50;
+  const t0 = first / rate, t1 = (first + frames) / rate;
+  const y0 = bar.y * k, dy = by * k;
+  const y = `if(lt(t\\,${t0})\\,${y0}\\,if(lt(t\\,${t1})\\,${y0}+(t-${t0})/${t1 - t0}*${dy}\\,${y0 + dy}))`;
+  execFileSync(M.tool('ffmpeg'), ['-v', 'error', '-y',
+    '-f', 'lavfi', '-i', `color=c=white:s=1320x2868:r=${rate}:d=${seconds}`,
+    '-f', 'lavfi', '-i', `color=c=black:s=${bar.w * k}x${bar.h * k}:r=${rate}:d=${seconds}`,
+    '-filter_complex', `[0:v][1:v]overlay=x=${bar.x * k}:y='${y}':eval=frame[v]`, '-map', '[v]',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file]);
+  return file;
+}
+
 /** What record.mjs keeps beside a recording. */
 function log(clip, body) {
   fs.writeFileSync(clip.replace(/\.mp4$/, '.json'), JSON.stringify(body));
@@ -280,6 +299,13 @@ const TAP = { at: 0.3, x: 220, y: 440, windowX: 220, windowY: 500 };
 const touch = (at, x, y) => ({ id: '0', at, x, y, screen: SCREEN, upAt: at + 0.1, upX: x, upY: y, windowX: x, windowY: y });
 /** The month's day A before and after the sheet's day panel pushed it down (points); day B, after. */
 const DAY_A = [280, 400, 120, 50], DAY_A_MOVED = [280, 462, 120, 50];
+/**
+ * The day in recording 02: a black bar at its left, which the panel pushes
+ * down 62 points in 8 frames of 50 a second, at a moment of chance between the
+ * tap on it (0.55 s) and its reading there (1.0 s) — from frame 30 to 42 on.
+ */
+const DAY_BAR = { x: 282, y: 400, w: 20, h: 50 };
+const PUSHED = { first: 30 + Math.floor(Math.random() * 13), frames: 8, by: 62 };
 /** Done in the picker: read 0.75 s in, tapped 0.1 s later. */
 const DONE = { read: 0.75, tap: 0.85, frame: [340, 150, 90, 44] };
 /** From px of the video to points of SCREEN, on the recording's 1320×2868. */
@@ -303,10 +329,11 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
     clips.push(recording(at(0), [[LOADING, 0.8], [WHITE, 1.2]]));
     log(clips[0], { ...shot, marks: { ready: 1.0 }, lights: [hole('answer', 1.2, [20, 420, 400, 56]), hole('day', 1.3, [20, 392, 400, 250])] });
     // 02: the month — white, the worst a caption's shadow is over. Day A lit
-    // and tapped; the day's panel pushes the month down 62 points, and the
-    // flow reads the day again where it now is: tapped there; then the modes, Busy.
-    clips.push(recording(at(1), [[WHITE, 2]]));
-    log(clips[1], { ...shot, lights: [hole('days', 0.05, DAY_A), hole('days', 0.8, DAY_A_MOVED), hole('modes', 1.4, [20, 560, 400, 70])],
+    // and tapped; the day's panel pushes the month down 62 points in 8 frames
+    // at a moment of chance (PUSHED), and the flow reads the day again where it
+    // now is: tapped there; then the modes, Busy.
+    clips.push(movingRecording(at(1), 2.5, { bar: DAY_BAR, ...PUSHED }));
+    log(clips[1], { ...shot, lights: [hole('days', 0.05, DAY_A), hole('days', 1.0, DAY_A_MOVED), hole('modes', 1.4, [20, 560, 400, 70])],
       touches: [touch(0.55, 340, 425), touch(1.1, 340, 487), touch(1.7, 220, 595)] });
     // 03: Calendar Sync, white: the iPhone's calendar tapped; then a hole just
     // under the caption — its darkness never reaches into a hole.
@@ -395,21 +422,96 @@ describe('made by ffmpeg, its layer by compose.swift', { skip: MAC_ONLY }, () =>
     }
   });
 
-  test('a hole follows its element: the month pushed down after the first tap, the hole is where the day now is within 0.35 s of it being read there', () => {
+  /** A column `x` px of the video, top to bottom, grey, in each of its frames from `from` to `to` s: [{ t, column }]. */
+  function columns(x, from, to) {
+    const { height, fps } = M.VIDEO;
+    const raw = execFileSync(M.tool('ffmpeg'), ['-v', 'error', '-i', made.file, '-vf',
+      `select='between(t\\,${(from - 0.001).toFixed(4)}\\,${(to + 0.001).toFixed(4)})',format=gray,crop=1:${height}:${Math.round(x)}:0`,
+      '-fps_mode', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'pipe'] });
+    const first = Math.ceil((from - 0.001) * fps);
+    return Array.from({ length: raw.length / height }, (_, n) => ({ t: (first + n) / fps, column: raw.subarray(n * height, (n + 1) * height) }));
+  }
+
+  test('a hole goes with its element in the frames it moves in: the month pushed down 62 points in 8 frames at a moment of chance after the tap, the hole\'s centre within 4 px of the day\'s in every frame', () => {
     const month = made.shots[2];
-    const size = { width: 1320, height: 2868 };
-    const moved = M.holeOf({ x: DAY_A_MOVED[0], y: DAY_A_MOVED[1], w: DAY_A_MOVED[2], h: DAY_A_MOVED[3] }, SCREEN, size, { round: true });
-    const known = month.start + 0.8;
-    const there = made.lights.find((l) => l.holes.some((h) => Math.abs(h[1] - moved[1]) < 0.5));
-    assert.ok(there, `no light at the day's new place: ${JSON.stringify(made.lights.filter((l) => l.t >= month.start && l.t < month.start + month.length))}`);
-    assert.ok(there.t <= known + 1e-6, `moving there at ${(there.t - month.start).toFixed(3)} s into the shot, read there at 0.8 s`);
-    const png = frame(known + 0.35, 'followed');
-    const [nx, ny] = M.toVideo(size, SCREEN).point(DAY_A_MOVED[0] + 60, DAY_A_MOVED[1] + 25);
-    const [ox, oy] = M.toVideo(size, SCREEN).point(DAY_A[0] + 30, DAY_A[1] + 10);
-    assert.ok(near(pixel(png, nx, ny), WHITE, 8), `the day where it now is: ${pixel(png, nx, ny)}`);
-    assert.ok(near(pixel(png, ox, oy), shaded(WHITE, 0.62), 10), `where it was: ${pixel(png, ox, oy)}`);
+    const v = M.toVideo({ width: 1320, height: 2868 }, SCREEN);
+    // The bar's column, and one in the hole beside the bar, clear of the touch marks' rings.
+    const barX = v.point(DAY_BAR.x + DAY_BAR.w / 2, 0)[0], holeX = 790;
+    const top = Math.floor(v.point(0, DAY_A[1] - 30)[1]), bottom = Math.ceil(v.point(0, DAY_A_MOVED[1] + DAY_A_MOVED[3] + 30)[1]);
+    const from = month.start + 0.55, to = month.start + 1.1;
+    const bars = columns(barX, from, to), holes = columns(holeX, from, to);
+    assert.ok(bars.length >= 16 && bars.length === holes.length, `${bars.length} and ${holes.length} frames`);
+    const centre = (column, test) => {
+      const ys = [];
+      for (let y = top; y <= bottom; y++) if (test(column[y])) ys.push(y);
+      return ys.length ? (ys[0] + ys.at(-1)) / 2 : NaN;
+    };
+    const plain = shaded(WHITE, 0.62)[1];
+    const pushed = `pushed from frame ${PUSHED.first} of 50 a second (${(PUSHED.first / 50).toFixed(2)} s)`;
+    const off = bars.map(({ t, column }, n) => {
+      const day = centre(column, (g) => g < 50), hole = centre(holes[n].column, (g) => g > (255 + plain) / 2);
+      return { at: (t - month.start).toFixed(3), day, hole, off: Math.abs(day - hole) };
+    });
+    const [, y0] = v.point(0, DAY_A[1] + DAY_A[3] / 2), [, y1] = v.point(0, DAY_A_MOVED[1] + DAY_A_MOVED[3] / 2);
+    assert.ok(Math.abs(off[0].day - y0) < 3 && Math.abs(off.at(-1).day - y1) < 3, `the day from ${off[0].day} to ${off.at(-1).day}, ${pushed}`);
+    const astray = off.filter((f) => !(f.off <= 4));
+    assert.deepEqual(astray.map((f) => `${f.at} s: day ${f.day}, hole ${f.hole}`), [], `${pushed}; frames ${off.map((f) => `${f.at}:${f.day}/${f.hole}`).join(' ')}`);
+    // The light that follows it is the recording's own: a keyframe on the frames it moved in.
+    assert.ok(made.followed.some((p) => p.name === 'days'), JSON.stringify(made.followed));
     // Each of the month's taps on a lit day: none outside the light.
     assert.deepEqual(M.touchesOutside(made.lights, made.taps), []);
+  });
+
+  test('the app\'s words never read on from a caption\'s line: on each line\'s height, from its last letter 300 px on, outside the holes, no brighter than 25 of 255 — a short first line too («…or sync»)', () => {
+    const looks = [
+      { c: made.drawn.captions[0], at: made.poster.seconds, name: 'beside-hook' },
+      ...[1, 2, 3].map((k) => ({ c: made.drawn.captions[k], at: made.shots[k].start + made.shots[k].length - 0.2, name: `beside-${k}` })),
+      { c: made.drawn.finale, at: made.shots[7].start + 2.0, name: 'beside-finale' },
+    ];
+    // Shot 4's first line is the short one: its rectangle runs on past it by the second.
+    const sync = made.drawn.captions[3];
+    assert.ok(sync.box.right - sync.inks[0].right > 150, `«${sync.lines[0]}» ends at ${sync.inks[0].right}, its rectangle at ${sync.box.right}`);
+    for (const { c, at, name } of looks) {
+      const png = frame(at, name);
+      const holes = made.lights.filter((l) => l.t <= at).at(-1)?.holes ?? [];
+      const letters = c.inks.map((k) => ({ left: k.left - 5, right: k.right + 0.25 * c.size, top: k.top - 5, bottom: k.bottom + 5 }));
+      const f = made.drawn.finale;
+      if (c === f) letters.push({ left: f.insert.x - f.insert.width / 2 - 12, right: f.insert.x + f.insert.width / 2 + 12, top: f.insert.y - f.insertSize * 0.75, bottom: f.insert.y + f.insertSize * 0.6 });
+      for (const [i, ink] of c.inks.entries()) {
+        let worst = { v: 0 };
+        for (let y = Math.ceil(ink.top); y <= ink.bottom; y += 2) {
+          for (let x = Math.ceil(ink.right + 0.25 * c.size); x <= Math.min(883, ink.right + 300); x += 2) {
+            if (letters.some((r, j) => j !== i && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom)) continue;
+            if (holes.some(([hx, hy, hw, hh]) => x >= hx - 24 && x <= hx + hw + 24 && y >= hy - 24 && y <= hy + hh + 24)) continue;
+            const value = Math.max(...pixel(png, x, y));
+            if (value > worst.v) worst = { v: value, x, y };
+          }
+        }
+        assert.ok(worst.v <= 25, `«${c.lines[i]}» at ${at.toFixed(2)} s: ${worst.v} of 255 at ${worst.x},${worst.y}`);
+      }
+    }
+    // As compose.swift works it out for every one of them.
+    for (const c of [...made.drawn.captions, made.drawn.finale]) assert.ok(c.beside <= 25, `${JSON.stringify(c.lines)}: beside ${c.beside} of 255`);
+  });
+
+  test('the light lags its element: more than two frames in a row off it, and the video is refused', () => {
+    // The element moves down 120 px in 6 frames from 1.0 s, then stays.
+    const frames = Array.from({ length: 10 }, (_, n) => ({ t: 1 + n / 30, x: 100, y: 100 + Math.min(n, 6) * 20 }));
+    const at = (y) => [60, y - 40, 80, 80, 20];
+    const followed = [{ name: 'days', hole: 0, frames }];
+    const start = { t: 0, holes: [at(100)], instant: true };
+    // Its light waiting where it was, then gliding there in LIGHT_MOVE — as on e23d16a.
+    const late = [start, { t: 1.2, holes: [at(220)] }];
+    const lags = M.lightLags(late, followed);
+    assert.ok(lags.length === 1 && lags[0].name === 'days' && lags[0].frames > 2 && lags[0].from === 1 + 1 / 30, JSON.stringify(lags));
+    // With it in each frame: none.
+    const along = [start, ...frames.map((f) => ({ t: f.t, holes: [at(f.y)], instant: true }))];
+    assert.deepEqual(M.lightLags(along, followed), []);
+    // A row that jumps: two frames behind it are let be, three are not.
+    const jump = [{ t: 0, x: 100, y: 100 }, { t: 1, x: 100, y: 220 }];
+    const after = (n) => [start, { t: 1 + n / 30, holes: [at(220)], instant: true }];
+    assert.deepEqual(M.lightLags(after(2), [{ name: 'modes', hole: 0, frames: jump }]), []);
+    assert.deepEqual(M.lightLags(after(3), [{ name: 'modes', hole: 0, frames: jump }]).map((r) => r.frames), [3]);
   });
 
   test('the light on Done comes before the tap on it, whole by then, though the flow read it 0.1 s before the tap', () => {

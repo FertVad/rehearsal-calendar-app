@@ -26,8 +26,10 @@
  * - the light: the screen in a shade (SHADE, `dim` of it), rounded holes with
  *   a soft edge where what matters is — each hole the frame of elements read
  *   from the screen's hierarchy by testID while the recording ran (record.mjs
- *   `/light`), never placed by eye; read again after a tap moved the screen,
- *   so it follows its element; moving to its next place in LIGHT_MOVE;
+ *   `/light`), never placed by eye; moving to its next place in LIGHT_MOVE;
+ *   read again where a tap moved its element, it goes with it frame by frame
+ *   as the recording shows it moving (follow, track) — no video with a light
+ *   behind its element (lightLags);
  * - the touch marks: where and when the app itself said a finger went down
  *   (record.mjs `/touch`, e2e/device/App.js) — none where it said none; a
  *   finger that moved (a list pulled) is no tap and gets none; every one in
@@ -222,6 +224,157 @@ function frameTimes(clip) {
     '-of', 'csv=p=0', clip], { encoding: 'utf8' });
   const times = out.split('\n').filter((line) => line.trim()).map(Number).filter(Number.isFinite).sort((x, y) => x - y);
   return times.map((t) => t - times[0]);
+}
+
+/**
+ * A recording's frames from `from` to `to` (seconds from its first frame, as
+ * frameTimes gives them), grey, cut to `region` ({ x, y, w, h } in px of the
+ * recording) and halved: [{ at, data }], `data` a row after row of `width` ×
+ * `height` bytes ({ width, height } on the array).
+ */
+export function framesOf(clip, from, to, region) {
+  const raw = execFileSync(tool('ffprobe'), ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'packet=pts_time',
+    '-of', 'csv=p=0', clip], { encoding: 'utf8' }).split('\n').filter((l) => l.trim()).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const zero = raw[0];
+  const wanted = raw.filter((t) => t - zero >= from - 1e-6 && t - zero <= to + 1e-6);
+  const width = Math.floor(region.w / 2), height = Math.floor(region.h / 2);
+  const out = execFileSync(tool('ffmpeg'), ['-v', 'error', '-i', clip, '-vf',
+    `select='between(t\\,${(zero + from - 0.0005).toFixed(4)}\\,${(zero + to + 0.0005).toFixed(4)})',format=gray,`
+      + `crop=${width * 2}:${height * 2}:${region.x}:${region.y},scale=${width}:${height}:flags=area`,
+    '-fps_mode', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] });
+  const n = out.length / (width * height);
+  if (n !== wanted.length) throw new Error(`${clip}: ${n} frames decoded from ${from.toFixed(3)} to ${to.toFixed(3)} s, ${wanted.length} recorded`);
+  const frames = wanted.map((t, i) => ({ at: t - zero, data: out.subarray(i * width * height, (i + 1) * width * height) }));
+  return Object.assign(frames, { width, height });
+}
+
+/**
+ * Where elements that moved were in each of `frames` (framesOf: grey, halved,
+ * `origin` their top left in px of the recording, `k` px of it a point): each
+ * one's picture as the last frame shows it at its `to` ({ x, y, w, h }, points)
+ * sought along its way from `from` (where it was read before) to `to`, a pixel
+ * at a time, a little before and beyond — where the frame's patches are
+ * nearest to the pictures, the elements' together: one light's holes move as
+ * one (the month's two days). Returns [{ at, s, cost }]: `s` how far along (0
+ * at `from`, 1 at `to`), `cost` the patches' mean difference from the
+ * pictures, of 255. A frame where they are not to be told (UNSEEN or more:
+ * covered, or still changing — the day just tapped fading to chosen) keeps
+ * the place before it, at first `from`.
+ *
+ * Why matching, not the frames' difference: a difference says something
+ * changed, not where the element is — the day's panel opening under the month
+ * changes the frame as much as the month moving. The picture is the element
+ * as it ends, already chosen; along a one-dimensional way the nearest patch is
+ * the element, never a neighbour that only looks like it (T-290).
+ */
+export function track(frames, { holes, origin, k }) {
+  const { width, height } = frames;
+  const last = frames.at(-1).data;
+  const px = (v, o) => (v * k - o) / 2;
+  const ways = holes.map(({ from, to }) => {
+    const dx = px(to.x, origin.x) - px(from.x, origin.x), dy = px(to.y, origin.y) - px(from.y, origin.y);
+    return { tw: Math.floor(to.w * k / 2), th: Math.floor(to.h * k / 2), tx: Math.round(px(to.x, origin.x)), ty: Math.round(px(to.y, origin.y)), dx, dy };
+  });
+  const steps = Math.max(1, ...ways.map((w) => Math.ceil(Math.hypot(w.dx, w.dy))));
+  const step = 2;
+  const cost = (data, { tw, th, tx, ty }, ox, oy) => {
+    let sum = 0, n = 0;
+    for (let y = 0; y < th; y += step) {
+      const yy = oy + y;
+      if (yy < 0 || yy >= height) return Infinity;
+      for (let x = 0; x < tw; x += step) {
+        const xx = ox + x;
+        if (xx < 0 || xx >= width) return Infinity;
+        sum += Math.abs(data[yy * width + xx] - last[(ty + y) * width + tx + x]);
+        n++;
+      }
+    }
+    return sum / n;
+  };
+  const reach = Math.ceil(steps * 0.15);
+  let held = 0;
+  return frames.map(({ at, data }) => {
+    let best = { s: 0, cost: Infinity };
+    for (let i = -reach; i <= steps + reach; i++) {
+      const s = i / steps;
+      const c = ways.reduce((sum, w) => sum + cost(data, w, Math.round(w.tx - w.dx * (1 - s)), Math.round(w.ty - w.dy * (1 - s))), 0) / ways.length;
+      if (c < best.cost) best = { s, cost: c };
+    }
+    if (best.cost >= UNSEEN) return { at, s: held, cost: best.cost, unseen: true };
+    held = best.s;
+    return { at, ...best };
+  });
+}
+
+/** A patch further than this from an element's picture, of 255 a pixel, is not it. */
+export const UNSEEN = 24;
+
+/** CSS's cubic-bezier timing, as compose.swift's `bezier`. */
+function bezier(x1, y1, x2, y2, x) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  let lo = 0, hi = 1, t = x;
+  for (let i = 0; i < 40; i++) {
+    const cx = 3 * x1 * t * (1 - t) * (1 - t) + 3 * x2 * t * t * (1 - t) + t * t * t;
+    if (cx < x) lo = t; else hi = t;
+    t = (lo + hi) / 2;
+  }
+  return 3 * y1 * t * (1 - t) * (1 - t) + 3 * y2 * t * t * (1 - t) + t * t * t;
+}
+
+/** The holes of light at `t`, as compose.swift's `lightAt` draws them: the last keyframe's, or on the way there in LIGHT_MOVE. */
+export function lightAt(lights, t) {
+  const k = lights.findLastIndex((l) => l.t <= t + 1e-9);
+  if (k < 0) return lights[0]?.holes ?? [];
+  const to = lights[k].holes;
+  if (lights[k].instant || k === 0) return to;
+  const p = bezier(0.25, 0.1, 0.25, 1, Math.min(1, Math.max(0, (t - lights[k].t) / LIGHT_MOVE)));
+  if (p >= 1) return to;
+  const from = lights[k - 1].holes;
+  const mid = (h) => [h[0] + h[2] / 2, h[1] + h[3] / 2, 0, 0, h[4]];
+  return Array.from({ length: Math.max(from.length, to.length) }, (_, i) => {
+    const b = to[i] ?? mid(from[i]), a = from[i] ?? mid(to[i]);
+    return a.map((v, j) => v + (b[j] - v) * p);
+  });
+}
+
+/**
+ * The frames of the video where a lit element is not in its hole (T-290):
+ * `followed`, each moved element's place frame by frame as the recording shows
+ * it ([{ name, hole, frames: [{ t, x, y }] }], its centre in px of the video
+ * from the video frame `t` on), against the light drawn then (`lights`).
+ * More than HOLE_PAD from its hole's centre, its edge is out of the hole's.
+ * Looked at from the frame it set off in until half a second after it came to
+ * rest, or the light went on to another element. Returns the runs longer than
+ * `most` frames: [{ name, hole, from, to, off, frames }].
+ */
+export function lightLags(lights, followed, { fps = VIDEO.fps, most = 2 } = {}) {
+  const inOrder = [...lights].sort((a, b) => a.t - b.t);
+  const runs = [];
+  for (const { name, hole, frames } of followed) {
+    const first = Math.round(frames[0].t * fps), end = Math.round(frames.at(-1).t * fps) + Math.round(0.5 * fps);
+    let run = null;
+    for (let n = first; n <= end; n++) {
+      const t = n / fps;
+      // Until the light goes on to the next element: then this one is no longer lit.
+      const key = inOrder.findLast((l) => l.t <= t + 1e-9);
+      if (n > first && key?.name !== undefined && key.name !== name) break;
+      const at = frames.findLast((f) => f.t <= t + 1e-9);
+      const h = lightAt(inOrder, t)[hole];
+      const off = h ? Math.hypot(h[0] + h[2] / 2 - at.x, h[1] + h[3] / 2 - at.y) : Infinity;
+      if (off > HOLE_PAD) {
+        run = run ?? { name, hole, from: t, frames: 0, off: 0 };
+        run.frames++;
+        run.to = t;
+        run.off = Math.max(run.off, off);
+      } else {
+        if (run && run.frames > most) runs.push(run);
+        run = null;
+      }
+    }
+    if (run && run.frames > most) runs.push(run);
+  }
+  return runs;
 }
 
 /** The day of the week a recording was shot on, in its page's country: `mon`…`sun`. */
@@ -474,6 +627,7 @@ function plan(clips) {
   // after a tap moved the screen): the first where the shot says, each next
   // one a move to where its elements then were — a hole follows its element.
   const lights = [];
+  const followed = [];
   for (const shot of shots) {
     if (shot.card) continue;
     const rec = recordings[shot.clip];
@@ -483,6 +637,13 @@ function plan(clips) {
       if (!reads.length) throw new Error(`${rec.log.file}: no light "${l.name}" (video.yaml); record the scene again`);
       for (const [j, read] of reads.entries()) {
         const holes = read ? read.holes.map((f) => holeOf(f, read.screen, rec.size, l)) : [];
+        // Read again somewhere else: the element moved, and its light goes with it frame by frame.
+        if (j > 0 && moved(reads[j - 1], read)) {
+          const way = follow(rec, reads[j - 1], read, l, shot, when);
+          mine.push(...way.lights);
+          followed.push(...way.followed);
+          continue;
+        }
         let t = shot.start + (l.at ?? 0);
         // Moved to when it was read; the shot's very first is there on its first frame.
         if (read && (j > 0 || (l.at === undefined && i > 0))) t = Math.min(shot.end - LIGHT_MOVE, Math.max(shot.start, whenShown(rec, read.at)));
@@ -497,7 +658,7 @@ function plan(clips) {
     // flow reads Done a moment before tapping it).
     const inShot = taps.filter((tap) => tap.t >= shot.start && tap.t < shot.end);
     for (const [k, light] of mine.entries()) {
-      if (k === 0 || light.instant) continue;
+      if (k === 0 || light.instant || light.followed) continue;
       const target = inShot.find((tap) => tap.t >= light.t - 1e-6 && light.holes.some((h) => inHole(h, tap.x, tap.y)));
       if (!target) continue;
       const before = inShot.filter((tap) => tap.t < target.t - 1e-6).at(-1);
@@ -517,6 +678,12 @@ function plan(clips) {
       + `${Math.round(tap.x)}, ${Math.round(tap.y)} px) outside the light that has begun`).join('; ')
       + ' — read the light again where its element is (video.yaml) and record the scene again');
   }
+  // A lit element that moved is in its hole in every frame but two at most in a row (T-290).
+  const lagging = lightLags(lights, followed);
+  if (lagging.length) {
+    throw new Error(lagging.map((r) => `the light "${r.name}" (hole ${r.hole + 1}) off its element from ${r.from.toFixed(3)} to ${r.to.toFixed(3)} s `
+      + `of the video, ${r.frames} frames, up to ${Math.round(r.off)} px`).join('; ') + ' — no video is made with a light behind its element');
+  }
 
   for (const shot of shots) {
     if (shot.card || shot.caption === undefined) continue;
@@ -524,7 +691,83 @@ function plan(clips) {
     shot.captionAt = shot.seen ? rec.start + rec.counted / rec.speed : shot.start + (shot.hook ? 0 : CAPTION_AT);
     if (shot.end - shot.captionAt < MIN_CAPTION - 1e-6) throw new Error(`shot ${shot.index + 1}: its caption would be on screen under ${MIN_CAPTION} s`);
   }
-  return { recordings, shots, lights, taps, length: total };
+  return { recordings, shots, lights, taps, followed, length: total };
+}
+
+/** Whether a light read again (`read`) is somewhere else than the reading before (`before`): any hole half a point or more away. */
+function moved(before, read) {
+  if (before.holes.length !== read.holes.length) return true;
+  return before.holes.some((h, i) => ['x', 'y', 'w', 'h'].some((key) => Math.abs(h[key] - read.holes[i][key]) >= 0.5));
+}
+
+/**
+ * A light read again where its element had moved to (T-290): the frames of
+ * the recording from the reading before to this one, the element sought in
+ * each along its way (track), and the light where it was found — in the same
+ * frames of the video as the recording's own, as it moved: a keyframe on each
+ * frame it moved in, the hole there at once (`instant`), so the hole never
+ * trails behind a month pushed down or a row that jumped. `when` gives a
+ * moment of the recording in the video. Returns { lights, followed }: the
+ * keyframes, and each hole's element frame by frame (lightLags).
+ */
+function follow(rec, before, read, l, shot, when) {
+  const fps = VIDEO.fps;
+  if (before.holes.length !== read.holes.length) {
+    throw new Error(`${rec.log.file}: the light "${l.name}" read with ${before.holes.length} then ${read.holes.length} hole(s); a hole follows one element`);
+  }
+  if (before.holes.some((h, i) => Math.abs(h.w - read.holes[i].w) >= 1 || Math.abs(h.h - read.holes[i].h) >= 1)) {
+    throw new Error(`${rec.log.file}: the light "${l.name}" changed its size between readings; only an element that moved is followed`);
+  }
+  const k = rec.size.width / read.screen.width;
+  const all = [...before.holes, ...read.holes];
+  const margin = 6;
+  const left = Math.max(0, Math.floor((Math.min(...all.map((h) => h.x)) - margin) * k));
+  const top = Math.max(0, Math.floor((Math.min(...all.map((h) => h.y)) - margin) * k));
+  const right = Math.min(rec.size.width, Math.ceil((Math.max(...all.map((h) => h.x + h.w)) + margin) * k));
+  const bottom = Math.min(rec.size.height, Math.ceil((Math.max(...all.map((h) => h.y + h.h)) + margin) * k));
+  const region = { x: left, y: top, w: right - left, h: bottom - top };
+  // From the frame on screen when it was read before to the last one on screen when it was read again.
+  const from = rec.times.findLast((t) => t <= before.at + 1e-6) ?? 0;
+  const frames = framesOf(rec.clip, from, read.at, region);
+  if (!frames.length) throw new Error(`${rec.log.file}: no frame of the recording between the readings of "${l.name}"`);
+  const way = track(frames, { holes: before.holes.map((h, i) => ({ from: h, to: read.holes[i] })), origin: region, k });
+  const at = (s) => before.holes.map((h, i) => {
+    const to = read.holes[i];
+    return { x: h.x + (to.x - h.x) * s, y: h.y + (to.y - h.y) * s, w: to.w, h: to.h };
+  });
+  // The way's length in px of the video: how much of it a pixel is.
+  const v = toVideo(rec.size, read.screen);
+  const span = Math.max(...before.holes.map((h, i) => Math.hypot(read.holes[i].x - h.x, read.holes[i].y - h.y))) * v.scale;
+  // Once it is within a pixel of its end and stays there, it is there.
+  const settled = way.findIndex((f, n) => way.slice(n).every((g) => Math.abs(1 - g.s) * span <= 1.5));
+  const lights = [];
+  const places = before.holes.map(() => []);
+  let last = 0;
+  for (const [n, f] of way.entries()) {
+    const shown = when(rec, f.at);
+    if (shown === null) continue;
+    const t = Math.min(shot.end - 1 / fps, Math.max(shot.start, Math.round(shown * fps) / fps));
+    const s = n >= settled ? 1 : f.s;
+    const still = Math.abs(s - last) * span < 0.5 && !(n === settled && last !== 1);
+    // Its places from the frame it set off in: before that the light of the reading before has it.
+    if (!still || places[0].length) {
+      for (const [i, frame] of at(s).entries()) {
+        const [x, y] = v.point(frame.x + frame.w / 2, frame.y + frame.h / 2);
+        places[i].push({ t, x, y });
+      }
+    }
+    if (still) continue;
+    last = s;
+    lights.push({ name: l.name, t, holes: at(s).map((frame) => holeOf(frame, read.screen, rec.size, l)), dim: l.dim ?? DIM,
+      instant: true, followed: true, read: read.at, seen: f.at });
+  }
+  if (last !== 1) {
+    // Never seen to arrive (it moved in what was cut out): there when it was read.
+    const t = Math.min(shot.end - 1 / fps, Math.max(shot.start, Math.round((when(rec, read.at) ?? shot.end) * fps) / fps));
+    lights.push({ name: l.name, t, holes: read.holes.map((frame) => holeOf(frame, read.screen, rec.size, l)), dim: l.dim ?? DIM,
+      instant: true, followed: true, read: read.at });
+  }
+  return { lights, followed: places.map((frames, hole) => ({ name: l.name, hole, frames })).filter((p) => p.frames.length) };
 }
 
 /** setpts's expression: each kept frame at its time in the kept recording, played `speed` times faster. */
@@ -580,7 +823,7 @@ export async function montage({ locale, clips, out = path.join(OUT, 'video'), ca
   for (const clip of clips) if (!fs.existsSync(clip)) throw new Error(`no recording ${clip}`);
   const day = shotOn(logOf(clips[0]));
   const words = videoCaptions(locale, day, captionsFile);
-  const { recordings, shots, lights, taps, length: total } = plan(clips);
+  const { recordings, shots, lights, taps, followed, length: total } = plan(clips);
   const { width: W, height: H, fps } = VIDEO;
   const frames = Math.round(total * fps);
 
@@ -642,7 +885,7 @@ export async function montage({ locale, clips, out = path.join(OUT, 'video'), ca
     const hookShot = shots.find((s) => s.hook);
     const poster = (Math.round(hookShot.end * fps) - 1) / fps;
     return {
-      file, length: total, day, words, drawn, lights, taps,
+      file, length: total, day, words, drawn, lights, taps, followed,
       poster: { seconds: poster, timeCode: timeCode(poster) },
       shots: shots.map(({ index, start, length, captionAt, clip }) => ({ index, start, length, captionAt, speed: recordings[clip].speed,
         recorded: recordings[clip].duration, kept: recordings[clip].kept.length })),
@@ -737,7 +980,10 @@ export function report(locale, made) {
     `${locale}: ${made.length.toFixed(2)} s, shot on ${made.day}; captions ${drawn.fontSize} px, hook ${drawn.hookSize} px, `
       + `finale ${drawn.finale.fontSize} px; sign-in ${drawn.signIn.fontSize} px in ${drawn.signIn.lines.length} line(s); `
       + `worst contrast over white: text ${drawn.contrast.white.toFixed(2)}:1, lilac ${drawn.contrast.lilac.toFixed(2)}:1; `
-      + `the app's white round the captions at most ${Math.max(...[...drawn.captions, drawn.finale].map((c) => c.under)).toFixed(1)} of 255`,
+      + `the app's white round the captions at most ${Math.max(...[...drawn.captions, drawn.finale].map((c) => c.under)).toFixed(1)} of 255, `
+      + `300 px on from a line's last letter at most ${Math.max(...[...drawn.captions, drawn.finale].map((c) => c.beside)).toFixed(1)} of 255`,
+    ...(made.followed ?? []).filter((p) => p.hole === 0).map((p) => `${locale}: the light "${p.name}" follows its element from ${p.frames[0].t.toFixed(3)} s: `
+      + `${made.lights.filter((l) => l.followed && l.name === p.name).map((l) => `${l.t.toFixed(3)} s ${Math.round(l.holes[0][1])} px`).join(', ')}`),
     ...made.shots.map((s) => {
       const taps = made.taps.filter((t) => t.t >= s.start && t.t < s.start + s.length);
       const lights = made.lights.filter((l) => l.t >= s.start - 1e-6 && l.t < s.start + s.length);
