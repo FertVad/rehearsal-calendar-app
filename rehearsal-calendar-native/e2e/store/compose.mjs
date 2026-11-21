@@ -50,7 +50,7 @@ export const FONTS = {
   playItalic: path.join(FONT_DIR, 'literata', 'Literata-Italic[opsz,wght].ttf'),
   /** The video's handwritten finale (T-289): Caveat. */
   hand: path.join(FONT_DIR, 'caveat', 'Caveat[wght].ttf'),
-  /** The video's closing card (T-289), and its captions until then: Inter Tight. */
+  /** The video's closing card (T-289): Inter Tight. */
   brand: path.join(FONT_DIR, 'intertight', 'InterTight[wght].ttf'),
 };
 
@@ -84,8 +84,10 @@ export function binary() {
   const bin = path.join(OUT, '.bin', `compose-${createHash('sha256').update(source).digest('hex').slice(0, 12)}`);
   if (!fs.existsSync(bin)) {
     fs.mkdirSync(path.dirname(bin), { recursive: true });
-    execFileSync('xcrun', ['swiftc', '-O', SOURCE, '-o', `${bin}.tmp`], { stdio: ['ignore', 'inherit', 'inherit'], timeout: 600000 });
-    fs.renameSync(`${bin}.tmp`, bin);
+    // A file of this process's own: test files run side by side may compile at once.
+    const tmp = `${bin}.${process.pid}.tmp`;
+    execFileSync('xcrun', ['swiftc', '-O', SOURCE, '-o', tmp], { stdio: ['ignore', 'inherit', 'inherit'], timeout: 600000 });
+    fs.renameSync(tmp, bin);
   }
   return bin;
 }

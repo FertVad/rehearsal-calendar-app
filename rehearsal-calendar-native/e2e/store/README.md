@@ -1,4 +1,4 @@
-# App Store screenshots (T-274) and preview video (T-275, T-285)
+# App Store screenshots (T-274) and preview video (T-275, T-289)
 
 Eight screenshots of the real app, taken on the local e2e stand and made into
 the App Store's pictures: a two-line caption at the top, the screenshot under
@@ -9,8 +9,8 @@ reached: the database, the server and Metro are the e2e runner's own
 ## The captions' look: «Пьеса» (T-288)
 
 The owner's choice of 20.11.2026: the captions set as the text of a printed
-play, the screenshots and the video in one type and one style (the video from
-T-289; until then it keeps its own, below).
+play, the screenshots and the video in one type and one style (the video's
+since T-289, below).
 
 - **Type.** Literata at weight 600, its optical size (`opsz`) the type's size,
   72 at most. One size for a language — the largest at which its widest line
@@ -26,9 +26,8 @@ T-289; until then it keeps its own, below).
   edge (x 127 of 1320). The block centred in the band above the window, as
   before; the background, the glow, the window and its corners as before.
 - **Fonts, in the repository.** `fonts/` — Literata (upright and italic,
-  variable, axes `opsz` and `wght`), Caveat (the video's handwritten finale,
-  T-289) and Inter Tight (the video's closing card, T-289; its captions until
-  then), from github.com/google/fonts (`ofl/literata`, `ofl/caveat`,
+  variable, axes `opsz` and `wght`), Caveat (the video's handwritten finale)
+  and Inter Tight (the video's closing card), from github.com/google/fonts (`ofl/literata`, `ofl/caveat`,
   `ofl/intertight`), each family's `OFL.txt` beside it. The SIL Open Font
   License lets them be kept here and set in pictures and videos. compose.swift
   takes fonts from here only; no picture of the store uses a font of the
@@ -39,8 +38,8 @@ T-289; until then it keeps its own, below).
   the video is shot), `video`, `finale` (the line the video's pencil strikes
   through, the struck part and the word written over it) and `signIn`. es
   keeps the "?" of its hook outside the brackets — the pair «¿…?» upright, as
-  the RAE has it. `video[6]`, the old slogan, stays until T-289: today's
-  video reads it.
+  the RAE has it. The old slogan, `video[6]`, went with T-289: the finale says
+  it. `hook` is the editors' Tuesday; the video reads `hookByDay`.
 
 ## For a new version
 
@@ -75,13 +74,13 @@ What comes out, outside git (`.gitignore`):
 The pages are `en-US`, `en-GB`, `ru`, `es-ES` (uploaded for es-MX too) and
 `de-DE`. PNG without alpha, which App Store Connect refuses.
 
-## The preview video (T-275, made anew by T-285)
+## The preview video (T-275; the storyboard «Свет на главном», T-289)
 
 ```bash
 cd rehearsal-calendar-native
 node e2e/store/montage.mjs            # the cut, from the last recordings; every page
-node e2e/store/montage.mjs ru --preview=../audit/evidence/<task>   # one page, and three frames of it
-node e2e/store/record.mjs ru          # record a page again; about eight minutes
+node e2e/store/montage.mjs ru --preview=../audit/evidence/<task>   # one page, and six frames of it
+node e2e/store/record.mjs ru          # record a page again; about six minutes
 node e2e/store/record.mjs             # every page, one after another
 ```
 
@@ -91,11 +90,12 @@ country; record.mjs refuses up front as shoot.mjs does). Needs ffmpeg (`brew
 install ffmpeg`). Then watch every video before it is uploaded.
 
 What comes out, outside git: `e2e/store/out/video/<locale>.mp4` — 886×1920, 30
-fps, H.264 High at 10 Mb/s, 27.2 s, and a silent stereo AAC track at 48 kHz;
+fps, H.264 High at 10 Mb/s, 29.0 s, and a silent stereo AAC track at 48 kHz;
 and the recordings it was cut from, `e2e/store/out/clips/<locale>/01.mov…07.mov`,
-each with the flow's pauses and marks beside it (`01.json`). Upload es-ES's for es-MX too,
-and set each preview's poster frame (`previewFrameTimeCode`) to **00:00:02:15**:
-montage.mjs prints it.
+each with its log beside it (`01.json`: when and where it was shot, the
+flow's pauses, marks and cuts, the light's holes, the touches). Upload es-ES's
+for es-MX too, and set each preview's poster frame (`previewFrameTimeCode`) to
+**00:00:02:14**, the hook's last frame: montage.mjs prints it.
 
 ### The preview video's rules
 
@@ -107,84 +107,149 @@ app"). Keep to them whatever the next storyboard is:
 1. **The whole frame is the app.** The recording fills all 886×1920: scaled
    down to it and no more (no zoom), the simulator's hair of extra height cut
    evenly off the top and the bottom. No device frame, no rounded window, no
-   landing background, no band above the recording, no border, no shadow.
-   Shots are joined by a cut, or by a dissolve to the closing card.
-2. **Captions over the recording.** Bold Inter Tight in white (until T-289
-   sets them as the screenshots are; the main word's brackets taken out, not
-   printed), one size for the
-   language (its widest line sets it), lines broken only where captions.json
-   breaks them — never by the composer. Under the lines a soft dark band, only
-   as tall as the text: solid enough under them that white reads at 4.5:1 or
-   more over anything, fading out above and below. Each caption on screen at
-   least 2 s. Its place, the top or the bottom, is chosen for each shot so the
-   band does not cover what the caption is about (below).
+   landing background, no border. The shade and its light are over the app's
+   own screen, edge to edge. Shots are joined by a cut, and one dissolve goes
+   to the closing card.
+2. **Captions over the recording**, each on screen 2 s or more (below).
 3. **Sign-in, said.** Rehearsly does nothing without signing in, and Apple
    asks an app that needs it to say so in the preview. The closing card says
-   it (captions.json `signIn`) under the mark and the name for the whole card,
-   about 3 s, at 40 px or more; broken where captions.json breaks it (en, es,
-   de after the colon, T-288), and one not broken there breaks after its
-   colon when one line would be smaller (ru after «Нужен вход» if it has none).
-4. **The poster frame** is the end of the hook's shot: the Planner's windows
-   lit, the hook still on. Its time code goes to App Store Connect.
+   it (captions.json `signIn`): one small line at its foot.
+4. **The poster frame** is the hook's last frame: the answer lit, the hook
+   typed. Its time code goes to App Store Connect.
 5. **Never the app loading.** A preview plays by itself from its first frame,
    and the Planner loading says "Loading…" and that the project has no members.
    The hook's shot starts on the Planner with its windows already there: the
-   flow marks the moment (`mark ready`, in `01.json`'s `marks`) and montage.mjs
-   starts from the frame on screen then (`readyAt`); a recording 01 without the
-   mark is refused (T-286).
+   flow marks the moment (`mark ready`) and montage.mjs starts from the frame
+   on screen then; a recording 01 without the mark is refused (T-286).
 6. **No sound** but a silent track: App Store Connect refuses a preview with
-   no audio track at all.
+   no audio track at all. No music (the owner, 20.11.2026).
 
 **Why the video does not look like the screenshots.** A screenshot may be a
 picture about the app — a caption band, the screen in a rounded window on the
 landing's background (T-274). A preview may not: it must show the app as it
 will be on the whole screen. So the screenshots keep their frame, and the
-video has its own look: the full screen, captions on it. The type and the
-style of the captions are the same in both (T-288, «Пьеса»; the video's from
-T-289).
+video has its own look: the full screen, the light, captions on it. The type
+and the style of the captions are the same in both («Пьеса»).
 
-### The storyboard
+### The storyboard «Свет на главном» (T-289)
 
-Eight shots from video.yaml's seven recordings (`SHOTS` in montage.mjs), the
-captions captions.json's `hook` and `video`:
+The owner's of 20.11.2026, version 3 (`AUTODEV/notes/T-288-storyboard`). Nine
+shots, 29 s (`SHOTS` in montage.mjs), from video.yaml's seven recordings:
 
-| shot | on screen | caption | where | why there |
-|---|---|---|---|---|
-| 0 | the Planner with its windows, darkened; after 1.5 s the darkness lifts | `hook` | bottom | the title and first windows stay clear; the poster frame |
-| 1 | the Planner's windows | `video[0]` | bottom | the same |
-| 2 | two days marked busy | `video[1]` | top | the days are mid-screen, the sheet and Save at the bottom |
-| 3 | Calendar Sync on | `video[2]` | bottom | the whole screen is in its top half |
-| 4 | three picked, the windows weighed again | `video[3]` | bottom | "3 of 12" is in the upper third |
-| 5 | the form's conflict alert | `video[4]` | bottom | the alert's title and who cannot are mid-screen |
-| 6 | the seen count to 12 of 12 — its caption only once it is there | `video[5]` | bottom | the count is under the week strip |
-| 7 | the week, then the mark, "Rehearsly", the sign-in line | `video[6]` | bottom | the week strip is at the top |
+| # | s | on screen | light | touch marks | caption, its centre |
+|---|---|---|---|---|---|
+| 1 | 0–2.5 | the Planner (01, from `ready`), shade 0.86 | at 1.6 s today's first window, everyone free (`planner-row-<today>-…`), shade 0.64 | — | the hook, typed, 24 % |
+| 2 | 2.5–5 | the Planner | today's card (`planner-card-<today>`) | — | `video[0]`, 79 % |
+| 3 | 5–8 | the month (02): two days, Busy | the two days (`day-…`); then the modes (`mode-selector`) | day A, day B, Busy | `video[1]`, 13 % |
+| 4 | 8–10.5 | Calendar Sync (03) | the iPhone's calendar (`calendar-provider-apple`); then with Auto Sync (`calendar-sync-row`) | the calendar, the switch | `video[2]`, 63 % |
+| 5 | 10.5–14 | the picker (04): three, Done; a cut to the Planner weighed again | All participants and the three (`participants-all`, `participant-<id>`); then Done; after the cut the first two windows | three names, Done | `video[3]`, 82 % |
+| 6 | 14–17.5 | the form (05): Save, the conflict alert | Save (`rehearsal-submit`), shade 0.82; the alert, shade 0.6 | Save | `video[4]`, 80 % |
+| 7 | 17.5–22.5 | the rehearsal of all twelve (06): 4 → 7 → 9 → 11 → 12 | its row (`rehearsal-item-<id>`) | the eye | `video[5]` on the frame 12/12 came in, 74 % |
+| 8 | 22.5–25.5 | the week (07), shade 0.8 | — | — | the finale, 47 % |
+| 9 | 25.5–29 | the closing card, dissolving in over 0.5 s | — | — | — |
 
-The recordings are cut to their action: any stillness — Maestro finding its
-next tap, the flow's own pauses — is cut to 0.2 s. A recording still longer
-than its shot is played faster, up to 2× (`MAX_SPEEDUP`); beyond that
-montage.mjs refuses it: shoot that scene again with less in it, under the e2e
-lock (record.mjs), rather than race it.
+**The light.** A shade of `#04030A` over the whole screen, 0.62 dense unless a
+shot says otherwise, with up to two rounded holes, their edges soft (20 px
+either side at 886 wide); a hole moves to its next place in 0.3 s, a cut puts
+it there at once. Where a hole is is never placed by eye: the flow asks the
+recorder (`light`, scripts/recorder.js) and the recorder reads the screen's
+hierarchy at that moment from Maestro's own iOS driver (`POST /viewHierarchy`
+on the port it listens on) — the frames of the elements named by testID, or
+iOS's alert by its type, which has no testID. The app got the testIDs it
+lacked for it (`planner-card-<date>`, `mode-selector`,
+`calendar-provider-apple`, `calendar-sync-row`, `rehearsal-item-<id>`). An
+element not on screen fails the recording. The alert is read 0.45 s after the
+finger lifts off Save (`AFTER: up`): the button's spinner keeps the screen
+moving under it, and Maestro sees the alert seconds later; the form's
+recording ends a second after it was read.
 
-- `video.yaml` — the scenes, played at a person's pace: 1 the Planner
-  filling, 2 two days marked busy, 3 Calendar Sync on, 4 three people picked
-  in the Planner, 5 the form naming who is busy and its save asking about it,
-  6 the seen count to 12 of 12 (seven of the cast mark it through the API
-  while it is on screen, `scripts/seen.js`; the recording stops once it reads
-  12/12, so the caption comes when the recording has played out), 7 the week.
-  Each is recorded on its own (`xcrun simctl io <udid> recordVideo
-  --codec=h264`), started and stopped by the flow through record.mjs's
-  recorder on 127.0.0.1:3003 (`scripts/recorder.js`), which also holds the
-  flow's pauses: Maestro has no command for one.
-- `record.mjs` — runs `node e2e/run.mjs --store=<locale> e2e/store/video.yaml`
-  (the e2e lock, the store's simulator) with the recorder listening, then the cut.
-- `montage.mjs` — the cut, with ffmpeg; the captions, the hook's darkness and
-  the closing card drawn by compose.swift `video`. Test:
-  `node --test e2e/__tests__/store-video.test.mjs` (in `npm test`).
+**The touch marks.** A mark is where and when a real touch was, taken from
+the recording itself, not guessed and not from the storyboard: *when* from
+the app, *where* from Maestro's driver.
 
-Only the app's own screen and the captions: no device frame, hands, prices or
-reminders. The availability legend's "Free" (and its translations) is the
-app's word for a free hour, not a price. No touch marks are drawn: Maestro
-does not say where on the screen its taps land, and they are not guessed.
+- The app tells the recorder each touch as it happens: launched with
+  `rehearslyStoreTouches: "http://127.0.0.1:3003"`, an e2e bundle's app sits
+  in a view that only listens in the capture phase (e2e/device/App.js; Metro
+  hands it to index.ts only when e2e/run.mjs sets `REHEARSLY_E2E`, so no
+  production bundle has it, and without the argument the e2e app is the real
+  one as it is — `e2e/__tests__/store-touches.test.mjs`). Its time is the
+  touch's own, on the Mac's clock.
+- The app's point is in its root view's points, and on a sheet iOS presents
+  (the month, the form) that root starts some 60 points below the window's
+  top. So the place is the tap Maestro's driver logged as it made it
+  ("Tapping x, y", in the window's points; the run's `xctest_runner_*.log`):
+  record.mjs gives each touch the driver's tap that began just before the app
+  felt it, at the same x (montage.mjs `placeTouches`). A touch with no such
+  tap gets no place, and montage.mjs refuses to draw it.
+- A finger that moved more than 10 points (a list pulled to refresh) is no
+  tap and gets no mark; what the flow cut out gets none either.
+- The mark, at 886 wide: a circle 88 px across, white at 30 % with a white
+  edge at 95 %, 5 px, a thin dark ring outside it so it shows on white;
+  pressed in 0.09 s (scaled 1.3 → 0.94), held 0.15 s, let go with a ripple
+  out to about 150 px, gone in 0.38 s.
+
+**The captions, «Пьеса».** As the screenshots' (above): Literata 600, the
+main word in its italic in `#C084FC`, the rest white; flush left, each line's
+ink from x 42 of 886, the app's margin; lines broken only where captions.json
+breaks them. One size for a language, the largest up to 70 px at which every
+caption fits; the hook and the finale up to 88 px. No band: under the lines a
+soft shadow of `#04030A`, a rectangle round them blurred by 28 px, 55 % dense
+or more — as dense as white and the lilac need to read at 4.5:1 over a white
+recording where it is weakest, with the light as it is there (compose.swift
+works it out and says so; montage.mjs prints the worst). Each line comes in
+from below, fading, 0.14 s after the one before; its main word 0.22 s after
+its line. A caption comes 0.12 s into its shot and stays to its end.
+
+**The hook** is captions.json's `hookByDay` for the day recording 01 was shot
+on in the page's country (`recordedAt` and `zone` in 01.json) — the day of the
+Planner's first card, which is that country's today. Typed letter by letter
+from 0.15 s, in about 0.95 s, a lilac caret blinking after it.
+
+**The seen count.** Four of the cast mark the rehearsal of all twelve seen
+before the shot; in it three, two and two more through the API
+(scripts/seen.js), the list pulled after each — the pull between the flow's
+`cut` and `resume`, taken out, so the number changes in place: 7, 9, 11. The
+twelfth is the director's own eye. The caption comes on the frame 12/12 came
+in: the last frame recorded before the flow saw it (`mark counted`). The
+recording's stillness is kept 0.5 s here, so each number stays a moment.
+
+**The finale.** captions.json `finale`: its `line` in Literata 600 at up to
+88 px; at 0.8 s a pencil stroke in `#C084FC`, uneven, drawn in 0.45 s through
+the `struck` part; then `insert` over it in Caveat 700, tilted −5°, in 0.3 s,
+and the struck part fades to 45 %. No light, the shade at 0.8.
+
+**The closing card.** Dissolves in over 0.5 s and stays 3 s more. The
+landing's background and glow; the mark (`server/public/assets/mark.png`) and
+"Rehearsly" in Inter Tight 700, centred a little above the middle; at its foot
+`signIn` in Inter Tight 500, 40 px — never smaller — in the text's colour at
+72 %. ru in one line; en, es and de broken after the colon, as their editors
+broke it in captions.json.
+
+**The cut.** The recordings are cut to their action: any stillness — Maestro
+finding its next tap, the flow's own pauses — is cut to 0.2 s; what the flow
+marked between `cut` and `resume` is taken out, but the frame on screen at
+`resume`. A recording still longer than its shot is played faster, up to 2×
+(`MAX_SPEEDUP`); beyond that montage.mjs refuses it: shoot that scene again,
+under the e2e lock (record.mjs), rather than race it. compose.swift draws the
+layer over the recording — the shade, the marks, the captions, the finale, the
+card — frame by frame, straight-alpha RGBA piped into ffmpeg (a straight blend
+in YUV is the RGB one; a premultiplied one made the shade denser).
+
+- `video.yaml` — the scenes, played at a person's pace, each recorded on its
+  own (`xcrun simctl io <udid> recordVideo --codec=h264`), started and stopped
+  by the flow through record.mjs's recorder on 127.0.0.1:3003
+  (`scripts/recorder.js`), which also holds the flow's pauses, marks its
+  moments and reads the light.
+- `record.mjs` — runs `node e2e/run.mjs --store=<locale>
+  e2e/store/video.yaml` (the e2e lock, the store's simulator) with the
+  recorder listening, places the touches from the driver's log, then the cut.
+- `montage.mjs` — the cut, with ffmpeg; the layer drawn by compose.swift
+  `video`. Tests: `node --test e2e/__tests__/store-video.test.mjs
+  e2e/__tests__/store-touches.test.mjs` (in `npm test`).
+
+Only the app's own screen, the light, the touch marks and the captions: no
+device frame, hands, prices or reminders. The availability legend's "Free"
+(and its translations) is the app's word for a free hour, not a price.
 
 ## What does what
 

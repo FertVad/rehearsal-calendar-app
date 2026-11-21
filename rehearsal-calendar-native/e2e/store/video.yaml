@@ -1,22 +1,27 @@
-# The App Store's preview video (T-275): the storyboard played on the app as
-# it is, on the store's simulator (iPhone 17 Pro Max), as the director of
-# e2e/store/seed.mjs's world, at a person's pace — a pause to look before each
-# tap and after what it brought. Not one of e2e/flows: run by
-# e2e/store/record.mjs, one language at a time, through `node e2e/run.mjs
-# --store=<locale>`, with the recorder listening (scripts/recorder.js).
+# The App Store's preview video (T-275; the storyboard «Свет на главном»,
+# T-289): the storyboard played on the app as it is, on the store's simulator
+# (iPhone 17 Pro Max), as the director of e2e/store/seed.mjs's world, at a
+# person's pace — a pause to look before each tap and after what it brought.
+# Not one of e2e/flows: run by e2e/store/record.mjs, one language at a time,
+# through `node e2e/run.mjs --store=<locale>`, with the recorder listening
+# (scripts/recorder.js).
 #
-# Each shot is recorded on its own, from "start" to "stop"; what leads up to
-# it — opening a screen, a sheet closed — is not. montage.mjs cuts the seven
-# into the storyboard's eight shots (SHOTS; README "The storyboard"), their
-# stillness and pauses cut, a shot shorter held on its last frame:
-#   1 the Planner filling with its levels (the hook, then its first caption)
-#   2 busy days marked in the month
-#   3 Calendar Sync switched on
-#   4 three people picked, the windows weighed again
-#   5 the form naming who is busy, its save asking about it
-#   6 the seen count running to 12 of 12 — stopped once it reads 12/12
-#   7 the week in the calendar, then the mark
-# Only the app's screen and its captions: no hands, no prices, no reminders.
+# Each recording runs from "start" to "stop"; what leads up to it — opening a
+# screen or a sheet — is not recorded. montage.mjs cuts the seven into the
+# storyboard's nine shots (SHOTS; README "The storyboard"), their stillness
+# and pauses cut, a shot shorter held on its last frame:
+#   1 the Planner with its windows (the hook, then the first day)
+#   2 two days marked busy in the month
+#   3 the iPhone's calendar chosen, sync switched on
+#   4 three people picked, then the Planner weighed again
+#   5 the form saved, the conflict alert
+#   6 the seen count, 4 → 7 → 9 → 11, and the director's eye: 12 of 12
+#   7 the week; the closing card comes over it
+# Where the light falls ("light"): the frames of the elements named, read
+# from the screen's hierarchy at that moment by the recorder — never guessed.
+# Where a finger went: the app tells the recorder itself, launched with
+# rehearslyStoreTouches (e2e/device/App.js). Only the app's screen: no hands,
+# no prices, no reminders.
 appId: ${APP_ID}
 name: App Store preview video
 tags:
@@ -37,19 +42,21 @@ tags:
     visible:
       id: tab-calendar
     timeout: 30000
-# The phone as one of the page's country: its language, region and clock.
+# The phone as one of the page's country: its language, region and clock; its
+# touches told to the recorder.
 - launchApp:
     arguments:
       AppleICUForce24HourTime: "${CLOCK24_LABEL}"
       AppleLanguages: "${APPLE_LANGUAGES_LABEL}"
       AppleLocale: "${APPLE_LOCALE_LABEL}"
       rehearslyPushDevice: "1"
+      rehearslyStoreTouches: "http://127.0.0.1:3003"
 - extendedWaitUntil:
     visible: ".*${CONCERT_LABEL}.*"
     timeout: 30000
 - waitForAnimationToEnd
 
-# 1. The Planner: its cards come, every level in the first.
+# 1. The Planner: its windows, every level in today's card.
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: start, CLIP: "01", SIMULATOR: "${SIMULATOR}" }
@@ -63,14 +70,22 @@ tags:
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: mark, NAME: ready }
+- waitForAnimationToEnd
+# The hook's answer: today's first window, everyone free; then today's card.
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "1800" }
+    env: { ACTION: light, NAME: answer, HOLES: "planner-row-${TODAY_DAY}-.*#1", APP: "${APP_ID}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: day, HOLES: "planner-card-${TODAY_DAY}", APP: "${APP_ID}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1000" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: stop }
 
-# 2. The director's month: two free days marked busy, saved.
+# 2. The director's month: two free days marked busy.
 - tapOn:
     id: tab-create
 - tapOn: "${MARK_BUSY_LABEL}"
@@ -84,7 +99,10 @@ tags:
     env: { ACTION: start, CLIP: "02", SIMULATOR: "${SIMULATOR}" }
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "500" }
+    env: { ACTION: light, NAME: days, HOLES: "day-${BUSY_A_DAY};day-${BUSY_B_DAY}", APP: "${APP_ID}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
 - tapOn:
     id: day-${BUSY_A_DAY}
 - runScript:
@@ -96,6 +114,10 @@ tags:
     visible:
       id: mode-busy
     timeout: 10000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: modes, HOLES: "mode-selector", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "400" }
@@ -103,19 +125,16 @@ tags:
     id: mode-busy
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "400" }
+    env: { ACTION: wait, MS: "900" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: stop }
 - tapOn:
     id: availability-save
 - extendedWaitUntil:
     visible:
       id: toast
     timeout: 15000
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: wait, MS: "800" }
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: stop }
 - extendedWaitUntil:
     notVisible:
       id: toast
@@ -151,11 +170,18 @@ tags:
     env: { ACTION: start, CLIP: "03", SIMULATOR: "${SIMULATOR}" }
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "500" }
-- tapOn: ".*${APPLE_LABEL}.*"
+    env: { ACTION: light, NAME: apple, HOLES: "calendar-provider-apple", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "400" }
+- tapOn:
+    id: calendar-provider-apple
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "400" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: both, HOLES: "calendar-provider-apple;calendar-sync-row", APP: "${APP_ID}" }
 - runFlow:
     when:
       notVisible:
@@ -171,7 +197,7 @@ tags:
     timeout: 15000
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "1500" }
+    env: { ACTION: wait, MS: "1200" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: stop }
@@ -184,38 +210,47 @@ tags:
 - tapOn:
     id: header-back
 
-# 4. The Planner again, the whole cast; three picked, the windows weighed again.
+# 4. The Planner again, the whole cast; the picker open, nobody in it yet:
+# three picked, Done, and the Planner weighed again for them.
 - runFlow:
     file: planner-tab.yaml
 - waitForAnimationToEnd
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: start, CLIP: "04", SIMULATOR: "${SIMULATOR}" }
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: wait, MS: "500" }
 - tapOn:
     id: participants-row
 - extendedWaitUntil:
     visible:
       id: participants-all
     timeout: 10000
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: wait, MS: "400" }
 - tapOn:
     id: participants-all
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: start, CLIP: "04", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: pick, HOLES: "participants-all;participant-${PICK_0_ID_LABEL},participant-${PICK_1_ID_LABEL},participant-${PICK_2_ID_LABEL}", APP: "${APP_ID}" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: wait, MS: "300" }
-- tapOn: "${PICK_0_LABEL}.*"
-- tapOn: "${PICK_1_LABEL}.*"
-- tapOn: "${PICK_2_LABEL}.*"
+- tapOn:
+    id: participant-${PICK_0_ID_LABEL}
+- tapOn:
+    id: participant-${PICK_1_ID_LABEL}
+- tapOn:
+    id: participant-${PICK_2_ID_LABEL}
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "400" }
+    env: { ACTION: light, NAME: done, HOLES: "participants-all;participants-done", APP: "${APP_ID}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "300" }
 - tapOn:
     id: participants-done
+# The sheet going and the Planner weighing: cut, the shot goes on with its windows.
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: mark, NAME: cut }
 - extendedWaitUntil:
     notVisible:
       id: participants-all
@@ -224,14 +259,22 @@ tags:
     visible:
       id: "planner-row-.*"
     timeout: 30000
+- waitForAnimationToEnd
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "1500" }
+    env: { ACTION: mark, NAME: resume }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: windows, HOLES: "planner-row-.*#1;planner-row-.*#2", APP: "${APP_ID}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1200" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: stop }
 
-# 5. Tomorrow at FORM_TIME, one of the three busy: the form names them; saved.
+# 5. Tomorrow at FORM_TIME, one of the three busy: the form names them; Save
+# asks about it, naming who is busy.
 - scrollUntilVisible:
     element:
       id: planner-add-${FORM_DAY}-${FORM_TIME}
@@ -239,32 +282,33 @@ tags:
     centerElement: true
     timeout: 30000
 - waitForAnimationToEnd
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: start, CLIP: "05", SIMULATOR: "${SIMULATOR}" }
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: wait, MS: "400" }
 - tapOn:
     id: planner-add-${FORM_DAY}-${FORM_TIME}
 - extendedWaitUntil:
     visible:
       id: participants-conflict
     timeout: 15000
+- waitForAnimationToEnd
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "1300" }
+    env: { ACTION: start, CLIP: "05", SIMULATOR: "${SIMULATOR}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: save, HOLES: "rehearsal-submit", APP: "${APP_ID}" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "300" }
+# The alert read 0.45 s after the finger lifts off Save: the button's spinner
+# turns under it, the screen never settles, and Maestro sees the alert seconds
+# later. montage.mjs ends the shot a second after the alert was read.
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: alert, HOLES: "@alert", APP: "${APP_ID}", AFTER: up, MS: "450" }
 - tapOn:
     id: rehearsal-submit
-# Saving asks first, naming who is busy: the shot ends on that question. The
-# button's spinner turns under it, so the screen never settles and Maestro
-# takes some ten seconds over the next tap; "Create Anyway" is tapped after.
 - extendedWaitUntil:
     visible: "${CREATE_ANYWAY_LABEL}"
     timeout: 10000
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: wait, MS: "1500" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: stop }
@@ -279,8 +323,10 @@ tags:
     timeout: 15000
 
 # 6. The rehearsal of all twelve, on its day in the calendar: four have seen
-# it; seven more do while it is on screen, the list is pulled to read them,
-# and the director's own eye makes it 12 of 12.
+# it before the shot. In it the cast's marks come through the API in three
+# batches — three, two, two (scripts/seen.js) — each read by pulling the list,
+# and the pull is cut: the count changes in place, 7, 9, 11. The director's
+# own eye makes it 12 of 12.
 - runScript:
     file: scripts/seen.js
     env: { API_URL: "${API_URL}", PASSWORD: "${PASSWORD}", EMAILS: "${SEEN_EMAILS_LABEL}", REHEARSAL: "${EVERYONE_REHEARSAL}", FROM: "0", TO: "4" }
@@ -307,11 +353,52 @@ tags:
     file: scripts/recorder.js
     env: { ACTION: start, CLIP: "06", SIMULATOR: "${SIMULATOR}" }
 - runScript:
+    file: scripts/recorder.js
+    env: { ACTION: light, NAME: card, HOLES: "rehearsal-item-${EVERYONE_REHEARSAL}", APP: "${APP_ID}" }
+- runScript:
     file: scripts/seen.js
-    env: { API_URL: "${API_URL}", PASSWORD: "${PASSWORD}", EMAILS: "${SEEN_EMAILS_LABEL}", REHEARSAL: "${EVERYONE_REHEARSAL}", FROM: "4", TO: "11" }
+    env: { API_URL: "${API_URL}", PASSWORD: "${PASSWORD}", EMAILS: "${SEEN_EMAILS_LABEL}", REHEARSAL: "${EVERYONE_REHEARSAL}", FROM: "4", TO: "7" }
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "300" }
+    env: { ACTION: mark, NAME: cut }
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 75%"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      text: "7/12"
+    timeout: 15000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: mark, NAME: resume }
+- runScript:
+    file: scripts/seen.js
+    env: { API_URL: "${API_URL}", PASSWORD: "${PASSWORD}", EMAILS: "${SEEN_EMAILS_LABEL}", REHEARSAL: "${EVERYONE_REHEARSAL}", FROM: "7", TO: "9" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: mark, NAME: cut }
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 75%"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      text: "9/12"
+    timeout: 15000
+- waitForAnimationToEnd
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: mark, NAME: resume }
+- runScript:
+    file: scripts/seen.js
+    env: { API_URL: "${API_URL}", PASSWORD: "${PASSWORD}", EMAILS: "${SEEN_EMAILS_LABEL}", REHEARSAL: "${EVERYONE_REHEARSAL}", FROM: "9", TO: "11" }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: mark, NAME: cut }
 - swipe:
     start: "50%, 35%"
     end: "50%, 75%"
@@ -321,9 +408,10 @@ tags:
       id: seen-toggle
       text: "11/12"
     timeout: 15000
+- waitForAnimationToEnd
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "400" }
+    env: { ACTION: mark, NAME: resume }
 - tapOn:
     id: seen-toggle
     text: ".*${EVERYONE_TITLE_LABEL}"
@@ -332,25 +420,28 @@ tags:
       id: seen-toggle
       text: "12/12"
     timeout: 15000
+# 12 of 12 on screen: its caption comes on the frame it came in (montage.mjs).
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "1600" }
+    env: { ACTION: mark, NAME: counted }
+- runScript:
+    file: scripts/recorder.js
+    env: { ACTION: wait, MS: "1500" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: stop }
 
-# 7. Back to today: the week, its rehearsals under it; the mark comes after.
+# 7. Back to today: the week, its rehearsals under it. No touch in the shot:
+# today is tapped before it; the closing card comes over it.
+- tapOn:
+    id: calendar-today
+- waitForAnimationToEnd
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: start, CLIP: "07", SIMULATOR: "${SIMULATOR}" }
 - runScript:
     file: scripts/recorder.js
-    env: { ACTION: wait, MS: "400" }
-- tapOn:
-    id: calendar-today
-- runScript:
-    file: scripts/recorder.js
-    env: { ACTION: wait, MS: "1800" }
+    env: { ACTION: wait, MS: "1200" }
 - runScript:
     file: scripts/recorder.js
     env: { ACTION: stop }

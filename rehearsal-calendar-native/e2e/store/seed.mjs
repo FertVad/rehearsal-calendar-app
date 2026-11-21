@@ -151,11 +151,16 @@ const DAY_END = 23;
  */
 export const LAST_HOUR = DAY_END - 3 - 1;
 
-/** The hour now on `locale`'s page's clock (its world's zone). */
-export function storeHour(locale, now = new Date()) {
+/** The zone of `locale`'s page's country: its world's, every profile's in it. */
+export function storeZone(locale) {
   const world = WORLDS[locale];
   if (!world) throw new Error(`No store world for ${locale}: ${Object.keys(WORLDS).join(', ')}`);
-  return Number(new Intl.DateTimeFormat('en-US', { timeZone: world.zone, hour: 'numeric', hourCycle: 'h23' }).format(now));
+  return world.zone;
+}
+
+/** The hour now on `locale`'s page's clock (its world's zone). */
+export function storeHour(locale, now = new Date()) {
+  return Number(new Intl.DateTimeFormat('en-US', { timeZone: storeZone(locale), hour: 'numeric', hourCycle: 'h23' }).format(now));
 }
 
 /**
@@ -422,6 +427,8 @@ export async function seedStore({ client, apiUrl, locale, now = new Date() }) {
       // shot 5's form names one. Shot 6: the rehearsal of all twelve, and the
       // eleven of the cast who mark it seen, through the API, as their phones would.
       pick_0: world.cast[0].join(' '), pick_1: world.cast[1].join(' '), pick_2: world.cast[2].join(' '),
+      // Their rows in the picker (`participant-<id>`), where the preview's light falls (T-289).
+      pick_0_id: String(ids.actor0), pick_1_id: String(ids.actor1), pick_2_id: String(ids.actor2),
       create_anyway: world.words.createAnyway,
       everyone_title: titles.play[1],
       seen_emails: actors.map((key) => emails[key]).join(','),

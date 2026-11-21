@@ -43,10 +43,17 @@ if (process.env.REHEARSLY_E2E === '1') {
     'expo-device': path.join(device, 'expo-device.js'),
     'expo-notifications': path.join(device, 'expo-notifications.js'),
   };
+  // And the app itself, as index.ts takes it: the real App, which tells the
+  // App Store preview's recorder where its touches land only when a launch
+  // asks (e2e/device/App.js; T-289). No other import of ./App is touched.
+  const entry = path.join(__dirname, 'index.ts');
   const resolveRequest = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {
     if (standIns[moduleName] && !context.originModulePath.startsWith(device + path.sep)) {
       return { type: 'sourceFile', filePath: standIns[moduleName] };
+    }
+    if (moduleName === './App' && context.originModulePath === entry) {
+      return { type: 'sourceFile', filePath: path.join(device, 'App.js') };
     }
     return (resolveRequest ?? context.resolveRequest)(context, moduleName, platform);
   };
