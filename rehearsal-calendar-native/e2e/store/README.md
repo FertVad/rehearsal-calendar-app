@@ -211,10 +211,11 @@ ink from x 42 of 886, the app's margin; lines broken only where captions.json
 breaks them. One size for a language, the largest up to 70 px at which every
 caption fits; the hook and the finale up to 88 px. No band, but no word of
 the app beside or between the lines either: round the lines' rectangle (and
-16 px more) the shade itself is 0.97 dense, so the app's white comes through
-no brighter than 20 of 255 — as under the hook at 0.86 with its old shadow —
-and from there it eases back to the shot's shade (0.62, 0.8, 0.86…) over
-80 px, no edge to see. It is the shade's, so a hole is never darkened by it;
+16 px more above and below, 40 px to either side) the shade itself is 0.97
+dense, so the app's white comes through no brighter than 20 of 255 — as under
+the hook at 0.86 with its old shadow — and from there it eases back to the
+shot's shade (0.62, 0.8, 0.86…) over 80 px up and down and 180 px to the
+sides, where the app's rows run on past a short line; no edge to see. It is the shade's, so a hole is never darkened by it;
 elsewhere the shade is the storyboard's. White and the lilac read at 4.5:1 or
 more over a white recording where it is weakest, with the light as it is
 there; compose.swift works it out and refuses otherwise, and says how bright

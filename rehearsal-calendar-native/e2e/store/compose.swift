@@ -282,11 +282,13 @@ let lightFeather: CGFloat = 20           // a hole's soft edge, either side of i
 // Round a caption the shade is denser (T-289, 21.11): the app's white comes
 // through at 3 % — 8 of 255, with the shade's own colour some 15 — so no word
 // of the app reads between or beside the caption's lines; from `darkPad`
-// round the lines it eases back to the shot's shade over `darkFeather`. It is
-// the shade's, so a hole lets the app through as it is: never darkened.
+// round the lines it eases back to the shot's shade over `darkFeather` — the
+// wider to either side, where the app's rows run on past a short line ("…зал"
+// after «Все в курсе:»). It is the shade's, so a hole lets the app through as
+// it is: never darkened.
 let captionDark: Double = 0.97
-let darkPad: CGFloat = 16
-let darkFeather: CGFloat = 80
+let darkPad = CGSize(width: 40, height: 16)
+let darkFeather = CGSize(width: 180, height: 80)
 let leastContrast: CGFloat = 4.5
 let signInSize: CGFloat = 40             // the sign-in line: 40 px of 886, never smaller
 
@@ -357,9 +359,9 @@ struct Dark { let rect: CGRect; let on: Double }
 
 /** How much of a caption's darkness reaches (x, y): 1 in its rectangle and `darkPad` round it, easing to 0 over `darkFeather`. */
 func darkness(_ d: Dark, _ x: Double, _ y: Double) -> Double {
-  let r = d.rect.insetBy(dx: -darkPad, dy: -darkPad)
+  let r = d.rect.insetBy(dx: -darkPad.width, dy: -darkPad.height)
   let dx = max(Double(r.minX) - x, 0, x - Double(r.maxX)), dy = max(Double(r.minY) - y, 0, y - Double(r.maxY))
-  let s = clamp01(hypot(dx, dy) / Double(darkFeather))
+  let s = clamp01(hypot(dx / Double(darkFeather.width), dy / Double(darkFeather.height)))
   return d.on * (1 - s * s * (3 - 2 * s))
 }
 
@@ -602,9 +604,10 @@ func video(_ job: VideoJob) {
     }
     let p = shadeBuffer.assumingMemoryBound(to: UInt8.self)
     row.withUnsafeBufferPointer { r in for y in 0..<h { (p + y * w * 4).update(from: r.baseAddress!, count: w * 4) } }
-    let f = Double(lightFeather), reach = Double(darkPad + darkFeather)
+    let f = Double(lightFeather)
+    let reachX = Double(darkPad.width + darkFeather.width), reachY = Double(darkPad.height + darkFeather.height)
     let regions = s.holes.filter { min($0.w, $0.h) > 0 }.map { (x: $0.x - f, y: $0.y - f, r: $0.x + $0.w + f, b: $0.y + $0.h + f) }
-      + darks.filter { $0.on > 0 }.map { (x: Double($0.rect.minX) - reach, y: Double($0.rect.minY) - reach, r: Double($0.rect.maxX) + reach, b: Double($0.rect.maxY) + reach) }
+      + darks.filter { $0.on > 0 }.map { (x: Double($0.rect.minX) - reachX, y: Double($0.rect.minY) - reachY, r: Double($0.rect.maxX) + reachX, b: Double($0.rect.maxY) + reachY) }
     for region in regions {
       let x0 = max(0, Int(region.x)), x1 = min(w - 1, Int(region.r))
       let y0 = max(0, Int(region.y)), y1 = min(h - 1, Int(region.b))
