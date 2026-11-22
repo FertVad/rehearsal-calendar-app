@@ -112,13 +112,13 @@ server/public/
 ├── cinema.js            # The page as one 3D scene: three.js from vendor/, phones with the app's screens
 ├── lang.js              # The language, settled in <head> before the first layout
 ├── i18n.js              # Language toggle; tells the scene with a langchange event
-├── variant.js           # What tells /lead and /cast apart, without any analytics
+├── variant.js           # /cast's "send it to your director": hands on /lead in the reader's language
 ├── vendor/              # three.module.min.js (r186, MIT), served from here, never a CDN
 ├── privacy.html         # Privacy Policy — EN/RU/ES/DE
 ├── support.html         # Support — EN/RU/ES/DE
 ├── legal.css            # Shared styling for the two pages above
 ├── legal.js             # Their language toggle (4 locales, shared storage key)
-└── assets/              # Each language's screens ({en,ru,es,de}/*.webp), status bar, logo, favicons
+└── assets/              # Each language's screens ({en,ru,es,de}/*.webp), status bar, logo, favicons, app-store/ badges
 ```
 - **Stack**: Pure HTML/CSS/JS, no build tools. Every script is served from
   here, three.js included; the only outside request is Google Fonts, which the
@@ -142,9 +142,17 @@ server/public/
   there is no dictionary in `i18n.js`. The choice is stored under
   `rehearsly-lang`, shared with `legal.js`; `?lang=de` overrides it for a link.
 - **Two audiences, one scene**: `/lead` and `/cast` say the same thing to the
-  two sides of a rehearsal. `variant.js` puts the page's name in the subject of
-  the access request, and "send it to your director" on `/cast` hands on
-  `/lead`. The pages read the same if it never runs.
+  two sides of a rehearsal. "Send it to your director" on `/cast` hands on
+  `/lead` through `variant.js` (Web Share, else the clipboard, else a letter),
+  with `ref=cast` in the address; the page reads the same if it never runs.
+- **The App Store badge** (since 1.0.0 went live, 22.11.2026) replaced every
+  TestFlight request on the three pages: Apple's own artwork, one file per
+  language in `assets/app-store/` (from toolbox.marketingtools.apple.com,
+  black; Spanish is the es-ES "Consíguelo"), switched with the language like
+  any `[data-l]` run. Apple's rules: never restyle the file, at least 40px
+  high (it is 48, the buttons' height), a quarter of its height clear around
+  it. It is served from here because `img-src` is `'self'`. The link is
+  https://apps.apple.com/app/id6830809401.
 - **The phones' screens**: `assets/{en,ru,es,de}/` is generated from the raw
   simulator shots in `screens/shots/` by `screens/build-assets.py`, which lifts
   the status bar, tab bar and a screen's own pinned header out of the images
