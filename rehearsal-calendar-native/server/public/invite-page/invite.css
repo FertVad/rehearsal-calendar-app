@@ -1,38 +1,107 @@
+/* Invitation page — the landing's dark theme and palette (public/styles.css,
+   which itself takes them from the app). Kept apart so the landing's files stay
+   its own; system fonts only, so the page asks nothing of another origin. */
+:root {
+  --bg:        #0d1117;
+  --bg-2:      #161b22;
+  --fg:        #e6edf3;
+  --fg-2:      #8b949e;
+  --accent:    #A855F7;
+  --accent-2:  #9333EA;
+  --line:      rgba(139, 148, 158, .2);
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 [hidden] { display: none !important; }
+* { box-sizing: border-box; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--sans);
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  padding: 24px 16px;
+  background: var(--bg) radial-gradient(ellipse 80% 50% at 50% 0%, rgba(168, 85, 247, .16), transparent 70%) no-repeat;
+  color: var(--fg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
-.container { text-align: center; padding: 2rem; max-width: 500px; }
-h1 { margin-bottom: 1rem; font-size: 2rem; }
-p { margin-bottom: 1rem; font-size: 1.1rem; opacity: 0.9; }
-.button {
-  display: inline-block;
-  margin: 0.5rem;
-  padding: 1rem 2rem;
-  background: white;
-  color: #667eea;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1.1rem;
+.card {
+  width: 100%;
+  max-width: 460px;
+  padding: 28px 24px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+}
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand__mark { display: block; width: 40px; height: 40px; border-radius: 10px; }
+.brand__name { font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+.lang { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; }
+.lang button {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-2);
+  font-family: var(--mono);
+  font-size: 11px;
   cursor: pointer;
 }
-.button:focus-visible { outline: 3px solid white; outline-offset: 4px; }
+.lang button:hover { color: var(--fg); }
+.lang button[aria-pressed="true"] { background: rgba(168, 85, 247, .18); color: var(--fg); }
+h1 { margin: 0 0 8px; font-size: 26px; font-weight: 600; letter-spacing: -.03em; line-height: 1.2; }
+p { margin: 0; }
+.lead { color: var(--fg-2); }
+.steps { margin: 24px 0 0; padding: 0; list-style: none; counter-reset: step; }
+.steps li { counter-increment: step; position: relative; padding-left: 40px; }
+.steps li + li { margin-top: 20px; }
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(168, 85, 247, .18);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 28px;
+  text-align: center;
+}
+.steps p { padding-top: 2px; margin-bottom: 10px; }
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .2s, border-color .2s;
+}
+.btn + .btn { margin-top: 10px; }
+.btn--primary { background: var(--accent); color: var(--bg); }
+.btn--primary:hover { background: var(--accent-2); }
+.btn--ghost { border: 1px solid rgba(139, 148, 158, .28); color: var(--fg); font-weight: 500; }
+.btn--ghost:hover { border-color: var(--accent); }
+.note { margin-top: 20px; color: var(--fg-2); font-size: 14px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+#status { text-align: center; margin-top: 24px; }
 .spinner {
-  margin: 2rem auto;
-  width: 50px;
-  height: 50px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  margin: 8px auto 16px;
+  width: 44px;
+  height: 44px;
+  border: 4px solid rgba(168, 85, 247, .25);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .btn { transition: none; } }
