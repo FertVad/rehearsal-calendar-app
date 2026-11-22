@@ -196,7 +196,10 @@ export function createApp({ databaseRuntime } = {}) {
 
   // Render the browser fallback without querying invitation/account data.
   app.get('/invite/:code', (req, res) => {
-    res.type('html').send(generateInvitePageHTML(req.params.code, req.query.expoHost));
+    // The Smart App Banner hands the app this page's own address (T-267).
+    res.type('html').send(generateInvitePageHTML(req.params.code, req.query.expoHost, {
+      protocol: req.protocol, host: req.get('host'),
+    }));
   });
 
   app.use(errorHandler);
