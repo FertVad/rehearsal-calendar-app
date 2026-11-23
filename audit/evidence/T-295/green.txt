@@ -1,0 +1,16 @@
+HEAD = 986b3e8
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminAnalytics.test.js __tests__/routes/privacyPage.test.js __tests__/utils/privacyProcessors.test.js --verbose | grep -E "T-295|Tests:|^(FAIL|PASS)"
+PASS __tests__/utils/privacyProcessors.test.js
+PASS __tests__/routes/adminAnalytics.test.js
+    ✓ calendar sync used: busy times imported from a calendar, or rehearsals exported to one (T-295) (26 ms)
+PASS __tests__/routes/privacyPage.test.js
+Tests:       152 passed, 152 total
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest --silent | grep -E "Tests:|Suites:|FAIL"
+FAIL __tests__/startup/runtimeStartup.test.js   (8 tests; the same 8 fail on 315301f: the sandbox refuses to read .env)
+Test Suites: 1 failed, 87 passed, 88 total
+Tests:       8 failed, 1390 passed, 1398 total
+
+$ npm run check:dead      -> clean
+$ npm run lint            -> 0 errors (648 warnings, as before)
