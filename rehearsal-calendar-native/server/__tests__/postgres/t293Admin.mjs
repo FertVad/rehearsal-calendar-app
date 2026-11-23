@@ -186,6 +186,18 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
       { purpose: 'verify', created: 2, sent: 2, failed: 0, used: 1, replaced: 1, locked: 0 }]);
     assert.doesNotMatch(JSON.stringify(month), /@/);
     contracts.push('inbox by type with median to read, email codes by purpose; no address in the summaries');
+
+    // An all-day stretch from a calendar that began before today: one that
+    // ended yesterday is behind, one still going covers Ivan.
+    const coverage = async () => (await get('/admin/api/analytics')).projects
+      .find((project) => project.name === 'Hamlet').coverage;
+    const stretch = (endsAt) => q(`INSERT INTO native_user_availability (user_id, starts_at, ends_at, is_all_day, source, created_at)
+      VALUES (2, $1, $2, TRUE, 'google_calendar', $3)`, [at(firstDate - 5 * D), endsAt, ago(1 * D)]);
+    await stretch(at(firstDate - 1));
+    assert.deepEqual(await coverage(), { people: 2, of: 3, rate: 66.7 });
+    await stretch(at(firstDate + 6 * D - 1));
+    assert.deepEqual(await coverage(), { people: 3, of: 3, rate: 100 });
+    contracts.push('coverage counts an all-day stretch begun before today and not yet over, not one that ended yesterday');
   } finally {
     delete process.env.ADMIN_SERVICE_EMAILS;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

@@ -146,8 +146,10 @@ function sources(cohort, everyone, projects, people, since) {
 
 /**
  * Who has anything in the next 14 days. All-day marks are dates kept at UTC
- * midnight and are read in UTC: from today's UTC date for 14 dates. Timed ones
- * are instants: anything that has not ended by now and starts within 14 days.
+ * midnight and are read in UTC: anything that has not ended before today's UTC
+ * date and starts before the 15th date — so a stretch from a calendar that
+ * began before today and is still going counts. Timed ones are instants:
+ * anything that has not ended by now and starts within 14 days.
  */
 async function coveredPeople(conn, now) {
   const today = new Date(now);
@@ -155,7 +157,7 @@ async function coveredPeople(conn, now) {
   const rows = await conn.all(
     `SELECT DISTINCT user_id FROM native_user_availability
      WHERE source IN (${MARK_SOURCES_SQL})
-       AND ((is_all_day = TRUE AND starts_at >= $1 AND starts_at < $2)
+       AND ((is_all_day = TRUE AND ends_at > $1 AND starts_at < $2)
          OR (is_all_day = FALSE AND ends_at > $3 AND starts_at < $4))`,
     [iso(firstDate), iso(firstDate + 14 * DAY_MS), iso(now), iso(now + 14 * DAY_MS)]
   );

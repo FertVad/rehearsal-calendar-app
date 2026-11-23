@@ -400,7 +400,7 @@
       table(['Week of registration', 'Source', 'Registered', 'Onboarding', 'In a project', 'Availability marks', 'Seen / own rehearsal'], rows),
       note('People registered in the period, by the Monday (UTC) of their registration week. Each step is the share of those registered who have it now: onboarding done; an active membership; availability marks of their own or from a calendar; at least one rehearsal marked as seen (participant) or created (organizer). "Invited" is the source in the users table.'),
       ...medians,
-      note('Onboarding has no time recorded, only whether it is done. The wait to a project is to the earliest membership still active.'));
+      note('Onboarding has no time recorded, only whether it is done. The wait to a project is to the earliest membership still active. The wait to first marks is to the earliest mark still stored: saving a day again replaces its marks, so someone who rewrote their first day counts as later.'));
   }
 
   function renderSources(sources) {

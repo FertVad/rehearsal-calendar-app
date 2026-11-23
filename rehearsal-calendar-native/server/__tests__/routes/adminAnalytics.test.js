@@ -326,6 +326,19 @@ describe('analytics', () => {
     expect(week.projects.map((project) => project.name)).toEqual(['Hamlet', 'Second']);
   });
 
+  test('coverage counts an all-day stretch that began before today and has not ended', async () => {
+    const mark = sqlite.prepare(`INSERT INTO native_user_availability (user_id, starts_at, ends_at, is_all_day, source, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)`);
+    const hamlet = async () => (await get('/admin/api/analytics').expect(200)).body.projects
+      .find((project) => project.name === 'Hamlet').coverage;
+    // Today is 25 November (UTC). A stretch that ended on the 24th is behind.
+    mark.run(2, '2026-11-20T00:00:00.000Z', '2026-11-24T23:59:59.999Z', 1, 'google_calendar', ago(1 * D));
+    expect(await hamlet()).toEqual({ people: 2, of: 3, rate: 66.7 });
+    // A tour from the 20th to the 30th: Ivan is away today and for five more days.
+    mark.run(2, '2026-11-20T00:00:00.000Z', '2026-11-30T23:59:59.999Z', 1, 'google_calendar', ago(1 * D));
+    expect(await hamlet()).toEqual({ people: 3, of: 3, rate: 100 });
+  });
+
   test('notifications, inbox and email codes, without service accounts', async () => {
     const { body } = await get('/admin/api/analytics?period=30').expect(200);
     expect(body.notifications.devices).toEqual({ people: 1, of: 5, rate: 20 });
