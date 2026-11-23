@@ -12,6 +12,7 @@ const budgetGroups = {
   '010': ['native_email_identities', 'native_email_codes'],
   '011': ['native_push_tickets'],
   '012': ['native_idempotency_keys'],
+  '016': ['native_usage_days', 'native_invite_counts'],
 };
 export const schemaTableNames = Object.freeze(descriptor.tables?.map(table => table.name) || []);
 const retiredTables = new Set(['native_subscription_plans', 'native_user_subscriptions',
@@ -292,7 +293,8 @@ export function createSchemaInspector(expectedDescriptor) {
     }));
     return { compatible: issues.length === 0, issues: unique(issues),
       evidenceSha256: digest({ profile, tables: normalized, incoming: unique(incoming) }),
-      frontier: { domain: 'v1', availabilityConflictKey: hasImportedKey, budgets: presentGroups },
+      // In group order: 013, a key, is found after the table groups (016 among them).
+      frontier: { domain: 'v1', availabilityConflictKey: hasImportedKey, budgets: presentGroups.sort() },
       repairCandidates: !hasImportedKey && duplicateGroups === 0 && (onlyMissingImportedKey || (preImported && !issues.length))
         ? [{ id: 'availability-conflict-key-v1', profileId: 'rehearsly-pg-domain13-pre-import-key-v1' }] : [],
     };

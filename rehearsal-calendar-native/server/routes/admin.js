@@ -5,6 +5,8 @@ import { adminLogin, requireAdmin } from '../middleware/adminAuth.js';
 import { generateAdminPageHTML } from './admin/dashboardPage.js';
 import { fullName } from './../utils/names.js';
 import { analytics, summary } from '../services/admin/analytics.js';
+import { lastAppDays } from '../services/admin/usage.js';
+import { purgeExpired } from '../services/usage/statsStore.js';
 import {
   FilterRefused, emptyFacts, loadFacts, loadPeople, matches, parseFilters, registeredSince, userRow,
 } from '../services/admin/people.js';
@@ -32,7 +34,7 @@ function filtersOf(req, res) {
 
 // The cards: as of now, real people only — service accounts never count (T-293).
 // Who has not signed in for 30 days is all the sign-in figure can say: a
-// session renews itself without one (H03).
+// session renews itself without one (H03). Use is in /api/analytics (T-294).
 router.get('/api/stats', requireAdmin, asyncHandler(async (req, res) => {
   try {
     const filters = filtersOf(req, res);
@@ -44,12 +46,15 @@ router.get('/api/stats', requireAdmin, asyncHandler(async (req, res) => {
   }
 }));
 
-// Everything under the cards: funnel, sources, projects, notifications (T-293).
-// No addresses here — they stay in the users table.
+// Everything under the cards: funnel, sources, projects, notifications (T-293),
+// use of the app (T-294). No addresses here — they stay in the users table.
+// Opening the admin is also when app days and invitation counts older than 13
+// months are deleted: there is no scheduler (services/usage/statsStore.js).
 router.get('/api/analytics', requireAdmin, asyncHandler(async (req, res) => {
   try {
     const filters = filtersOf(req, res);
     if (!filters) return;
+    await purgeExpired(db, filters.now);
     res.json(await analytics(db, filters));
   } catch (err) {
     console.error('[Admin] Analytics error:', err);
@@ -72,11 +77,17 @@ router.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
         && registeredSince(person, filters.since))
       .sort((a, b) => (b.createdAt ?? -Infinity) - (a.createdAt ?? -Infinity) || b.id - a.id);
     const page = listed.slice(offset, offset + limit);
-    const facts = await loadFacts(db, page.map((person) => person.id));
+    const ids = page.map((person) => person.id);
+    const [facts, lastDays] = await Promise.all([loadFacts(db, ids), lastAppDays(db, ids)]);
 
     res.json({
-      users: page.map((person) => userRow(person, facts.get(person.id) || emptyFacts(), directory)),
+      users: page.map((person) => ({
+        ...userRow(person, facts.get(person.id) || emptyFacts(), directory),
+        lastAppDay: lastDays?.get(person.id) ?? null,
+      })),
       total: listed.length,
+      // False until migration 016 is applied: no last day is "not recorded", not "never".
+      appDaysRecorded: lastDays !== null,
     });
   } catch (err) {
     console.error('[Admin] Users error:', err);

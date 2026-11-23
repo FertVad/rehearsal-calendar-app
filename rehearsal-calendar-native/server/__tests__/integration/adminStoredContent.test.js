@@ -267,8 +267,8 @@ async function checkStoredContentInBrowser({ userName, email, reportName, messag
 
     expect(await page.locator('#users-body tr').count()).toBe(1);
     expect(await page.locator('#bugs-body tr').count()).toBe(1);
-    expect(await page.locator('#users-body td').count()).toBe(8);
-    expect(await page.locator('#users-body td').nth(4).textContent()).toBe(`own project “${projectName}”`);
+    expect(await page.locator('#users-body td').count()).toBe(9);
+    expect(await page.locator('#users-body td').nth(5).textContent()).toBe(`own project “${projectName}”`);
     // The projects table: name and owner, literally.
     const projectRow = page.locator('#analytics-body tr', { has: page.locator('td', { hasText: projectName }) }).last();
     const projectCells = await projectRow.locator('td').allTextContents();

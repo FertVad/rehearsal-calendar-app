@@ -366,3 +366,23 @@ CREATE TABLE native_idempotency_keys (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, idempotency_key)
 );
+
+-- 016: the days someone used the app and the counts of each invitation (T-294).
+-- Same DDL as migrations/016-usage-statistics.sql, the forward step for existing schemas.
+CREATE TABLE native_usage_days (
+  user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+  day DATE NOT NULL,
+  app_build INTEGER CHECK (app_build >= 0),
+  PRIMARY KEY (user_id, day)
+);
+CREATE INDEX idx_usage_days_day ON native_usage_days (day);
+
+CREATE TABLE native_invite_counts (
+  project_id INTEGER NOT NULL REFERENCES native_projects(id) ON DELETE CASCADE,
+  day DATE NOT NULL,
+  page_opens INTEGER NOT NULL DEFAULT 0 CHECK (page_opens >= 0),
+  app_opens INTEGER NOT NULL DEFAULT 0 CHECK (app_opens >= 0),
+  joins INTEGER NOT NULL DEFAULT 0 CHECK (joins >= 0),
+  PRIMARY KEY (project_id, day)
+);
+CREATE INDEX idx_invite_counts_day ON native_invite_counts (day);

@@ -7,6 +7,7 @@ import { limitInviteIp, limitInviteAccount } from '../../middleware/inviteRateLi
 import { isInviteCode } from '../../utils/inviteCodes.js';
 import { notifyMemberJoined } from '../../services/notifications/pushNotificationService.js';
 import { fullName } from '../../utils/names.js';
+import { countInviteOpen, countJoin } from '../../services/usage/inviteCounts.js';
 
 const router = Router();
 const validateInviteCode = (req, res, next) => {
@@ -18,6 +19,10 @@ const validateInviteCode = (req, res, next) => {
 router.get('/:code', limitInviteIp, validateInviteCode, asyncHandler(async (req, res) => {
   try {
     const { code } = req.params;
+
+    // The app opened this invitation (T-294): counted for its project, an
+    // expired one too — the opening happened. An unknown code counts nothing.
+    await countInviteOpen(db, code, 'app');
 
     // Get project by invite code
     const project = await db.get(
@@ -73,23 +78,28 @@ const joinHandlers = [limitInviteIp, requireAuth, limitInviteAccount, validateIn
       [project.id, userId]
     );
 
-    if (existingMembership) {
-      if (existingMembership.status === 'active') {
-        return res.status(400).json({ error: 'You are already a member of this project', code: 'ALREADY_MEMBER' });
-      }
-      // Reactivate membership
-      await db.run(
-        "UPDATE native_project_members SET status = 'active', joined_at = NOW() WHERE id = $1",
-        [existingMembership.id]
-      );
-    } else {
-      // Create new membership
-      await db.run(
-        `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
-         VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
-        [project.id, userId]
-      );
+    if (existingMembership?.status === 'active') {
+      return res.status(400).json({ error: 'You are already a member of this project', code: 'ALREADY_MEMBER' });
     }
+    // The membership and the join count commit together (T-294): a join
+    // that fails is not counted.
+    await db.transaction(async (tx) => {
+      if (existingMembership) {
+        // Reactivate membership
+        await tx.run(
+          "UPDATE native_project_members SET status = 'active', joined_at = NOW() WHERE id = $1",
+          [existingMembership.id]
+        );
+      } else {
+        // Create new membership
+        await tx.run(
+          `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+           VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+          [project.id, userId]
+        );
+      }
+      await countJoin(tx, project.id);
+    });
 
     // Send push notification to the user who just joined
     try {

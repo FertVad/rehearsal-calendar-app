@@ -22,8 +22,9 @@ const freeze = value => {
 // (hence the frontier key "budgets"); 010 is email address proof (R3), 011
 // push tickets (R8), 012 idempotency keys of creates (R4). 013 adds no table:
 // it is the one-owner key of native_push_tokens (R4: G01), present when the
-// token is unique on its own.
-export const tableGroups = Object.freeze(['007', '008', '009', '010', '011', '012', '013']);
+// token is unique on its own. 014 and 015 are data steps outside the manifest
+// (migrations/README.md); 016 is the usage statistics (T-294).
+export const tableGroups = Object.freeze(['007', '008', '009', '010', '011', '012', '013', '016']);
 const idValid = value => typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,99}$/.test(value);
 const artifactValid = value => value && typeof value.file === 'string'
   && /^[a-zA-Z0-9_./-]+$/.test(value.file) && !path.posix.isAbsolute(value.file)

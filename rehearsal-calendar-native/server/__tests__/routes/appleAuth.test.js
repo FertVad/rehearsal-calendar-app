@@ -254,6 +254,9 @@ test('intended Apple credentials use the real linked account, persist timestamps
   before.native_users.find(user => user.id === linkedUserId).last_login_at = updatedUser.last_login_at;
   before.native_auth_providers.find(provider => provider.provider_user_id === SUBJECT).last_used_at = updatedProvider.last_used_at;
   before.native_email_identities = after.native_email_identities;
+  // The issued session was used once (expectUsableAppSession): its day (T-294).
+  expect(after.native_usage_days).toEqual([expect.objectContaining({ user_id: linkedUserId })]);
+  before.native_usage_days = after.native_usage_days;
   expect(after).toEqual(before); // Every unrelated fixture row remains unchanged.
 });
 

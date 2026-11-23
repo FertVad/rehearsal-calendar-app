@@ -137,10 +137,12 @@ server/public/
 ### Database
 - **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
 - **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
-- **Canonical schema**: twenty-three `native_*` application tables: thirteen domain
+- **Canonical schema**: twenty-five `native_*` application tables: thirteen domain
   tables, six shared-budget tables, two for email address proof (group 010),
-  one for push tickets awaiting their receipts (group 011) and one for the
-  idempotency keys of creates (group 012).
+  one for push tickets awaiting their receipts (group 011), one for the
+  idempotency keys of creates (group 012) and two for the usage statistics —
+  the days someone used the app and the invitation counts (group 016, T-294).
+  Group 013 is a key, not a table; 014 and 015 are data steps outside the manifest.
   Migration history is separate. Retired
   payment/activity/participant tables are not created by fresh provisioning.
   Actual production catalog and migration history have not been inspected here.
@@ -695,8 +697,11 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 
 **Features**:
 - User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
+- Use of the app (T-294, `services/admin/usage.js`): active today / 7 / 30 days, retention on days 1, 7, 30 by registration week, builds among the active, each invitation from page to join; the users table's "last day in app". Read from migration 016's tables; without them the sections say "no data: migration 016 not applied", never zeros
 - Users table with pagination
 - Bug reports table with inline status management
+
+**What 016 records** (`services/usage/`): the session check (`authenticateToken`) writes the day in the person's zone with the `X-App-Build` build — once a day per person per instance, never failing the request, nothing on 401/403/426. The invite page counts after it is sent (not HEAD, a malformed code or a link preview); `GET /api/native/invite/:code` counts an app opening; a join counts inside its transaction. No IP, nothing linking a count to a person. Rows older than 13 months are deleted when the admin opens and at most hourly on a write — there is no scheduler. Before 016 is applied all of it logs once and does nothing.
 
 **Auth**: `server/middleware/adminAuth.js` — bcrypt password login → JWT token (24h expiry)
 - Set `ADMIN_PASSWORD_HASH` (bcrypt hash, recommended) or `ADMIN_PASSWORD` (plaintext, legacy)
@@ -706,7 +711,8 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 **API Endpoints**:
 - `POST /admin/api/login` — authenticate with password
 - `GET /admin/api/stats` — aggregate stats: `users`, `signIns` (`notInLast30Days`, `rate`; a never-signed-in user counts from registration), `usage`
-- `GET /admin/api/users` — paginated user list
+- `GET /admin/api/analytics` — funnel, sources, projects, notifications and `usage` (`recorded: false` without 016); deletes statistics past 13 months first
+- `GET /admin/api/users` — paginated user list, with `lastAppDay` and `appDaysRecorded`
 - `GET /admin/api/bug-reports` — paginated bug reports (sorted: new → in_progress → fixed)
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
 

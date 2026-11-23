@@ -305,7 +305,11 @@
     && Array.isArray(user.signIn) && user.signIn.every(isText)
     && isObject(user.steps) && isObject(user.steps.roles)
     && hasFields(user.steps, ['projects', 'marks', 'seen', 'onRoster', 'rehearsals'])
-    && hasFields(user.steps, ['marksUntil'], isNullableText);
+    && hasFields(user.steps, ['marksUntil'], isNullableText)
+    && hasFields(user, ['lastAppDay'], isNullableText);
+
+  // Without migration 016 nothing records use: say so, not "never" (T-294).
+  const NOT_RECORDED = 'no data: migration 016 not applied';
 
   function sourceText(source) {
     if (source.kind === 'own') return 'own project' + (source.project === null ? '' : ' “' + source.project + '”');
@@ -332,7 +336,7 @@
     const service = document.getElementById('show-service').checked ? '&service=1' : '';
     return loadSection(sections.users, page, '/users?limit=' + PAGE_SIZE + '&offset=' + (page * PAGE_SIZE)
       + '&' + filterQuery() + service,
-    data => validList(data, 'users', validUser), data => {
+    data => validList(data, 'users', validUser) && typeof data.appDaysRecorded === 'boolean', data => {
       const rows = data.users.map(user => {
         const row = element('tr', user.service ? 'service-row' : '');
         row.append(
@@ -340,6 +344,7 @@
           element('td', '', user.email + (user.service ? ' [service]' : '')),
           element('td', '', fmtDate(user.createdAt)),
           element('td', '', fmtDate(user.lastLoginAt)),
+          element('td', '', data.appDaysRecorded ? (user.lastAppDay || '-') : NOT_RECORDED),
           element('td', '', sourceText(user.source)),
           element('td', '', user.signIn.length ? user.signIn.join(', ') : '-'),
           element('td', '', (user.locale || '-') + ' / ' + (user.timezone || '-')),
@@ -347,7 +352,7 @@
         );
         return row;
       });
-      document.getElementById('users-body').replaceChildren(...(rows.length ? rows : [emptyRow(8, 'No users')]));
+      document.getElementById('users-body').replaceChildren(...(rows.length ? rows : [emptyRow(9, 'No users')]));
       renderPagination('users-pagination', data.total, page, loadUsers);
     });
   }
@@ -444,7 +449,35 @@
       note('Bug reports: their own section below.'));
   }
 
+  function renderUsage(usage) {
+    if (!usage.recorded) return block('Use of the app', element('p', 'metric', 'No data: migration 016 is not applied.'),
+      note('Days in the app, app builds and invitation counts are recorded once migration 016 is applied; until then there is nothing to count, which is not the same as nobody using the app.'));
+    const a = usage.active;
+    const ratio = (cell) => cell.of ? cell.opened + ' of ' + cell.of + ' (' + percent(cell.rate) + ')' : '-';
+    return block('Use of the app',
+      element('p', 'metric', 'Active today: ' + share(a.day, a.of) + ' · last 7 days: ' + share(a.week, a.of)
+        + ' · last 30 days: ' + share(a.month, a.of)),
+      note('Real people the filters select (any registration date) who used the app — any request in their session — on a day in the window, by the date in their own zone. Recorded since ' + (usage.since || 'nothing yet') + '.'),
+      table(['Week of registration', 'Registered', 'Day 1', 'Day 7', 'Day 30'],
+        usage.retention.map(row => [row.week, row.registered, ratio(row.day1), ratio(row.day7), ratio(row.day30)])),
+      note('People registered in the period, by the Monday of the week of their registration date in their own zone: who opened the app on the 1st, 7th and 30th day after it (the registration day is day 0). Only people whose day is over and fell after recording began are counted ("of").'),
+      table(['App build', 'People'], usage.builds.map(row => [row.build === null ? 'unknown' : row.build, row.people]),
+        'Nobody active in the last 30 days'),
+      note('Among the people active in the last 30 days, the build of their latest day that named one: what still runs before MIN_IOS_BUILD is raised.'),
+      table(['Project', 'Owner', 'Invitation page opened', 'Opened in the app', 'Joined'],
+        usage.invitations.map(row => [row.project, row.owner, row.pageOpens, row.appOpens, row.joins])),
+      note('Since the start of the period (UTC days). Page: the invitation page opened in a browser, not counting link previews. In the app: the invitation opened in the app, through the link or the page. Joined: joins through the invitation. Counts only — nothing ties them to a person. Projects owned from rehearsly.me or demo.rehearsly.me are left out.'));
+  }
+
+  const validUsage = usage => isObject(usage) && typeof usage.recorded === 'boolean' && (!usage.recorded
+    || (isObject(usage.active) && hasFields(usage.active, ['day', 'week', 'month', 'of'])
+      && hasFields(usage, ['since'], isNullableText)
+      && Array.isArray(usage.retention) && usage.retention.every(row => isObject(row)
+        && ['day1', 'day7', 'day30'].every(key => isObject(row[key])))
+      && Array.isArray(usage.builds) && Array.isArray(usage.invitations)));
+
   const validAnalytics = data => isObject(data) && Array.isArray(data.languages) && data.languages.every(isText)
+    && validUsage(data.usage)
     && isObject(data.funnel) && Array.isArray(data.funnel.weeks) && isObject(data.funnel.total) && isObject(data.funnel.medians)
     && isObject(data.sources) && ['byDay', 'byWeek', 'projects', 'languages', 'timezones'].every(key => Array.isArray(data.sources[key]))
     && Array.isArray(data.projects) && data.projects.every(p => isObject(p) && isObject(p.seenBeforeStart) && isObject(p.coverage))
@@ -472,7 +505,7 @@
       document.getElementById('analytics-body').replaceChildren(
         note(data.people + ' real people registered in the period.'),
         renderFunnel(data.funnel), renderSources(data.sources),
-        renderProjects(data.projects), renderNotifications(data.notifications));
+        renderUsage(data.usage), renderProjects(data.projects), renderNotifications(data.notifications));
     });
   }
 

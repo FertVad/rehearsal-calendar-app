@@ -113,6 +113,7 @@ export function generateAdminPageHTML() {
             <th>Email</th>
             <th>Registered</th>
             <th>Last Login</th>
+            <th>Last day in app</th>
             <th title="The earliest project they are still an active member of: as owner, their own project; in any other role, an invitation (an invited member later made admin stays invited). Someone who left a project loses its membership row, so a person who left every project reads &quot;no project&quot;.">Source ⓘ</th>
             <th>Sign-in</th>
             <th>Language / zone</th>
@@ -122,7 +123,7 @@ export function generateAdminPageHTML() {
         <tbody id="users-body"></tbody>
       </table>
       </div>
-      <p class="note">Last Login is the last sign-in, not use: the app renews its session without one.</p>
+      <p class="note">Last Login is the last sign-in, not use: the app renews its session without one. Last day in app is use: the last date, in their own zone, the app made a request in their session (kept 13 months; recorded from migration 016 on).</p>
       <div class="pagination" id="users-pagination"></div>
     </section>
 

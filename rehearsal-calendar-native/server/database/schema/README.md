@@ -6,10 +6,12 @@ an empty, explicitly selected application schema and commits DDL, verified
 postconditions and the new history record in one transaction. The snapshot has
 no table drops, historical data conversion or implicit environment loading.
 
-The snapshot defines 23 application tables: 13 domain tables, the six tables
+The snapshot defines 25 application tables: 13 domain tables, the six tables
 of the approved 007/008/009 budget groups, the two of group 010 (email
 address proof, R3), the one of group 011 (push tickets awaiting their
-receipts, R8) and the one of group 012 (idempotency keys of creates, R4).
+receipts, R8), the one of group 012 (idempotency keys of creates, R4) and the
+two of group 016 (the days someone used the app and the invitation counts,
+T-294).
 It supplies the availability conflict
 key, notification indexes and other historical structural postconditions that
 the old mixed-dialect bootstrap omitted. Fresh `provider_metadata` is TEXT;
@@ -18,11 +20,11 @@ No existing column is silently cast to those types.
 
 ## Named profiles
 
-- `rehearsly-pg-current-v1`: all 23 tables, required constraints/indexes, and
+- `rehearsly-pg-current-v1`: all 25 tables, required constraints/indexes, and
   consistent budget gate rows. Fresh and adoption are both allowed.
 - `rehearsly-pg-domain13-v1`: the complete modern domain schema, with each budget
   group either wholly absent or fully compatible. After adoption, an explicit
-  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013 order.
+  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013, 016 order.
 - `rehearsly-pg-domain13-pre-import-key-v1`: the same modern predecessor, except
   that the availability imported-event unique key is absent and the aggregate
   duplicate count is zero. Adoption requires this explicit profile. Apply first
@@ -117,6 +119,16 @@ than tables: the inspector counts it present when the token is unique on its
 own, and otherwise checks `native_push_tokens` against its predecessor shape.
 `migrations/013-push-token-owner.sql` is its forward step (dropping all but the
 most recently active holder of each token), installed by `--apply` after 012.
+
+On 2026-11-24 T-294 added group 016 the same way: `native_usage_days` and
+`native_invite_counts` in the snapshot and the descriptor, `016` in the
+inspector's groups (the frontier lists groups in their order, 013 among them),
+`migrations/016-usage-statistics.sql` as the forward step after 013, and the
+hashes re-pinned. This holds only while no database anyone keeps has recorded
+a v1 history with the earlier hashes: the repository has no record of a
+production adoption (OPS-R2-ADOPT is still open). Should one exist, the
+re-pinned v1 would refuse it (`HISTORY_INVALID`) before touching anything, and
+016 has to become a v2 profile instead — the owner's `--dry` says which.
 
 `r2Schema.mjs` checks actual fresh and adopted schemas through the real migration
 runner and application HTTP/adapter code, plus independent catalog drift and

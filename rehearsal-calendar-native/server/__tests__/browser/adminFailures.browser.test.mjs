@@ -91,7 +91,8 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
       service: false, source: { kind: 'none', project: null, owner: null }, signIn: ['email'],
       locale: 'en', timezone: 'UTC', steps: { onboarding: false, projects: 0, roles: { owner: 0, admin: 0, member: 0 },
         marks: 0, marksUntil: null, calendar: false, device: false, seen: 0, onRoster: 0, rehearsals: 0 },
-    })).slice(offset, offset + 30) };
+      lastAppDay: null,
+    })).slice(offset, offset + 30), appDaysRecorded: true };
   }));
   const empty = { registered: 0, onboarding: 0, project: 0, marks: 0, engaged: 0 };
   const noWait = { toProjectHours: null, toProjectOf: 0, toMarksHours: null, toMarksOf: 0 };
@@ -100,6 +101,7 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
     funnel: { weeks: [], total: { invite: empty, other: empty }, medians: { invite: noWait, other: noWait } },
     sources: { byDay: [], byWeek: [], projects: [], languages: [], timezones: [] },
     projects: [], notifications: { devices: { people: 0, of: 0, rate: null }, inbox: [], emailCodes: [] },
+    usage: { recorded: false },
   })));
   app.get('/admin/api/bug-reports', reply('bugs', req => {
     const offset = Number(req.query.offset);

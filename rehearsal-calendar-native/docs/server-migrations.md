@@ -59,8 +59,14 @@ validated constraints, usable conflict targets and indexes. An index name alone
 does not prove uniqueness. Extra restrictive constraints, triggers, RLS, partial
 budget groups and incompatible legacy columns fail inspection.
 
-The domain profile permits wholly absent approved table groups 007/008/009/010/011;
-`--apply` installs the missing groups in explicit order after adoption. Existing
+The domain profile permits wholly absent approved groups
+007/008/009/010/011/012/013/016; `--apply` installs the missing groups in
+explicit order after adoption. 013 is a key, not a table (the one owner of a
+push token); 014 and 015 are data steps outside the manifest
+(`server/migrations/README.md`). 016 is the usage statistics (T-294):
+`native_usage_days` and `native_invite_counts`. The server runs without it —
+it records nothing and the admin says so — so 016 may be applied before or
+after the deploy that writes to it; applying it first means no day is missed. Existing
 groups must have valid structures and consistent counters. The explicit
 pre-import-key profile permits a missing availability conflict key only when
 the duplicate preflight is clean; its first forward step creates that key.
@@ -109,7 +115,7 @@ without credentials, raw SQL errors or business row values.
 `server/migrations/` is the record of what older databases ran by hand. The
 runner reads those filenames only to verify an existing `native_migrations`
 ledger; the only files it executes are the reviewed forward steps named in
-`database/schema/manifest.mjs` (007–011 and the availability key). Do not
+`database/schema/manifest.mjs` (007–013, 016 and the availability key). Do not
 run the others with `psql` either. Two of them are known to corrupt data:
 
 - **FM01.** `migrate-*-to-timestamptz.sql` cast `date + time` with a bare

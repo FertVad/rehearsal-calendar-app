@@ -17,17 +17,17 @@ export const manifest = freeze({
       "id": "rehearsly-pg-current-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "3ed03aaac7a6516936b2a8617802a8c286fb5aa711fb1cb9412bb13608af6f83"
+        "sha256": "9256300a82181add2381799f1ab396a208cd853bee435b214fc06cf3256e0636"
       },
       "fresh": true,
       "adopt": true,
       "bootstrap": {
         "file": "database/init-native-schema.sql",
-        "sha256": "48284687247da9559e196a0175f427fd39c997fab04f2356de2f7ab204217cf9"
+        "sha256": "bf637fa815d81e5f7d72f6d08640d28b5642772eaa59a4b9df196a56b88b2f31"
       },
       "inspector": {
         "file": "database/schema/inspect.mjs",
-        "sha256": "a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317"
+        "sha256": "09a4c130026f19d8491ce8fbb291c356a0e88fb39d1483d17bcbaa917b33bfe9"
       },
       "completionProfile": "rehearsly-pg-current-v1"
     },
@@ -35,13 +35,13 @@ export const manifest = freeze({
       "id": "rehearsly-pg-domain13-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "3ed03aaac7a6516936b2a8617802a8c286fb5aa711fb1cb9412bb13608af6f83"
+        "sha256": "9256300a82181add2381799f1ab396a208cd853bee435b214fc06cf3256e0636"
       },
       "fresh": false,
       "adopt": true,
       "inspector": {
         "file": "database/schema/inspect.mjs",
-        "sha256": "a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317"
+        "sha256": "09a4c130026f19d8491ce8fbb291c356a0e88fb39d1483d17bcbaa917b33bfe9"
       },
       "completionProfile": "rehearsly-pg-current-v1"
     },
@@ -49,13 +49,13 @@ export const manifest = freeze({
       "id": "rehearsly-pg-domain13-pre-import-key-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "3ed03aaac7a6516936b2a8617802a8c286fb5aa711fb1cb9412bb13608af6f83"
+        "sha256": "9256300a82181add2381799f1ab396a208cd853bee435b214fc06cf3256e0636"
       },
       "fresh": false,
       "adopt": true,
       "inspector": {
         "file": "database/schema/inspect.mjs",
-        "sha256": "a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317"
+        "sha256": "09a4c130026f19d8491ce8fbb291c356a0e88fb39d1483d17bcbaa917b33bfe9"
       },
       "completionProfile": "rehearsly-pg-current-v1"
     }
@@ -188,6 +188,22 @@ export const manifest = freeze({
         "rehearsly-pg-domain13-v1",
         "rehearsly-pg-domain13-pre-import-key-v1"
       ]
+    },
+    {
+      "id": "016-usage-statistics",
+      "sql": {
+        "file": "migrations/016-usage-statistics.sql",
+        "sha256": "50c70c74f69f5046b33dd7e30f7309374320857f142974c8dbbebb6a283a69e0"
+      },
+      "when": {
+        "missingBudget": "016"
+      },
+      "verifyProfile": "rehearsly-pg-domain13-v1",
+      "roots": [
+        "rehearsly-pg-current-v1",
+        "rehearsly-pg-domain13-v1",
+        "rehearsly-pg-domain13-pre-import-key-v1"
+      ]
     }
   ],
   "legacyFilenames": [
@@ -227,6 +243,7 @@ export const manifest = freeze({
     "native_email_identities",
     "native_idempotency_keys",
     "native_invite_account_rate_limits",
+    "native_invite_counts",
     "native_invite_ip_rate_limit_gate",
     "native_invite_ip_rate_limits",
     "native_member_availability_rate_limits",
@@ -240,6 +257,7 @@ export const manifest = freeze({
     "native_push_tokens",
     "native_rehearsal_responses",
     "native_rehearsals",
+    "native_usage_days",
     "native_user_availability",
     "native_users"
   ]

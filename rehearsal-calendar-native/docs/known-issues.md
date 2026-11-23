@@ -276,6 +276,16 @@ client sends a short invite code in capitals, as issued (T-025).
 
 ## Known and left alone on purpose — not defects
 
+- The usage statistics (T-294) are approximate in known ways. A day of use is
+  any request the app makes in a session: opening the app counts, whatever
+  the person then does, and a session refresh alone does not. A link preview
+  is recognised by its user agent; one that calls itself an ordinary browser
+  counts as a person opening the page. The page is counted after it is sent:
+  on Vercel through the platform's `waitUntil` hook, and where that is absent a
+  count may be lost if the function is frozen first — never the page. Each
+  server instance writes a person's day once; several instances write it once
+  each, onto the same row.
+
 - Push delivery is not shown to anyone: Expo's ticket says the message was
   accepted, and `sent` means accepted. The receipts are read by the reminder
   cron (`checkPushReceipts`) only to drop tokens of devices no longer

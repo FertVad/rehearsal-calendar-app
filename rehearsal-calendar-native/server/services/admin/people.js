@@ -24,6 +24,7 @@
  */
 import { answersByPerson } from '../rehearsals/roster.js';
 import { AVAILABILITY_SOURCES } from '../../constants/timezone.js';
+import { dateIn } from '../../utils/dateIn.js';
 
 const SERVICE_DOMAINS = ['rehearsly.me', 'demo.rehearsly.me'];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -143,16 +144,6 @@ export const registeredSince = (person, since) => since === null || (person.crea
 
 /** The real people these filters select: never a service account. */
 export const counted = (people, filters) => [...people.values()].filter((person) => !person.service && matches(person, filters));
-
-/** "YYYY-MM-DD" of an instant in a zone; UTC when the zone is unknown. */
-function dateIn(ms, timeZone) {
-  try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' })
-      .format(new Date(ms));
-  } catch {
-    return new Date(ms).toISOString().slice(0, 10);
-  }
-}
 
 /**
  * Per person: sign-in methods, availability marks, calendar sync used (import

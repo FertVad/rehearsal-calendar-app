@@ -1,7 +1,8 @@
 /**
  * The admin's figures (T-293): the cards, the newcomer funnel, where people come
- * from, how projects live, notifications and email codes. Read-only, computed
- * when the admin page asks and at no other time.
+ * from, how projects live, notifications and email codes, and use of the app
+ * (T-294, usage.js). Read-only, computed when the admin page asks and at no
+ * other time.
  *
  * Who is counted is people.js's: never a service account, then the source and
  * language filters. "The last N days" run back from now.
@@ -10,6 +11,7 @@ import { seenBeforeStart } from '../rehearsals/roster.js';
 import {
   MARK_SOURCES_SQL, count, counted, emptyFacts, loadFacts, loadPeople, registeredSince, shortName, toMs,
 } from './people.js';
+import { usage } from './usage.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const iso = (ms) => new Date(ms).toISOString();
@@ -56,7 +58,8 @@ export async function summary(conn, filters) {
   const real = counted(people, filters);
   const since = (days) => real.filter((person) => registeredSince(person, now - days * DAY_MS)).length;
   // Who has not signed in for 30 days — and that is all it can say: the app
-  // renews its session without a sign-in, and nothing records use (H03).
+  // renews its session without a sign-in (H03). Use is the days in the app
+  // (usage.js, from migration 016).
   const notSignedIn = real.filter((person) => (person.lastLoginAt ?? person.createdAt ?? 0) < now - 30 * DAY_MS).length;
   const liveProjects = [...projects.values()].filter((project) => !project.serviceOwned);
   return {
@@ -265,9 +268,10 @@ export async function analytics(conn, filters) {
   const everyone = counted(directory.people, filters);
   const cohort = everyone.filter((person) => registeredSince(person, filters.since));
   const facts = await loadFacts(conn, null);
-  const [health, delivery] = await Promise.all([
+  const [health, delivery, use] = await Promise.all([
     projectHealth(conn, filters, directory, everyone),
     notifications(conn, filters, cohort, everyone, facts),
+    usage(conn, filters, directory, everyone, cohort),
   ]);
   const languages = [...new Set([...directory.people.values()].filter((person) => !person.service)
     .map((person) => person.locale).filter(Boolean))].sort();
@@ -281,5 +285,6 @@ export async function analytics(conn, filters) {
     sources: sources(cohort, everyone, directory.projects, directory.people, filters.since),
     projects: health,
     notifications: delivery,
+    usage: use,
   };
 }
