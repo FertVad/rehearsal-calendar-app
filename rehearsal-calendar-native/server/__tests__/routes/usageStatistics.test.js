@@ -252,14 +252,27 @@ describe('the invitation, counted per project and day', () => {
   test('a join that does not happen is not counted: already a member, or the transaction failing', async () => {
     await app(`/api/native/invite/${CODE}/join`, { user: data.memberId, method: 'post' }).expect(400);
     db.run('DELETE FROM native_project_members WHERE user_id = ?', [data.memberId]);
+    // The transaction that writes the membership fails at its end — after
+    // everything in it ran — as a COMMIT the database refuses would.
     const original = db.transaction;
-    const transaction = jest.spyOn(db, 'transaction').mockImplementationOnce((work) => original.call(db, async (tx) => {
-      await work(tx);
-      throw new Error('commit refused');
+    let refused = 0;
+    const transaction = jest.spyOn(db, 'transaction').mockImplementation((work) => original.call(db, async (tx) => {
+      let joins = false;
+      const watched = { ...tx, run: (sql, params) => {
+        if (/native_project_members/.test(sql)) joins = true;
+        return tx.run(sql, params);
+      } };
+      const result = await work(watched);
+      if (joins) {
+        refused += 1;
+        throw new Error('commit refused');
+      }
+      return result;
     }));
     const error = jest.spyOn(console, 'error').mockImplementation(() => {});
     try {
       await app(`/api/native/invite/${CODE}/join`, { user: data.memberId, method: 'post' }).expect(500);
+      expect(refused).toBe(1);
     } finally {
       transaction.mockRestore();
       error.mockRestore();
