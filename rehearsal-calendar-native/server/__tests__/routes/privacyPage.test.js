@@ -127,39 +127,79 @@ const COPY = {
 // T-295: the whole list of what they read (rehearsals created, the introduction,
 // calendar sync used either way), overall and per account, and what they show
 // (notifications and email codes reaching people).
+// T-294: two records are collected only for them — the days in the app with its
+// version, and the invitation counts — so the section names them instead of
+// "nothing extra", and the lede no longer says "only what the app needs".
 const STATISTICS = {
   en: { heading: 'Internal statistics',
     purpose: /also use some of the data listed above for statistics, both overall and for each account, on our own admin page/,
-    shows: /how people come to Rehearsly[^.]*first steps[^.]*projects are doing[^.]*notifications and email codes reach people/,
-    nothingExtra: /Nothing extra is collected/,
+    shows: /how people come to Rehearsly[^.]*first steps[^.]*projects are doing[^.]*notifications and email codes reach people[^.]*how often people use the app and which versions of it are still in use/,
+    onlyForThem: /Two of these records are collected only for them: the days you use the app with its version, and the invitation counts \(no IP addresses, not linked to anyone\)/,
     onlyOperator: /Only the person who runs Rehearsly sees these statistics/, noThirdParty: /not shared with third parties[^.]*no third-party analytics SDK/,
     reads: [/finished or skipped the app’s introduction/, /including which ones you created and which you have marked as seen/,
-      /whether you have used calendar sync/, /the notifications in your in-app inbox/],
-    signInWhy: /still in use, and for the internal statistics/, updated: 'Last updated: November 23, 2026', lede: /keeps only what it needs to run the app/ },
+      /whether you have used calendar sync/, /the notifications in your in-app inbox/, /the days you have used the app with its version/,
+      /for each project, the counts of its invitation being opened and joined through/],
+    signInWhy: /still in use, and for the internal statistics/, updated: 'Last updated: November 24, 2026',
+    lede: /keeps what it needs to run the app and schedule rehearsals, plus a few records for its own statistics: the days you use the app and counts of how often invitations are opened/,
+    wasOnly: /keeps only what it needs|Nothing extra is collected/ },
   ru: { heading: 'Внутренняя статистика',
     purpose: /Часть перечисленных выше данных мы используем и для статистики в нашей собственной панели администратора/,
-    shows: /как люди приходят в Rehearsly[^.]*первые шаги[^.]*как живут проекты[^.]*доходят ли до людей уведомления и письма с кодами/,
-    nothingExtra: /Дополнительных данных для неё мы не собираем/,
+    shows: /как люди приходят в Rehearsly[^.]*первые шаги[^.]*как живут проекты[^.]*доходят ли до людей уведомления и письма с кодами[^.]*как часто пользуются приложением и какие его версии ещё в ходу/,
+    onlyForThem: /Только для неё мы собираем две вещи: дни, когда вы пользуетесь приложением, с его версией и счётчики приглашений \(без IP-адресов и без связи с человеком\)/,
     onlyOperator: /Эту статистику видит только тот, кто отвечает за Rehearsly/, noThirdParty: /Третьим лицам она не передаётся[^.]*сторонние SDK аналитики/,
     reads: [/Статистика строится как в целом, так и по каждому аккаунту/, /прошли или пропустили знакомство с приложением/,
-      /какие из них создали вы и какие отметили как просмотренные/, /пользовались ли вы синхронизацией календаря/],
-    signInWhy: /ещё пользуются, и составлять внутреннюю статистику \(о ней ниже\)/, updated: 'Обновлено: 23 ноября 2026 г.', lede: /хранит только то, что нужно для работы приложения/ },
+      /какие из них создали вы и какие отметили как просмотренные/, /пользовались ли вы синхронизацией календаря/,
+      /дни, когда вы пользовались приложением, и его версию/, /по каждому проекту — счётчики открытий его приглашения и присоединений по нему/],
+    signInWhy: /ещё пользуются, и составлять внутреннюю статистику \(о ней ниже\)/, updated: 'Обновлено: 24 ноября 2026 г.',
+    lede: /хранит то, что нужно для работы приложения и планирования репетиций, и несколько записей для собственной статистики: дни, когда вы пользуетесь приложением, и счётчики открытий приглашений/,
+    wasOnly: /хранит только то|Дополнительных данных для неё мы не собираем/ },
   es: { heading: 'Estadísticas internas',
     purpose: /también se usan para elaborar estadísticas en nuestro propio panel de administración, tanto en conjunto como para cada cuenta/,
-    shows: /cómo llegan las personas a Rehearsly[^.]*primeros pasos[^.]*cómo marchan los proyectos/,
-    nothingExtra: /no se recopila ningún dato adicional/,
+    shows: /cómo llegan las personas a Rehearsly[^.]*primeros pasos[^.]*cómo marchan los proyectos[^.]*con qué frecuencia se usa la aplicación y qué versiones siguen en uso/,
+    onlyForThem: /Solo para ellas se recopilan dos cosas: los días en que usas la aplicación, con su versión, y los recuentos de las invitaciones \(sin direcciones IP y sin vínculo con ninguna persona\)/,
     onlyOperator: /Solo la persona que gestiona Rehearsly ve estas estadísticas/, noThirdParty: /No se comparten con terceros[^.]*ningún SDK de análisis de terceros/,
     reads: [/si has completado u omitido la introducción de la aplicación/, /cuáles has creado tú y cuáles has marcado como vistos/,
-      /si has usado la sincronización de calendario/, /llegan a sus destinatarios/],
-    signInWhy: /siguen en uso y elaborar las estadísticas internas/, updated: 'Última actualización: 23 de noviembre de 2026', lede: /guarda lo que necesita para funcionar/ },
+      /si has usado la sincronización de calendario/, /llegan a sus destinatarios/, /los días en que has usado la aplicación y su versión/,
+      /de cada proyecto, cuántas veces se ha abierto su invitación y cuántas personas se han unido con ella/],
+    signInWhy: /siguen en uso y elaborar las estadísticas internas/, updated: 'Última actualización: 24 de noviembre de 2026',
+    lede: /guarda lo que necesita para funcionar y para planificar ensayos, además de unos pocos registros para sus propias estadísticas: los días en que usas la aplicación y cuántas veces se abren las invitaciones/,
+    wasOnly: /y nada más|no se recopila ningún dato adicional/ },
   de: { heading: 'Interne Statistik',
     purpose: /nutzen wir auch für Statistiken in unserem eigenen Admin-Bereich, sowohl insgesamt als auch für jedes einzelne Konto/,
-    shows: /wie Menschen zu Rehearsly kommen[^.]*ersten Schritte[^.]*wie es den Projekten geht[^.]*ob Mitteilungen und E-Mail-Codes ankommen/,
-    nothingExtra: /keine zusätzlichen Daten erhoben/,
+    shows: /wie Menschen zu Rehearsly kommen[^.]*ersten Schritte[^.]*wie es den Projekten geht[^.]*ob Mitteilungen und E-Mail-Codes ankommen[^.]*wie oft die App genutzt wird und welche Versionen noch im Einsatz sind/,
+    onlyForThem: /Nur dafür erheben wir zwei Dinge: an welchen Tagen du die App nutzt, samt App-Version, und die Zählungen der Einladungen \(ohne IP-Adressen und ohne Verbindung zu einer Person\)/,
     onlyOperator: /Diese Statistiken sieht nur die Person, die Rehearsly betreibt/, noThirdParty: /nicht an Dritte weitergegeben[^.]*kein Analyse-SDK eines Drittanbieters/,
     reads: [/ob du die Einführung in die App abgeschlossen oder übersprungen hast/, /welche davon du angelegt und welche du als gesehen markiert hast/,
-      /ob du die Kalendersynchronisation genutzt hast/],
-    signInWhy: /noch genutzt werden, und die unten beschriebene interne Statistik erstellen/, updated: 'Zuletzt aktualisiert: 23. November 2026', lede: /speichert, was für den Betrieb der App/ },
+      /ob du die Kalendersynchronisation genutzt hast/, /an welchen Tagen du die App genutzt hast und mit welcher Version/,
+      /für jedes Projekt, wie oft seine Einladung geöffnet und darüber beigetreten wurde/],
+    signInWhy: /noch genutzt werden, und die unten beschriebene interne Statistik erstellen/, updated: 'Zuletzt aktualisiert: 24. November 2026',
+    lede: /speichert, was für den Betrieb der App und die Probenplanung nötig ist, und dazu einige wenige Einträge für die eigene Statistik: an welchen Tagen du die App nutzt und wie oft Einladungen geöffnet werden/,
+    wasOnly: /und nicht mehr|keine zusätzlichen Daten erhoben/ },
+};
+
+// T-294: the two records in "What we collect" — what, why, when, how long; the
+// days go with the account, the counts carry no IP and no person.
+const USAGE_ROWS = {
+  en: [['The days you use the app, with the app version on each of them. Kept for 13 months and deleted with your account',
+    'To see how Rehearsly is used and which versions of the app are still in use',
+    'When the app, signed in to your account, contacts our server'],
+  ['Daily counts of how often each project’s invitation is opened — in a browser and in the app — and how many people join through it. No IP addresses, and nothing that links a count to a person. Kept for 13 months',
+    'To see how invitations bring people into projects', 'When an invitation is opened or someone joins through it']],
+  ru: [['Дни, когда вы пользовались приложением, и версия приложения в каждый из них. Хранятся 13 месяцев и удаляются вместе с аккаунтом',
+    'Видеть, как пользуются Rehearsly и какие версии приложения ещё в ходу',
+    'Когда приложение, в котором вы вошли в аккаунт, обращается к нашему серверу'],
+  ['Счётчики по дням: сколько раз открыли приглашение в каждый проект — в браузере и в приложении — и сколько человек по нему присоединилось. Без IP-адресов и без связи с конкретным человеком. Хранятся 13 месяцев',
+    'Видеть, как приглашения приводят людей в проекты', 'Когда приглашение открывают или по нему присоединяются']],
+  es: [['Los días en que usas la aplicación, con la versión de la aplicación de cada uno. Se conservan 13 meses y se borran junto con tu cuenta',
+    'Ver cómo se usa Rehearsly y qué versiones de la aplicación siguen en uso',
+    'Cuando la aplicación, con tu sesión iniciada, se comunica con nuestro servidor'],
+  ['Recuentos diarios de cuántas veces se abre la invitación de cada proyecto —en el navegador y en la aplicación— y de cuántas personas se unen con ella. Sin direcciones IP y sin nada que vincule un recuento con una persona. Se conservan 13 meses',
+    'Ver cómo las invitaciones atraen a personas a los proyectos', 'Cuando se abre una invitación o alguien se une con ella']],
+  de: [['Die Tage, an denen du die App nutzt, jeweils mit der App-Version. Gespeichert 13 Monate lang und mit deinem Konto gelöscht',
+    'Sehen, wie Rehearsly genutzt wird und welche App-Versionen noch im Einsatz sind',
+    'Wenn die App, in der du angemeldet bist, unseren Server kontaktiert'],
+  ['Tägliche Zählungen, wie oft die Einladung eines Projekts geöffnet wurde – im Browser und in der App – und wie viele darüber beigetreten sind. Ohne IP-Adressen und ohne etwas, das eine Zählung mit einer Person verbindet. Gespeichert 13 Monate lang',
+    'Sehen, wie Einladungen Menschen in Projekte bringen', 'Wenn eine Einladung geöffnet wird oder jemand darüber beitritt']],
 };
 
 // T-295: the rows for what the app keeps about calendar export and the
@@ -230,11 +270,20 @@ describe.each(LANGS)('privacy policy, %s', lang => {
     const statistics = STATISTICS[lang];
     const page = text('privacy', lang);
     expect(markup('privacy', lang)).toContain(`<h3>${statistics.heading}</h3>`);
-    for (const key of ['purpose', 'shows', 'nothingExtra', 'onlyOperator', 'noThirdParty', 'signInWhy', 'lede']) {
+    for (const key of ['purpose', 'shows', 'onlyForThem', 'onlyOperator', 'noThirdParty', 'signInWhy', 'lede']) {
       expect(page).toMatch(statistics[key]);
     }
     for (const claim of statistics.reads) expect(page).toMatch(claim);
     expect(page).toContain(statistics.updated);
+    // No longer true once the app's days are recorded for statistics (T-294).
+    expect(page).not.toMatch(statistics.wasOnly);
+  });
+
+  test('lists the days in the app and the invitation counts in what we collect, with how long they are kept', () => {
+    const html = markup('privacy', lang).replace(/\s+/g, ' ');
+    for (const row of USAGE_ROWS[lang]) {
+      expect(html).toContain(`<tr> ${row.map(cell => `<td>${cell}</td>`).join(' ')} </tr>`);
+    }
   });
 
   test('has a row for the calendar export records and one for the introduction, each beside its neighbour', () => {
