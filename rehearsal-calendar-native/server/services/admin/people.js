@@ -32,6 +32,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // slots the server books for rehearsals.
 const MARK_SOURCES = [AVAILABILITY_SOURCES.MANUAL, AVAILABILITY_SOURCES.GOOGLE, AVAILABILITY_SOURCES.APPLE];
 export const MARK_SOURCES_SQL = MARK_SOURCES.map((source) => `'${source}'`).join(', ');
+// "Has used calendar sync" (T-295) is either direction: busy times imported
+// from a calendar, or rehearsals exported to the phone's calendar — whose
+// records stay after sync is turned off, hence "has used", not "uses".
+const CALENDAR_SOURCES_SQL = [AVAILABILITY_SOURCES.GOOGLE, AVAILABILITY_SOURCES.APPLE]
+  .map((source) => `'${source}'`).join(', ');
 
 const PERIODS = { 7: 7, 30: 30, 90: 90, all: null };
 const SOURCES = ['invite', 'own', 'none'];
@@ -150,7 +155,8 @@ function dateIn(ms, timeZone) {
 }
 
 /**
- * Per person: sign-in methods, availability marks, calendar, device, roster
+ * Per person: sign-in methods, availability marks, calendar sync used (import
+ * or export), device, roster
  * answers and rehearsals they created. Six grouped queries; `ids` null — everyone.
  */
 export async function loadFacts(conn, ids = null) {
@@ -162,7 +168,8 @@ export async function loadFacts(conn, ids = null) {
   const [providers, marks, calendars, devices, answers, created] = await Promise.all([
     conn.all(`SELECT user_id, provider_type FROM native_auth_providers ${where('user_id')}
               GROUP BY user_id, provider_type`, params),
-    conn.all(`SELECT user_id, is_all_day, COUNT(*) AS marks, MIN(created_at) AS first_at, MAX(ends_at) AS last_end
+    conn.all(`SELECT user_id, is_all_day, COUNT(*) AS marks, MIN(created_at) AS first_at, MAX(ends_at) AS last_end,
+                SUM(CASE WHEN source IN (${CALENDAR_SOURCES_SQL}) THEN 1 ELSE 0 END) AS imported
               FROM native_user_availability WHERE source IN (${MARK_SOURCES_SQL}) ${and('user_id')}
               GROUP BY user_id, is_all_day`, params),
     conn.all(`SELECT user_id, COUNT(*) AS calendars FROM native_calendar_connections ${where('user_id')}
@@ -189,10 +196,13 @@ export async function loadFacts(conn, ids = null) {
     fact.marks += count(row.marks);
     const first = toMs(row.first_at);
     if (first !== null && (fact.firstMarkAt === null || first < fact.firstMarkAt)) fact.firstMarkAt = first;
+    if (count(row.imported) > 0) fact.calendar = true;
     if (truthy(row.is_all_day)) fact.allDayLastEnd = toMs(row.last_end);
     else fact.timedLastEnd = toMs(row.last_end);
   }
-  for (const row of calendars) of(row.user_id).calendar = count(row.calendars) > 0;
+  for (const row of calendars) {
+    if (count(row.calendars) > 0) of(row.user_id).calendar = true;
+  }
   for (const row of devices) of(row.user_id).device = count(row.devices) > 0;
   for (const row of answers) {
     of(row.user_id).onRoster = count(row.on_roster);

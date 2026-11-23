@@ -101,7 +101,7 @@ export function generateAdminPageHTML() {
     <section class="section" id="users-section" aria-labelledby="users-title" aria-busy="false">
       <h2 class="section-title" id="users-title">Recent Users</h2>
       <label class="toggle"><input type="checkbox" id="show-service"> Show service accounts</label>
-      <p class="note">People registered in the period, newest first. Steps: onboarding done; projects and roles; availability marks (own or from a calendar) and the last date they reach; a calendar connected; a device for notifications; rehearsals marked as seen, of those they are on; rehearsals they created.</p>
+      <p class="note">People registered in the period, newest first. Steps: onboarding done; projects and roles; availability marks (own or from a calendar) and the last date they reach; calendar sync used, either way (busy times imported from a calendar, or rehearsals exported to the phone's calendar; the export records stay after sync is turned off); a device for notifications; rehearsals marked as seen, of those they are on; rehearsals they created.</p>
       <div id="users-loading" class="loading hidden" role="status">Loading...</div>
       <div id="users-error" class="section-error hidden" role="alert"></div>
       <div id="users-stale" class="stale-note hidden" role="status"></div>

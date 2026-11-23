@@ -254,6 +254,29 @@ describe('the users table', () => {
     expect(users['olga@example.test'].createdAt).toBe(ago(20 * D));
   });
 
+  test('calendar sync used: busy times imported from a calendar, or rehearsals exported to one (T-295)', async () => {
+    const calendarOf = async (query = '') => Object.fromEntries((await get(`/admin/api/users${query}`).expect(200)).body.users
+      .map((user) => [user.email, user.steps.calendar]));
+    // Anna has both; drop her export record: import alone still counts.
+    sqlite.prepare('DELETE FROM native_calendar_connections WHERE user_id = 3').run();
+    // Leo exports only; Olga has only marks of her own, Ivan a slot booked for a rehearsal.
+    sqlite.prepare('INSERT INTO native_calendar_connections (user_id) VALUES (5)').run();
+    // Maria, a service account, imports from her calendar.
+    sqlite.prepare(`INSERT INTO native_user_availability (user_id, starts_at, ends_at, is_all_day, source, created_at)
+      VALUES (9, ?, ?, 0, 'google_calendar', ?)`).run(at(NOW + 5 * H), at(NOW + 6 * H), ago(1 * D));
+    const calendar = await calendarOf();
+    expect(calendar['anna@example.test']).toBe(true);
+    expect(calendar['left@example.test']).toBe(true);
+    expect(calendar['olga@example.test']).toBe(false);
+    expect(calendar['ivan@example.test']).toBe(false);
+    expect(calendar['loner@example.test']).toBe(false);
+    // The service account is not counted; shown only when asked, marked.
+    expect(Object.keys(calendar)).not.toContain('maria@demo.rehearsly.me');
+    const shown = (await get('/admin/api/users?service=1').expect(200)).body.users
+      .find((user) => user.email === 'maria@demo.rehearsly.me');
+    expect(shown).toMatchObject({ service: true, steps: { calendar: true } });
+  });
+
   test('filters by period, source and language, and pages', async () => {
     const month = (await get('/admin/api/users?period=30').expect(200)).body;
     expect(month.total).toBe(5);

@@ -198,6 +198,16 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     await stretch(at(firstDate + 6 * D - 1));
     assert.deepEqual(await coverage(), { people: 3, of: 3, rate: 100 });
     contracts.push('coverage counts an all-day stretch begun before today and not yet over, not one that ended yesterday');
+
+    // T-295: calendar sync used, either way. Ivan now has busy times imported
+    // from a calendar and no export record; Leo gets an export record only.
+    await q('DELETE FROM native_calendar_connections WHERE user_id = 3');
+    await q(`INSERT INTO native_calendar_connections (user_id, provider, device_calendar_id) VALUES (5, 'apple', 'cal-5')`);
+    const calendar = Object.fromEntries((await get('/admin/api/users')).users.map((user) => [user.email, user.steps.calendar]));
+    assert.deepEqual([calendar['ivan@example.test'], calendar['anna@example.test'], calendar['left@example.test'],
+      calendar['olga@example.test'], calendar['loner@example.test']], [true, true, true, false, false]);
+    assert.ok(!('maria@demo.rehearsly.me' in calendar));
+    contracts.push('calendar sync used: an import from a calendar or an export record; neither — no');
   } finally {
     delete process.env.ADMIN_SERVICE_EMAILS;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

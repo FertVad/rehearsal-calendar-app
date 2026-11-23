@@ -321,7 +321,7 @@
       'onboarding ' + (steps.onboarding ? 'done' : 'not done'),
       'projects ' + steps.projects + (roles.length ? ' (' + roles.join(', ') + ')' : ''),
       'marks ' + (steps.marks ? steps.marks + ' until ' + steps.marksUntil : 'none'),
-      'calendar ' + (steps.calendar ? 'yes' : 'no'),
+      'calendar sync used ' + (steps.calendar ? 'yes' : 'no'),
       'device ' + (steps.device ? 'yes' : 'no'),
       'seen ' + steps.seen + ' of ' + steps.onRoster,
       'own rehearsals ' + steps.rehearsals,
