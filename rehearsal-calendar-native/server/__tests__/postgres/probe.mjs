@@ -86,9 +86,12 @@ await control.query(operationBudgetMigration);
 // has group 010's actual tables as well; the runtime does not work without them.
 await control.query(await readFile(new URL('../../migrations/010-email-verification.sql', import.meta.url), 'utf8'));
 if (scenario === 'A02') {
-  // The diagnostic subset needs this real column to authorize the admin users
-  // listing after bcrypt login.
-  await control.query('ALTER TABLE native_users ADD COLUMN last_login_at TIMESTAMPTZ');
+  // The diagnostic subset needs the real columns and tables the admin users
+  // listing reads (T-293: source, sign-in, steps) to authorize it after bcrypt
+  // login. Shapes as in database/init-native-schema.sql.
+  await control.query(`ALTER TABLE native_users ADD COLUMN last_login_at TIMESTAMPTZ,
+    ADD COLUMN password_hash VARCHAR, ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE`);
+  await (await import('./adminListingFixture.mjs')).addAdminListingSchema(control);
 }
 if (scenario === 'B03') {
   // Apply only B03's actual additive migration, twice, against this owned
