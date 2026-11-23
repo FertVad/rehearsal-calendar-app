@@ -1,0 +1,41 @@
+T-294 on PostgreSQL 15.13 (postgres:15 image sha256:b8e11f8a8b38...), disposable container, 2026-11-24,
+HEAD 9d6fa2a. `node server/scripts/r0-postgres.mjs <mode>` from rehearsal-calendar-native.
+
+--t294-only
+{"scenario":"controls","outcome":"PASS",...}     (the diagnostic subset has no 016: one WARN line, then as before)
+{"scenario":"T294_USAGE","outcome":"PASS","contracts":[
+ "a session's request records the day in the person's zone (UTC without one), once, with the last build",
+ "concurrent first requests of one person make one row (the key)",
+ "a refused session records nothing",
+ "the day's write never waits behind a sign-in holding the person's row: the next request writes it",
+ "invitation: a person's page view, the app's opening and a join count; a preview, HEAD, an unknown code and a repeated join do not",
+ "admin: active, builds, invitations and last day on PostgreSQL types; opening it deletes what is past 13 months",
+ "the days go with the account, the counts with the project",
+ "without 016: requests, the page and a join work as before; the admin says there is no data"],"externalConnections":0}
+T294_USAGE REGRESSION PASS
+
+--r2-migrations-schema-only   (migration 016: fresh and upgrade)
+R2_SCHEMA PASS, 40 checks, catalogTables 25: fresh through the runner matches catalog.json; a modern schema
+with every optional group dropped (016 among them) is adopted and `--apply` runs the steps through
+016-usage-statistics, rows and the legacy ledger kept, catalog equal to fresh; one missing group alone is
+applied alone; HTTP contracts (register, projects, invites, account deletion, admin...) on both schemas.
+R2_MIGRATIONS PASS, 16 contracts (the copied CLI applies fresh with the real manifest).
+R2_SCHEMA+R2_MIGRATIONS REGRESSION PASS
+
+The rest, each its own container:
+--r3-only        R3_EMAIL+R3_AUTH REGRESSION PASS
+--r4-only        D01+R4_LIFECYCLE+R4_PUSH_TOKEN REGRESSION PASS
+--r6-only        R6_AVAILABILITY REGRESSION PASS
+--r7-only        R7_IMPORT REGRESSION PASS
+--r8-only        R8_REMINDERS REGRESSION PASS
+--t278-only      T278_NOTICES REGRESSION PASS
+--t293-only      T293_ADMIN REGRESSION PASS
+--a02-b03-only   A02+B03 REGRESSION PASS
+--b04-only       B04 REGRESSION PASS
+--h04-only       H04 REGRESSION PASS
+--is02-only      IS02 REGRESSION PASS
+--f05-only       F05 REGRESSION PASS
+--r2-foundation-only   R2_ADAPTER PASS; R2_STARTUP FAILS — the same on 477ea2f with the change taken out:
+                 the copied entrypoint reads the .env its fixture writes, and this machine's sandbox
+                 forbids reading .env files ("import-failed"). Environment, not this task
+                 (as runtimeStartup.test.js in Jest, T-293's evidence).

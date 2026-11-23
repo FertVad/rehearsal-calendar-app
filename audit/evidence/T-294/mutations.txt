@@ -1,0 +1,26 @@
+T-294 mutations — each put in, run, then `git restore` of the file. 2026-11-24.
+
+M1. countJoin without its savepoint (the count straight in the join's transaction).
+    PG --t294-only: "without 016 ... a join" -> 500 !== 200 (PostgreSQL aborts the whole
+    transaction on the failed count, and the join with it). T294_USAGE probe failed.
+    Jest usageStatistics: ✕ everything works as before, said once in the log (expects
+    ROLLBACK TO SAVEPOINT invite_count). CAUGHT.
+
+M2. recordUsageDay moved before the version and pending-address checks.
+    Jest usageStatistics: ✕ refused requests record nothing: 401, 403 and 426;
+    ✕ a failing write does not fail the request (the 403 wrote). CAUGHT.
+
+M3. The join counted in its own transaction after the membership commits.
+    Not caught, and correct by the rule: a join that does not commit never reaches
+    the count. Not a defect.
+
+M3'. The join counted in its own transaction BEFORE the membership's.
+    First run: not caught — the test failed the request's first transaction, which
+    is the invite budget's, so the join never ran. Test fixed (012f49b): it fails the
+    transaction that writes the membership, after its work, and checks it did.
+    Then: ✕ a join that does not happen is not counted: already a member, or the
+    transaction failing. CAUGHT.
+
+M4. SKIP LOCKED taken off the day's write (FOR KEY SHARE alone).
+    PG --t294-only: "Error: T-294 /api/native/projects timed out" — the request hangs
+    behind a sign-in's FOR UPDATE on the person's row. T294_USAGE probe failed. CAUGHT.
