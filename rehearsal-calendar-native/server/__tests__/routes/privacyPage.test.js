@@ -123,8 +123,38 @@ const COPY = {
   },
 };
 
+// T-293: the admin's statistics are a purpose of their own, named in every language.
+const STATISTICS = {
+  en: { heading: 'Internal statistics', purpose: /also used for statistics in our own admin page/,
+    shows: /where people come from[^.]*first steps[^.]*projects are doing/, nothingExtra: /Nothing extra is collected/,
+    onlyOperator: /Only the person who runs Rehearsly sees these statistics/, noThirdParty: /not passed to third parties[^.]*no third-party analytics SDK/,
+    signInWhy: /still in use, and for the internal statistics/, updated: 'Last updated: November 23, 2026', lede: /keeps only what it needs to run the app/ },
+  ru: { heading: 'Внутренняя статистика', purpose: /используются и для статистики в нашей собственной админке/,
+    shows: /откуда люди приходят[^.]*первые шаги[^.]*как живут проекты/, nothingExtra: /Ничего сверх этого для неё не собирается/,
+    onlyOperator: /Эту статистику видит только тот, кто ведёт Rehearsly/, noThirdParty: /Третьим лицам она не передаётся[^.]*сторонние SDK аналитики/,
+    signInWhy: /ещё пользуются, и для внутренней статистики/, updated: 'Обновлено: 23 ноября 2026 г.', lede: /хранит только то, что нужно для работы приложения/ },
+  es: { heading: 'Estadísticas internas', purpose: /también se usan para elaborar estadísticas en nuestro propio panel de administración/,
+    shows: /de dónde llegan las personas[^.]*primeros pasos[^.]*cómo marchan los proyectos/, nothingExtra: /no se recopila ningún dato adicional/,
+    onlyOperator: /Solo la persona que gestiona Rehearsly ve estas estadísticas/, noThirdParty: /No se comparten con terceros[^.]*ningún SDK de análisis de terceros/,
+    signInWhy: /siguen en uso y elaborar las estadísticas internas/, updated: 'Última actualización: 23 de noviembre de 2026', lede: /guarda lo que necesita para funcionar/ },
+  de: { heading: 'Interne Statistik', purpose: /nutzen wir auch für Statistiken in unserem eigenen Admin-Bereich/,
+    shows: /woher die Leute kommen[^.]*ersten Schritte[^.]*wie es den Projekten geht/, nothingExtra: /keine zusätzlichen Daten erhoben/,
+    onlyOperator: /Diese Statistiken sieht nur, wer Rehearsly betreibt/, noThirdParty: /nicht an Dritte weitergegeben[^.]*kein Analyse-SDK eines Drittanbieters/,
+    signInWhy: /noch genutzt werden, und für die unten beschriebene interne Statistik/, updated: 'Zuletzt aktualisiert: 23. November 2026', lede: /speichert, was für den Betrieb der App/ },
+};
+
 describe.each(LANGS)('privacy policy, %s', lang => {
   const copy = COPY[lang];
+
+  test('names the internal statistics as a purpose: what they use, who sees them, nothing to third parties', () => {
+    const statistics = STATISTICS[lang];
+    const page = text('privacy', lang);
+    expect(markup('privacy', lang)).toContain(`<h3>${statistics.heading}</h3>`);
+    for (const key of ['purpose', 'shows', 'nothingExtra', 'onlyOperator', 'noThirdParty', 'signInWhy', 'lede']) {
+      expect(page).toMatch(statistics[key]);
+    }
+    expect(page).toContain(statistics.updated);
+  });
 
   test('confirms that the providers protect the data as this policy does', () => {
     expect(text('privacy', lang)).toMatch(copy.processors);
