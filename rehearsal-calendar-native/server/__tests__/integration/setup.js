@@ -68,6 +68,8 @@ export async function setupIntegrationDb() {
       status TEXT DEFAULT 'active',
       invited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      -- As in the canonical schema; the admin statistics fall back to it (T-293).
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(project_id, user_id)
     );
 

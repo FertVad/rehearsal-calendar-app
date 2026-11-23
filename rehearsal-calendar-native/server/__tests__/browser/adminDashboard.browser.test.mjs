@@ -14,8 +14,29 @@ const html = '<img data-xss-probe src="/xss-probe" onerror="window.__xss = 1">';
 const svg = '<svg data-xss-probe onload="window.__xss = 2"></svg>\'"&<>';
 const link = '<a data-xss-probe href="javascript:window.__xss=3">mail@example.test</a>';
 const escaped = '&lt;img src=x onerror=alert(1)&gt;';
+const steps = { onboarding: true, projects: 1, roles: { owner: 0, admin: 0, member: 1 }, marks: 2,
+  marksUntil: '2026-12-09', calendar: false, device: true, seen: 1, onRoster: 2, rehearsals: 0 };
 const user = { id: 1, firstName: html, lastName: svg, email: link,
-  createdAt: '2026-09-01T12:00:00Z', lastLoginAt: null };
+  createdAt: '2026-09-01T12:00:00Z', lastLoginAt: null, service: false,
+  source: { kind: 'invite', project: html, owner: svg }, signIn: ['apple'], locale: 'en', timezone: svg, steps };
+const counts = { registered: 1, onboarding: 1, project: 1, marks: 1, engaged: 0 };
+const medians = { toProjectHours: 2, toProjectOf: 1, toMarksHours: null, toMarksOf: 0 };
+// Project, owner, language, zone and inbox type are stored text too (T-293).
+const analyticsBody = payload => ({
+  period: 'all', from: null, to: '2026-11-25T12:00:00Z', people: 1,
+  languages: payload ? [html] : ['en', 'ru'],
+  funnel: { weeks: [{ week: '2026-11-16', invite: counts, other: { ...counts, registered: 0 } }],
+    total: { invite: counts, other: { ...counts, registered: 0 } }, medians: { invite: medians, other: medians } },
+  sources: { byDay: [{ date: '2026-11-17', invite: 1, own: 0, none: 0 }], byWeek: [{ date: '2026-11-16', invite: 1, own: 0, none: 0 }],
+    projects: [{ project: payload ? html : 'Hamlet', owner: payload ? svg : 'Olga O.', joined: 1, newcomers: 1 }],
+    languages: [{ value: payload ? html : 'en', people: 1 }], timezones: [{ value: payload ? svg : 'UTC', people: 1 }] },
+  projects: [{ id: 1, name: payload ? html : 'Hamlet', owner: payload ? link : 'Olga O.', createdAt: '2026-11-01T00:00:00Z',
+    members: 3, rehearsals: 3, rehearsalsLastFourWeeks: 2, nextRehearsalAt: null,
+    seenBeforeStart: { seen: 2, of: 4, rate: 50 }, coverage: { people: 2, of: 3, rate: 66.7 } }],
+  notifications: { devices: { people: 1, of: 5, rate: 20 },
+    inbox: [{ type: payload ? html : 'member_joined', created: 2, read: 1, readRate: 50, medianMinutesToRead: 30 }],
+    emailCodes: [{ purpose: 'verify', created: 2, sent: 2, failed: 0, used: 1, replaced: 1, locked: 0 }] },
+});
 const report = { id: '1);window.__xss=4;//', name: html, message: html + '\n' + escaped,
   screen: svg, status: 'new" onclick="window.__xss=5', createdAt: user.createdAt };
 let browser;
@@ -70,6 +91,7 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
     next();
   });
   app.get('/admin/api/stats', (_req, res) => res.json(stats));
+  app.get('/admin/api/analytics', (_req, res) => res.json(analyticsBody(payload)));
   app.get('/admin/api/users', (req, res) => {
     const all = state.empty ? [] : users;
     const offset = Number(req.query.offset);
@@ -138,6 +160,14 @@ test('untrusted admin API values remain literal text, even without CSP', { timeo
   assert.equal(await page.evaluate(() => window.__xss), undefined);
   assert.equal(await page.locator('#users-body td').nth(0).textContent(), `${html} ${svg}`);
   assert.equal(await page.locator('#users-body td').nth(1).textContent(), link);
+  assert.equal(await page.locator('#users-body td').nth(4).textContent(), `invited into “${html}” (owner ${svg})`);
+  assert.equal(await page.locator('#users-body td').nth(6).textContent(), `en / ${svg}`);
+  // The analytics carry project, owner, language, zone and type names as text.
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const cells = await page.locator('#analytics-body td').allTextContents();
+  for (const value of [html, svg, link]) assert.ok(cells.includes(value), `analytics shows ${value} literally`);
+  assert.ok(await page.locator('#filter-lang option').evaluateAll((options, value) =>
+    options.some(option => option.textContent === value), html));
   assert.equal(await page.locator('#bugs-body td').nth(0).textContent(), report.name);
   assert.equal(await page.locator('#bugs-body td').nth(1).textContent(), report.message);
   assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), report.screen);
@@ -204,6 +234,37 @@ test('the sign-in figure is named for sign-ins, not churn or inactivity', { time
   assert.match(note, /not a measure of use/);
   const cards = (await page.locator('#stats-cards').textContent()).toLowerCase();
   assert.doesNotMatch(cards, /churn|inactive/);
+  assert.deepEqual(errors, []);
+});
+
+// One period and one selection for every section; service accounts only when asked (T-293).
+test('the filters reach every statistics request, and the service switch only the users table', { timeout: 30000 }, async t => {
+  const { page, state, errors } = await fixture(t);
+  await waitForDashboard(page);
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const query = (name) => new URL(state.requests.filter(r => r.path.startsWith('/admin/api/' + name)).at(-1).path,
+    'http://fixture.test').searchParams;
+  for (const name of ['stats', 'analytics', 'users']) assert.equal(query(name).get('period'), 'all');
+  const answered = (name, test) => page.waitForResponse(r => {
+    const url = new URL(r.url());
+    return url.pathname === '/admin/api/' + name && test(url.searchParams);
+  });
+  await page.locator('#filter-period').selectOption('30');
+  await page.locator('#filter-lang').selectOption('ru');
+  const all = ['stats', 'analytics', 'users'].map(name =>
+    answered(name, params => params.get('source') === 'invite'));
+  await page.locator('#filter-source').selectOption('invite');
+  await Promise.all(all);
+  for (const name of ['stats', 'analytics', 'users']) {
+    const params = query(name);
+    assert.deepEqual([params.get('period'), params.get('source'), params.get('lang')], ['30', 'invite', 'ru'], name);
+  }
+  assert.equal(query('users').get('service'), null);
+  const shown = answered('users', params => params.get('service') === '1');
+  await page.locator('#show-service').check();
+  await shown;
+  assert.equal(query('users').get('service'), '1');
+  assert.equal(await page.locator('#filter-lang').inputValue(), 'ru', 'the chosen language survives a reload of the list');
   assert.deepEqual(errors, []);
 });
 

@@ -49,12 +49,17 @@ beforeAll(async () => {
 
 beforeEach(() => {
   sqlite = new Database(':memory:');
+  // The columns the cards read since T-293 decides who counts (service accounts
+  // never) and where they came from.
   sqlite.exec(`
-    CREATE TABLE native_users (id INTEGER PRIMARY KEY, email TEXT NOT NULL, created_at TEXT NOT NULL, last_login_at TEXT);
-    CREATE TABLE native_projects (id INTEGER PRIMARY KEY);
-    CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY);
+    CREATE TABLE native_users (id INTEGER PRIMARY KEY, email TEXT NOT NULL, created_at TEXT NOT NULL, last_login_at TEXT,
+      first_name TEXT, last_name TEXT, locale TEXT, timezone TEXT, onboarding_completed INTEGER, password_hash TEXT);
+    CREATE TABLE native_projects (id INTEGER PRIMARY KEY, name TEXT, created_at TEXT);
+    CREATE TABLE native_project_members (id INTEGER PRIMARY KEY, user_id INTEGER, project_id INTEGER, role TEXT,
+      status TEXT, joined_at TEXT, created_at TEXT);
+    CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY, project_id INTEGER, starts_at TEXT);
   `);
-  const insert = sqlite.prepare('INSERT INTO native_users VALUES (?, ?, ?, ?)');
+  const insert = sqlite.prepare('INSERT INTO native_users (id, email, created_at, last_login_at) VALUES (?, ?, ?, ?)');
   // Signed in yesterday.
   insert.run(1, 'recent@example.test', daysAgo(400), daysAgo(1));
   // Last signed in 40 days ago — in the app every day since, perhaps, on a
