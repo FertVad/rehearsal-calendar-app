@@ -88,6 +88,28 @@ export async function probeT294Usage({ connectionString, control, allowedPorts }
     assert.equal((await days()).length, 3);
     contracts.push('a refused session records nothing');
 
+    // A sign-in that revokes sessions holds the person's row FOR UPDATE. The
+    // day's write does not wait behind it: the request goes on at once, writes
+    // nothing, and the next one writes the day.
+    await q("INSERT INTO native_users (id, email, first_name, created_at) VALUES (4, 'lena@example.test', 'Lena', NOW())");
+    const holder = new (await import('pg')).default.Client({ connectionString });
+    await holder.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT id FROM native_users WHERE id = 4 FOR UPDATE');
+      const started = Date.now();
+      assert.equal((await call('GET', '/api/native/projects', { token: token(4), build: 41 })).status, 200);
+      assert.ok(Date.now() - started < 2000, 'the request did not wait for the locked row');
+      assert.equal((await days()).filter((row) => row.user_id === 4).length, 0);
+    } finally {
+      await holder.query('ROLLBACK');
+      await holder.end();
+    }
+    assert.equal((await call('GET', '/api/native/projects', { token: token(4), build: 41 })).status, 200);
+    assert.deepEqual((await days()).filter((row) => row.user_id === 4), [{ user_id: 4, day: today(), app_build: 41 }]);
+    await q('DELETE FROM native_users WHERE id = 4');
+    contracts.push('the day\'s write never waits behind a sign-in holding the person\'s row: the next request writes it');
+
     // The invitation: page, app, join.
     assert.equal((await call('GET', '/invite/ABCDEFGH', { agent: 'TelegramBot (like TwitterBot)' })).status, 200);
     assert.equal((await call('HEAD', '/invite/ABCDEFGH', { agent: SAFARI })).status, 200);

@@ -30,9 +30,16 @@ export async function recordUsageDay(userId, timeZone, build, now = Date.now()) 
   const before = written.get(userId);
   const sameDay = before?.day === day;
   if (sameDay && (appBuild === null || appBuild === before.build)) return;
+  let row;
   try {
-    await db.get(
-      `INSERT INTO native_usage_days (user_id, day, app_build) VALUES ($1, $2, $3)
+    // The row's foreign key takes a share lock on the person's row, and a
+    // sign-in that revokes sessions holds that row FOR UPDATE: waiting for it
+    // would hold this request back and let the sign-in overtake a request that
+    // came first. A statistic never waits — a locked row writes nothing now and
+    // the next request writes the day. Nothing either when the account is gone.
+    row = await db.get(
+      `INSERT INTO native_usage_days (user_id, day, app_build)
+       SELECT id, $2, $3 FROM native_users WHERE id = $1 FOR KEY SHARE SKIP LOCKED
        ON CONFLICT (user_id, day) DO UPDATE SET app_build = COALESCE(EXCLUDED.app_build, native_usage_days.app_build)
        RETURNING user_id`,
       [userId, day, appBuild]
@@ -42,6 +49,7 @@ export async function recordUsageDay(userId, timeZone, build, now = Date.now()) 
     return;
   }
   statsWriteSucceeded();
+  if (!row) return;
   // A full map is cleared, not grown: the worst a clear costs is one more
   // upsert per person that day.
   if (written.size >= REMEMBERED) written.clear();

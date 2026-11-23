@@ -290,7 +290,8 @@ export async function setupIntegrationDb() {
         // Row locks: SQLite has one writer, so there is nothing to lock. What
         // FOR UPDATE or FOR SHARE buys against a second connection is proven on
         // PostgreSQL.
-        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|(?:KEY\s+)?SHARE)\b/gi, '')
+        // SKIP LOCKED and NOWAIT go with them: there is never another holder.
+        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|(?:KEY\s+)?SHARE)\b(?:\s+(?:SKIP\s+LOCKED|NOWAIT)\b)?/gi, '')
         // SET LOCAL tunes the PostgreSQL session for one transaction — a
         // timeout, a lock wait — and SQLite has nothing to tune.
         .replace(/^\s*SET\s+LOCAL\s+[\s\S]*$/i, 'SELECT 1')
