@@ -124,23 +124,103 @@ const COPY = {
 };
 
 // T-293: the admin's statistics are a purpose of their own, named in every language.
+// T-295: the whole list of what they read (rehearsals created, the introduction,
+// calendar sync used either way), overall and per account, and what they show
+// (notifications and email codes reaching people).
 const STATISTICS = {
-  en: { heading: 'Internal statistics', purpose: /also used for statistics in our own admin page/,
-    shows: /where people come from[^.]*first steps[^.]*projects are doing/, nothingExtra: /Nothing extra is collected/,
-    onlyOperator: /Only the person who runs Rehearsly sees these statistics/, noThirdParty: /not passed to third parties[^.]*no third-party analytics SDK/,
+  en: { heading: 'Internal statistics',
+    purpose: /also use some of the data listed above for statistics, both overall and for each account, on our own admin page/,
+    shows: /how people come to Rehearsly[^.]*first steps[^.]*projects are doing[^.]*notifications and email codes reach people/,
+    nothingExtra: /Nothing extra is collected/,
+    onlyOperator: /Only the person who runs Rehearsly sees these statistics/, noThirdParty: /not shared with third parties[^.]*no third-party analytics SDK/,
+    reads: [/finished or skipped the app’s introduction/, /including which ones you created and which you have marked as seen/,
+      /whether you have used calendar sync/, /the notifications in your in-app inbox/],
     signInWhy: /still in use, and for the internal statistics/, updated: 'Last updated: November 23, 2026', lede: /keeps only what it needs to run the app/ },
-  ru: { heading: 'Внутренняя статистика', purpose: /используются и для статистики в нашей собственной админке/,
-    shows: /откуда люди приходят[^.]*первые шаги[^.]*как живут проекты/, nothingExtra: /Ничего сверх этого для неё не собирается/,
-    onlyOperator: /Эту статистику видит только тот, кто ведёт Rehearsly/, noThirdParty: /Третьим лицам она не передаётся[^.]*сторонние SDK аналитики/,
-    signInWhy: /ещё пользуются, и для внутренней статистики/, updated: 'Обновлено: 23 ноября 2026 г.', lede: /хранит только то, что нужно для работы приложения/ },
-  es: { heading: 'Estadísticas internas', purpose: /también se usan para elaborar estadísticas en nuestro propio panel de administración/,
-    shows: /de dónde llegan las personas[^.]*primeros pasos[^.]*cómo marchan los proyectos/, nothingExtra: /no se recopila ningún dato adicional/,
+  ru: { heading: 'Внутренняя статистика',
+    purpose: /Часть перечисленных выше данных мы используем и для статистики в нашей собственной панели администратора/,
+    shows: /как люди приходят в Rehearsly[^.]*первые шаги[^.]*как живут проекты[^.]*доходят ли до людей уведомления и письма с кодами/,
+    nothingExtra: /Дополнительных данных для неё мы не собираем/,
+    onlyOperator: /Эту статистику видит только тот, кто отвечает за Rehearsly/, noThirdParty: /Третьим лицам она не передаётся[^.]*сторонние SDK аналитики/,
+    reads: [/Статистика строится как в целом, так и по каждому аккаунту/, /прошли или пропустили знакомство с приложением/,
+      /какие из них создали вы и какие отметили как просмотренные/, /пользовались ли вы синхронизацией календаря/],
+    signInWhy: /ещё пользуются, и составлять внутреннюю статистику \(о ней ниже\)/, updated: 'Обновлено: 23 ноября 2026 г.', lede: /хранит только то, что нужно для работы приложения/ },
+  es: { heading: 'Estadísticas internas',
+    purpose: /también se usan para elaborar estadísticas en nuestro propio panel de administración, tanto en conjunto como para cada cuenta/,
+    shows: /cómo llegan las personas a Rehearsly[^.]*primeros pasos[^.]*cómo marchan los proyectos/,
+    nothingExtra: /no se recopila ningún dato adicional/,
     onlyOperator: /Solo la persona que gestiona Rehearsly ve estas estadísticas/, noThirdParty: /No se comparten con terceros[^.]*ningún SDK de análisis de terceros/,
+    reads: [/si has completado u omitido la introducción de la aplicación/, /cuáles has creado tú y cuáles has marcado como vistos/,
+      /si has usado la sincronización de calendario/, /llegan a sus destinatarios/],
     signInWhy: /siguen en uso y elaborar las estadísticas internas/, updated: 'Última actualización: 23 de noviembre de 2026', lede: /guarda lo que necesita para funcionar/ },
-  de: { heading: 'Interne Statistik', purpose: /nutzen wir auch für Statistiken in unserem eigenen Admin-Bereich/,
-    shows: /woher die Leute kommen[^.]*ersten Schritte[^.]*wie es den Projekten geht/, nothingExtra: /keine zusätzlichen Daten erhoben/,
-    onlyOperator: /Diese Statistiken sieht nur, wer Rehearsly betreibt/, noThirdParty: /nicht an Dritte weitergegeben[^.]*kein Analyse-SDK eines Drittanbieters/,
-    signInWhy: /noch genutzt werden, und für die unten beschriebene interne Statistik/, updated: 'Zuletzt aktualisiert: 23. November 2026', lede: /speichert, was für den Betrieb der App/ },
+  de: { heading: 'Interne Statistik',
+    purpose: /nutzen wir auch für Statistiken in unserem eigenen Admin-Bereich, sowohl insgesamt als auch für jedes einzelne Konto/,
+    shows: /wie Menschen zu Rehearsly kommen[^.]*ersten Schritte[^.]*wie es den Projekten geht[^.]*ob Mitteilungen und E-Mail-Codes ankommen/,
+    nothingExtra: /keine zusätzlichen Daten erhoben/,
+    onlyOperator: /Diese Statistiken sieht nur die Person, die Rehearsly betreibt/, noThirdParty: /nicht an Dritte weitergegeben[^.]*kein Analyse-SDK eines Drittanbieters/,
+    reads: [/ob du die Einführung in die App abgeschlossen oder übersprungen hast/, /welche davon du angelegt und welche du als gesehen markiert hast/,
+      /ob du die Kalendersynchronisation genutzt hast/],
+    signInWhy: /noch genutzt werden, und die unten beschriebene interne Statistik erstellen/, updated: 'Zuletzt aktualisiert: 23. November 2026', lede: /speichert, was für den Betrieb der App/ },
+};
+
+// T-295: the rows for what the app keeps about calendar export and the
+// introduction, each right after the row it belongs beside, and the export
+// records named among what goes with the account. `after` is the start of the
+// row before; text() leaves one space between cells.
+const ROWS = {
+  en: {
+    exported: ['Which rehearsals Rehearsly has added to your phone’s calendar, with technical identifiers of that calendar and of each event',
+      'So that the next sync updates those events instead of adding copies, and so that they can be removed later',
+      'Only if you turn on calendar sync'],
+    exportedAfter: 'Start and end times of your calendar events',
+    introduction: ['Whether you have finished or skipped the app’s introduction', 'To show the introduction only once', 'When you finish or skip it'],
+    introductionAfter: 'Time zone, language, first day of the week',
+    keeping: /<h2>How long we keep it<\/h2>/,
+    goesWithAccount: /the record of which rehearsals were added to\s+your phone’s calendar/,
+  },
+  ru: {
+    exported: ['Какие репетиции Rehearsly добавил в календарь вашего телефона — с техническими идентификаторами этого календаря и каждого события',
+      'Чтобы следующая синхронизация не добавила копии, а обновила эти события и чтобы их потом можно было удалить',
+      'Только если включена синхронизация календаря'],
+    exportedAfter: 'Время начала и окончания событий календаря',
+    introduction: ['Отметка о том, что вы прошли или пропустили знакомство с приложением',
+      'Показывать знакомство с приложением только один раз', 'Когда вы проходите или пропускаете его'],
+    introductionAfter: 'Часовой пояс, язык, начало недели',
+    keeping: /<h2>Сколько храним<\/h2>/,
+    goesWithAccount: /записи о том, какие репетиции\s+добавлены в календарь вашего телефона/,
+  },
+  es: {
+    exported: ['Los ensayos que Rehearsly ha añadido al calendario de tu teléfono, con identificadores técnicos de ese calendario y de cada evento',
+      'Actualizar esos eventos en la siguiente sincronización, en lugar de duplicarlos, y poder eliminarlos más adelante',
+      'Solo si activas la sincronización de calendario'],
+    exportedAfter: 'Hora de inicio y fin de los eventos de tu calendario',
+    introduction: ['Si has completado u omitido la introducción de la aplicación', 'Mostrar la introducción una sola vez',
+      'Cuando la completas o la omites'],
+    introductionAfter: 'Zona horaria, idioma, inicio de la semana',
+    keeping: /<h2>Cuánto tiempo conservamos tus datos<\/h2>/,
+    goesWithAccount: /registro de los ensayos añadidos al calendario de tu teléfono/,
+  },
+  de: {
+    exported: ['Welche Proben Rehearsly in den Kalender auf deinem iPhone eingetragen hat, sowie technische Kennungen dieses Kalenders und jedes Termins',
+      'Damit die nächste Synchronisation diese Termine aktualisiert, statt sie doppelt einzutragen, und damit sie sich später wieder entfernen lassen',
+      'Nur wenn du die Kalendersynchronisation einschaltest'],
+    exportedAfter: 'Beginn und Ende deiner Kalendertermine',
+    introduction: ['Ob du die Einführung in die App abgeschlossen oder übersprungen hast', 'Die Einführung nur einmal anzeigen',
+      'Wenn du sie abschließt oder überspringst'],
+    introductionAfter: 'Zeitzone, Sprache, Wochenbeginn',
+    keeping: /<h2>Wie lange wir sie speichern<\/h2>/,
+    goesWithAccount: /der Vermerk, welche Proben in den Kalender auf deinem iPhone eingetragen wurden/,
+  },
+};
+
+// T-295: no analytics or tracking SDK in the app — in the lede and in what is
+// not collected, as wide as the English (ru had narrowed it to «third-party»).
+const NO_SDK = {
+  en: { lede: /no analytics or tracking SDKs in the app/, notCollected: /No advertising identifiers, no analytics or tracking SDKs/ },
+  ru: { lede: /в приложении нет SDK ни для аналитики, ни для отслеживания/,
+    notCollected: /Рекламные идентификаторы и SDK для аналитики и отслеживания — их в приложении нет/ },
+  es: { lede: /la aplicación no incluye ningún SDK de análisis ni de rastreo/,
+    notCollected: /Identificadores publicitarios ni datos a través de SDK de análisis o de rastreo/ },
+  de: { lede: /die App enthält weder Analyse- noch Tracking-SDKs/, notCollected: /Werbe-IDs, Analyse- oder Tracking-SDKs/ },
 };
 
 describe.each(LANGS)('privacy policy, %s', lang => {
@@ -153,7 +233,32 @@ describe.each(LANGS)('privacy policy, %s', lang => {
     for (const key of ['purpose', 'shows', 'nothingExtra', 'onlyOperator', 'noThirdParty', 'signInWhy', 'lede']) {
       expect(page).toMatch(statistics[key]);
     }
+    for (const claim of statistics.reads) expect(page).toMatch(claim);
     expect(page).toContain(statistics.updated);
+  });
+
+  test('has a row for the calendar export records and one for the introduction, each beside its neighbour', () => {
+    const rows = ROWS[lang];
+    const html = markup('privacy', lang).replace(/\s+/g, ' ');
+    for (const [row, after] of [[rows.exported, rows.exportedAfter], [rows.introduction, rows.introductionAfter]]) {
+      // The three cells, in order, in one row.
+      const at = html.indexOf(`<tr> ${row.map(cell => `<td>${cell}</td>`).join(' ')} </tr>`);
+      expect(at).toBeGreaterThan(0);
+      // The row before is the one named: exactly one row starts between them.
+      const before = html.lastIndexOf(`<td>${after}`, at);
+      expect(before).toBeGreaterThan(0);
+      expect(html.slice(before, at + 4).match(/<tr>/g)).toHaveLength(1);
+    }
+  });
+
+  test('names the calendar export records among what goes with the account', () => {
+    expect(part(lang, ROWS[lang].keeping)).toMatch(ROWS[lang].goesWithAccount);
+  });
+
+  test('says the app has no analytics or tracking SDK, in the lede and in what is not collected', () => {
+    const page = text('privacy', lang);
+    expect(page).toMatch(NO_SDK[lang].lede);
+    expect(page).toMatch(NO_SDK[lang].notCollected);
   });
 
   test('confirms that the providers protect the data as this policy does', () => {
@@ -205,7 +310,8 @@ const SIGN_IN = {
     heading: /<h2>Google and Apple sign-in data<\/h2>/,
     says: [/first and last name/i, /email address/i, /verified/i, /account identifier/i, /profile photo/i,
       /Gmail/, /Google Calendar/, /Google Contacts/, /Neon/, /do not sell/i, /advertising/i, /train/i,
-      /Delete Account/, /Google Account settings/, /privaterelay\.appleid\.com/, /Hide My Email/],
+      /Delete Account/, /Google Account settings/, /privaterelay\.appleid\.com/, /Hide My Email/,
+      /include your account in the internal statistics described above/],
   },
   ru: {
     heading: /<h2>Данные Google и Apple при входе<\/h2>/,
@@ -214,21 +320,24 @@ const SIGN_IN = {
     limitedUse: /Rehearsly использует и передаёт информацию[^.]*Limited Use/,
     says: [/имя и фамилия/i, /адрес почты/i, /подтвержд/i, /идентификатор/i, /фото профиля/i,
       /Gmail/, /Google Календар/, /Google Контакт/, /Neon/, /не продаём/i, /реклам/i, /обучени/i,
-      /Удалить аккаунт/, /настройках аккаунта Google/, /privaterelay\.appleid\.com/, /Скрыть e-mail/],
+      /Удалить аккаунт/, /настройках аккаунта Google/, /privaterelay\.appleid\.com/, /Скрыть e-mail/,
+      /учитывать ваш аккаунт во внутренней статистике \(о ней выше\)/],
   },
   es: {
     heading: /<h2>Datos de Google y Apple al iniciar sesión<\/h2>/,
     limitedUse: /cumplen[^.]*Limited Use/,
     says: [/nombre y apellido/i, /dirección de correo/i, /verificad/i, /identificador/i, /foto de perfil/i,
       /Gmail/, /Google Calendar/, /Contactos de Google/, /Neon/, /no los vendemos/i, /publicidad/i, /entrenar/i,
-      /Eliminar cuenta/, /configuración de tu cuenta de Google/, /privaterelay\.appleid\.com/, /Ocultar mi correo/],
+      /Eliminar cuenta/, /configuración de tu cuenta de Google/, /privaterelay\.appleid\.com/, /Ocultar mi correo/,
+      /e incluir tu cuenta en las estadísticas internas/],
   },
   de: {
     heading: /<h2>Google- und Apple-Daten bei der Anmeldung<\/h2>/,
     limitedUse: /entspricht[^.]*Limited Use/,
     says: [/Vor- und Nachname/i, /E-Mail-Adresse/i, /bestätig/i, /Kennung/i, /Profilfoto/i,
       /Gmail/, /Google Kalender/, /Google Kontakte/, /Neon/, /verkaufen/i, /Werbung/i, /Training/i,
-      /Konto löschen/, /Einstellungen deines Google-Kontos/, /privaterelay\.appleid\.com/, /E-Mail-Adresse verbergen/],
+      /Konto löschen/, /Einstellungen deines Google-Kontos/, /privaterelay\.appleid\.com/, /E-Mail-Adresse verbergen/,
+      /deinen Namen zu zeigen und dein Konto in die oben beschriebene interne Statistik einzubeziehen/],
   },
 };
 const LIMITED_USE = "Rehearsly's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.";
