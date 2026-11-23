@@ -43,7 +43,7 @@ import * as P from './lib/prompts.mjs';
 import { appendReport, loadState, nextReview, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
 import { auditTasks, taskMarkdown } from './lib/audit.mjs';
 import { flakeTask, flakeTitle, nextFlakeId, queueFound } from './lib/flakes.mjs';
-import { NIGHT, fullE2eDue, regressionTask, regressionTitle } from './lib/nightly.mjs';
+import { NIGHT, fullE2eDue, regressionTask, regressionTitle, seenByE2e, unseenGroups } from './lib/nightly.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
@@ -212,6 +212,8 @@ function writeStatus(state, now) {
   const last = state.fullE2e;
   lines.push('', last ? `Последний полный прогон e2e: ${last.kind}, ${new Date(last.at).toLocaleString('ru-RU')}, ${last.head.slice(0, 7)} — ${last.ok ? `зелёный (${last.flows})` : last.machine ? 'не состоялся по вине машины' : `красный, в очереди ${last.queued?.join(', ')}`}.`
     : `Полного прогона e2e ещё не было: он идёт ночью (с ${NIGHT.from}:00) и когда очередь пуста.`);
+  const skipped = state.fullE2eSkipped;
+  if (skipped) lines.push('', `Полный прогон на ${skipped.head.slice(0, 7)} не нужен: приложение то же, что в зелёном ${skipped.green.slice(0, 7)}${skipped.what ? `; менялись только ${skipped.what}` : ''}.`);
   lines.push('', '## Последнее', '', ...events.map((e) => `- ${e}`));
   const deferred = Object.entries(state.tasks).filter(([, t]) => t.phase === 'deferred');
   if (deferred.length) lines.push('', '## Отложено (очередь шла дальше)', '', ...deferred.map(([id, t]) => `- ${id}: ${t.deferReason}. Начать заново — \`${id}: продолжить\`, на ревью с её коммитами — \`${id}: на ревью\` в DECISIONS.md.`));
@@ -637,9 +639,24 @@ async function fullE2e(state, queueEmpty) {
   const head = current?.base && current.phase !== 'adopt' ? current.base : git(WORKTREE, 'rev-parse', 'HEAD');
   const now = Date.now();
   if (!fullE2eDue({ last: state.fullE2e, head, now, hour: new Date(now).getHours(), queueEmpty })) return false;
-  if (memoryPressure() >= 2) return false; // like the checks, it waits for memory; tried again next step
   const kind = queueEmpty ? 'контрольный' : 'ночной';
+  // Since the last green run only what the set never reads changed: the app
+  // is the one it passed (seenByE2e). Decided once per code; a diff that
+  // cannot be read, or no green run yet, and the set runs as before.
+  if (state.fullE2eSkipped?.head === head) return false;
+  const green = state.fullE2e?.lastGreen;
+  let changed = null;
+  if (green) {
+    try { changed = git(WORKTREE, 'diff', '--name-only', '--no-renames', green, head).split('\n').filter(Boolean); } catch { /* not known: the set runs */ }
+  }
+  if (changed && !seenByE2e(changed).length) {
+    state.fullE2eSkipped = { head, green, what: unseenGroups(changed) };
+    note(null, `${kind} полный прогон e2e на ${head.slice(0, 7)}: не нужен — приложение то же, что в зелёном ${green.slice(0, 7)}${changed.length ? `; менялись только ${state.fullE2eSkipped.what}` : ''}`);
+    return false;
+  }
+  if (memoryPressure() >= 2) return false; // like the checks, it waits for memory; tried again next step
   state.fullE2eRunning = { head, kind, at: new Date(now).toISOString() };
+  delete state.fullE2eSkipped;
   const finish = (result, text) => {
     state.fullE2e = { head, at: state.fullE2eRunning.at, kind, lastGreen: result.ok ? head : state.fullE2e?.lastGreen, ...result };
     delete state.fullE2eRunning;
