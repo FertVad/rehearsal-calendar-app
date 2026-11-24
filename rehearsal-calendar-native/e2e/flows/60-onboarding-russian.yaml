@@ -31,6 +31,11 @@ tags:
   - onboarding
   - language
   - calendar
+# iOS's calendar prompt outlives the app: a failure here must not leave it
+# over the next flows (T-299).
+onFlowComplete:
+  - runFlow:
+      file: ../subflows/no-calendar-prompt-left.yaml
 ---
 - evalScript: ${output.wrong = ''}
 - launchApp:
@@ -74,10 +79,12 @@ tags:
 - extendedWaitUntil:
     visible: "Don’t Allow|Don't Allow"
     timeout: 10000
-- tapOn: "Don’t Allow|Don't Allow"
-- extendedWaitUntil:
-    visible: "Требуется разрешение"
-    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Don’t Allow|Don't Allow"
+      SEE: "Требуется разрешение"
+      WAIT_MS: 10000
 - assertVisible: "Для этого нужен доступ к календарю"
 - assertNotVisible: "Calendar access is required.*"
 - takeScreenshot: 60-onboarding-calendar-refused-ru

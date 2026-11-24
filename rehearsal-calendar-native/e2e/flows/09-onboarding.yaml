@@ -28,6 +28,11 @@ tags:
   - auth
   - calendar
   - profile
+# iOS's calendar prompt outlives the app: left up by a failure here, it stood
+# over the sign-in screen of the next two flows (T-299).
+onFlowComplete:
+  - runFlow:
+      file: ../subflows/no-calendar-prompt-left.yaml
 ---
 - launchApp:
     clearState: true
@@ -63,11 +68,15 @@ tags:
     visible: "Don’t Allow|Don't Allow"
     timeout: 10000
 - takeScreenshot: 09-onboarding-calendar-prompt
-- tapOn: "Don’t Allow|Don't Allow"
-# The app says it has none and stays on the step; she sets it up later.
-- extendedWaitUntil:
-    visible: "OK"
-    timeout: 10000
+# The app says it has none and stays on the step; she sets it up later. The
+# simulator lost this tap once (T-299, backboardd), so it goes as every tap
+# whose result the flow waits for.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Don’t Allow|Don't Allow"
+      SEE: "OK"
+      WAIT_MS: 10000
 - tapOn: "OK"
 - assertVisible: "Grant Access"
 - takeScreenshot: 09-onboarding-calendar

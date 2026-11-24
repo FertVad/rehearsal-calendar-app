@@ -644,6 +644,15 @@ whether it has gone, which waited seven seconds every time.
   granted. A flow that needs iOS to ask — and to be answered by the flow —
   launches with `permissions: { all: unset }` and then runs
   `sign-in-form.yaml` (flow 09-onboarding refuses the calendar's prompt).
+  Its answer goes through `tap-and-see.yaml` like any other tap. The prompt
+  belongs to SpringBoard, not to the app: tccd asks for it on behalf of
+  calaccessd. So stopping the app, clearing its state or granting its
+  permissions does not take it down, and the next flows' `launchApp` cannot
+  either. Such a flow refuses whatever prompt it left, in `onFlowComplete:`
+  with `e2e/subflows/no-calendar-prompt-left.yaml`, which Maestro runs when
+  the flow fails too. T-299: one lost "Don't Allow" in flow 09 left the
+  prompt over the sign-in screen of flows 100 and 65, three red flows for one
+  lost tap.
 - Open a link through `e2e/subflows/open-link.yaml` (`env: { LINK: ... }`): iOS
   asks 'Open in "Rehearsly"?' first, and it answers.
 - Find controls by `testID` (`id:` in Maestro), not by their English label.

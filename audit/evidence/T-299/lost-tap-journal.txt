@@ -1,0 +1,36 @@
+T-299: the "Don't Allow" tap of flow 09 in the red run of T-291 was lost by the
+simulator (T-207), not by the app or the flow.
+Artifacts: rehearsal-calendar-native/e2e/out/failed/T-291-2026-11-24T04-36-22-458Z/
+  artifacts/Onboarding to the end, nothing granted/logs/
+
+$ node audit/evidence/T-207/touch-scan.mjs rehearsal-calendar-native/e2e/out/failed/T-291-2026-11-24T04-36-22-458Z
+artifacts  Onboarding to the end, nothing granted: digitizers 10, registered twice 1 (s after the app's last scene change: 22.58s/tap 8 after "unspecified -> foreground"), app scene changes 6, taps lost 1
+    lost 06:33:26.409 -> Something have changed in the UI judging by view hierarchy. Proceed.
+3 flow logs, 10 digitizers attached, 1 registered twice, 1 taps lost
+
+maestro.log:
+06:33:25.620 Tap on "Don’t Allow|Don't Allow" RUNNING
+06:33:25.862 Tapping on element: accessibilityText=Don’t Allow, bounds=[52,677][340,725]
+06:33:26.091 Try tapping at (196, 701) using hierarchy based logic for wait
+06:33:27.477 Something have changed in the UI judging by view hierarchy. Proceed.
+06:33:27.477 Tap on "Don’t Allow|Don't Allow" COMPLETED
+06:33:37.858 CommandFailed: Assertion is false: "OK" is visible
+
+device-simulator.log (backboardd), the digitizer XCTest attached for that tap:
+06:33:26.404858 [HID] unknown senderID: 0x1056BCE000015
+06:33:26.406933 [HID] cache sender info for senderID:1056BCE000015
+06:33:26.407431 [HID] we already have a service for senderID:1056BCE000015
+06:33:26.407462 [TouchEvents] digitizer attached (sender 1056BCE000015)
+06:33:26.408166 [TouchEvents] *** unknown digitizer ... id:0x1056bce000015
+06:33:26.408492 [TouchEvents] init: <BKDirectTouchState ... senderID: 0x1056BCE000015>  (a second touch state)
+06:33:26.409542 .. 06:33:26.526675 [TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event  (x10)
+06:33:26.637795 cancel -- digitizer did disappear ... contacts: [pathIndex: 2 ...]
+The nine taps before it each had one digitizer, one touch state, no skipped event.
+
+Why the prompt outlived the flow (flows 100, 65 at 06:34, 06:36):
+06:33:24.043912 tccd: AUTHREQ_CTX ... service=kTCCServiceCalendar; requestor: identifier=com.apple.calaccessd
+06:33:24.521038 SpringBoard: Received request to activate alertItem: <SBUserNotificationAlert; title: “Rehearsly” would like full access to your Calendar.; source: tccd>
+The prompt is SpringBoard's, asked for by tccd on behalf of calaccessd, not a
+window of the app: stopping the app, clearing its state and granting its
+permissions (launchApp of flows 100 and 65) leave it up. Only an answer takes
+it down.

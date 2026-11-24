@@ -1,0 +1,31 @@
+T-299 green after: flows 09 and 60 answer "Don't Allow" through tap-and-see.yaml
+and refuse a calendar prompt left up in onFlowComplete
+(e2e/subflows/no-calendar-prompt-left.yaml).
+
+1. The same lost tap, after the fix: one red flow, not three.
+$ npm --prefix rehearsal-calendar-native run e2e -- ../audit/evidence/T-299/09-dont-allow-lost-after.yaml e2e/flows/100-first-launch-phone-language.yaml e2e/flows/65-dates-russian.yaml
+[Failed] T-299 check, the Don't Allow tap lost, the prompt not left (1m 49s) (Assertion is false: "OK" is visible)
+[Passed] First launch in the phone's language (52s)
+[Passed] Dates in Russian, one format (59s)
+1/3 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+(The check flow fails by design: its tap is left out. onFlowComplete ran after
+the failure and refused the prompt; 100 and 65 found the sign-in screen.)
+
+2. The task's flows, in the supervisor's order.
+$ npm --prefix rehearsal-calendar-native run e2e -- e2e/flows/09-onboarding.yaml e2e/flows/100-first-launch-phone-language.yaml e2e/flows/65-dates-russian.yaml
+[Passed] Onboarding to the end, nothing granted (2m 29s)
+[Passed] First launch in the phone's language (53s)
+[Passed] Dates in Russian, one format (1m 8s)
+3/3 Flows Passed in 4m 29s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+3. Flow 60, the same prompt in Russian, changed the same way.
+$ npm --prefix rehearsal-calendar-native run e2e -- e2e/flows/60-onboarding-russian.yaml
+[Passed] Onboarding in Russian, the greeting on one line (4m 16s)
+1/1 Flow Passed in 4m 18s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The bug flow 09 guards (T-003: the end of onboarding went to the inbox) is
+not back: the flow reaches calendar-today after "Get Started", and neither
+the reopen nor the fresh install shows onboarding again.
