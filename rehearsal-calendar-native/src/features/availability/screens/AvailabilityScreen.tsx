@@ -200,6 +200,11 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // writes, and this only decides what is drawn.
   const shownMode = displayedMode(selectedDayState ?? undefined);
 
+  // A day not marked is free, from today on, as the planner reads it (T-292).
+  // Unless nothing loaded at all: an empty screen is not proof of an empty
+  // diary, and the banner above already says so.
+  const unmarkedFreeFrom = loadFailed && Object.keys(availability).length === 0 ? undefined : today;
+
   const renderMonth = ({ item, index }: { item: { year: number; month: number; key: string }; index: number }) => {
     // The list begins with today's month, at the top of the list's content.
     return (
@@ -209,7 +214,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         selectedDates={editor.selectedDates}
         today={today}
         onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
-        getDayStatus={(date) => getDayStatus(date, availability)}
+        getDayStatus={(date) => getDayStatus(date, availability, unmarkedFreeFrom)}
         onTodayLayout={index === 0 ? scrollToToday : undefined}
       />
     );

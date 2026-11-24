@@ -33,6 +33,11 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
+# The day before the evening, nothing on it and nothing marked, is free
+# (T-292); it had no dot, as if unknown.
+- assertVisible:
+    id: day-${AFTER_DAY}
+    text: "\\d+, Free"
 - runFlow:
     file: ../subflows/day-in-reach.yaml
     env:
