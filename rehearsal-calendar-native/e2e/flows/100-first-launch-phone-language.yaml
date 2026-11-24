@@ -1,0 +1,70 @@
+# The first launch speaks the phone's language (T-291). The app opened in
+# English whatever the phone said — the sign-in, the registration and the
+# onboarding too — and only a choice in the profile or an account's language
+# changed it.
+#
+# The simulator is en-US, as run.mjs pins it. A launch argument puts the phone
+# in another language: iOS reads AppleLanguages among the user defaults, as
+# flow 53 reads AppleICUForce24HourTime, and the value is a property list —
+# "(ru-RU)" the array of the phone's preferred languages, in its order.
+#
+# A Russian phone opens the sign-in in Russian. The same install on a phone
+# preferring Hebrew, then Mexican Spanish opens in Spanish: the first language
+# the app has, by its language, and nothing was stored by the first launch.
+# Then, on the Russian phone, Anna Director signs in: her account is English,
+# and the account's language decides over the phone's (HC01), as before.
+#
+# Apple and Google cannot sign in on the stand; that their sign-in carries the
+# language shown, and a new account gets it, is Jest's (ProviderSignInLanguage,
+# providerSignIn).
+appId: ${APP_ID}
+name: First launch in the phone's language
+tags:
+  - auth
+  - language
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      AppleLanguages: "(ru-RU)"
+- extendedWaitUntil:
+    visible:
+      id: login-submit
+    timeout: 60000
+- assertVisible: "Войти"
+- assertVisible: "Войти через Google"
+- assertNotVisible: "Sign In"
+- takeScreenshot: 100-sign-in-russian-phone
+# Hebrew first, which the app does not have, then Mexican Spanish.
+- launchApp:
+    stopApp: true
+    arguments:
+      AppleLanguages: "(he-IL, es-MX)"
+- extendedWaitUntil:
+    visible:
+      id: login-submit
+    timeout: 60000
+- assertVisible: "Iniciar sesión"
+- assertNotVisible: "Войти"
+- takeScreenshot: 100-sign-in-spanish-phone
+# Back on the Russian phone, an English account signs in.
+- launchApp:
+    stopApp: true
+    arguments:
+      AppleLanguages: "(ru-RU)"
+- extendedWaitUntil:
+    visible: "Войти"
+    timeout: 60000
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- assertVisible:
+    id: tab-calendar
+    text: "Calendar, tab.*"
+- takeScreenshot: 100-calendar-english-account
