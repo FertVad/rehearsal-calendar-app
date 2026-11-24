@@ -284,22 +284,43 @@ in it.
 
 Every `openLink`, and every link the app hands to Safari, opens a tab of its
 own ("policy = New Foreground Tab" in the device log), none is closed, and
-Safari restores them all at every launch: "Read 26 normal tabs from saved
-state" before flow 70 on ae991aa (T-404, `audit/evidence/T-404/`). The launch
-grew with them, and a restored tab could show the page a flow waits for - an
-older build's policy at its anchor, or any page of ours for flow 98's
-".*Rehearsly.*" - before the link's own. So every flow opens Safari through
-`e2e/subflows/fresh-safari.yaml` first (44 before each of its two pages, 70,
-98): its script asks the runner's helper, `GET /fresh-safari?device=<udid>` in
-`server-with-mailbox.mjs`, to `simctl terminate` Safari and remove
-`SafariTabs.db` and `BrowserState.db` from the simulator's own
-`Library/Safari` (`simctl getenv <udid> HOME`); bookmarks and history stay.
-Safari's next launch reads 0 tabs; `node audit/evidence/T-404/restored-tabs.mjs
-e2e/out/artifacts/<run>` counts them from a run's device logs. Two things that
-do not work: Maestro's `clearState: com.apple.mobilesafari` reinstalls the app,
-and the simulator refuses to uninstall Safari (IXErrorDomain 22); emptying
-Safari's data container (`simctl get_app_container … data`) leaves the tabs,
-which are not in it.
+Safari restored the same 26 tabs, of earlier runs and builds, at every launch:
+"Read 26 normal tabs from saved state" at 09:17 on 24.11 (T-296's red check)
+and again at 12:51 (after three runs of flow 70 in T-403) (T-404,
+`audit/evidence/T-404/`). A restored tab could show the page a flow waits for -
+an older build's policy at its anchor, or any page of ours for flow 98's
+".*Rehearsly.*" - before the link's own; that is why Safari starts empty. So
+every flow opens Safari through `e2e/subflows/fresh-safari.yaml` first (44
+before each of its two pages, 70, 98): its script asks the runner's helper,
+`GET /fresh-safari?device=<udid>` in `server-with-mailbox.mjs` (`freshSafari`
+in `e2e/safari.mjs`), to `simctl terminate` Safari and remove `SafariTabs.db`
+and `BrowserState.db` from the simulator's own `Library/Safari` (`simctl getenv
+<udid> HOME`); bookmarks and history stay.
+
+The files go only when Safari is known to be stopped: terminate exited 0, or
+exited 3 with "found nothing to terminate" - what simctl says when Safari is
+not running (`audit/evidence/T-405/probe-terminate.txt`). Any other answer -
+another error, simctl out of its 30 s - removes nothing and answers 500, and
+the flow fails at the subflow: a Safari still running could write its tabs
+back (T-405).
+
+The runner checks it after every run (`reportSafari` in `run.mjs`): Safari
+says "Read <n> normal tabs from saved state" once per launch, and every launch
+in the device log of every flow of the run is counted. Its line is printed
+each run, after the taps taken again:
+
+    [e2e] Safari launches: 4, tabs restored: 0 (fresh-safari.yaml)
+
+A launch that restored a tab fails the run with 1, the flow and the number
+named in the last lines of the output; so does a flow that passed after
+`fresh-safari.yaml` with no launch of Safari in its log - the line changed, or
+the log was not kept, and a check that sees nothing passes on anything.
+junit.xml has every flow green then: the reason is in the output only.
+
+Two things that do not work: Maestro's `clearState: com.apple.mobilesafari`
+reinstalls the app, and the simulator refuses to uninstall Safari
+(IXErrorDomain 22); emptying Safari's data container (`simctl get_app_container
+… data`) leaves the tabs, which are not in it.
 
 ## A lost tap
 

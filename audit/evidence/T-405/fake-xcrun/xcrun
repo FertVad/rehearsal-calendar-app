@@ -1,0 +1,14 @@
+#!/bin/sh
+# T-405: an xcrun first in PATH that fails `simctl terminate <udid>
+# com.apple.mobilesafari` with another error than "found nothing to terminate"
+# - as a simctl that timed out or broke would - and hands every other call to
+# the real xcrun. The helper's /fresh-safari must then remove nothing and
+# answer 500. Each failed terminate is a line in calls.log next to this copy
+# (with-fake-xcrun.mjs prints it): the e2e server is given PATH and HOME only.
+if [ "$1" = simctl ] && [ "$2" = terminate ] && [ "$4" = com.apple.mobilesafari ]; then
+  echo "$(date '+%H:%M:%S') simctl terminate $3 com.apple.mobilesafari: failed on purpose, exit 1" >> "$(dirname "$0")/calls.log"
+  echo "fake xcrun (T-405): simctl terminate $3 com.apple.mobilesafari failed on purpose" >&2
+  echo "An error was encountered processing the command (domain=com.apple.CoreSimulator.SimError, code=405)" >&2
+  exit 1
+fi
+exec /usr/bin/xcrun "$@"

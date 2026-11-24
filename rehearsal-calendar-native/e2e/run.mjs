@@ -46,7 +46,8 @@
  * Everything it writes goes to e2e/out: logs, the seed, JUnit, screenshots.
  *
  * Exit codes: 0 the flows passed; 1 the change failed — a flow, the server,
- * the seed, the bundle; 2 the app reported another API address; 75 the machine
+ * the seed, the bundle, a launch of Safari that restored a tab (reportSafari);
+ * 2 the app reported another API address; 75 the machine
  * was not ready — Docker, a port held by something not ours, the simulator,
  * another run that never finished — so a scheduler waits and runs it again
  * rather than send the change back.
@@ -65,6 +66,7 @@ import { mergeJunit } from './junit.mjs';
 import { LOCK, takeLock } from './lock.mjs';
 import { exitCode, flattenBatches, limitMs, nextStep, startClock } from './midnight.mjs';
 import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, requireInstalledAsLocked, splitFlows } from './native.mjs';
+import { runsFreshSafari, safariLaunches, safariVerdict } from './safari.mjs';
 import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -743,6 +745,7 @@ async function main() {
     await runFlows(debugFlows);
   }
   reportTapsAgain(earlierTaps);
+  reportSafari(artifacts, [...releaseFlows, ...debugFlows]);
 }
 
 /** Metro for the Debug app, its bundle checked to talk to the local server only. */
@@ -795,6 +798,30 @@ function reportTapsAgain(earlier = []) {
   const lines = [...earlier, ...tapsAgain()];
   step(`taps taken again (tap-and-see.yaml): ${lines.length}`);
   for (const line of lines) step(`  ${line}`);
+}
+
+/**
+ * Whether Safari started with no tabs, as fresh-safari.yaml makes it (T-405,
+ * docs/e2e.md "A fresh Safari"): every launch of Safari in the device log of
+ * every flow of the run, all batches in one folder. A launch that restored a
+ * tab, or a flow that passed after fresh-safari.yaml with no launch in its log
+ * to check, fails the run with 1: the mechanism broke, not the machine. Printed
+ * last, so the tail of the output the supervisor keeps says why; junit.xml has
+ * every flow green then.
+ */
+function reportSafari(artifacts, ran) {
+  const junit = fs.existsSync(path.join(OUT, 'junit.xml')) ? fs.readFileSync(path.join(OUT, 'junit.xml'), 'utf8') : '';
+  const passed = new Set([...junit.matchAll(/<testcase\b[^>]*?\bname="([^"]*)"[^>]*?\bstatus="SUCCESS"/g)]
+    .map((match) => match[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;/g, '\'').replace(/&amp;/g, '&')));
+  const fresh = ran.map((flow) => fs.readFileSync(flow, 'utf8')).filter(runsFreshSafari)
+    .map((text) => /^name:\s*(.+?)\s*$/m.exec(text)?.[1].replace(/^(['"])(.*)\1$/, '$2'))
+    .filter((name) => name && passed.has(name));
+  const { summary, failures } = safariVerdict({ launches: safariLaunches(artifacts), fresh });
+  step(summary);
+  if (!failures.length) return;
+  process.exitCode = 1;
+  console.error('[e2e] FAILED: Safari did not start with no tabs (fresh-safari.yaml, docs/e2e.md "A fresh Safari"):');
+  for (const line of failures) console.error(`[e2e]   ${line}`);
 }
 
 main()
