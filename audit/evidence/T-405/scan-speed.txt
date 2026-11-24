@@ -1,0 +1,87 @@
+T-405 review, point 1: the runner's Safari check read each device log whole
+and ran LAUNCH on every line - 6 min 02 s of CPU on a full run's 112 logs
+(2.3 GB, the reviewer's measure), silent after the last flow, and a log over
+V8's longest string (~512 MB) could not be read at all: the run would leave
+with 1 and no reason. Now (2d3ebd2) safariLaunches reads each log a megabyte
+at a time and runs LAUNCH only on the lines indexOf finds its text in.
+
+Red before - the new tests on safariLaunches of 760e769
+(git restore --source=760e769 -- e2e/safari.mjs, then back to HEAD):
+
+$ node --test e2e/__tests__/safari.test.mjs
+[shortened: the 13 passing tests' lines and the stack trace removed]
+✖ a device log over 512 MB: read, its launches found (1045.181292ms)
+ℹ tests 14
+ℹ pass 13
+ℹ fail 1
+✖ failing tests:
+test at e2e/__tests__/safari.test.mjs:101:1
+✖ a device log over 512 MB: read, its launches found (1045.181292ms)
+  Error: Cannot create a string longer than 0x1fffffe8 characters
+    code: 'ERR_STRING_TOO_LONG'
+
+Green after - the same tests on 2d3ebd2:
+
+$ node --test e2e/__tests__/safari.test.mjs
+✔ Safari running: stopped, its tab stores removed, bookmarks and history kept (15.042833ms)
+✔ Safari not running ("found nothing to terminate", exit 3): its tab stores removed (8.190875ms)
+✔ terminate failing with another error: nothing removed, an error (7.689125ms)
+✔ terminate failing with exit 3 with another text: nothing removed, an error (5.946083ms)
+✔ terminate failing with "found nothing to terminate" with another exit: nothing removed, an error (6.18475ms)
+✔ terminate failing with simctl out of its time: nothing removed, an error (6.054792ms)
+✔ a home that is not the simulator's: an error, nothing removed (6.556ms)
+✔ every launch of Safari, by flow, from the device logs (35.138333ms)
+✔ a launch line cut between two pieces of the log: found once (12.371459ms)
+✔ a device log over 512 MB: read, its launches found (1378.2575ms)
+✔ no tab restored: green, and the line says how many launches (6.235375ms)
+✔ a launch that restored tabs: red, naming the flow and the number (0.908917ms)
+✔ a fresh flow passed with no launch in its log: red, the check saw nothing (3.154209ms)
+✔ the flows that run fresh-safari.yaml (1.401625ms)
+ℹ pass 14
+ℹ fail 0
+
+The time, on the real device logs left in e2e/out/artifacts (the full run
+2026-11-24_142847 the reviewer measured is no longer there), 760e769's
+function verbatim against today's, same launches found by both:
+
+$ cd rehearsal-calendar-native && node ../audit/evidence/T-405/measure-scan.mjs
+2026-11-24_174422: launches 1, same as 760e769: true
+2026-11-24_175027: launches 0, same as 760e769: true
+2026-11-24_175617: launches 4, same as 760e769: true
+2026-11-24_180527: launches 0, same as 760e769: true
+2026-11-24_181143: launches 4, same as 760e769: true
+2026-11-24_184219: launches 4, same as 760e769: true
+12 device logs, 199.6 MB, the largest 41.1 MB
+760e769 (whole, LAUNCH on every line): 42503 ms
+now (in pieces, LAUNCH on its lines):  804 ms
+
+About 53 times faster: at that rate the full run's 2.3 GB is some 10 s, not 6 min.
+
+The flows of the task on 2d3ebd2, the runner's own check at the end
+[shortened: the runner's lines before the flows, Maestro's warnings and npm's notices removed]:
+
+$ npm run e2e -- e2e/flows/70-privacy-lists-resend.yaml
+[Passed] Privacy policy lists Resend in every language (47s)
+1/1 Flow Passed in 47s
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (56s)
+1/1 Flow Passed in 57s
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+$ npm run e2e -- e2e/flows/44-profile-language.yaml
+[Passed] The profile's language, kept by the account (3m 44s)
+1/1 Flow Passed in 3m 44s
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
+
+Before these, twice 44 and 98 in one run failed with the machine: junit.xml
+"maestro.DeviceUnreachableException: Device became unreachable during
+deviceInfo", device-xctest.log "Error getting main window
+kAXErrorAPIDisabled", Maestro's log ending at sign-in, before any Safari
+(artifacts 2026-11-24_192543, 2026-11-24_193349). 44 together with 98 in one
+run also once ran past the 10 min of the command. Not the change: it touches
+only the check after the flows.
