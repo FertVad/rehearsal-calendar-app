@@ -8,9 +8,17 @@
 # #processors-xx — as a link from the app or a mail would point a reader to it.
 # Scrolling there from the top of the page took 13 swipes of ~4.3 s in English
 # alone, and every new paragraph of the policy added more: on 477ea2f, after
-# T-293 and T-295, the line was not reached in the 60 s (T-296). From the
-# anchor the line is on screen or one swipe away, however long the policy
-# grows above it. (A second link into the running Safari once left the page in
+# T-293 and T-295, the line was not reached in the 60 s (T-296). At the anchor
+# the line is whole on screen, however long the policy grows above it.
+#
+# openLink returns before Safari has the page: once it restored 26 tabs and
+# committed the page 4.4 s later, after the first look and the first swipe, so
+# the swipes ran from the anchor and carried the line above the screen, where
+# scrolling down never brings it back (T-296). So after each link the flow
+# waits for that language's own line — on screen at its anchor, on no other
+# language's page — and swipes nothing until it is there. The scroll after it
+# only checks the line is whole on screen (100 %); at the anchor it is, and no
+# swipe happens. (A second link into the running Safari once left the page in
 # English; that was the CSP sending legal.js to https, fixed in T-038.)
 #
 # Each language is written on its own, so each is read on its own: the line is
@@ -31,6 +39,9 @@ tags:
 - stopApp
 - openLink:
     link: ${API_URL.replace('/api', '')}/privacy?lang=en#processors-en
+- extendedWaitUntil:
+    visible: ".*sends our emails: your codes for signing up.*Ireland.*"
+    timeout: 30000
 - scrollUntilVisible:
     element: ".*sends our emails: your codes for signing up.*Ireland.*"
     direction: DOWN
@@ -39,6 +50,9 @@ tags:
 
 - openLink:
     link: ${API_URL.replace('/api', '')}/privacy?lang=ru#processors-ru
+- extendedWaitUntil:
+    visible: ".*отправка писем с кодами.*Ирландия.*"
+    timeout: 30000
 - scrollUntilVisible:
     element: ".*отправка писем с кодами.*Ирландия.*"
     direction: DOWN
@@ -47,6 +61,9 @@ tags:
 
 - openLink:
     link: ${API_URL.replace('/api', '')}/privacy?lang=es#processors-es
+- extendedWaitUntil:
+    visible: ".*envío de los correos con códigos.*Irlanda.*"
+    timeout: 30000
 - scrollUntilVisible:
     element: ".*envío de los correos con códigos.*Irlanda.*"
     direction: DOWN
@@ -55,6 +72,9 @@ tags:
 
 - openLink:
     link: ${API_URL.replace('/api', '')}/privacy?lang=de#processors-de
+- extendedWaitUntil:
+    visible: ".*Versand unserer E-Mails: Codes für Registrierung.*Irland.*"
+    timeout: 30000
 - scrollUntilVisible:
     element: ".*Versand unserer E-Mails: Codes für Registrierung.*Irland.*"
     direction: DOWN
