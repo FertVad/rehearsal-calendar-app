@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import http from 'node:http';
-import { mkdtemp, mkdir, writeFile, symlink, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, symlink, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,8 +11,8 @@ import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 
 // Production's database as it is (T-294): created by `migrate --fresh` of a
 // release whose migrator and manifest are those of 477ea2f (8a6dd5e, on
-// 2026-10-28), and kept by the migrator since. Here 477ea2f's own CLI, taken
-// from git, creates such a database; its history is never touched by hand.
+// 2026-10-28), and kept by the migrator since. Here 477ea2f's own CLI creates
+// such a database; its history is never touched by hand.
 // Then this tree's real CLI: --dry plans 016 alone, --apply applies it, the
 // next --dry is clean, and the server records the days. A database created by
 // this tree's --fresh is version 2 with all 25 tables.
@@ -20,21 +21,57 @@ const base = '477ea2f';
 const v1 = 'rehearsly-pg-current-v1';
 const v2 = 'rehearsly-pg-current-v2';
 const serverRoot = fileURLToPath(new URL('../../', import.meta.url));
-const repoRoot = path.resolve(serverRoot, '../..');
-const prefix = 'rehearsal-calendar-native/server/';
+
+// 477ea2f's migrator code is kept in fixtures/migrator-477ea2f byte for byte
+// (T-297): CI checks out one commit, so 477ea2f is not in its git history, and
+// the scenario fetches nothing. Each file is pinned here by its sha256, the
+// hash of `git show 477ea2f:rehearsal-calendar-native/server/<file>`
+// (audit/evidence/T-297/extract-fixture.mjs). A changed byte fails the scenario.
+const baseCode = Object.freeze({
+  'scripts/migrate.js': '1e5b28837b0b123f4cfec9daa748b676c8ffb802b97ee639bd03f4d3c788e1eb',
+  'database/migrations/artifacts.mjs': 'd779dae64754e6a282c729e22d1cbe8e25833edcc253fc58d724cc29c5c8c4ca',
+  'database/migrations/cli.mjs': '7bad6917bfb16177141dc807a2f10490981d5779c4776f55cf851c7376c28ca7',
+  'database/migrations/core.mjs': '04640211c7ed29c1e538543fe395e02cdceca9c94d914d51da4ab602010a98fe',
+  'database/migrations/errors.mjs': 'e6aa24349f9e0ea9294b2aa9be47db5595f839c0243c164c95b91b66b1195c36',
+  'database/migrations/history.mjs': 'd9879c6104c22b3030949e202bbc8e83e5501db131827c8ffa16919c1b26a9ba',
+  'database/migrations/sql.mjs': 'ba70bf8dacc846ff23cef26f3b1853677ffd279dff7aa700644b06bc3c13e578',
+  'database/schema/manifest.mjs': '57497bde1283a48e5a69cc66110e8fd266d4f0d7c7d9d60faf26a44aaf34cba7',
+});
+// The artifacts 477ea2f's manifest names, with the hashes it pins. Version 1's
+// artifacts never change (database/schema/README.md), so they come from this
+// tree; the old CLI checks each against its manifest (CHECKSUM_MISMATCH), and
+// the scenario checks them here first.
+const baseArtifacts = Object.freeze({
+  'database/init-native-schema.sql': '48284687247da9559e196a0175f427fd39c997fab04f2356de2f7ab204217cf9',
+  'database/schema/catalog.json': '3ed03aaac7a6516936b2a8617802a8c286fb5aa711fb1cb9412bb13608af6f83',
+  'database/schema/inspect.mjs': 'a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317',
+  'database/schema/availability-conflict-key-v1.sql': '9bac959563d488e931f6dc1486f8098499a84cf192a0cdb3d81cf99e40110088',
+  'migrations/007-member-availability-rate-limit.sql': '3e24a63c5fe5536e9e32fcc7a8096f149fc003a0aacabe236e0c1385991bb833',
+  'migrations/008-invite-rate-limits.sql': '7087822512ee51bc024ed1bacd96b6aebf8cc40a11133d43f63e467d6b532e99',
+  'migrations/009-operation-ip-rate-limits.sql': 'f52802b7cbc0d057e0098ce8f890aea4192268e6d05e0beef3ffbf1af6af5961',
+  'migrations/010-email-verification.sql': '0306e3c33c39edc892388dedabd4aed5909b0b0b81d53244b52c8a8032dfea6d',
+  'migrations/011-push-tickets.sql': 'b2a92ce145607f7298dd4f091e5ee15e9ad10c01a442f0cb81899ede97ddca5b',
+  'migrations/012-idempotency-keys.sql': '807f7d43e52dbb7060a4b7a22c8608f09b47b118e25ad4083a69088b2f215449',
+  'migrations/013-push-token-owner.sql': '3fe1254b348ee3be9112ad91fb9a754306a261102697e7662ccbf8c7de0a9998',
+});
+const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 async function baseMigrator() {
   const fixture = await realpath(await mkdtemp(path.join(tmpdir(), 't294-base-migrator-')));
-  const git = (...args) => execFileSync('git', ['-C', repoRoot, ...args], { maxBuffer: 16 * 1024 * 1024 });
-  const files = git('ls-tree', '-r', '--name-only', base, '--', `${prefix}database/migrations`, `${prefix}database/schema`,
-    `${prefix}database/init-native-schema.sql`, `${prefix}scripts/migrate.js`, `${prefix}migrations`)
-    .toString().trim().split('\n');
-  assert.ok(files.includes(`${prefix}database/schema/manifest.mjs`) && files.includes(`${prefix}scripts/migrate.js`));
-  for (const file of files) {
-    const target = path.join(fixture, file.slice(prefix.length));
+  const code = fileURLToPath(new URL(`./fixtures/migrator-${base}/`, import.meta.url));
+  const copy = async (from, file, expected) => {
+    const bytes = await readFile(path.join(from, file));
+    assert.equal(sha256(bytes), expected, `${file} is not ${base}'s`);
+    const target = path.join(fixture, file);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, git('show', `${base}:${file}`));
-  }
+    await writeFile(target, bytes);
+  };
+  for (const [file, expected] of Object.entries(baseCode)) await copy(code, file, expected);
+  for (const [file, expected] of Object.entries(baseArtifacts)) await copy(serverRoot, file, expected);
+  // Every artifact the old manifest names is here, with the hash it pins.
+  const named = new Map([...(await readFile(path.join(fixture, 'database/schema/manifest.mjs'), 'utf8'))
+    .matchAll(/"file": "([^"]+)",\s*"sha256": "([0-9a-f]{64})"/g)].map(([, file, hash]) => [file, hash]));
+  assert.deepEqual(Object.fromEntries([...named].sort()), Object.fromEntries(Object.entries(baseArtifacts).sort()));
   await writeFile(path.join(fixture, 'package.json'), '{"type":"module"}');
   await symlink(path.join(serverRoot, 'node_modules'), path.join(fixture, 'node_modules'));
   return fixture;
