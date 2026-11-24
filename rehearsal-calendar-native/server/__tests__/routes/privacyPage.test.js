@@ -134,25 +134,25 @@ const STATISTICS = {
   en: { heading: 'Internal statistics',
     purpose: /also use some of the data listed above for statistics, both overall and for each account, on our own admin page/,
     shows: /how people come to Rehearsly[^.]*first steps[^.]*projects are doing[^.]*notifications and email codes reach people[^.]*how often people use the app and which versions of it are still in use/,
-    onlyForThem: /Two of these records are collected only for them: the days you use the app with its version, and the invitation counts \(no IP addresses, not linked to anyone\)/,
+    onlyForThem: /Two of these records are collected only for the statistics: the days you use the app with its version, and the invitation counts \(no IP addresses, not linked to anyone\)/,
     onlyOperator: /Only the person who runs Rehearsly sees these statistics/, noThirdParty: /not shared with third parties[^.]*no third-party analytics SDK/,
     reads: [/finished or skipped the app’s introduction/, /including which ones you created and which you have marked as seen/,
       /whether you have used calendar sync/, /the notifications in your in-app inbox/, /the days you have used the app with its version/,
-      /for each project, the counts of its invitation being opened and joined through/],
+      /for each project, the counts of how often its invitation is opened and how many people join through it/],
     signInWhy: /still in use, and for the internal statistics/, updated: 'Last updated: November 24, 2026',
-    lede: /keeps what it needs to run the app and schedule rehearsals, plus a few records for its own statistics: the days you use the app and counts of how often invitations are opened and joined through, described below/,
+    lede: /keeps what it needs to run the app and schedule rehearsals, plus two records for its internal statistics, described below: the days you use the app, and counts of how often invitations are opened and how many people join through them\./,
     elseKept: /Everything else on this list is kept anyway, for the purposes given in the table above/,
     wasOnly: /keeps only what it needs|Nothing extra is collected|kept to run the app anyway/ },
   ru: { heading: 'Внутренняя статистика',
     purpose: /Часть перечисленных выше данных мы используем и для статистики в нашей собственной панели администратора/,
     shows: /как люди приходят в Rehearsly[^.]*первые шаги[^.]*как живут проекты[^.]*доходят ли до людей уведомления и письма с кодами[^.]*как часто пользуются приложением и какие его версии ещё в ходу/,
-    onlyForThem: /Только для неё мы собираем две вещи: дни, когда вы пользуетесь приложением, с его версией и счётчики приглашений \(без IP-адресов и без связи с человеком\)/,
+    onlyForThem: /Только для неё мы собираем две вещи: дни, когда вы пользуетесь приложением, с его версией, а также счётчики приглашений \(без IP-адресов и без связи с человеком\)/,
     onlyOperator: /Эту статистику видит только тот, кто отвечает за Rehearsly/, noThirdParty: /Третьим лицам она не передаётся[^.]*сторонние SDK аналитики/,
     reads: [/Статистика строится как в целом, так и по каждому аккаунту/, /прошли или пропустили знакомство с приложением/,
       /какие из них создали вы и какие отметили как просмотренные/, /пользовались ли вы синхронизацией календаря/,
       /дни, когда вы пользовались приложением, и его версию/, /по каждому проекту — счётчики открытий его приглашения и присоединений по нему/],
     signInWhy: /ещё пользуются, и составлять внутреннюю статистику \(о ней ниже\)/, updated: 'Обновлено: 24 ноября 2026 г.',
-    lede: /хранит то, что нужно для работы приложения и планирования репетиций, и несколько записей для собственной статистики: дни, когда вы пользуетесь приложением, и счётчики открытий приглашений и присоединений по ним \(о них ниже\)/,
+    lede: /хранит то, что нужно для работы приложения и планирования репетиций, и несколько записей для внутренней статистики: дни, когда вы пользуетесь приложением, и счётчики открытий приглашений и присоединений по ним \(о них ниже\)/,
     elseKept: /Всё остальное из этого списка хранится и так — для целей, указанных в таблице выше/,
     wasOnly: /хранит только то|Дополнительных данных для неё мы не собираем|хранится и так — для работы приложения/ },
   es: { heading: 'Estadísticas internas',
@@ -164,7 +164,7 @@ const STATISTICS = {
       /si has usado la sincronización de calendario/, /llegan a sus destinatarios/, /los días en que has usado la aplicación y su versión/,
       /de cada proyecto, cuántas veces se ha abierto su invitación y cuántas personas se han unido con ella/],
     signInWhy: /siguen en uso y elaborar las estadísticas internas/, updated: 'Última actualización: 24 de noviembre de 2026',
-    lede: /guarda lo que necesita para funcionar y para planificar ensayos, además de unos pocos registros para sus propias estadísticas: los días en que usas la aplicación, cuántas veces se abren las invitaciones y cuántas personas se unen con ellas \(se describen más abajo\)/,
+    lede: /guarda lo que necesita para funcionar y para planificar ensayos, además de unos pocos registros para sus estadísticas internas: los días en que usas la aplicación, cuántas veces se abren las invitaciones y cuántas personas se unen con ellas \(se describen más abajo\)/,
     elseKept: /Todo lo demás de esta lista se guarda de todos modos, para los fines indicados en la tabla de arriba/,
     wasOnly: /y nada más|no se recopila ningún dato adicional|para que la aplicación funcione\./ },
   de: { heading: 'Interne Statistik',
@@ -174,9 +174,9 @@ const STATISTICS = {
     onlyOperator: /Diese Statistiken sieht nur die Person, die Rehearsly betreibt/, noThirdParty: /nicht an Dritte weitergegeben[^.]*kein Analyse-SDK eines Drittanbieters/,
     reads: [/ob du die Einführung in die App abgeschlossen oder übersprungen hast/, /welche davon du angelegt und welche du als gesehen markiert hast/,
       /ob du die Kalendersynchronisation genutzt hast/, /an welchen Tagen du die App genutzt hast und mit welcher Version/,
-      /für jedes Projekt, wie oft seine Einladung geöffnet und darüber beigetreten wurde/],
+      /für jedes Projekt, wie oft seine Einladung geöffnet wurde und wie viele darüber beigetreten sind/],
     signInWhy: /noch genutzt werden, und die unten beschriebene interne Statistik erstellen/, updated: 'Zuletzt aktualisiert: 24. November 2026',
-    lede: /speichert, was für den Betrieb der App und die Probenplanung nötig ist, und dazu einige wenige Einträge für die eigene Statistik: an welchen Tagen du die App nutzt, wie oft Einladungen geöffnet werden und wie viele darüber beitreten \(siehe unten\)/,
+    lede: /speichert, was für den Betrieb der App und die Probenplanung nötig ist, und dazu einige wenige Einträge für die interne Statistik: an welchen Tagen du die App nutzt, wie oft Einladungen geöffnet werden und wie viele darüber beitreten \(siehe unten\)/,
     elseKept: /Alles andere in dieser Liste wird ohnehin gespeichert, für die Zwecke in der Tabelle oben/,
     wasOnly: /und nicht mehr|keine zusätzlichen Daten erhoben|ohnehin für den Betrieb der App gespeichert/ },
 };
@@ -184,25 +184,25 @@ const STATISTICS = {
 // T-294: the two records in "What we collect" — what, why, when, how long; the
 // days go with the account, the counts carry no IP and no person.
 const USAGE_ROWS = {
-  en: [['The days you use the app, with the app version on each of them. Kept for 13 months and deleted with your account',
-    'To see how Rehearsly is used and which versions of the app are still in use',
+  en: [['The days you use the app, with the app version on each of them. Kept for no longer than 13 months and deleted with your account',
+    'To see how often Rehearsly is used and which versions of the app are still in use',
     'When the app, signed in to your account, contacts our server'],
-  ['Daily counts of how often each project’s invitation is opened — in a browser and in the app — and how many people join through it. No IP addresses, and nothing that links a count to a person. Kept for 13 months and deleted with its project',
+  ['Daily counts of how often each project’s invitation is opened — in a browser and in the app — and how many people join through it. No IP addresses, and nothing that links a count to a person. Kept for no longer than 13 months and deleted with its project',
     'To see how invitations bring people into projects', 'When an invitation is opened or someone joins through it']],
-  ru: [['Дни, когда вы пользовались приложением, и версия приложения в каждый из них. Хранятся 13 месяцев и удаляются вместе с аккаунтом',
-    'Видеть, как пользуются Rehearsly и какие версии приложения ещё в ходу',
+  ru: [['Дни, когда вы пользовались приложением, и версия приложения в каждый из них. Хранятся не дольше 13 месяцев и удаляются вместе с аккаунтом',
+    'Видеть, как часто пользуются Rehearsly и какие версии приложения ещё в ходу',
     'Когда приложение, в котором вы вошли в аккаунт, обращается к нашему серверу'],
-  ['Счётчики по дням: сколько раз открыли приглашение в каждый проект — в браузере и в приложении — и сколько человек по нему присоединилось. Без IP-адресов и без связи с конкретным человеком. Хранятся 13 месяцев и удаляются вместе с проектом',
+  ['Счётчики по дням: сколько раз открыли приглашение в каждый проект — в браузере и в приложении — и сколько человек по нему присоединилось. Без IP-адресов и без связи с конкретным человеком. Хранятся не дольше 13 месяцев и удаляются вместе с проектом',
     'Видеть, как приглашения приводят людей в проекты', 'Когда приглашение открывают или по нему присоединяются']],
-  es: [['Los días en que usas la aplicación, con la versión de la aplicación de cada uno. Se conservan 13 meses y se borran junto con tu cuenta',
-    'Ver cómo se usa Rehearsly y qué versiones de la aplicación siguen en uso',
+  es: [['Los días en que usas la aplicación, con la versión de la aplicación de cada uno. Se conservan como máximo 13 meses y se borran junto con tu cuenta',
+    'Ver con qué frecuencia se usa Rehearsly y qué versiones de la aplicación siguen en uso',
     'Cuando la aplicación, con tu sesión iniciada, se comunica con nuestro servidor'],
-  ['Recuentos diarios de cuántas veces se abre la invitación de cada proyecto —en el navegador y en la aplicación— y de cuántas personas se unen con ella. Sin direcciones IP y sin nada que vincule un recuento con una persona. Se conservan 13 meses y se borran junto con su proyecto',
+  ['Recuentos diarios de cuántas veces se abre la invitación de cada proyecto —en el navegador y en la aplicación— y de cuántas personas se unen con ella. Sin direcciones IP y sin nada que vincule un recuento con una persona. Se conservan como máximo 13 meses y se borran junto con su proyecto',
     'Ver cómo las invitaciones atraen a personas a los proyectos', 'Cuando se abre una invitación o alguien se une con ella']],
-  de: [['Die Tage, an denen du die App nutzt, jeweils mit der App-Version. Gespeichert 13 Monate lang und mit deinem Konto gelöscht',
-    'Sehen, wie Rehearsly genutzt wird und welche App-Versionen noch im Einsatz sind',
+  de: [['Die Tage, an denen du die App nutzt, jeweils mit der App-Version. Höchstens 13 Monate gespeichert und mit deinem Konto gelöscht',
+    'Sehen, wie oft Rehearsly genutzt wird und welche App-Versionen noch im Einsatz sind',
     'Wenn die App, in der du angemeldet bist, unseren Server kontaktiert'],
-  ['Tägliche Zählungen, wie oft die Einladung eines Projekts geöffnet wurde – im Browser und in der App – und wie viele darüber beigetreten sind. Ohne IP-Adressen und ohne etwas, das eine Zählung mit einer Person verbindet. Gespeichert 13 Monate lang und mit dem jeweiligen Projekt gelöscht',
+  ['Tägliche Zählungen, wie oft die Einladung eines Projekts geöffnet wurde – im Browser und in der App – und wie viele darüber beigetreten sind. Ohne IP-Adressen und ohne etwas, das eine Zählung mit einer Person verbindet. Höchstens 13 Monate gespeichert und mit dem jeweiligen Projekt gelöscht',
     'Sehen, wie Einladungen Menschen in Projekte bringen', 'Wenn eine Einladung geöffnet wird oder jemand darüber beitritt']],
 };
 
@@ -213,11 +213,27 @@ const RETENTION = {
   en: [/project memberships, and the days you used the app with its version — is removed from our database/,
     /The days you use the app and the invitation counts are kept for no longer than 13 months, and the counts of an invitation are also deleted with its project/],
   ru: [/участие в проектах, дни, когда вы пользовались приложением, с его версией/,
-    /Дни использования приложения и счётчики приглашений хранятся не дольше 13 месяцев, а счётчики приглашения удаляются и вместе с его проектом/],
+    /Дни использования приложения и счётчики приглашений хранятся не дольше 13 месяцев, а счётчики удаляются и вместе со своим проектом/],
   es: [/pertenencia a proyectos, así como los días en que usaste la aplicación, con su versión/,
     /Los días de uso de la aplicación y los recuentos de las invitaciones se conservan como máximo 13 meses, y los recuentos de una invitación se borran también junto con su proyecto/],
   de: [/Projektmitgliedschaften, außerdem die Tage, an denen du die App genutzt hast, samt App-Version/,
     /Die Tage der App-Nutzung und die Zählungen der Einladungen speichern wir höchstens 13 Monate, und die Zählungen einer Einladung werden außerdem mit ihrem Projekt gelöscht/],
+};
+
+// T-298: the native speakers' fixes, by meaning. The days row records only a day
+// and a version, so it shows how *often* the app is used, not how; both new rows
+// keep their records *at most* 13 months, as "How long we keep it" says, never a
+// bare "13 months"; and the lede calls them the *internal* statistics, the name
+// of the section, not "own statistics".
+const NATIVE = {
+  en: { often: 'To see how often Rehearsly is used', atMost: 'Kept for no longer than 13 months', months: /13 months/,
+    lede: /records for its internal statistics/, ledeWas: /own statistics/ },
+  ru: { often: 'Видеть, как часто пользуются Rehearsly', atMost: 'Хранятся не дольше 13 месяцев', months: /13 месяцев/,
+    lede: /записей для внутренней статистики/, ledeWas: /собственной статистики/ },
+  es: { often: 'Ver con qué frecuencia se usa Rehearsly', atMost: 'Se conservan como máximo 13 meses', months: /13 meses/,
+    lede: /registros para sus estadísticas internas/, ledeWas: /propias estadísticas/ },
+  de: { often: 'Sehen, wie oft Rehearsly genutzt wird', atMost: 'Höchstens 13 Monate gespeichert', months: /13 Monate/,
+    lede: /Einträge für die interne Statistik/, ledeWas: /eigene Statistik/ },
 };
 
 // T-295: the rows for what the app keeps about calendar export and the
@@ -302,6 +318,22 @@ describe.each(LANGS)('privacy policy, %s', lang => {
     for (const row of USAGE_ROWS[lang]) {
       expect(html).toContain(`<tr> ${row.map(cell => `<td>${cell}</td>`).join(' ')} </tr>`);
     }
+  });
+
+  test('says how often the app is used, at most 13 months in both rows, and "internal statistics" in the lede', () => {
+    const native = NATIVE[lang];
+    const html = markup('privacy', lang).replace(/\s+/g, ' ');
+    const cells = [...html.matchAll(/<td>([^<]*)<\/td>/g)].map(match => match[1]);
+    // The days row says why: how often.
+    expect(cells.filter(cell => cell.startsWith(native.often))).toHaveLength(1);
+    // Every table cell with a 13-month term is one of the two rows, and says "at most".
+    const terms = cells.filter(cell => native.months.test(cell));
+    expect(terms).toHaveLength(2);
+    for (const cell of terms) expect(cell).toContain(native.atMost);
+    // The lede names the section's own term.
+    const lede = /<p class="lede">([\s\S]*?)<\/p>/.exec(html)[1];
+    expect(lede).toMatch(native.lede);
+    expect(lede).not.toMatch(native.ledeWas);
   });
 
   test('says how long the days in the app and the invitation counts are kept, and what deletes them', () => {
