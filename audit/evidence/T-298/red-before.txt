@@ -1,0 +1,64 @@
+T-298 red before: privacy.html from ffc81af, privacyPage.test.js of this task.
+$ git restore --source=ffc81af -- public/privacy.html
+$ NODE_OPTIONS=--experimental-vm-modules npx jest privacyPage privacyProcessors
+
+PASS __tests__/utils/privacyProcessors.test.js
+FAIL __tests__/routes/privacyPage.test.js
+  ● privacy policy, en › names the internal statistics as a purpose: what they use, who sees them, nothing to third parties
+    Expected pattern: /Two of these records are collected only for the statistics: the days you use the app with its version, and the invitation counts \(no IP addresses, not linked to anyone\)/
+  ● privacy policy, en › lists the days in the app and the invitation counts in what we collect, with how long they are kept
+    Expected substring: "<tr> <td>The days you use the app, with the app version on each of them. Kept for no longer than 13 months and deleted with your account</td> <td>To see how often Rehearsly is used and which versions of the app are still in use</td> <t…
+  ● privacy policy, en › says how often the app is used, at most 13 months in both rows, and "internal statistics" in the lede
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+  ● privacy policy, ru › names the internal statistics as a purpose: what they use, who sees them, nothing to third parties
+    Expected pattern: /Только для неё мы собираем две вещи: дни, когда вы пользуетесь приложением, с его версией, а также счётчики приглашений \(без IP-адресов и без связи с человеком\)/
+  ● privacy policy, ru › lists the days in the app and the invitation counts in what we collect, with how long they are kept
+    Expected substring: "<tr> <td>Дни, когда вы пользовались приложением, и версия приложения в каждый из них. Хранятся не дольше 13 месяцев и удаляются вместе с аккаунтом</td> <td>Видеть, как часто пользуются Rehearsly и какие версии приложения ещё в ходу</td…
+  ● privacy policy, ru › says how often the app is used, at most 13 months in both rows, and "internal statistics" in the lede
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+  ● privacy policy, ru › says how long the days in the app and the invitation counts are kept, and what deletes them
+    Expected pattern: /Дни использования приложения и счётчики приглашений хранятся не дольше 13 месяцев, а счётчики удаляются и вместе со своим проектом/
+  ● privacy policy, es › names the internal statistics as a purpose: what they use, who sees them, nothing to third parties
+    Expected pattern: /guarda lo que necesita para funcionar y para planificar ensayos, además de unos pocos registros para sus estadísticas internas: los días en que usas la aplicación, cuántas veces se abren las invitaciones y cuántas personas se unen con el…
+  ● privacy policy, es › lists the days in the app and the invitation counts in what we collect, with how long they are kept
+    Expected substring: "<tr> <td>Los días en que usas la aplicación, con la versión de la aplicación de cada uno. Se conservan como máximo 13 meses y se borran junto con tu cuenta</td> <td>Ver con qué frecuencia se usa Rehearsly y qué versiones de la aplicaci…
+  ● privacy policy, es › says how often the app is used, at most 13 months in both rows, and "internal statistics" in the lede
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+  ● privacy policy, de › names the internal statistics as a purpose: what they use, who sees them, nothing to third parties
+    Expected pattern: /speichert, was für den Betrieb der App und die Probenplanung nötig ist, und dazu einige wenige Einträge für die interne Statistik: an welchen Tagen du die App nutzt, wie oft Einladungen geöffnet werden und wie viele darüber beitreten \(s…
+  ● privacy policy, de › lists the days in the app and the invitation counts in what we collect, with how long they are kept
+    Expected substring: "<tr> <td>Die Tage, an denen du die App nutzt, jeweils mit der App-Version. Höchstens 13 Monate gespeichert und mit deinem Konto gelöscht</td> <td>Sehen, wie oft Rehearsly genutzt wird und welche App-Versionen noch im Einsatz sind</td> …
+  ● privacy policy, de › says how often the app is used, at most 13 months in both rows, and "internal statistics" in the lede
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       13 failed, 131 passed, 144 total
+
+13 = the 9 the task names (en/ru/es/de "lists the days…", en/ru/es/de "names the
+internal statistics…", ru "says how long…") + the new test in each of 4 languages.
+The other 131 policy tests are green on the old page too.
+
+The new test stops at its first assertion ("how often"). Each of the three
+meanings on its own, same predicates:
+$ node audit/evidence/T-298/meanings.mjs <ffc81af privacy.html>
+en  1 how often: NO
+en  2 at most 13 months, both rows: NO
+en  3 internal statistics in the lede: NO
+ru  1 how often: NO
+ru  2 at most 13 months, both rows: NO
+ru  3 internal statistics in the lede: NO
+es  1 how often: NO
+es  2 at most 13 months, both rows: NO
+es  3 internal statistics in the lede: NO
+de  1 how often: NO
+de  2 at most 13 months, both rows: NO
+de  3 internal statistics in the lede: NO
+12 of 12 missing

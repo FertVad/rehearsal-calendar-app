@@ -97,7 +97,8 @@ it('does not generate recommendations from old availability while the new range 
     error: 'Availability exceeds the response budget. Choose a shorter range.',
     code: 'AVAILABILITY_BUDGET_EXCEEDED',
   } } }));
-  expect(result.current.error).toContain('Choose a shorter range');
+  // By its code, in the app's words — not the server's English (T-281).
+  expect(result.current.error).toBe(jest.requireActual('../../../../i18n/translations').en.errors.availabilityTooLarge);
   expect(result.current.filteredSlots).toEqual([]);
   expect(generation).not.toHaveBeenCalled();
 });

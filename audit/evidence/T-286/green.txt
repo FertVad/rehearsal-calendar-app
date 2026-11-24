@@ -1,0 +1,15 @@
+T-286 — green: both store tests on the task's tree
+
+$ cd rehearsal-calendar-native && node --test e2e/__tests__/store-seed.test.mjs e2e/__tests__/store-video.test.mjs
+…
+  ✔ the hook over the Planner darkened, lifting before the poster frame; the hook still on it
+  ✔ the hook's shot shows no frame of the Planner loading, from its very first: only the Planner with its windows
+  ✔ a hook's recording without its "ready" mark is refused: where the loading ends is not guessed
+  ✔ the seen count's caption comes only once the count is at 12 of 12, and stays 2 s
+…
+✔ the rehearsals ahead are each seen by some of their cast and not all; the one of all twelve by nobody yet
+ℹ tests 27
+ℹ pass 27
+ℹ fail 0
+
+$ npm run check:dead      # knip: nothing unused

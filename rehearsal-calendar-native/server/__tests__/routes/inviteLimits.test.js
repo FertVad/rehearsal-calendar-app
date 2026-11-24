@@ -151,3 +151,21 @@ test('rate storage loss fails closed before invite lookup, and restoration recov
   }
   expect((await http('/api/native/invite/ABCDEFGH', { authenticated: false })).status).toBe(200);
 });
+
+// The app says a refusal by its code, in the person's language; the English
+// sentence beside it is for the logs (T-281).
+test('an invite that is not there, has run out or is already used says so by its code', async () => {
+  const preview = (code) => http(`/api/native/invite/${code}`, { authenticated: false });
+  expect((await preview('ZZZZZZZZ')).body.code).toBe('INVITE_INVALID');
+  expect((await preview('!')).body.code).toBe('INVITE_INVALID');
+
+  // The seeded admin is already in the project the invite opens.
+  const join = await http('/api/native/invite/ABCDEFGH/join', { method: 'post' });
+  expect(join.status).toBe(400);
+  expect(join.body.code).toBe('ALREADY_MEMBER');
+
+  db.run("UPDATE native_projects SET invite_expires_at = '2000-01-01T00:00:00Z' WHERE id = ?", [data.projectId]);
+  const expired = await preview('ABCDEFGH');
+  expect(expired.status).toBe(410);
+  expect(expired.body.code).toBe('INVITE_EXPIRED');
+});

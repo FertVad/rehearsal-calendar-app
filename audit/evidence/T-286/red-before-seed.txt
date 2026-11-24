@@ -1,0 +1,13 @@
+T-286 — red before: the seed's test on seed.mjs as T-285 left it (HEAD d788455)
+
+$ cd rehearsal-calendar-native && node --test e2e/__tests__/store-seed.test.mjs
+✔ until LAST_HOUR, today has one window of each busy level, after now and by 23:00 (2.967667ms)
+✔ after LAST_HOUR in the page's country the seed refuses, before it writes anything (87.588125ms)
+✖ the rehearsals ahead are each seen by some of their cast and not all; the one of all twelve by nobody yet (1386.04825ms)
+ℹ tests 3
+ℹ pass 2
+ℹ fail 1
+
+✖ the rehearsals ahead are each seen by some of their cast and not all; the one of all twelve by nobody yet (1386.04825ms)
+  AssertionError [ERR_ASSERTION]: Репетиция ансамбля (136): 0/4
+      at TestContext.<anonymous> (file:///…/e2e/__tests__/store-seed.test.mjs:85:12)

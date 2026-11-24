@@ -191,6 +191,18 @@ by hand with `NOW()`, in the same millisecond as others, could fall between two
 pages and not be shown. Left alone: nothing in the app writes such rows, and a
 cursor with microseconds would need the database to hand the time back as text.
 
+### The admin statistics read whole tables into memory (T-293)
+
+The admin dashboard computes its figures in the server from whole lists, not
+in SQL. The inbox section reads every `native_notifications` row of the period
+— for "all time", every row — to take a median time to read
+([analytics.js](../server/services/admin/analytics.js), `notifications`). The
+list of people is read in full by each of the three routes on one opening of
+the page (stats, users, analytics). With a dozen accounts this costs nothing; it
+becomes noticeable at tens of thousands of notifications, only while the owner
+has the dashboard open, and only to the owner. When it does, take the median in
+PostgreSQL (`percentile_cont`) and share one read of the people per request.
+
 ### Migration 013 needs the push-token keys under their original names
 
 The migrator recognises a schema from before 013 by what its push-token keys do
@@ -263,6 +275,16 @@ client sends a short invite code in capitals, as issued (T-025).
 ---
 
 ## Known and left alone on purpose — not defects
+
+- The usage statistics (T-294) are approximate in known ways. A day of use is
+  any request the app makes in a session: opening the app counts, whatever
+  the person then does, and a session refresh alone does not. A link preview
+  is recognised by its user agent; one that calls itself an ordinary browser
+  counts as a person opening the page. The page is counted after it is sent:
+  on Vercel through the platform's `waitUntil` hook, and where that is absent a
+  count may be lost if the function is frozen first — never the page. Each
+  server instance writes a person's day once; several instances write it once
+  each, onto the same row.
 
 - Push delivery is not shown to anyone: Expo's ticket says the message was
   accepted, and `sent` means accepted. The receipts are read by the reminder

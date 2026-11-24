@@ -2,6 +2,7 @@
  * AsyncStorage utility functions for user preferences
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocales } from 'expo-localization';
 import { Language, translations } from '../../i18n/translations';
 
 /**
@@ -11,13 +12,32 @@ import { Language, translations } from '../../i18n/translations';
 export const LANGUAGE_STORAGE_KEY = 'userLanguage';
 
 /**
+ * The language of a phone on which nobody chose one in Rehearsly yet (T-291):
+ * the first of the phone's preferred languages, in its order, that the app has
+ * — es-MX is es — and English when it has none of them. Read each time and
+ * never stored, so until someone signs in or picks a language the app follows
+ * the phone.
+ */
+export function phoneLanguage(): Language {
+  try {
+    for (const { languageCode } of getLocales()) {
+      const code = languageCode?.toLowerCase();
+      if (code && Object.prototype.hasOwnProperty.call(translations, code)) return code as Language;
+    }
+  } catch {
+    // No answer from the phone: English, as before.
+  }
+  return 'en';
+}
+
+/**
  * The app's language now, for code outside the screens — the calendar export
- * (T-276). The same answer I18nContext starts from: the stored choice, English
- * when there is none. Not the phone's language.
+ * (T-276). The same answer I18nContext starts from: the stored choice — the
+ * profile's or the account's — and the phone's language when there is none.
  */
 export async function appLanguage(): Promise<Language> {
   const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-  return saved && saved in translations ? (saved as Language) : 'en';
+  return saved && saved in translations ? (saved as Language) : phoneLanguage();
 }
 
 interface User {

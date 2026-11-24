@@ -1,0 +1,37 @@
+T-293, review round 1, finding 1: coverage missed an all-day stretch begun before today.
+
+Fix: f66c11d (services/admin/analytics.js, coveredPeople: all-day branch
+`starts_at >= today` -> `ends_at > today`, as the timed branch).
+
+== Red before: services/admin/analytics.js from f66c11d~1, tests from f66c11d ==
+$ git restore --source=HEAD~1 -- services/admin/analytics.js
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminAnalytics.test.js
+    ✕ coverage counts an all-day stretch that began before today and has not ended (21 ms)
+    - Expected  - 2
+    + Received  + 2
+    -   "people": 3,
+    +   "people": 2,
+    > 339 |     expect(await hamlet()).toEqual({ people: 3, of: 3, rate: 100 });
+Tests:       1 failed, 18 passed, 19 total
+
+$ npm run test:r0-postgres -- --t293-only        (PostgreSQL 15.13)
+{"scenario":"controls","outcome":"PASS", ...}
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  actual: { people: 2, of: 3, rate: 66.7 },
+  expected: { people: 3, of: 3, rate: 100 },
+AssertionError [ERR_ASSERTION]: T293_ADMIN probe failed unexpectedly
+
+$ git restore --source=HEAD -- services/admin/analytics.js   (tree clean)
+
+== Green on f66c11d ==
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminAnalytics.test.js \
+    __tests__/routes/rehearsalRoster.test.js __tests__/integration/adminStoredContent.test.js \
+    __tests__/routes/privacyPage.test.js __tests__/routes/admin
+Test Suites: 6 passed, 6 total
+Tests:       182 passed, 182 total
+
+$ npm run test:r0-postgres -- --t293-only        (PostgreSQL 15.13)
+{"scenario":"T293_ADMIN","outcome":"PASS","contracts":[ ...,
+  "coverage counts an all-day stretch begun before today and not yet over, not one that ended yesterday"]}
+T293_ADMIN REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.

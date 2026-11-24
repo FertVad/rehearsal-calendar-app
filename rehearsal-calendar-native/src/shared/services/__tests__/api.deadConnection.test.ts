@@ -72,7 +72,7 @@ describe.each(['ECONNABORTED', 'ERR_NETWORK'] as const)('no answer as %s', (code
   });
 
   it('a Google sign-in that heard nothing is sent again, on a new connection, and goes through', async () => {
-    await expect(authAPI.loginWithGoogle('id-token')).resolves.toMatchObject({ status: 200 });
+    await expect(authAPI.loginWithGoogle('id-token', 'en')).resolves.toMatchObject({ status: 200 });
     expect(sent).toEqual([
       { method: 'POST', url: '/auth/google', connection: 1 },
       { method: 'POST', url: '/auth/google', connection: 2 },
@@ -83,7 +83,7 @@ describe.each(['ECONNABORTED', 'ERR_NETWORK'] as const)('no answer as %s', (code
   it('so are a sign-in with a password, with Apple, and a read', async () => {
     await expect(authAPI.login('a@b.c', 'secret')).resolves.toMatchObject({ status: 200 });
     pooled = { id: ++opened, dead: true };
-    await expect(authAPI.loginWithApple('id-token')).resolves.toMatchObject({ status: 200 });
+    await expect(authAPI.loginWithApple('id-token', undefined, 'en')).resolves.toMatchObject({ status: 200 });
     pooled = { id: ++opened, dead: true };
     await expect(rehearsalsAPI.getById('r1')).resolves.toMatchObject({ status: 200 });
     expect(sent.map((request) => request.connection)).toEqual([1, 2, 3, 4, 5, 6]);
@@ -104,13 +104,13 @@ describe.each(['ECONNABORTED', 'ERR_NETWORK'] as const)('no answer as %s', (code
       pooled = { id: ++opened, dead: true };
       return true;
     });
-    await expect(authAPI.loginWithGoogle('id-token')).rejects.toMatchObject({ code });
+    await expect(authAPI.loginWithGoogle('id-token', 'en')).rejects.toMatchObject({ code });
     expect(sent.map((request) => request.connection)).toEqual([1, 2]);
 
     // The repeat's connection failed too, and is flushed as well: the
     // person's next tap does not start on it.
     expect(renew).toHaveBeenCalledTimes(2);
-    await expect(authAPI.loginWithGoogle('id-token')).resolves.toMatchObject({ status: 200 });
+    await expect(authAPI.loginWithGoogle('id-token', 'en')).resolves.toMatchObject({ status: 200 });
     expect(sent.map((request) => request.connection)).toEqual([1, 2, 3]);
   });
 });

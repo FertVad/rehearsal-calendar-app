@@ -1,0 +1,32 @@
+# The Planner tab, tapped until the Planner is on screen, its windows in it
+# (video.yaml, T-275). The simulator loses about one tap in 250 and Maestro
+# reports it done (docs/e2e.md, "A lost tap", T-207): the ru recording stayed on
+# the calendar. As e2e/subflows/tap-and-see.yaml does it, but the result is an
+# id — its tab's own label "Planner" is on every screen. A second tap comes only
+# when the first left no Planner, is told to the run, and the shot cuts the wait.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: planner-list-dates
+    timeout: 10000
+    optional: true
+- runFlow:
+    when:
+      notVisible:
+        id: planner-list-dates
+    commands:
+      - runScript:
+          file: ../scripts/tap-again.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            TAP: "id tab-planner"
+            SEE: "id planner-list-dates"
+      - tapOn:
+          id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: "planner-row-.*"
+    timeout: 30000

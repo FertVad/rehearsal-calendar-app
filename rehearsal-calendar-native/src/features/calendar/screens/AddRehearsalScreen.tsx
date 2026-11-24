@@ -274,6 +274,7 @@ export default function AddRehearsalScreen() {
                 selectedIds={form.selectedMemberIds}
                 onChange={form.setSelectedMemberIds}
                 loading={loadingMembers}
+                failed={membersLoad.failed}
                 conflict={conflict}
               />
               {issues.participants && (

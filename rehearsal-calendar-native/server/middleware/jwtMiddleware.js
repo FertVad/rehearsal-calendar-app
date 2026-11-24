@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken';
 import db from '../database/db.js';
 import { asyncHandler } from './asyncHandler.js';
 import { readTokenTtls } from '../config/tokenTtl.js';
+import { appBuildOf } from './appBuild.js';
+import { recordUsageDay } from '../services/usage/usageDays.js';
 
 // Fail-fast: Require JWT_SECRET in production
 const isProduction = process.env.NODE_ENV === 'production';
@@ -72,9 +74,10 @@ export const authenticateToken = asyncHandler(async function authenticateToken(r
   }
 
   // Verify token_version matches current DB value (revocation check), and
-  // read whether the address is pending with it.
+  // read whether the address is pending with it — and the zone the day of use
+  // is counted in, so recording it needs no read of its own (T-294).
   const user = await db.get(
-    `SELECT u.token_version, i.status AS email_status FROM native_users u
+    `SELECT u.token_version, u.timezone, i.status AS email_status FROM native_users u
      LEFT JOIN native_email_identities i ON i.user_id = u.id WHERE u.id = $1`,
     [decoded.userId]
   );
@@ -96,6 +99,10 @@ export const authenticateToken = asyncHandler(async function authenticateToken(r
 
   req.userId = decoded.userId;
   req.tokenVersion = tokenVer;
+  // Only a session that passed every check above: a refused request (401,
+  // 403, and 426 before it) records nothing. Once a day per person on this
+  // instance; it never fails the request (services/usage/usageDays.js).
+  await recordUsageDay(decoded.userId, user.timezone, appBuildOf(req));
   next();
 });
 

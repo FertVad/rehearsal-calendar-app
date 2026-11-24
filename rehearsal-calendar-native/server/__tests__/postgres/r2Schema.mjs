@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { inspectSchema } from '../../database/schema/inspect.mjs';
-import { manifest } from '../../database/schema/manifest.mjs';
+import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
 import { checkSchemaHttp } from './r2SchemaHttp.mjs';
 
-const schemaSql=readFileSync(new URL('../../database/init-native-schema.sql',import.meta.url),'utf8');
+// The current snapshot is version 2 (T-294: 016). Version 1's predecessors
+// (domain13, pre-import-key) are checked by version 1's own checker, so the
+// schemas adopted through them below lack 016 too, and --apply adds it last.
+const schemaSql=readFileSync(new URL('../../database/init-native-schema-v2.sql',import.meta.url),'utf8');
+const current='rehearsly-pg-current-v2';
 const groupTables={
   '007':['native_member_availability_rate_limits'],
   '008':['native_invite_account_rate_limits','native_invite_ip_rate_limits','native_invite_ip_rate_limit_gate'],
@@ -15,6 +18,7 @@ const groupTables={
   '011':['native_push_tickets'],
   '012':['native_idempotency_keys'],
   '013':[],
+  '016':['native_usage_days','native_invite_counts'],
 };
 // Group 013 is a key, not a table: its predecessor is the push token table
 // unique on (user_id, device_token) with a plain token index.
@@ -31,12 +35,12 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   const artifacts=await loadArtifacts(manifest,fileURLToPath(new URL('../../',import.meta.url)));
   const migrate=(schema,request)=>runMigrations({connectionString,schema,request,artifacts,inspectSchema});
   const report=[];
-  const check=async(schema,profile='rehearsly-pg-current-v1')=>inspect(query,{schema,profile});
+  const check=async(schema,profile=current)=>inspect(query,{schema,profile});
   const create=async(name)=>{
     await query(`CREATE SCHEMA ${name}`);await query(`SET search_path TO ${name},pg_catalog`);await query(schemaSql);
   };
   const pass=(name)=>{report.push(name);console.log(JSON.stringify({check:name,outcome:'PASS'}));};
-  async function withMutation(name,sql,code,profile='rehearsly-pg-current-v1') {
+  async function withMutation(name,sql,code,profile=current) {
     await query('BEGIN');
     try {
       await query('SET LOCAL search_path TO r0_fixture,pg_catalog');
@@ -192,13 +196,14 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   const live=await check('r2_schema_modern');assert.equal(live.compatible,true);assert.equal(live.evidenceSha256,fingerprint);
   pass('consistent nonzero budget state is accepted without counter fingerprint drift');
   await create('r2_schema_partial');
-  for(const table of groupTables['008']) await query(`DROP TABLE ${table}`);
+  // A version 1 schema (no 016) without group 008.
+  for(const table of [...groupTables['008'],...groupTables['016']]) await query(`DROP TABLE ${table}`);
   const partial=await check('r2_schema_partial','rehearsly-pg-domain13-v1');
   assert.equal(partial.compatible,true,JSON.stringify(partial.issues));
-  assert.deepEqual(partial.frontier.budgets,Object.keys(groupTables).filter(group=>group!=='008'));
+  assert.deepEqual([...partial.frontier.budgets].sort(),Object.keys(groupTables).filter(group=>!['008','016'].includes(group)));
   await migrate('r2_schema_partial',{mode:'adopt',profileId:'rehearsly-pg-domain13-v1'});
   const oneGroup=await migrate('r2_schema_partial',{mode:'apply'});
-  assert.deepEqual(oneGroup.stepIds,['008-invite-rate-limits']);
+  assert.deepEqual(oneGroup.stepIds,['008-invite-rate-limits','016-usage-statistics']);
   assert.equal((await check('r2_schema_partial')).evidenceSha256,baseline.evidenceSha256);
   pass('modern adoption applies only the missing whole budget group');
   // FM01: the historical DATE+TIME→TIMESTAMPTZ files cast in the session zone.
@@ -243,7 +248,7 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   assert.deepEqual(manifest.steps.map(step=>step.sql.file).sort(),['database/schema/availability-conflict-key-v1.sql',
     'migrations/007-member-availability-rate-limit.sql','migrations/008-invite-rate-limits.sql','migrations/009-operation-ip-rate-limits.sql',
     'migrations/010-email-verification.sql','migrations/011-push-tickets.sql','migrations/012-idempotency-keys.sql',
-    'migrations/013-push-token-owner.sql']);
+    'migrations/013-push-token-owner.sql','migrations/016-usage-statistics.sql']);
   await query('BEGIN');
   try {
     await query('SET LOCAL search_path TO r2_schema_legacy_time,pg_catalog');
@@ -259,5 +264,5 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
     assert.equal((await check(schema)).compatible,true);
     pass('actual HTTP contracts on '+schema);
   }
-  return {outcome:'PASS',checks:report.length,catalogTables:23,http};
+  return {outcome:'PASS',checks:report.length,catalogTables:25,http};
 }

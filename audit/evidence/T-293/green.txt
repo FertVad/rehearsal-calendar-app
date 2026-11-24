@@ -1,0 +1,43 @@
+HEAD cd0d613
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminAnalytics.test.js __tests__/routes/adminStats.test.js __tests__/routes/privacyPage.test.js __tests__/utils/privacyProcessors.test.js __tests__/integration/adminStoredContent.test.js __tests__/routes/rehearsalRoster.test.js __tests__/routes/operationIpLimits.test.js --silent
+PASS __tests__/utils/privacyProcessors.test.js
+PASS __tests__/routes/adminStats.test.js (5.139 s)
+PASS __tests__/routes/rehearsalRoster.test.js (6.529 s)
+PASS __tests__/routes/adminAnalytics.test.js (6.978 s)
+PASS __tests__/integration/adminStoredContent.test.js (7.195 s)
+PASS __tests__/routes/privacyPage.test.js (7.628 s)
+PASS __tests__/routes/operationIpLimits.test.js (9.287 s)
+Test Suites: 7 passed, 7 total
+Tests:       181 passed, 181 total
+
+$ npm run test:unit -- --silent
+FAIL __tests__/startup/runtimeStartup.test.js   (8 tests; the same 8 fail on 32ca8f0: the sandbox refuses to read .env)
+Test Suites: 1 failed, 87 passed, 88 total
+Tests:       8 failed, 1376 passed, 1384 total
+
+$ npm run test:admin-stored-browser
+    ✓ preserves image handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+    ✓ preserves SVG handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+    ✓ preserves table/script delimiters in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+    ✓ preserves literal markup, entities and Unicode in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+    ✓ returns legacy email text literally when a report author has no name [persisted data -> real API -> Chromium DOM/CSP]
+    ✓ requires user authentication for writes and admin authentication for reads
+Tests:       6 passed, 6 total
+
+$ node --test __tests__/browser/adminDashboard.browser.test.mjs
+✔ untrusted admin API values remain literal text, even without CSP
+✔ production CSP loads admin assets, blocks inline execution and preserves per-response nonces
+✔ the sign-in figure is named for sign-ins, not churn or inactivity
+✔ the filters reach every statistics request, and the service switch only the users table
+✔ login, pagination, status, refresh, empty states and logout work under production CSP
+✔ 401 returns to login and removes the stored credential
+ℹ pass 6
+ℹ fail 0
+
+$ npm run test:admin-browser   (adminFailures: 17/18; the one failure waited for a URL ending in /stats,
+                                 which now carries ?period=...; fixed to match the path, rerun: pass 1 fail 0)
+
+$ npm run check:dead      -> knip, both modes: no findings
+$ npm run check:secrets   -> {"summary":"pass","mode":"worktree","files":2411,"findings":0,"errors":0}
+$ npm run lint            -> 0 errors (648 warnings, all pre-existing, src/ only)

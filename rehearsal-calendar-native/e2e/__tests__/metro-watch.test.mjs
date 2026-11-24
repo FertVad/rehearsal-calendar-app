@@ -25,23 +25,29 @@ const config = require(path.join(ROOT, 'metro.config.js'));
 const tag = `metro-watch-${process.pid}`;
 const outDir = path.join(ROOT, 'e2e', 'out', 'artifacts', tag);
 const appDir = path.join(ROOT, 'e2e', tag);
+const storeDir = path.join(ROOT, 'e2e', 'store', 'out', 'clips', tag);
 const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metro-watch-'));
 let fileMap = null;
 after(async () => {
   await fileMap?.end();
-  for (const dir of [outDir, appDir, cacheDir]) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of [outDir, appDir, storeDir, cacheDir]) fs.rmSync(dir, { recursive: true, force: true });
 });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Metro's file map over the two folders, with the project's resolver. */
+/**
+ * Metro's file map over the project, as `expo start` watches it, with the
+ * project's resolver. One stream for all of it: a folder watched on its own got
+ * a stream that could start after the probe was heard, and hear nothing.
+ */
 async function watch() {
   fs.mkdirSync(outDir, { recursive: true });
   fs.mkdirSync(appDir, { recursive: true });
+  fs.mkdirSync(storeDir, { recursive: true });
   fileMap = createFileMap({
     ...config,
     projectRoot: ROOT,
-    watchFolders: [outDir, appDir],
+    watchFolders: [ROOT],
     fileMapCacheDirectory: cacheDir,
     resetCache: true,
     maxWorkers: 1,
@@ -69,7 +75,7 @@ async function writeUntilHeard(heard, file) {
   return false;
 }
 
-test("a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are", async () => {
+test("a screenshot Maestro writes into e2e/out, or a recording into e2e/store/out, is not a change to Metro; the app's files are", async () => {
   const heard = await watch();
 
   // A file of the app's own, outside e2e/out: once it is heard, the watcher listens.
@@ -79,6 +85,9 @@ test("a screenshot Maestro writes into e2e/out is not a change to Metro; the app
   // What Maestro leaves for a step: a screenshot and the hierarchy beside it.
   fs.writeFileSync(path.join(outDir, 'step-033-tapOnElement-Allow_Full_Access.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   fs.writeFileSync(path.join(outDir, 'step-033-tapOnElement-Allow_Full_Access.json'), '{}');
+  // What record.mjs leaves for a shot of the preview: the recording and its pauses.
+  fs.writeFileSync(path.join(storeDir, '01.mov'), Buffer.from([0, 0, 0, 0x14, 0x66, 0x74, 0x79, 0x70]));
+  fs.writeFileSync(path.join(storeDir, '01.json'), '{"waits":[]}');
   // Another app file, written after them: it is heard, so they had their chance to be.
   const appFile = path.join(appDir, 'probe.ts');
   assert.ok(await writeUntilHeard(heard, appFile), `the app file written after the screenshots was not heard: ${JSON.stringify(heard)}`);
@@ -86,4 +95,6 @@ test("a screenshot Maestro writes into e2e/out is not a change to Metro; the app
 
   assert.deepEqual(heard.filter((file) => file.startsWith(outDir)), [],
     'files written into e2e/out reached Metro as changes');
+  assert.deepEqual(heard.filter((file) => file.startsWith(storeDir)), [],
+    'files written into e2e/store/out reached Metro as changes');
 });

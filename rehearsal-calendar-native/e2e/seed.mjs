@@ -311,6 +311,18 @@ export const PEOPLE = {
   // of their own, so 100's notices and members stay as they are.
   theseus: { email: 'theseus@e2e.test', firstName: 'Theseus', lastName: 'Athens', onboarded: true },
   snug: { email: 'snug@e2e.test', firstName: 'Snug', lastName: 'Joiner', onboarded: true },
+  // Starveling, whose app speaks Russian, has Quince's company open when Quince
+  // removes him from another device; he pulls the page to refresh it and reads
+  // why in Russian, not the server's English "Access denied" (102, T-281). A
+  // company of their own, as 101's.
+  quince: { email: 'quince@e2e.test', firstName: 'Peter', lastName: 'Quince', onboarded: true },
+  starveling: { email: 'starveling@e2e.test', firstName: 'Robin', lastName: 'Starveling', onboarded: true, locale: 'ru' },
+  // Peaseblossom, whose app speaks Russian, is an admin of Oberon's company and
+  // has its page open when Oberon takes the role back from another device; she
+  // taps "Показать код" and is told the rule in the natives' words (103,
+  // T-283). A company of their own, so 102's stays as it is.
+  oberon: { email: 'oberon@e2e.test', firstName: 'Oberon', lastName: 'Fairy', onboarded: true },
+  peaseblossom: { email: 'peaseblossom@e2e.test', firstName: 'Peaseblossom', lastName: 'Fairy', onboarded: true, locale: 'ru' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -318,6 +330,20 @@ const ISLANDERS = [
   ['Ariel', 'Spirit'], ['Caliban', 'Island'], ['Miranda', 'Milan'], ['Ferdinand', 'Naples'],
   ['Alonso', 'Naples'], ['Gonzalo', 'Counsellor'], ['Adrian', 'Lord'], ['Francisco', 'Lord'],
   ['Trinculo', 'Jester'], ['Stephano', 'Butler'], ['Iris', 'Rainbow'], ['Juno', 'Queen'],
+];
+
+/**
+ * Whom the inbox flows' notices name (61, 62, 86, 88): a notice that names
+ * someone is written only while their account exists (T-278), so each is an
+ * account, found by the stand by this full name (server-with-mailbox.mjs). In
+ * no project and never signed in: only the notice is sent, nobody joins or
+ * sees anything. Not Kabanikha, whose account 89 deletes: 86's Russian woman
+ * is Varvara.
+ */
+const NAMED = [
+  ['malcolm', 'Malcolm', 'Prince'], ['banquo.thane', 'Banquo', 'Thane'],
+  ['jacinta', 'Jacinta', 'Labradora'], ['marthe', 'Marthe', 'Schwerdtlein'],
+  ['varvara', 'Варвара', 'Кабанова'],
 ];
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -518,6 +544,12 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE) RETURNING id`,
       [`${firstName.toLowerCase()}@e2e.test`, hash, firstName, lastName, timezone]);
     islanders.push(islander.id);
+  }
+  for (const [mailbox, firstName, lastName] of NAMED) {
+    await client.query(
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE)`,
+      [`${mailbox}@e2e.test`, hash, firstName, lastName, timezone]);
   }
   const prosperoProject = async (name, description, members) => {
     const { rows: [made] } = await client.query(
@@ -906,6 +938,24 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
     [athens.id, ids.theseus, ids.snug]);
+
+  // Quince's company (102), the same way: Starveling an actor in it.
+  const { rows: [players] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Quince Players', 'The carpenter''s workshop', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [players.id, ids.quince, ids.starveling]);
+
+  // Oberon's company (103), the same way, with Peaseblossom an admin in it.
+  const { rows: [fairies] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Fairy Court', 'The wood near Athens', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW())`,
+    [fairies.id, ids.oberon, ids.peaseblossom]);
 
   // Juliet's two (74), made as the server makes them: the sign-ins are spent.
   // Tomorrow a titled one with a place, one with no place, one with no title;

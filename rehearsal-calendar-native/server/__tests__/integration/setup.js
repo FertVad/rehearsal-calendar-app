@@ -68,6 +68,8 @@ export async function setupIntegrationDb() {
       status TEXT DEFAULT 'active',
       invited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      -- As in the canonical schema; the admin statistics fall back to it (T-293).
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(project_id, user_id)
     );
 
@@ -248,6 +250,7 @@ export async function setupIntegrationDb() {
   testDb.exec(readFileSync(join(__dirname, '../../migrations/009-operation-ip-rate-limits.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/011-push-tickets.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/012-idempotency-keys.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/016-usage-statistics.sql'), 'utf8'));
 
   // Translate the PostgreSQL dialect our routes are written in into something
   // SQLite can parse. Only the constructs actually used in the codebase are
@@ -287,7 +290,8 @@ export async function setupIntegrationDb() {
         // Row locks: SQLite has one writer, so there is nothing to lock. What
         // FOR UPDATE or FOR SHARE buys against a second connection is proven on
         // PostgreSQL.
-        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|(?:KEY\s+)?SHARE)\b/gi, '')
+        // SKIP LOCKED and NOWAIT go with them: there is never another holder.
+        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|(?:KEY\s+)?SHARE)\b(?:\s+(?:SKIP\s+LOCKED|NOWAIT)\b)?/gi, '')
         // SET LOCAL tunes the PostgreSQL session for one transaction — a
         // timeout, a lock wait — and SQLite has nothing to tune.
         .replace(/^\s*SET\s+LOCAL\s+[\s\S]*$/i, 'SELECT 1')
@@ -349,6 +353,8 @@ export async function setupIntegrationDb() {
 export function clearIntegrationDb() {
   if (testDb) {
     testDb.exec('DELETE FROM native_idempotency_keys');
+    testDb.exec('DELETE FROM native_usage_days');
+    testDb.exec('DELETE FROM native_invite_counts');
     testDb.exec('DELETE FROM native_operation_ip_rate_limits');
     testDb.exec('UPDATE native_operation_ip_rate_limit_gates SET key_count = 0');
     testDb.exec('DELETE FROM native_invite_account_rate_limits');

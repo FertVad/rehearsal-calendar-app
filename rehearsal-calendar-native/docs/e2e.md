@@ -13,6 +13,13 @@ npm run e2e:up                    # stay up for Maestro MCP / Studio; Ctrl-C end
 npm run e2e -- --build            # generate the iOS project and build anew anyway
 ```
 
+The App Store's screenshots are taken on the same stand, on a simulator of
+their own, by `node e2e/store/shoot.mjs` (`run.mjs --store=<locale>`), and its
+preview video recorded there by `node e2e/store/record.mjs`; neither is part
+of `npm run e2e`. How to run them for a new version: `e2e/store/README.md`.
+What they write in `e2e/store/out` is kept out of Metro's watch, as `e2e/out`
+is (`metro.config.js`): a new file there was the "Refreshing..." banner.
+
 Needs: Docker Desktop with a local `postgres:15` image, Xcode, CocoaPods,
 Maestro in `~/.maestro/bin` (2.11.0), Node 22. Logs, the seed, JUnit and
 screenshots go to `e2e/out`.
@@ -253,6 +260,24 @@ it hid, with the sheet off, at flow 54 on d74e9d2 (T-246,
 take it out - not with waits and not with repeats. The supervisor runs every
 flow that failed after the first lost driver once more, on its own; those are
 not unstable flows. Turning the sheet off left it one cause fewer, not none.
+
+## Safari over a running app
+
+A Safari flow stops Rehearsly first: `- stopApp: ${APP_ID}`, then `- stopApp`
+(Safari) and `openLink`. The flows run one after another on one simulator,
+and the flow before a Safari one leaves the app running. With the app behind
+Safari, Maestro's driver (2.11.0) still took it for the app on screen: after
+the link opened it read Rehearsly's hierarchy, not the page's - flow 98's
+".*Rehearsly.*" was found there - until iOS suspended the app, and a read
+that met the suspension waited 60 s on the app's main run loop
+("XCTPerformOnMainRunLoop work timed out after 60.0s") and failed the step.
+Flows 70 and 98 failed so on 25e2d1d, each after the app's own flow (69,
+97), and passed alone (T-277). A probe opening Safari over the running app 8
+times read the app first all 8 times; with the app stopped first, Safari
+every time (`audit/evidence/T-277`, `wrong-app-scan.mjs` tells it from any
+run's `device-xctest.log`). Flow 44 opens the policy from the app's profile,
+so the app stays behind Safari there by design and the race stays possible
+in it.
 
 ## A lost tap
 

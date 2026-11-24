@@ -174,6 +174,35 @@ tr:hover td { background: rgba(139,148,158,0.04); }
 }
 .hidden { display: none !important; }
 
+/* Filters, notes and analytics (T-293) */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+.filters label, .toggle { font-size: 12px; color: #8b949e; display: flex; flex-direction: column; gap: 4px; }
+.toggle { flex-direction: row; align-items: center; gap: 6px; margin-bottom: 8px; }
+.filters select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(139,148,158,0.3);
+  background: #0d1117;
+  color: #e6edf3;
+  font-size: 13px;
+}
+.filters .note { flex-basis: 100%; }
+.note { font-size: 12px; color: #8b949e; margin: 6px 0 10px; line-height: 1.45; }
+.card .note { margin-bottom: 0; }
+.metric { font-size: 14px; margin: 4px 0; }
+.analytics-block { margin-bottom: 28px; }
+.block-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #e6edf3; }
+.table-scroll { overflow-x: auto; }
+.mini-table { margin-top: 10px; }
+.steps-cell { color: #8b949e; font-size: 12px; min-width: 260px; }
+.service-row td { color: #8b949e; font-style: italic; }
+
 .login-button { width: 100%; padding: 10px; }
 .empty-cell { text-align: center; color: #8b949e; }
 .page-label { color: #8b949e; font-size: 12px; line-height: 30px; }

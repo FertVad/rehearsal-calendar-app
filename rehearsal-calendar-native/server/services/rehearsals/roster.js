@@ -220,6 +220,41 @@ export async function rosterStats(conn, rehearsalIds) {
   return stats;
 }
 
+/**
+ * For the admin statistics (T-293): per person, how many rehearsals they are
+ * on and how many of those they have marked as seen. `userIds` null: everyone.
+ */
+export async function answersByPerson(conn, userIds = null) {
+  if (userIds && userIds.length === 0) return [];
+  return conn.all(
+    `SELECT roster.user_id, COUNT(*) AS on_roster,
+       COUNT(CASE WHEN roster.response = 'yes' THEN 1 END) AS seen
+     FROM ${ROSTER} roster
+     ${userIds ? `WHERE roster.user_id IN (${placeholders(userIds, 1)})` : ''}
+     GROUP BY roster.user_id`,
+    userIds || []
+  );
+}
+
+/**
+ * For the admin statistics (T-293): the rehearsals that started in [from, to),
+ * per project and person on them — how many, and how many of them the person
+ * marked as seen before the start. The row has to say 'yes' and have last
+ * changed before the start: a mark made after it, or taken back, is not "seen
+ * before". Someone taken off the project is on none of them (ROSTER).
+ */
+export async function seenBeforeStart(conn, from, to) {
+  return conn.all(
+    `SELECT r.project_id, roster.user_id, COUNT(*) AS on_roster,
+       COUNT(CASE WHEN roster.response = 'yes' AND roster.updated_at < r.starts_at THEN 1 END) AS seen_before
+     FROM ${ROSTER} roster
+     JOIN native_rehearsals r ON r.id = roster.rehearsal_id
+     WHERE r.starts_at >= $1 AND r.starts_at < $2
+     GROUP BY r.project_id, roster.user_id`,
+    [from, to]
+  );
+}
+
 /** The people on a rehearsal with their names, for the participants screen. */
 export async function rosterWithNames(conn, rehearsalId) {
   return conn.all(

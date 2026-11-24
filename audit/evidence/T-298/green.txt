@@ -1,0 +1,32 @@
+T-298 green: privacy.html = HEAD + native-speakers.patch (git apply, exact).
+$ NODE_OPTIONS=--experimental-vm-modules npx jest privacyPage privacyProcessors
+PASS __tests__/utils/privacyProcessors.test.js
+PASS __tests__/routes/privacyPage.test.js
+Test Suites: 2 passed, 2 total
+Tests:       144 passed, 144 total
+(140 before + the new test in 4 languages)
+
+$ node audit/evidence/T-298/meanings.mjs public/privacy.html
+en  1 how often: yes
+en  2 at most 13 months, both rows: yes
+en  3 internal statistics in the lede: yes
+ru  1 how often: yes
+ru  2 at most 13 months, both rows: yes
+ru  3 internal statistics in the lede: yes
+es  1 how often: yes
+es  2 at most 13 months, both rows: yes
+es  3 internal statistics in the lede: yes
+de  1 how often: yes
+de  2 at most 13 months, both rows: yes
+de  3 internal statistics in the lede: yes
+all 12 present
+
+$ npx eslint __tests__/routes/privacyPage.test.js
+(clean)
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest      (whole server)
+Test Suites: 1 failed, 90 passed, 91 total
+Tests:       8 failed, 1449 passed, 1457 total
+The one failing suite is __tests__/startup/runtimeStartup.test.js: its child
+process reports "import-failed" in this sandbox. Same 8 failures on clean HEAD
+(164d22f, without this task's changes) — not this task.

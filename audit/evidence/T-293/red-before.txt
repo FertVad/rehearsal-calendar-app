@@ -1,0 +1,47 @@
+$ git restore --source=32ca8f0 -- routes/admin.js routes/admin/dashboardPage.js public/admin/dashboard.js public/admin/dashboard.css services/rehearsals/roster.js public/privacy.html
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminAnalytics.test.js __tests__/routes/privacyPage.test.js __tests__/utils/privacyProcessors.test.js __tests__/integration/adminStoredContent.test.js __tests__/startup/runtimeStartup.test.js --verbose | grep -E "✕|Tests:|Test Suites:|^(PASS|FAIL)"
+FAIL __tests__/utils/privacyProcessors.test.js
+    ✕ the update date is that of the last revision (T-269), as each language writes a date (66 ms)
+    ✕ the update date is that of the last revision (T-269), as each language writes a date (3 ms)
+    ✕ the update date is that of the last revision (T-269), as each language writes a date (1 ms)
+    ✕ the update date is that of the last revision (T-269), as each language writes a date (1 ms)
+FAIL __tests__/integration/adminStoredContent.test.js
+    ✕ preserves image handler in profile, report, database and admin JSON (396 ms)
+    ✕ preserves SVG handler in profile, report, database and admin JSON (109 ms)
+    ✕ preserves table/script delimiters in profile, report, database and admin JSON (82 ms)
+    ✕ preserves literal markup, entities and Unicode in profile, report, database and admin JSON (70 ms)
+    ✕ requires user authentication for writes and admin authentication for reads (171 ms)
+FAIL __tests__/routes/adminAnalytics.test.js
+    ✕ count in no figure: both domains and the listed addresses (85 ms)
+    ✕ an address counts again once it is no longer listed (37 ms)
+    ✕ are hidden from the users table, and shown marked when asked (24 ms)
+    ✕ says where each person came from by their earliest active membership (32 ms)
+    ✕ sign-in, language, zone and the steps (24 ms)
+    ✕ filters by period, source and language, and pages (20 ms)
+    ✕ the newcomer funnel by week of registration, invited apart from the rest, with medians (87 ms)
+    ✕ where people come from, which projects brought them, languages and zones (31 ms)
+    ✕ projects: seen before the start leaves out the removed member; coverage stops at the 14th date (29 ms)
+    ✕ notifications, inbox and email codes, without service accounts (23 ms)
+    ✕ carries no address (19 ms)
+    ✕ the source and language filters apply to every section (9 ms)
+    ✕ /admin/api/analytics refuses without the admin token (19 ms)
+    ✕ refuses a malformed filter: period=365 (17 ms)
+    ✕ refuses a malformed filter: source=friends (12 ms)
+    ✕ refuses a malformed filter: lang=%3Cb%3E (12 ms)
+FAIL __tests__/routes/privacyPage.test.js
+    ✕ names the internal statistics as a purpose: what they use, who sees them, nothing to third parties (16 ms)
+    ✕ names the internal statistics as a purpose: what they use, who sees them, nothing to third parties (5 ms)
+    ✕ names the internal statistics as a purpose: what they use, who sees them, nothing to third parties (3 ms)
+    ✕ names the internal statistics as a purpose: what they use, who sees them, nothing to third parties (4 ms)
+FAIL __tests__/startup/runtimeStartup.test.js (10.407 s)
+  ✕ library import (VERCEL=false) exports the app without listeners or database attempts (1227 ms)
+  ✕ library import (VERCEL=true) exports the app without listeners or database attempts (1042 ms)
+  ✕ direct Vercel execution also leaves listener ownership to the platform (975 ms)
+  ✕ direct standalone startup serves every public route without attempting an unavailable database (706 ms)
+  ✕ an owned standalone child exits when its parent IPC channel closes (642 ms)
+  ✕ failed initialization is shared, not retried within the pause and cannot take public routes offline (634 ms)
+  ✕ an owned stalled PostgreSQL handshake is bounded and not retried by requests within the pause (808 ms)
+  ✕ process database configuration takes precedence over the explicitly selected file (623 ms)
+Test Suites: 5 failed, 5 total
+Tests:       37 failed, 118 passed, 155 total
+$ git restore --source=HEAD -- (same files)   # HEAD cd0d613

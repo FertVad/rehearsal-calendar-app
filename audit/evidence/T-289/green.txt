@@ -1,0 +1,35 @@
+T-289 — green on 393a076.
+
+  node --test e2e/__tests__/store-video.test.mjs e2e/__tests__/store-touches.test.mjs \
+    e2e/__tests__/store-compose.test.mjs e2e/__tests__/store-seed.test.mjs
+
+✔ the sizes App Store Connect takes: 1320×2868 and 1206×2622
+✔ the fonts are the repository's, in e2e/store/fonts, each with its OFL.txt beside it; no system font (T-288)
+✔ every caption of every language marks at most one main word, in [brackets] within one line (T-288)
+✔ a missing screenshot or language is refused, not drawn over
+✔ drawn by compose.swift
+✔ until LAST_HOUR, today has one window of each busy level, after now and by 23:00
+✔ after LAST_HOUR in the page's country the seed refuses, before it writes anything
+✔ the rehearsals ahead are each seen by some of their cast and not all; the one of all twelve by nobody yet
+✔ a production bundle gets the real App: no touch is ever reported
+✔ an e2e bundle gets e2e/device/App.js for index.ts's ./App, and only for it
+✔ without the launch argument the e2e bundle's app is the real App, as it is
+✔ with it, the app sits in a view that only listens
+✔ only a recorder on this machine is told, and told where, when and on what screen
+✔ captions.json for the video
+✔ the format App Store Connect takes, and the storyboard: nine shots, 29 s, from seven recordings
+✔ a recording's stillness is cut to STILL; what lies between "cut" and "resume" is taken out, but the frame on screen at "resume"
+✔ the poster frame's time code, as App Store Connect writes it
+✔ the hook's day is the day it was shot on in the page's country
+✔ a hole of light is the elements' frames as the hierarchy gives them, never placed by eye
+✔ a touch's place on the window is the tap Maestro's driver logged as the finger went down, at the same x
+✔ every language as compose.swift lays it out
+✔ made by ffmpeg, its layer by compose.swift
+ℹ tests 46
+ℹ pass 46
+ℹ fail 0
+
+Also: npm run type-check — clean; npm run lint — 0 errors (648 warnings, none
+new in kind); npm run check:dead — clean; npm run check:secrets — pass;
+npx jest --selectProjects frontend DayCard RehearsalCard CalendarSync
+Availability SmartPlanner — 29 suites, 325 tests passed.

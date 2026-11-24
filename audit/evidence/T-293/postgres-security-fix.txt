@@ -1,0 +1,46 @@
+T-293 — supervisor's `npm run test:r0-postgres` (--security-only) failed on 9a1d29b.
+
+Cause
+- A02 and IS02 log in to the admin with bcrypt and then list /admin/api/users
+  on the R0 *diagnostic subset* (__tests__/postgres/fixture.sql), not the
+  canonical schema. T-293's listing now reads where each person came from and
+  how far they got: native_users.onboarding_completed / password_hash,
+  native_project_members.created_at, native_user_availability.created_at,
+  native_auth_providers, native_calendar_connections. The subset had none of
+  them, so the route answered 500 (42703 / 42P01). The route is right for the
+  real schema (database/init-native-schema.sql; T293_ADMIN runs it on the
+  canonical schema and passes). The probes' fixture lagged behind the route.
+- Fix: __tests__/postgres/adminListingFixture.mjs adds exactly those columns
+  and tables, in the canonical shapes, for the two scenarios that list users
+  after a real login (A02 in probe.mjs, IS02 in is02.mjs). No application code,
+  schema or migration changed.
+
+Red (HEAD 9a1d29b, PostgreSQL 15.13), `node scripts/r0-postgres.mjs --a02-only`:
+  {"scenario":"controls","outcome":"PASS",...}
+  [Admin] Users error: error: column "onboarding_completed" does not exist
+  AssertionError [ERR_ASSERTION]: bcrypt-issued token must authorize a real admin route
+  500 !== 200
+  AssertionError [ERR_ASSERTION]: A02 probe failed unexpectedly
+
+Red for IS02 (after the A02 part only, same run of --security-only):
+  (IS02 already adds the native_users columns itself; the listing after its
+  login hits the missing membership/availability columns and tables)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: 500 !== 200
+  AssertionError [ERR_ASSERTION]: IS02 probe failed unexpectedly
+
+Green after the fix, PostgreSQL 15.13:
+  --security-only: controls, D01, R4_LIFECYCLE, R4_PUSH_TOKEN, A02, B03, B04, H04,
+    IS02, R2_ADAPTER — PASS
+  --f05-only: F05 PASS
+  --r2-migrations-schema-only: R2_SCHEMA, R2_MIGRATIONS PASS
+  --r3-only: R3_EMAIL, R3_AUTH PASS
+  --r4-only: D01, R4_LIFECYCLE, R4_PUSH_TOKEN PASS
+  --r6-only, --r7-only, --r8-only: PASS
+  --t278-only: T278_NOTICES PASS
+  --t293-only: T293_ADMIN PASS
+
+Not green here, not T-293: R2_STARTUP. Its copied server child cannot read its
+own fixture .env under /private/tmp — this worker's OS sandbox forbids reading
+any .env ("Unable to load the explicitly selected server environment file" at
+config/env.js:16, seen with a temporary debug print, since reverted). The
+supervisor's run, outside this sandbox, reaches it normally.

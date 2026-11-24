@@ -1,0 +1,42 @@
+$ node audit/evidence/T-290/rule.mjs        # on 57a7fe6, the recordings of e2e/store/out/clips (T-289's, not shot again)
+ru e23d16a: RED
+  "days" hole 1: off its element 18 frames in a row, 5.533–6.100 s (frames 166–183), up to 126 px
+  "days" hole 2: off its element 18 frames in a row, 5.533–6.100 s (frames 166–183), up to 126 px
+  "modes" hole 1: off its element 14 frames in a row, 7.100–7.533 s (frames 213–226), up to 108 px
+ru now: green
+  days: the element from frame 165, 165:474 165:477 166:482 166:488 167:496 167:505 168:515 168:525 169:536 169:548 170:558 170:568 171:578 171:584 172:591 172:597 173:599 173:599 174:599 174:599 175:599 175:599 176:599 176:599 177:599 177:599 178:599 178:599 179:599 179:599 180:599 180:599 181:599 (frame:y px of its centre)
+  modes: the element from frame 213, 213:1248 213:1248 214:1248 214:1248 215:1248 215:1248 216:1248 216:1248 217:1248 217:1248 218:1248 218:1248 218:1248 219:1248 219:1248 220:1248 220:1248 (frame:y px of its centre)
+en-US e23d16a: RED
+  "days" hole 1: off its element 17 frames in a row, 5.533–6.067 s (frames 166–182), up to 126 px
+  "days" hole 2: off its element 17 frames in a row, 5.533–6.067 s (frames 166–182), up to 126 px
+  "modes" hole 1: off its element 16 frames in a row, 7.067–7.567 s (frames 212–227), up to 108 px
+en-US now: green
+  days: the element from frame 165, 165:474 165:477 166:482 166:488 167:496 167:505 168:515 168:525 169:536 169:548 170:558 170:568 171:578 171:584 172:591 172:597 173:599 173:599 174:599 174:599 175:599 175:599 176:599 176:599 177:599 177:599 178:599 178:599 179:599 179:599 180:599 180:599 181:599 (frame:y px of its centre)
+  modes: the element from frame 204, 204:1144 208:1144 208:1144 209:1144 209:1140 210:1140 210:1140 211:1140 212:1248 212:1248 213:1248 213:1248 214:1248 214:1248 215:1248 215:1248 216:1248 216:1248 217:1248 217:1248 218:1248 218:1248 219:1248 219:1248 220:1248 220:1248 (frame:y px of its centre)
+en-GB e23d16a: RED
+  "days" hole 1: off its element 17 frames in a row, 5.500–6.033 s (frames 165–181), up to 126 px
+  "days" hole 2: off its element 17 frames in a row, 5.500–6.033 s (frames 165–181), up to 126 px
+  "modes" hole 1: off its element 14 frames in a row, 7.233–7.667 s (frames 217–230), up to 108 px
+en-GB now: green
+  days: the element from frame 165, 165:474 165:477 165:482 166:488 167:496 167:505 168:515 168:525 169:536 169:548 170:558 170:568 171:578 171:584 172:591 172:597 173:599 173:599 174:599 174:599 175:599 175:599 175:599 176:599 176:599 177:599 177:599 178:599 179:599 179:599 180:599 180:599 (frame:y px of its centre)
+  modes: the element from frame 208, 208:1144 213:1144 213:1144 213:1144 214:1140 214:1140 215:1140 215:1140 216:1140 217:1248 217:1248 218:1248 218:1248 218:1248 219:1248 219:1248 220:1248 220:1248 221:1248 221:1248 222:1248 222:1248 223:1248 223:1248 224:1248 224:1248 (frame:y px of its centre)
+es-ES e23d16a: RED
+  "days" hole 1: off its element 18 frames in a row, 5.500–6.067 s (frames 165–182), up to 126 px
+  "days" hole 2: off its element 18 frames in a row, 5.500–6.067 s (frames 165–182), up to 126 px
+  "modes" hole 1: off its element 15 frames in a row, 7.067–7.533 s (frames 212–226), up to 108 px
+es-ES now: green
+  days: the element from frame 164, 164:474 165:477 165:482 166:488 166:496 167:505 167:515 168:525 168:536 169:548 169:558 170:568 170:578 171:584 171:591 172:597 172:599 173:599 173:599 174:599 174:599 175:599 175:599 176:599 176:599 177:599 177:599 178:599 178:599 179:599 179:599 180:599 180:599 181:599 (frame:y px of its centre)
+  modes: the element from frame 204, 204:1144 208:1144 209:1144 209:1140 209:1140 210:1140 210:1140 211:1140 211:1140 212:1248 213:1248 213:1248 214:1248 214:1248 215:1248 215:1248 215:1248 216:1248 216:1248 217:1248 218:1248 218:1248 218:1248 219:1248 219:1248 220:1248 (frame:y px of its centre)
+de-DE e23d16a: RED
+  "days" hole 1: off its element 18 frames in a row, 5.700–6.267 s (frames 171–188), up to 126 px
+  "days" hole 2: off its element 18 frames in a row, 5.700–6.267 s (frames 171–188), up to 126 px
+  "modes" hole 1: off its element 15 frames in a row, 7.233–7.700 s (frames 217–231), up to 108 px
+de-DE now: green
+  days: the element from frame 170, 170:477 171:482 171:488 172:496 172:505 173:515 173:525 174:536 174:548 175:558 175:568 176:578 176:584 177:591 177:597 178:599 178:599 179:599 179:599 180:599 180:599 181:599 181:599 182:599 182:599 183:599 183:599 184:599 184:599 185:599 185:599 (frame:y px of its centre)
+  modes: the element from frame 209, 209:1144 213:1144 213:1144 214:1144 214:1144 215:1144 215:1144 216:1140 216:1140 217:1248 217:1248 218:1248 218:1248 219:1248 219:1248 220:1248 220:1248 221:1248 221:1248 222:1248 222:1248 223:1248 223:1248 224:1248 224:1248 225:1248 (frame:y px of its centre)
+5 of 5 red on e23d16a
+
+Two readings of a frame number are two frames of the recording (60 a second)
+in one of the video's; the video shows the later. Before the modes' row jumps
+it shifts 4 px (en-US, en-GB, es-ES, de-DE: the row's Busy fading in), within
+the hole's 8 px room.

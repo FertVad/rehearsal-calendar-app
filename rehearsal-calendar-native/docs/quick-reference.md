@@ -27,7 +27,7 @@
 4. **A query works in production but fails only under test**
    - The in-memory schema in `server/__tests__/integration/setup.js` is written
      by hand and drifts from the shipped one. Compare it against
-     `database/init-native-schema.sql` before suspecting the query.
+     `database/init-native-schema-v2.sql` before suspecting the query.
    - It also rewrites `$1, $2 …` into `?`. Postgres lets the same `$n` appear
      twice — upserts do — so the translator maps each occurrence back to its
      parameter. New SQL shapes may need it taught more.

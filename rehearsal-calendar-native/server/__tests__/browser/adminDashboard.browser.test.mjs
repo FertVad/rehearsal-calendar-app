@@ -14,8 +14,39 @@ const html = '<img data-xss-probe src="/xss-probe" onerror="window.__xss = 1">';
 const svg = '<svg data-xss-probe onload="window.__xss = 2"></svg>\'"&<>';
 const link = '<a data-xss-probe href="javascript:window.__xss=3">mail@example.test</a>';
 const escaped = '&lt;img src=x onerror=alert(1)&gt;';
+const steps = { onboarding: true, projects: 1, roles: { owner: 0, admin: 0, member: 1 }, marks: 2,
+  marksUntil: '2026-12-09', calendar: false, device: true, seen: 1, onRoster: 2, rehearsals: 0 };
 const user = { id: 1, firstName: html, lastName: svg, email: link,
-  createdAt: '2026-09-01T12:00:00Z', lastLoginAt: null };
+  createdAt: '2026-09-01T12:00:00Z', lastLoginAt: null, service: false,
+  source: { kind: 'invite', project: html, owner: svg }, signIn: ['apple'], locale: 'en', timezone: svg, steps,
+  lastAppDay: '2026-11-24' };
+const none = { opened: 0, of: 0, rate: null };
+// Use of the app (T-294): with migration 016, or without it — "no data", not zeros.
+const usageBody = (payload, recorded) => (recorded ? { recorded: true, since: '2026-11-02',
+  active: { day: 1, week: 2, month: 3, of: 4 },
+  retention: [{ week: '2026-11-16', registered: 2, day1: { opened: 1, of: 2, rate: 50 }, day7: none, day30: none }],
+  builds: [{ build: 42, people: 1 }, { build: null, people: 2 }],
+  invitations: [{ project: payload ? html : 'Hamlet', owner: payload ? svg : 'Olga O.', pageOpens: 6, appOpens: 3, joins: 2 }] }
+  : { recorded: false });
+const counts = { registered: 1, onboarding: 1, project: 1, marks: 1, engaged: 0 };
+const medians = { toProjectHours: 2, toProjectOf: 1, toMarksHours: null, toMarksOf: 0 };
+// Project, owner, language, zone and inbox type are stored text too (T-293).
+const analyticsBody = (payload, recorded = true) => ({
+  usage: usageBody(payload, recorded),
+  period: 'all', from: null, to: '2026-11-25T12:00:00Z', people: 1,
+  languages: payload ? [html] : ['en', 'ru'],
+  funnel: { weeks: [{ week: '2026-11-16', invite: counts, other: { ...counts, registered: 0 } }],
+    total: { invite: counts, other: { ...counts, registered: 0 } }, medians: { invite: medians, other: medians } },
+  sources: { byDay: [{ date: '2026-11-17', invite: 1, own: 0, none: 0 }], byWeek: [{ date: '2026-11-16', invite: 1, own: 0, none: 0 }],
+    projects: [{ project: payload ? html : 'Hamlet', owner: payload ? svg : 'Olga O.', joined: 1, newcomers: 1 }],
+    languages: [{ value: payload ? html : 'en', people: 1 }], timezones: [{ value: payload ? svg : 'UTC', people: 1 }] },
+  projects: [{ id: 1, name: payload ? html : 'Hamlet', owner: payload ? link : 'Olga O.', createdAt: '2026-11-01T00:00:00Z',
+    members: 3, rehearsals: 3, rehearsalsLastFourWeeks: 2, nextRehearsalAt: null,
+    seenBeforeStart: { seen: 2, of: 4, rate: 50 }, coverage: { people: 2, of: 3, rate: 66.7 } }],
+  notifications: { devices: { people: 1, of: 5, rate: 20 },
+    inbox: [{ type: payload ? html : 'member_joined', created: 2, read: 1, readRate: 50, medianMinutesToRead: 30 }],
+    emailCodes: [{ purpose: 'verify', created: 2, sent: 2, failed: 0, used: 1, replaced: 1, locked: 0 }] },
+});
 const report = { id: '1);window.__xss=4;//', name: html, message: html + '\n' + escaped,
   screen: svg, status: 'new" onclick="window.__xss=5', createdAt: user.createdAt };
 let browser;
@@ -31,7 +62,7 @@ after(async () => { await browser?.close(); }, { timeout: 10000 });
 async function fixture(t, { csp = true, payload = false, signedIn = true } = {}) {
   const diagnostic = stage => console.log(`[admin-browser] ${t.name}: ${stage}`);
   diagnostic('fixture: starting');
-  const state = { empty: false, unauthorized: false, requests: [], statuses: new Map() };
+  const state = { empty: false, unauthorized: false, requests: [], statuses: new Map(), recorded: true };
   const stats = payload ? {
     users: { total: html, newThisWeek: svg, newThisMonth: link },
     signIns: { rate: html, notInLast30Days: svg },
@@ -70,10 +101,12 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
     next();
   });
   app.get('/admin/api/stats', (_req, res) => res.json(stats));
+  app.get('/admin/api/analytics', (_req, res) => res.json(analyticsBody(payload, state.recorded)));
   app.get('/admin/api/users', (req, res) => {
     const all = state.empty ? [] : users;
     const offset = Number(req.query.offset);
-    res.json({ users: all.slice(offset, offset + 30), total: all.length });
+    res.json({ users: all.slice(offset, offset + 30).map(row => (state.recorded ? row : { ...row, lastAppDay: null })),
+      total: all.length, appDaysRecorded: state.recorded });
   });
   app.get('/admin/api/bug-reports', (req, res) => {
     const all = state.empty ? [] : reports;
@@ -138,6 +171,15 @@ test('untrusted admin API values remain literal text, even without CSP', { timeo
   assert.equal(await page.evaluate(() => window.__xss), undefined);
   assert.equal(await page.locator('#users-body td').nth(0).textContent(), `${html} ${svg}`);
   assert.equal(await page.locator('#users-body td').nth(1).textContent(), link);
+  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '2026-11-24');
+  assert.equal(await page.locator('#users-body td').nth(5).textContent(), `invited into “${html}” (owner ${svg})`);
+  assert.equal(await page.locator('#users-body td').nth(7).textContent(), `en / ${svg}`);
+  // The analytics carry project, owner, language, zone and type names as text.
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const cells = await page.locator('#analytics-body td').allTextContents();
+  for (const value of [html, svg, link]) assert.ok(cells.includes(value), `analytics shows ${value} literally`);
+  assert.ok(await page.locator('#filter-lang option').evaluateAll((options, value) =>
+    options.some(option => option.textContent === value), html));
   assert.equal(await page.locator('#bugs-body td').nth(0).textContent(), report.name);
   assert.equal(await page.locator('#bugs-body td').nth(1).textContent(), report.message);
   assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), report.screen);
@@ -204,6 +246,61 @@ test('the sign-in figure is named for sign-ins, not churn or inactivity', { time
   assert.match(note, /not a measure of use/);
   const cards = (await page.locator('#stats-cards').textContent()).toLowerCase();
   assert.doesNotMatch(cards, /churn|inactive/);
+  assert.deepEqual(errors, []);
+});
+
+// Use of the app (T-294): the figures with migration 016, and without it a
+// sentence saying there is no data — never zeros, which would read as nobody.
+test('use of the app shows its figures, or "no data" without migration 016', { timeout: 30000 }, async t => {
+  const { page, state, errors } = await fixture(t);
+  await waitForDashboard(page);
+  const block = page.locator('#analytics-body .analytics-block', { has: page.getByRole('heading', { name: 'Use of the app' }) });
+  await block.waitFor();
+  assert.match(await block.locator('.metric').textContent(), /^Active today: 1 \(25%\) · last 7 days: 2 \(50%\) · last 30 days: 3 \(75%\)$/);
+  const cells = await block.locator('td').allTextContents();
+  for (const value of ['2026-11-16', '1 of 2 (50%)', '42', 'unknown', 'Hamlet', 'Olga O.', '6', '3']) {
+    assert.ok(cells.includes(value), `use of the app shows ${value}`);
+  }
+  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '2026-11-24');
+
+  state.recorded = false;
+  const reloaded = page.waitForResponse(r => new URL(r.url()).pathname === '/admin/api/analytics');
+  await page.getByRole('button', { name: 'Refresh' }).click();
+  await reloaded;
+  await page.waitForFunction(() => document.querySelector('#analytics-body')?.textContent.includes('No data: migration 016 is not applied.'));
+  assert.equal(await block.locator('td').count(), 0, 'no table of zeros');
+  await page.waitForFunction(() => document.querySelectorAll('#users-body tr')[0]?.children[4]?.textContent === 'no data: migration 016 not applied');
+  assert.deepEqual(errors, []);
+});
+
+// One period and one selection for every section; service accounts only when asked (T-293).
+test('the filters reach every statistics request, and the service switch only the users table', { timeout: 30000 }, async t => {
+  const { page, state, errors } = await fixture(t);
+  await waitForDashboard(page);
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const query = (name) => new URL(state.requests.filter(r => r.path.startsWith('/admin/api/' + name)).at(-1).path,
+    'http://fixture.test').searchParams;
+  for (const name of ['stats', 'analytics', 'users']) assert.equal(query(name).get('period'), 'all');
+  const answered = (name, test) => page.waitForResponse(r => {
+    const url = new URL(r.url());
+    return url.pathname === '/admin/api/' + name && test(url.searchParams);
+  });
+  await page.locator('#filter-period').selectOption('30');
+  await page.locator('#filter-lang').selectOption('ru');
+  const all = ['stats', 'analytics', 'users'].map(name =>
+    answered(name, params => params.get('source') === 'invite'));
+  await page.locator('#filter-source').selectOption('invite');
+  await Promise.all(all);
+  for (const name of ['stats', 'analytics', 'users']) {
+    const params = query(name);
+    assert.deepEqual([params.get('period'), params.get('source'), params.get('lang')], ['30', 'invite', 'ru'], name);
+  }
+  assert.equal(query('users').get('service'), null);
+  const shown = answered('users', params => params.get('service') === '1');
+  await page.locator('#show-service').check();
+  await shown;
+  assert.equal(query('users').get('service'), '1');
+  assert.equal(await page.locator('#filter-lang').inputValue(), 'ru', 'the chosen language survives a reload of the list');
   assert.deepEqual(errors, []);
 });
 

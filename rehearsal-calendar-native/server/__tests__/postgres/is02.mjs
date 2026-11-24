@@ -3,6 +3,7 @@ import { fork } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { addAdminListingSchema } from './adminListingFixture.mjs';
 
 const table = 'native_operation_ip_rate_limits';
 const gates = 'native_operation_ip_rate_limit_gates';
@@ -137,6 +138,7 @@ export async function probeIS02({ control, db, http, allowedPorts, serverRoot = 
       ADD COLUMN last_login_at TIMESTAMPTZ, ADD COLUMN phone TEXT, ADD COLUMN avatar_url TEXT,
       ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE, ADD COLUMN week_start_day INTEGER DEFAULT 1,
       ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE`);
+    await addAdminListingSchema(control);
     const password = 'is02-positive-fixture';
     await control.query('UPDATE native_users SET password_hash = $1 WHERE id = 1', [await bcrypt.hash(password, 4)]);
     let first = await startWorker();

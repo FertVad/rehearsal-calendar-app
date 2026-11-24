@@ -3,8 +3,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import { inspectSchema } from '../../database/schema/inspect.mjs';
-import { manifest } from '../../database/schema/manifest.mjs';
+import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
 
 // A deleted account's name leaves other people's inboxes, on PostgreSQL (T-278).

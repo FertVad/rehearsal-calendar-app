@@ -469,27 +469,25 @@ describe('useAddRehearsalSubmit Hook', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    it('should show API error message when available', async () => {
+    // The server's sentence is English and for the logs; its code is said in
+    // the app's words (T-281).
+    it("says the server's refusal by its code, never its English", async () => {
       (rehearsalsAPI.create as jest.Mock).mockRejectedValue({
         response: {
-          data: {
-            error: 'Project not found',
-          },
+          status: 403,
+          data: { error: 'Only admins can create rehearsals', code: 'ADMIN_ONLY' },
         },
       });
 
       const { result } = renderHook(() =>
-        useAddRehearsalSubmit(defaultProps)
+        useAddRehearsalSubmit({ ...defaultProps, t: { ...mockT, errors: { adminOnly: 'Admins only' } } as any })
       );
 
       await act(async () => {
         await result.current.handleSubmit();
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Project not found'
-      );
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Admins only');
     });
 
     it('should show update error in edit mode', async () => {

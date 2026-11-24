@@ -84,9 +84,13 @@ function usersSnapshot() {
   return sqlite.all('SELECT * FROM native_users ORDER BY id');
 }
 
+// The day a session is used, and the hourly purge of statistics older than 13
+// months that rides on that write, are statistics, not business data (T-294).
+const isUsageDaySql = ({ sql }) => /\bnative_(?:usage_days|invite_counts)\b/.test(sql);
+
 function expectAdmissionAndNoBusinessWrites(count = 1) {
   expect(observer.statements.some(isOperationBudgetSql)).toBe(true);
-  expect(observer.statements.filter(statement => !isOperationBudgetSql(statement))
+  expect(observer.statements.filter(statement => !isOperationBudgetSql(statement) && !isUsageDaySql(statement))
     .filter(({ sql }) => /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i.test(sql))).toEqual([]);
   expect(sqlite.all('SELECT operation, request_count FROM native_operation_ip_rate_limits'))
     .toEqual([{ operation: 'auth', request_count: count }]);
@@ -108,6 +112,8 @@ test('an old valid refresh token yields the unchanged response shape with newly 
   expect(profile.body.user.id).toBe(userId);
   expect(usersSnapshot()).toEqual(before);
   expectAdmissionAndNoBusinessWrites(2);
+  // The session was used: its day is recorded, and that is the only other write.
+  expect(sqlite.all('SELECT user_id FROM native_usage_days')).toEqual([{ user_id: userId }]);
 });
 
 test('an otherwise valid old refresh token remains revoked when its version predates the database', async () => {

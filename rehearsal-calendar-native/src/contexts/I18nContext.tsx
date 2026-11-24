@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Language, Translations, translations } from '../i18n/translations';
-import { LANGUAGE_STORAGE_KEY, onAccountLanguage } from '../shared/utils/storage';
+import { LANGUAGE_STORAGE_KEY, appLanguage, onAccountLanguage, phoneLanguage } from '../shared/utils/storage';
 
 import { logger } from '../shared/utils/logger';
 interface I18nContextType {
@@ -17,15 +17,14 @@ interface I18nProviderProps {
 }
 
 export function I18nProvider({ children }: I18nProviderProps) {
-  const [language, setLanguageState] = useState<Language>('en');
+  // Before anything is chosen, the phone's language (T-291); it is not stored,
+  // so a choice in the profile or an account's language still decides.
+  const [language, setLanguageState] = useState<Language>(phoneLanguage);
   const [loading, setLoading] = useState(true);
 
   const loadLanguage = useCallback(async () => {
     try {
-      const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (saved && saved in translations) {
-        setLanguageState(saved as Language);
-      }
+      setLanguageState(await appLanguage());
     } catch (error) {
       logger.warn('Failed to load language preference:', error);
     } finally {
