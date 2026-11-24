@@ -57,8 +57,8 @@ export default function WhatWhereScreen({ navigation }: WhatWhereScreenProps) {
   return (
     <OnboardingStep
       title={w.title}
-      currentStep={3}
-      totalSteps={4}
+      currentStep={4}
+      totalSteps={5}
       onBack={() => navigation.goBack()}
       onNext={handleStart}
       onSkip={skipOnboarding}

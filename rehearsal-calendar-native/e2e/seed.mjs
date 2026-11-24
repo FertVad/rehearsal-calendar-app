@@ -18,6 +18,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import inviteFormat from'../shared/contracts/inviteCode.json' with { type: 'json' };
+import weekendTable from '../shared/contracts/weekends.json' with { type: 'json' };
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'server');
 const bcrypt = createRequire(path.join(SERVER, 'package.json'))('bcrypt');
@@ -323,7 +324,21 @@ export const PEOPLE = {
   // T-283). A company of their own, so 102's stays as it is.
   oberon: { email: 'oberon@e2e.test', firstName: 'Oberon', lastName: 'Fairy', onboarded: true },
   peaseblossom: { email: 'peaseblossom@e2e.test', firstName: 'Peaseblossom', lastName: 'Fairy', onboarded: true, locale: 'ru' },
+  // Weekends busy by default (104, T-406): his weekends red in the editor,
+  // green once he turns the profile's switch off, red again once on. In no
+  // project, so nothing another flow books lands on his days.
+  telyegin: { email: 'waffles@e2e.test', firstName: 'Waffles', lastName: 'Telyegin', onboarded: true, weekendsBusy: true },
 };
+
+/**
+ * Whose weekends are busy by default (T-406). Every flow written before it
+ * counts on a person's weekends being as free as any day they have not
+ * marked, so the people it seeds have the profile's switch off, as if they
+ * had answered "No" in onboarding — the server's default is on. Those still
+ * to go through onboarding keep that default (09, 32, 60), and so does anyone
+ * whose flow is about it (`weekendsBusy`).
+ */
+const weekendsBusy = (person) => person.weekendsBusy ?? !person.onboarded;
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
 const ISLANDERS = [
@@ -440,10 +455,10 @@ export async function seed({ client, apiUrl, timezone }) {
   const ids = {};
   for (const [key, person] of Object.entries(PEOPLE)) {
     const { rows } = await client.query(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled, weekends_busy)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
       [person.email, hash, person.firstName, person.lastName, timezone, person.locale ?? 'en', person.onboarded,
-        person.notifications ?? true]);
+        person.notifications ?? true, weekendsBusy(person)]);
     ids[key] = rows[0].id;
     await client.query(
       `INSERT INTO native_email_identities (user_id, email, status, verified_at, verified_by)
@@ -540,15 +555,15 @@ export async function seed({ client, apiUrl, timezone }) {
   const islanders = [];
   for (const [firstName, lastName] of ISLANDERS) {
     const { rows: [islander] } = await client.query(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
-       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE) RETURNING id`,
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled, weekends_busy)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE, FALSE) RETURNING id`,
       [`${firstName.toLowerCase()}@e2e.test`, hash, firstName, lastName, timezone]);
     islanders.push(islander.id);
   }
   for (const [mailbox, firstName, lastName] of NAMED) {
     await client.query(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
-       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE)`,
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled, weekends_busy)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE, FALSE)`,
       [`${mailbox}@e2e.test`, hash, firstName, lastName, timezone]);
   }
   const prosperoProject = async (name, description, members) => {
@@ -1175,6 +1190,26 @@ export async function seed({ client, apiUrl, timezone }) {
   // This month's title in the editor, in English: "November 2026" (10).
   labels.this_month = new Date(`${days.today}T00:00:00Z`).toLocaleDateString('en-US',
     { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+  // The weekend of the profiles' zone (T-406; every profile's is the
+  // machine's), by the table the server and the app read it from: its first
+  // day after today, and the first day after today that is not one — both in
+  // the week the editor opens on (104). And its days as the app names them:
+  // "Fri and Sat", "пт и сб" (09, 60).
+  const zoneCountry = weekendTable.zones[timezone];
+  const weekend = (zoneCountry && weekendTable.weekends[zoneCountry]) || weekendTable.world;
+  const isoWeekday = (date) => ((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7) + 1;
+  const firstAfterToday = (wanted) => {
+    for (let offset = 1; ; offset++) if (wanted(weekend.includes(isoWeekday(localDate(offset))))) return localDate(offset);
+  };
+  days.weekend = firstAfterToday((isWeekend) => isWeekend);
+  days.weekday = firstAfterToday((isWeekend) => !isWeekend);
+  const dayNames = (locale, and) => {
+    const names = weekend.map((day) => new Date(Date.UTC(2026, 0, 4 + day)).toLocaleDateString(locale, { weekday: 'short', timeZone: 'UTC' }));
+    return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} ${and} ${names[names.length - 1]}`;
+  };
+  labels.weekend_days_en = dayNames('en-US', 'and');
+  labels.weekend_days_ru = dayNames('ru-RU', 'и');
 
   // Zarechnaya's own slot past midnight (25), the row PUT /availability/days
   // writes for it — written here, since the sign-ins are spent.

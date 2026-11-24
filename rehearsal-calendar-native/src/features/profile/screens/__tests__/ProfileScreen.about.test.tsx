@@ -15,6 +15,8 @@ jest.mock('expo-constants', () => ({
   default: { expoConfig: { version: '2.4.1' } },
 }));
 jest.mock('../../../../shared/services/api', () => ({
+  // The weekends switch (T-406) reads its state on focus.
+  availabilityAPI: { getWeekends: () => Promise.resolve({ data: { enabled: true, days: [6, 7] } }), setWeekends: jest.fn() },
   authAPI: { registerPushToken: jest.fn(), unregisterPushToken: jest.fn(() => Promise.resolve()) },
   supportPageUrl: (language: string) => `http://127.0.0.1:3001/support?lang=${language}`,
   privacyPageUrl: (language: string) => `http://127.0.0.1:3001/privacy?lang=${language}`,

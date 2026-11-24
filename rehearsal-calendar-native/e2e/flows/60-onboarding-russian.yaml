@@ -66,6 +66,16 @@ onFlowComplete:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Начать"
+      SEE: "Отметить все выходные \\(${WEEKEND_DAYS_RU_LABEL}\\) как занятые\\?"
+      WAIT_MS: 10000
+# The weekends, asked outright in her language with the days of her zone's
+# country, and where to change it later in the Profile's words (T-406).
+- assertVisible: "Это можно включить и выключить позже: Профиль → Выходные заняты"
+- takeScreenshot: 60-onboarding-weekends-ru
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Да, отметить"
       SEE: "Ваша занятость"
       WAIT_MS: 10000
 - assertVisible: "Это можно сделать потом: Профиль → .*"
@@ -163,6 +173,12 @@ onFlowComplete:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Empezar"
+      SEE: "Sí, marcarlos"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Sí, marcarlos"
       SEE: "Tu disponibilidad"
       WAIT_MS: 10000
 - runFlow:
@@ -245,6 +261,12 @@ onFlowComplete:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Loslegen"
+      SEE: "Ja, markieren"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Ja, markieren"
       SEE: "Später einrichten"
       WAIT_MS: 10000
 - extendedWaitUntil:

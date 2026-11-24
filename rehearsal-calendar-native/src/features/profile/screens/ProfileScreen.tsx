@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert, Linking,
   TextInput, KeyboardAvoidingView, Platform,
@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -28,7 +29,9 @@ import {
   unregisterPushToken,
 } from '../../../shared/services/notifications';
 import { explainPushRegistration } from '../../../shared/utils/pushAlert';
-import { privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
+import { availabilityAPI, privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
+import { weekendDaysOf, weekendDayNames } from '../../../shared/utils/weekends';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -185,6 +188,43 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       hapticSuccess();
     } catch (err: any) {
       Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.weekStartError));
+    }
+  };
+
+  // Weekends busy by default (T-406): the account's switch, read from the
+  // server each time the screen comes into view; its days are the country's
+  // of the profile's zone. Only the latest question's answer lands (CLAUDE.md
+  // 11): a read that comes back after a switch was turned does not undo it.
+  const timezone = useTimezone();
+  const weekendDays = weekendDayNames(weekendDaysOf(timezone), language, t.profile.weekendDaysJoin);
+  const [weekendsBusy, setWeekendsBusy] = useState<boolean | null>(null);
+  // While a change is on its way the switch takes no other: one answer at a time.
+  const [weekendsSaving, setWeekendsSaving] = useState(false);
+  const weekendsRequest = useRef(0);
+  useFocusEffect(useCallback(() => {
+    const ticket = ++weekendsRequest.current;
+    availabilityAPI.getWeekends()
+      .then(({ data }) => { if (ticket === weekendsRequest.current) setWeekendsBusy(data.enabled); })
+      .catch(() => {
+        // Unknown, not off: the switch stays as it was, or unusable until known.
+      });
+  }, []));
+
+  const handleWeekendsToggle = async (value: boolean) => {
+    hapticLight();
+    const before = weekendsBusy;
+    const ticket = ++weekendsRequest.current;
+    setWeekendsBusy(value);
+    setWeekendsSaving(true);
+    try {
+      const { data } = await availabilityAPI.setWeekends(value);
+      if (ticket === weekendsRequest.current) setWeekendsBusy(data.enabled);
+      hapticSuccess();
+    } catch (err: any) {
+      if (ticket === weekendsRequest.current) setWeekendsBusy(before);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.weekendsBusyError));
+    } finally {
+      setWeekendsSaving(false);
     }
   };
 
@@ -375,6 +415,27 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </View>
           </TouchableOpacity>
+
+          {/* Weekends busy by default, right under the week's first day (T-406). */}
+          <View style={styles.settingItem}>
+            <View style={[styles.settingLeft, { flex: 1 }]}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+                <Ionicons name="bed-outline" size={20} color={Colors.accent.purple} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.settingLabel}>{t.profile.weekendsBusy}</Text>
+                <Text testID="profile-weekends-days" style={styles.settingValue}>{t.profile.weekendsBusyDays(weekendDays)}</Text>
+              </View>
+            </View>
+            <Switch
+              testID="profile-weekends-busy"
+              value={weekendsBusy ?? true}
+              disabled={weekendsBusy === null || weekendsSaving}
+              onValueChange={handleWeekendsToggle}
+              trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
+              thumbColor={Colors.text.inverse}
+            />
+          </View>
 
           {/* Calendar Sync */}
           <TouchableOpacity testID="profile-calendar-sync" style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>

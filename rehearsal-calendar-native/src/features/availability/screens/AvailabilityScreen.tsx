@@ -472,6 +472,15 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             </TouchableOpacity>
           </View>
 
+          {/* A weekend busy by default, not by the person (T-406): said, with
+              where the default is turned off. Any change above makes the day
+              theirs, and the note goes with the default. */}
+          {selectedDayState?.weekendDefault && (
+            <Text testID="availability-weekend-default" style={[styles.importedNote, { marginHorizontal: Spacing.xl }]}>
+              {t.availability.weekendDefault(`${t.nav.profile} → ${t.profile.weekendsBusy}`)}
+            </Text>
+          )}
+
           {/* Time Slots (only for custom mode) */}
           {shownMode === 'custom' && selectedDayState && (
             <View style={styles.slotsSection}>

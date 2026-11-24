@@ -12,6 +12,16 @@ export interface ProfileTranslations {
   weekStart: string;
   weekStartMonday: string;
   weekStartSunday: string;
+  /**
+   * The switch under "Start Week On" (T-406): weekends marked busy by
+   * default, the days of the country of the profile's zone. The onboarding
+   * and the availability editor name it by this label.
+   */
+  weekendsBusy: string;
+  /** Under the switch: the days, "пт и сб" (weekendDayNames). */
+  weekendsBusyDays: (days: string) => string;
+  /** Joins the days' names: "пт и сб", "Fri and Sat". */
+  weekendDaysJoin: (...names: string[]) => string;
   about: string;
   version: string;
   help: string;
@@ -54,6 +64,7 @@ export interface ProfileTranslations {
   languageError: string;
   timezoneError: string;
   weekStartError: string;
+  weekendsBusyError: string;
   // Changing the sign-in address with codes to both addresses (R3: HP01)
   changeEmail: string;
   changeEmailTitle: string;
@@ -87,6 +98,11 @@ export const ru = {
     weekStart: 'Начало недели',
     weekStartMonday: 'Понедельник',
     weekStartSunday: 'Воскресенье',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Выходные заняты',
+    weekendsBusyDays: (days: string) => `Ваши выходные: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} и ${names[names.length - 1]}`),
     about: 'О приложении',
     version: 'Версия',
     help: 'Помощь',
@@ -137,6 +153,8 @@ export const ru = {
     languageError: 'Не удалось изменить язык',
     timezoneError: 'Не удалось изменить часовой пояс',
     weekStartError: 'Не удалось изменить начало недели',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'Не удалось изменить выходные',
     changeEmail: 'Сменить адрес',
     changeEmailTitle: 'Смена адреса',
     changeEmailSubtitle: (email: string) => `Мы пришлём по коду на ${email} и на новый адрес. Адрес сменится, когда вы введёте оба.`,
@@ -170,6 +188,11 @@ export const en = {
     weekStart: 'Start Week On',
     weekStartMonday: 'Monday',
     weekStartSunday: 'Sunday',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Weekends Busy',
+    weekendsBusyDays: (days: string) => `Your weekend: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`),
     about: 'About',
     version: 'Version',
     help: 'Help',
@@ -216,6 +239,8 @@ export const en = {
     languageError: 'Could not change the language',
     timezoneError: 'Could not update the time zone',
     weekStartError: 'Could not change the first day of the week',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'Could not change the weekends',
     changeEmail: 'Change Email',
     changeEmailTitle: 'Change Email',
     changeEmailSubtitle: (email: string) => `We will send a code to ${email} and one to the new address. The address changes once you enter both.`,
@@ -249,6 +274,11 @@ export const es = {
     weekStart: 'Inicio de la semana',
     weekStartMonday: 'Lunes',
     weekStartSunday: 'Domingo',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Fines de semana ocupados',
+    weekendsBusyDays: (days: string) => `Tu fin de semana: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`),
     about: 'Acerca de',
     version: 'Versión',
     help: 'Ayuda',
@@ -294,6 +324,8 @@ export const es = {
     languageError: 'No se pudo cambiar el idioma',
     timezoneError: 'No se pudo actualizar la zona horaria',
     weekStartError: 'No se pudo actualizar el inicio de la semana',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'No se pudieron cambiar los fines de semana',
     changeEmail: 'Cambiar dirección',
     changeEmailTitle: 'Cambiar dirección',
     changeEmailSubtitle: (email: string) => `Enviaremos un código a ${email} y otro a la dirección nueva. La dirección cambiará cuando escribas los dos.`,
@@ -327,6 +359,11 @@ export const de = {
     weekStart: 'Wochenbeginn',
     weekStartMonday: 'Montag',
     weekStartSunday: 'Sonntag',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Wochenenden belegt',
+    weekendsBusyDays: (days: string) => `Dein Wochenende: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} und ${names[names.length - 1]}`),
     about: 'Über die App',
     version: 'Version',
     help: 'Hilfe',
@@ -372,6 +409,8 @@ export const de = {
     languageError: 'Sprache konnte nicht geändert werden',
     timezoneError: 'Zeitzone konnte nicht aktualisiert werden',
     weekStartError: 'Wochenbeginn konnte nicht aktualisiert werden',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'Die Wochenenden konnten nicht geändert werden',
     changeEmail: 'Adresse ändern',
     changeEmailTitle: 'Adresse ändern',
     changeEmailSubtitle: (email: string) => `Wir schicken einen Code an ${email} und einen an die neue Adresse. Die Adresse ändert sich, sobald du beide eingibst.`,

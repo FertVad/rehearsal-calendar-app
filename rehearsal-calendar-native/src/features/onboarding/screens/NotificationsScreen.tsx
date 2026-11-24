@@ -46,8 +46,8 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
     <OnboardingStep
       title={t.onboarding.notifications.title}
       description={t.onboarding.notifications.description}
-      currentStep={2}
-      totalSteps={4}
+      currentStep={3}
+      totalSteps={5}
       onBack={() => navigation.goBack()}
       onNext={handleAllow}
       onSkip={skipOnboarding}

@@ -169,8 +169,8 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     <OnboardingStep
       title={t.onboarding.calendarSync.title}
       description={t.onboarding.calendarSync.description}
-      currentStep={1}
-      totalSteps={4}
+      currentStep={2}
+      totalSteps={5}
       onBack={handleBack}
       onNext={handleNext}
       onSkip={skipOnboarding}

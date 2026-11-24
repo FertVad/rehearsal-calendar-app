@@ -18,7 +18,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
   const { skipOnboarding } = useOnboarding();
 
   const handleNext = () => {
-    navigation.navigate('CalendarSync');
+    navigation.navigate('Weekends');
   };
 
   return (
@@ -28,7 +28,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
       title={t.onboarding.welcome.greeting(user?.firstName || undefined)}
       description={t.onboarding.welcome.description}
       currentStep={0}
-      totalSteps={4}
+      totalSteps={5}
       onNext={handleNext}
       onSkip={skipOnboarding}
       nextButtonTitle={t.onboarding.welcome.next}

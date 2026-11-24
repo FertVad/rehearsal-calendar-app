@@ -163,7 +163,15 @@ export const useAvailabilityData = () => {
 
       // Group by date
       const serverData: Record<string, Array<{ startTime: string; endTime: string; type: string; isAllDay?: boolean; source?: string }>> = {};
+      // The weekend days busy by default (T-406): the server's rows, one whole
+      // day each, kept apart — neither the person's own marks, which a save
+      // writes back, nor read-only rows the person cannot change.
+      const weekendDefaults = new Set<string>();
       for (const record of rawRecords) {
+        if (record.source === 'weekend' && record.startsAt) {
+          weekendDefaults.add(record.startsAt.split('T')[0]);
+          continue;
+        }
         // Extract date from startsAt (ISO timestamp) or legacy date field
         const dateSource = record.startsAt || record.date;
         if (!dateSource) continue;
@@ -365,6 +373,15 @@ export const useAvailabilityData = () => {
             };
           }),
         };
+      }
+
+      // A weekend's default is the day's busy, unless the person has a mark of
+      // their own on it (the server lays none there; a mark saved since wins).
+      // Read-only rows on the day stay shown with it.
+      for (const date of weekendDefaults) {
+        const own = (serverData[date] ?? []).some((slot) => !slot.source || slot.source === 'manual');
+        if (own) continue;
+        localData[date] = { mode: 'busy', slots: [], importedSlots: localData[date]?.importedSlots ?? [], weekendDefault: true };
       }
 
       logger.debug('[useAvailabilityData] Converted to localData:', Object.keys(localData).length, 'dates');

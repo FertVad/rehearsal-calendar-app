@@ -21,6 +21,12 @@
 # step alone. The week-start step is gone; the last step says what is where,
 # and the week starts as the phone's region has it — Sunday on this en_US
 # simulator, where the step's default was Monday.
+#
+# T-406: where the week-start step was, right after the greeting, the app asks
+# outright whether to mark all weekends busy, naming the days of the country of
+# her profile's zone (WEEKEND_DAYS_EN_LABEL), and says where that is changed
+# later, in the Profile's words. She answers no, and the profile's switch is
+# off at the end.
 appId: ${APP_ID}
 name: Onboarding to the end, nothing granted
 tags:
@@ -56,6 +62,15 @@ onFlowComplete:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Get Started"
+      SEE: "Mark all weekends \\(${WEEKEND_DAYS_EN_LABEL}\\) as busy\\?"
+      WAIT_MS: 10000
+# Weekends: asked outright, with where to change it later (T-406).
+- assertVisible: "You can turn this on or off later in Profile → Weekends Busy"
+- takeScreenshot: 09-onboarding-weekends
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "No, Leave Them Free"
       SEE: "Your availability"
       WAIT_MS: 10000
 # Calendar: two sentences and the card; the privacy said once.
@@ -138,6 +153,22 @@ onFlowComplete:
       WAIT_MS: 10000
 - assertVisible: ".*Sunday.*"
 - takeScreenshot: 09-onboarding-week-start
+# Her answer about the weekends is the profile's switch, under the week's
+# first day: off (T-406).
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-busy
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-weekends-busy
+      checked: false
+      enabled: true
+    timeout: 10000
+- assertVisible:
+    id: profile-weekends-days
+    text: "Your weekend: ${WEEKEND_DAYS_EN_LABEL}"
 # Opened again, still signed in: straight to the calendar.
 - stopApp
 - launchApp:

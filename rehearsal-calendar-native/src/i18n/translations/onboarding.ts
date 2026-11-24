@@ -22,6 +22,19 @@ export interface OnboardingTranslations {
     exampleAdded: string;
     exampleTimeChanged: string;
   };
+  /**
+   * The step after the greeting (T-406): weekends busy by default, asked
+   * outright with the days of the profile's zone; the answer is the
+   * profile's switch. `note` names where it is turned on and off later,
+   * the path as the Profile labels it.
+   */
+  weekends: {
+    question: (days: string) => string;
+    description: string;
+    note: (path: string) => string;
+    yes: string;
+    no: string;
+  };
   calendarSync: {
     title: string;
     /** Two sentences; the privacy promise is said here and only here. */
@@ -77,6 +90,14 @@ export const ru = {
       exampleAdded: 'Вас позвали на репетицию',
       exampleTimeChanged: 'Время репетиции изменилось',
     },
+    // T-406: new, for the native speakers' reading.
+    weekends: {
+      question: (days: string) => `Отметить все выходные (${days}) как занятые?`,
+      description: 'Тогда в подборе времени ваши выходные будут заняты. Любой отдельный день можно поменять в «Занятости».',
+      note: (path: string) => `Это можно включить и выключить позже: ${path}`,
+      yes: 'Да, отметить',
+      no: 'Нет, оставить свободными',
+    },
     calendarSync: {
       title: 'Ваша занятость',
       description: 'Команда видит только часы, когда вы заняты, но не ваши дела. Выберите календарь телефона — и эти часы будут подтягиваться сами.',
@@ -128,6 +149,14 @@ export const en = {
       later: 'Not Now',
       exampleAdded: 'You Were Added to a Rehearsal',
       exampleTimeChanged: 'Rehearsal Time Changed',
+    },
+    // T-406: new, for the native speakers' reading.
+    weekends: {
+      question: (days: string) => `Mark all weekends (${days}) as busy?`,
+      description: 'Then the planner will count your weekends as busy. Any single day can be changed in Availability.',
+      note: (path: string) => `You can turn this on or off later in ${path}`,
+      yes: 'Yes, Mark Them',
+      no: 'No, Leave Them Free',
     },
     calendarSync: {
       title: 'Your Availability',
@@ -181,6 +210,14 @@ export const es = {
       exampleAdded: 'Te han añadido a un ensayo',
       exampleTimeChanged: 'Cambió la hora de un ensayo',
     },
+    // T-406: new, for the native speakers' reading.
+    weekends: {
+      question: (days: string) => `¿Marcar todos los fines de semana (${days}) como ocupados?`,
+      description: 'Así, al buscar un horario, tus fines de semana contarán como ocupados. Cualquier día suelto se puede cambiar en Disponibilidad.',
+      note: (path: string) => `Puedes activarlo o desactivarlo más tarde en ${path}`,
+      yes: 'Sí, marcarlos',
+      no: 'No, dejarlos libres',
+    },
     calendarSync: {
       title: 'Tu disponibilidad',
       description: 'El equipo ve solo las horas en que no puedes, nunca qué estás haciendo. Elige un calendario del teléfono y esas horas llegarán solas.',
@@ -231,6 +268,14 @@ export const de = {
       later: 'Jetzt nicht',
       exampleAdded: 'Du wurdest für eine Probe eingeteilt',
       exampleTimeChanged: 'Die Zeit einer Probe hat sich geändert',
+    },
+    // T-406: new, for the native speakers' reading.
+    weekends: {
+      question: (days: string) => `Alle Wochenenden (${days}) als belegt markieren?`,
+      description: 'Dann gelten deine Wochenenden bei der Terminsuche als belegt. Jeden einzelnen Tag kannst du unter Verfügbarkeit ändern.',
+      note: (path: string) => `Du kannst das später unter ${path} ein- oder ausschalten`,
+      yes: 'Ja, markieren',
+      no: 'Nein, frei lassen',
     },
     calendarSync: {
       title: 'Deine Verfügbarkeit',

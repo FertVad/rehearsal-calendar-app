@@ -28,6 +28,13 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Get Started"
+      SEE: "Yes, Mark Them"
+      WAIT_MS: 10000
+# The weekends' step since T-406, between the greeting and the calendar.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Yes, Mark Them"
       SEE: "Your availability"
       WAIT_MS: 10000
 # Calendar access, where the app has not been given it yet.
@@ -49,11 +56,17 @@ tags:
       WAIT_MS: 10000
 - assertVisible:
     id: onboarding-calendar-connected
-- tapOn: "Back"
+# Back a step, to the weekends', and forward again.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Get Started"
+      TAP: "Back"
+      SEE: "Yes, Mark Them"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Yes, Mark Them"
       SEE: "Your availability"
       WAIT_MS: 10000
 # Back on the step: the calendar saved is the one shown as connected.
