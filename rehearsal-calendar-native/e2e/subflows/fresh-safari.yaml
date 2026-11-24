@@ -1,0 +1,12 @@
+# Safari with no tabs: stopped and its tabs forgotten, before a flow opens a
+# page in it (T-404). Every link opens a tab of its own and none is closed,
+# and Safari restores them all at every launch: 26 by T-296, from earlier runs
+# and flows. Each made the launch longer, and a restored tab could show the
+# page a flow waits for - an older build's, or another flow's "Rehearsly" -
+# before the link's own. The runner's helper removes the simulator's
+# Library/Safari/SafariTabs.db (server-with-mailbox.mjs, /fresh-safari):
+# Maestro's clearState reinstalls an app, and the simulator will not uninstall
+# Safari (docs/e2e.md, "A fresh Safari").
+appId: com.apple.mobilesafari
+---
+- runScript: ../scripts/fresh-safari.js

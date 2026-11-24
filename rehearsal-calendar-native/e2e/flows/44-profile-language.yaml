@@ -131,6 +131,9 @@ tags:
     direction: DOWN
     centerElement: true
 - takeScreenshot: 44-profile-about
+# Safari with no tabs (T-404): a restored support page of an earlier run would
+# answer the wait below before this tap's page came.
+- runFlow: ../subflows/fresh-safari.yaml
 - tapOn:
     id: profile-help
 - extendedWaitUntil:
@@ -152,6 +155,8 @@ tags:
 # opens the server's /privacy with ?lang=ru, and the page, its script run
 # since T-038, shows its Russian and hides its English. Safari is closed
 # first: a link opened into the running one kept the page it had (flow 70).
+# And its tabs go with it (T-404): the support page above, restored, has
+# "Политика конфиденциальности" at its foot, and would answer the wait.
 - scrollUntilVisible:
     element:
       id: profile-privacy
@@ -167,7 +172,7 @@ tags:
     below:
       id: profile-privacy
 - takeScreenshot: 44-profile-privacy-row
-- stopApp: com.apple.mobilesafari
+- runFlow: ../subflows/fresh-safari.yaml
 - tapOn:
     id: profile-privacy
 - extendedWaitUntil:

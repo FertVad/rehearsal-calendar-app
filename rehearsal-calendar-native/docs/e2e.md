@@ -263,8 +263,9 @@ not unstable flows. Turning the sheet off left it one cause fewer, not none.
 
 ## Safari over a running app
 
-A Safari flow stops Rehearsly first: `- stopApp: ${APP_ID}`, then `- stopApp`
-(Safari) and `openLink`. The flows run one after another on one simulator,
+A Safari flow stops Rehearsly first: `- stopApp: ${APP_ID}`, then
+`- runFlow: ../subflows/fresh-safari.yaml` (Safari stopped, its tabs gone; next
+section) and `openLink`. The flows run one after another on one simulator,
 and the flow before a Safari one leaves the app running. With the app behind
 Safari, Maestro's driver (2.11.0) still took it for the app on screen: after
 the link opened it read Rehearsly's hierarchy, not the page's - flow 98's
@@ -278,6 +279,27 @@ every time (`audit/evidence/T-277`, `wrong-app-scan.mjs` tells it from any
 run's `device-xctest.log`). Flow 44 opens the policy from the app's profile,
 so the app stays behind Safari there by design and the race stays possible
 in it.
+
+## A fresh Safari
+
+Every `openLink`, and every link the app hands to Safari, opens a tab of its
+own ("policy = New Foreground Tab" in the device log), none is closed, and
+Safari restores them all at every launch: "Read 26 normal tabs from saved
+state" before flow 70 on ae991aa (T-404, `audit/evidence/T-404/`). The launch
+grew with them, and a restored tab could show the page a flow waits for - an
+older build's policy at its anchor, or any page of ours for flow 98's
+".*Rehearsly.*" - before the link's own. So every flow opens Safari through
+`e2e/subflows/fresh-safari.yaml` first (44 before each of its two pages, 70,
+98): its script asks the runner's helper, `GET /fresh-safari?device=<udid>` in
+`server-with-mailbox.mjs`, to `simctl terminate` Safari and remove
+`SafariTabs.db` and `BrowserState.db` from the simulator's own
+`Library/Safari` (`simctl getenv <udid> HOME`); bookmarks and history stay.
+Safari's next launch reads 0 tabs; `node audit/evidence/T-404/restored-tabs.mjs
+e2e/out/artifacts/<run>` counts them from a run's device logs. Two things that
+do not work: Maestro's `clearState: com.apple.mobilesafari` reinstalls the app,
+and the simulator refuses to uninstall Safari (IXErrorDomain 22); emptying
+Safari's data container (`simctl get_app_container … data`) leaves the tabs,
+which are not in it.
 
 ## A lost tap
 

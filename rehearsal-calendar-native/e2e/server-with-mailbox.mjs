@@ -144,6 +144,14 @@
  *   GET /pasteboard?device=<udid>&text=<t>   `xcrun simctl pbcopy` on that
  *                                            simulator
  *
+ * It gives a Safari flow a Safari with no tabs, which Maestro's clearState
+ * cannot (e2e/subflows/fresh-safari.yaml, T-404):
+ *
+ *   GET /fresh-safari?device=<udid>          `xcrun simctl terminate` Safari and
+ *                                            remove the simulator's
+ *                                            Library/Safari/SafariTabs.db
+ *                                            (and BrowserState.db)
+ *
  * It delivers a push to the app on the simulator, which receives none from
  * Expo — as the server's own would arrive (flow 75, T-229):
  *
@@ -216,6 +224,35 @@ const OPEN_LIMIT_MS = 180000;
 const OPEN_BEAT_MS = 2000;
 let holds = [];
 const held = new Set();
+
+const SAFARI = 'com.apple.mobilesafari';
+const simctl = (...args) => new Promise((resolve, reject) => {
+  execFile('xcrun', ['simctl', ...args], { timeout: 30000 }, (error, stdout) => (error ? reject(error) : resolve(stdout.trim())));
+});
+
+// Where Safari keeps its tabs on the simulator: the device's own
+// Library/Safari, not Safari's data container. Emptying the container left
+// all 26 to be restored (T-404, audit/evidence/T-404). SafariTabs.db is the
+// tabs; BrowserState.db is where older iOS kept them. Bookmarks and history
+// stay: Safari restores no page from them.
+const SAFARI_TABS = /^(SafariTabs|BrowserState)\.db(-shm|-wal)?$/;
+
+/**
+ * Safari stopped and its tabs forgotten: none of an earlier run or flow for it
+ * to restore at its next launch (T-404, docs/e2e.md "A fresh Safari").
+ * Maestro's clearState cannot do it: it reinstalls the app, and the simulator
+ * refuses to uninstall Safari (IXErrorDomain 22). The files removed.
+ */
+async function freshSafari(device) {
+  // Stopped first, so it writes no tab back. Not running is as good.
+  await simctl('terminate', device, SAFARI).catch(() => {});
+  const home = await simctl('getenv', device, 'HOME');
+  assert.ok(home.endsWith(`/Devices/${device}/data`), `the simulator's home is ${home}`);
+  const library = path.join(home, 'Library', 'Safari');
+  const removed = fs.existsSync(library) ? fs.readdirSync(library).filter((name) => SAFARI_TABS.test(name)) : [];
+  for (const name of removed) fs.rmSync(path.join(library, name), { force: true });
+  return removed;
+}
 
 // The server itself, on a port of its own, for a request held open: its answer
 // has begun on the app's connection, so the server answers it here instead.
@@ -599,6 +636,15 @@ http.createServer((request, response) => {
       return answer(200, { copied: true });
     });
     child.stdin.end(url.searchParams.get('text') || '');
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/fresh-safari') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    freshSafari(device).then((removed) => {
+      console.log(`[e2e] Safari stopped, its tabs removed: ${removed.join(', ') || 'none there'}`);
+      answer(200, { removed });
+    }, (error) => answer(500, { error: String(error) }));
     return;
   }
   if (request.method === 'GET' && url.pathname === '/push') {

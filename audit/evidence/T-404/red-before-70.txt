@@ -1,0 +1,15 @@
+T-404 red before: flow 70 on ae991aa (no fresh Safari), 2026-11-24 12:51
+
+$ npm run e2e -- e2e/flows/70-privacy-lists-resend.yaml
+[Passed] Privacy policy lists Resend in every language (43s)
+1/1 Flow Passed in 43s
+
+$ node audit/evidence/T-404/restored-tabs.mjs e2e/out/artifacts/2026-11-24_125130
+Privacy policy lists Resend in every language: 1 Safari launch(es); tabs restored: 26 at 2026-11-24 00:53:17.118021-1000; links opened as new tabs: 4
+total: 1 launch(es), 26 tab(s) restored
+(exit 1)
+
+The flow passes, but Safari starts with 26 tabs of earlier runs and flows
+("Read 26 normal tabs from saved state" in device-simulator.log), and each of
+the four links opens one more ("policy = New Foreground Tab"). The same 26 in
+the red check of T-296 (e2e/out/failed/T-296-2026-11-24T09-17-51-567Z).
