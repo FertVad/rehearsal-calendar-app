@@ -228,6 +228,54 @@ describe('a provider without proof', () => {
   });
 });
 
+// T-291. Before: Google and Apple created every account in English, whatever
+// language the app showed, and signing in switched the app to English. Now the
+// app sends its language; an account the sign-in creates takes it, one it
+// finds keeps its own.
+describe('the language of an account a provider creates', () => {
+  const withLocale = (route, claims, locale) => request(app).post(`/api/auth/${route}`).send({
+    idToken: JSON.stringify({ providerUserId: `${route}-new`, email: VICTIM, emailVerified: true, ...claims }),
+    ...(locale === undefined ? {} : { locale }),
+  });
+
+  it.each(['google', 'apple'])('%s creates the account in the language the app sent', async (route) => {
+    const response = await withLocale(route, {}, 'ru');
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ isNewUser: true, user: { locale: 'ru' } });
+    expect(userRow().locale).toBe('ru');
+  });
+
+  it.each([
+    ['google', 'xx'], ['apple', 'xx'], ['google', undefined], ['apple', undefined],
+    ['google', { $ne: 'en' }], ['apple', 'RU'],
+  ])('%s with %p creates it in English', async (route, locale) => {
+    const response = await withLocale(route, {}, locale);
+    expect(response.status).toBe(200);
+    expect(response.body.isNewUser).toBe(true);
+    expect(userRow().locale).toBe('en');
+  });
+
+  it.each(['google', 'apple'])('%s signing into an existing account leaves its language', async (route) => {
+    const id = await legacy({ password: null });
+    db.run("UPDATE native_users SET locale = 'de' WHERE id = ?", [id]);
+    link(id, route, `${route}-new`);
+    const response = await withLocale(route, {}, 'ru');
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ isNewUser: false, user: { id, locale: 'de' } });
+    expect(userRow().locale).toBe('de');
+  });
+
+  it.each(['google', 'apple'])('%s linked to an account by its address leaves its language', async (route) => {
+    const id = await legacy({ password: null });
+    db.run("UPDATE native_users SET locale = 'de' WHERE id = ?", [id]);
+    const response = await withLocale(route, {}, 'ru');
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ isNewUser: false, linked: true, user: { id, locale: 'de' } });
+    expect(userRow().locale).toBe('de');
+    expect(users()).toBe(1);
+  });
+});
+
 describe('a session of a pending account', () => {
   it('reaches nothing, PUT /me included', async () => {
     expect((await register()).status).toBe(201);
