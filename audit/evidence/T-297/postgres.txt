@@ -1,0 +1,36 @@
+T-297: --security-only locally on 5cfeffd, PostgreSQL 15.13.
+
+$ node scripts/r0-postgres.mjs --security-only
+controls, A02, B03, B04, D01, H04, IS02, R2_ADAPTER: PASS; then
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  assert.ok(fixture.events.some(event => event.type === 'imported' && event.defaultHandler))
+    at Module.probeR2Startup (…/server/__tests__/postgres/r2Startup.mjs:33:12)
+AssertionError [ERR_ASSERTION]: R2_STARTUP probe failed unexpectedly
+
+R2_STARTUP is the agent's sandbox, not this change: its child imports the
+copied server.js with SERVER_ENV_FILE=<temp>/server/.env, and the OS here
+refuses to read any file named .env. The child's own error:
+  Error: Unable to load the explicitly selected server environment file
+      at file:///private/var/folders/…/r2-entrypoint-o4j2Gv/server/config/env.js:16:27
+The fixture copies no __tests__ file (startup/entrypointFixture.mjs:27), and
+R2_STARTUP was green in CI run 45320175318. The supervisor's run covers it.
+
+The rest of --security-only, group by group (security-rest.mjs):
+$ node audit/evidence/T-297/security-rest.mjs
+== --a02-b03-only: exit 0   A02 PASS, B03 PASS
+== --b04-only: exit 0       B04 PASS
+== --h04-only: exit 0       H04 PASS
+== --is02-only: exit 0      IS02 PASS
+== --r4-only: exit 0        D01 PASS, R4_LIFECYCLE PASS, R4_PUSH_TOKEN PASS
+== --f05-only: exit 0       F05 PASS
+== --r2-migrations-schema-only: exit 0   R2_SCHEMA PASS (40 checks, 25 tables), R2_MIGRATIONS PASS
+== --r3-only: exit 0        R3_EMAIL PASS, R3_AUTH PASS
+== --r6-only: exit 0        R6_AVAILABILITY PASS
+== --r7-only: exit 0        R7_IMPORT PASS
+== --r8-only: exit 0        R8_REMINDERS PASS
+== --t278-only: exit 0      T278_NOTICES PASS
+== --t293-only: exit 0      T293_ADMIN PASS
+== --t294-only: exit 0      T294_USAGE PASS, T294_UPGRADE PASS (base 477ea2f)
+groups failed: 0
+(each line: "<NAME> REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.")
+R2_ADAPTER: PASS in the --security-only run above.
