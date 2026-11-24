@@ -46,10 +46,18 @@ export function flakeName(steps) {
   return `проверка ${steps.map((step) => step.name).join(', ')}`;
 }
 
-/** The next free id for a flaky-test task: T-201, T-202, … */
-export function nextFlakeId(tasksMarkdown) {
-  const taken = [...tasksMarkdown.matchAll(/^## T-2(\d{2})\b/gm)].map((match) => Number(match[1]));
-  return `T-2${String((taken.length ? Math.max(...taken) : 0) + 1).padStart(2, '0')}`;
+/**
+ * The next free id for a task the supervisor finds: one above every id the
+ * queue and the state know, and never below T-201 (T-201, T-202, … while the
+ * queue holds only lower ones). `known`: the state's ids, so a task gone from
+ * TASKS.md does not lend its id to another. It counted only "T-2" and two
+ * digits: after T-299 that was "T-2100", and the same again next time, since
+ * that heading is not two digits after "T-2" (24.11.2026).
+ */
+export function nextFlakeId(tasksMarkdown, known = []) {
+  const ids = [...tasksMarkdown.matchAll(/^## T-(\d+)\b/gm)].map((match) => Number(match[1]))
+    .concat(known.map((id) => Number(/^T-(\d+)$/.exec(id)?.[1])).filter(Number.isFinite));
+  return `T-${String(Math.max(200, ...ids) + 1).padStart(3, '0')}`;
 }
 
 export function flakeTitle(steps) {
