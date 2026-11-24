@@ -14,6 +14,11 @@
  * a v1 root receives it by --apply. The real PostgreSQL proof — a database
  * created by 477ea2f's own CLI, then --dry/--apply with this code — is
  * __tests__/postgres/t294Upgrade.mjs.
+ *
+ * Migration 017 (T-406) is version 3 the same way. Version 2's profile and
+ * step 016 are pinned too, as b8722df's loader computes them: production
+ * receives 016 from that release, and a v2 root (any --fresh since T-294)
+ * records them. __tests__/postgres/t406Upgrade.mjs is the PostgreSQL proof.
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +35,9 @@ const recordedProfiles = {
     '8bf276976bdc5863e45e2dd511cb042e9d2b448402717e1db4e27735f622ca6f'],
   'rehearsly-pg-domain13-v1': [null, 'ee4070df312183f4085f26674165fd20b00a2530e6255688e041d0b06337d53e'],
   'rehearsly-pg-domain13-pre-import-key-v1': [null, '7b9ebd3229829d93e68cd1e11bd7749577c55c7298bf76351a2432ccb4334691'],
+  // b8722df (T-294): version 2.
+  'rehearsly-pg-current-v2': ['ab086450afd91fb61b5a0dab7c4a14c6306e6b40f714a558c58089783eeeece3',
+    '51553bdb1dee7949bdde3ed082b503158602908501b7953b76b5ec033575944b'],
 };
 const recordedSteps = {
   'availability-conflict-key-v1': '8c22ec9013689ba94f8d2fff38aff89fb651affbd6f63ffe947a04d8eb37bdd9',
@@ -40,7 +48,13 @@ const recordedSteps = {
   '011-push-tickets': '2b22d9e827e40227ac7c578abd55e21a1e8917ef7fab74fc74001065320e3cd7',
   '012-idempotency-keys': 'aec7039c93fc96182a74ac8e93a4d7252ce2511d3dfebc80c30c20c8a0cbce22',
   '013-push-token-owner': 'b722a304c952d1841bcde61bee9606a3da9c5ed33d7b09778342ba91223ec0b3',
+  // b8722df (T-294).
+  '016-usage-statistics': '985cfde9b162598e98063cbd9229448994ee11d17716799965413d4cf622d836',
 };
+const PRODUCTION_BUDGETS = ['007', '008', '009', '010', '011', '012', '013'];
+const plan = (artifacts, rootId, budgets) => buildPlan({ artifacts, request: { mode: 'dry' }, observations: {
+  history: { root: { id: rootId }, frontier: { domain: 'v1', availabilityConflictKey: true, budgets } },
+  inspections: {}, empty: false } });
 
 describe('migration history identities (T-294)', () => {
   let artifacts;
@@ -53,26 +67,37 @@ describe('migration history identities (T-294)', () => {
     }
   });
 
-  it('keeps every step before 016 exactly as recorded', () => {
+  it('keeps every step before 017 exactly as recorded', () => {
     for (const [id, definition] of Object.entries(recordedSteps)) {
       expect(artifacts.steps.find((step) => step.id === id).definitionSha256).toBe(definition);
     }
   });
 
-  it('creates new databases as version 2, from its own artifacts', () => {
-    const v1 = artifacts.profiles.find((item) => item.id === V1);
-    const v2 = artifacts.profiles.find((item) => item.id === artifacts.currentProfile);
-    expect(v2.id).toBe('rehearsly-pg-current-v2');
-    expect(v2.fresh).toBe(true);
-    for (const kind of ['bootstrap', 'descriptor', 'inspector']) expect(v2[kind].file).not.toBe(v1[kind].file);
+  it('creates new databases as version 3, from its own artifacts', () => {
+    const older = artifacts.profiles.filter((item) => ['rehearsly-pg-current-v1', 'rehearsly-pg-current-v2'].includes(item.id));
+    const v3 = artifacts.profiles.find((item) => item.id === artifacts.currentProfile);
+    expect(v3.id).toBe('rehearsly-pg-current-v3');
+    expect(v3.fresh).toBe(true);
+    for (const profile of older) {
+      for (const kind of ['bootstrap', 'descriptor', 'inspector']) expect(v3[kind].file).not.toBe(profile[kind].file);
+    }
   });
 
-  it('plans 016 alone for production\'s root: fresh v1 with 007–013', () => {
-    const plan = buildPlan({ artifacts, request: { mode: 'dry' }, observations: {
-      history: { root: { id: V1 }, frontier: { domain: 'v1', availabilityConflictKey: true,
-        budgets: ['007', '008', '009', '010', '011', '012', '013'] } }, inspections: {}, empty: false } });
-    expect(plan).toMatchObject({ state: 'managed', rootId: V1, stepIds: ['016-usage-statistics'] });
-    const step = artifacts.steps.find((item) => item.id === '016-usage-statistics');
-    expect(step.verifyProfile).toBe('rehearsly-pg-current-v2');
+  it('plans 017 alone for production\'s root after 016: fresh v1 with 007–013 and 016', () => {
+    expect(plan(artifacts, V1, [...PRODUCTION_BUDGETS, '016']))
+      .toMatchObject({ state: 'managed', rootId: V1, stepIds: ['017-weekend-defaults'] });
+    const step = artifacts.steps.find((item) => item.id === '017-weekend-defaults');
+    expect(step.verifyProfile).toBe('rehearsly-pg-current-v3');
+  });
+
+  it('plans 016, then 017, for production\'s root before 016', () => {
+    expect(plan(artifacts, V1, PRODUCTION_BUDGETS))
+      .toMatchObject({ state: 'managed', rootId: V1, stepIds: ['016-usage-statistics', '017-weekend-defaults'] });
+    expect(artifacts.steps.find((item) => item.id === '016-usage-statistics').verifyProfile).toBe('rehearsly-pg-current-v2');
+  });
+
+  it('plans 017 alone for a version 2 root', () => {
+    expect(plan(artifacts, 'rehearsly-pg-current-v2', [...PRODUCTION_BUDGETS, '016']))
+      .toMatchObject({ state: 'managed', rootId: 'rehearsly-pg-current-v2', stepIds: ['017-weekend-defaults'] });
   });
 });

@@ -13,9 +13,12 @@
  *   lock order the rest of the server uses. Two saves of a still-empty day both
  *   deleted nothing and both inserted, leaving both versions (C03).
  * - Only manual rows are replaced; rehearsal and imported rows on the same day
- *   stay.
+ *   stay. A weekend's default busy row goes with them (T-406): the day is the
+ *   person's now, whatever they saved — [] leaves it free, and the defaults
+ *   are never laid out on it again (weekendDefaults.js).
  */
 import { AVAILABILITY_SOURCES } from '../../constants/timezone.js';
+import { deleteWeekendDefaults } from './weekendDefaults.js';
 
 export const MAX_DAYS = 366;
 export const MAX_ENTRIES_PER_DAY = 48;
@@ -133,11 +136,21 @@ export async function deleteManualDay(tx, userId, date, timezone) {
   );
 }
 
+/**
+ * The person takes this day over: their hand-entered rows go, and the
+ * weekend's default with them (T-406). Every path that replaces or clears a
+ * day of theirs goes through here.
+ */
+export async function clearOwnDay(tx, userId, date, timezone) {
+  await deleteManualDay(tx, userId, date, timezone);
+  await deleteWeekendDefaults(tx, userId, { dates: [date] });
+}
+
 /** Replace each checked day with exactly its entries. */
 export async function replaceManualDays(tx, userId, days, timezone) {
   await lockOwnAvailability(tx, userId);
   for (const day of days) {
-    await deleteManualDay(tx, userId, day.date, timezone);
+    await clearOwnDay(tx, userId, day.date, timezone);
     for (const entry of day.entries) {
       await tx.run(
         `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)

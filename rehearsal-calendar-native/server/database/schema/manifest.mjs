@@ -5,14 +5,17 @@
 // Version 1's artifacts and definitions are exactly those recorded by existing
 // histories (production: `--fresh` on 2026-10-28, root rehearsly-pg-current-v1)
 // and never change. Version 2 (T-294: group 016) has its own snapshot, catalog
-// and checker; `--fresh` creates it, and a v1 root receives 016 by `--apply`.
+// and checker, and so does version 3 (T-406: group 017, the weekends_* columns
+// of native_users). `--fresh` creates version 3; a v1 root receives 016 and
+// 017 by `--apply`, a v2 root 017. Version 2's entries stay as recorded.
 import { inspectSchema as inspectV1 } from './inspect.mjs';
 import { inspectSchema as inspectV2 } from './inspect-v2.mjs';
+import { inspectSchema as inspectV3 } from './inspect-v3.mjs';
 
-const v2Profiles = new Set(['rehearsly-pg-current-v2']);
+const checkers = { 'rehearsly-pg-current-v2': inspectV2, 'rehearsly-pg-current-v3': inspectV3 };
 // Each profile is checked by the checker its manifest entry pins.
 export const inspectSchema = (query, options) =>
-  (v2Profiles.has(options?.profile) ? inspectV2 : inspectV1)(query, options);
+  (checkers[options?.profile] ?? inspectV1)(query, options);
 const freeze = value => {
   if (value && typeof value === 'object') {
     Object.values(value).forEach(freeze);
@@ -22,7 +25,7 @@ const freeze = value => {
 };
 export const manifest = freeze({
   "formatVersion": 1,
-  "currentProfile": "rehearsly-pg-current-v2",
+  "currentProfile": "rehearsly-pg-current-v3",
   "profiles": [
     {
       "id": "rehearsly-pg-current-v1",
@@ -87,6 +90,24 @@ export const manifest = freeze({
         "sha256": "3f9e371967c29a1b74969e95c9609d9aa04ce6389eaf9bce54b8723320cdcd5e"
       },
       "completionProfile": "rehearsly-pg-current-v2"
+    },
+    {
+      "id": "rehearsly-pg-current-v3",
+      "descriptor": {
+        "file": "database/schema/catalog-v3.json",
+        "sha256": "f923dedf8af61ee13b5ac61cd1c77902a14eb3df72a0fb8050163ca310c45033"
+      },
+      "fresh": true,
+      "adopt": true,
+      "bootstrap": {
+        "file": "database/init-native-schema-v3.sql",
+        "sha256": "92190a62af055208b961ab95cea74ef6bcec19493c5d5694b5ae2288ad88f831"
+      },
+      "inspector": {
+        "file": "database/schema/inspect-v3.mjs",
+        "sha256": "c20a67043744bbb68db7565b8eba6862544347840d15d61afd8003332c976f26"
+      },
+      "completionProfile": "rehearsly-pg-current-v3"
     }
   ],
   "steps": [
@@ -232,6 +253,23 @@ export const manifest = freeze({
         "rehearsly-pg-current-v1",
         "rehearsly-pg-domain13-v1",
         "rehearsly-pg-domain13-pre-import-key-v1"
+      ]
+    },
+    {
+      "id": "017-weekend-defaults",
+      "sql": {
+        "file": "migrations/017-weekend-defaults.sql",
+        "sha256": "e116dce9f8515e10a3ac0898c08eb09bb81a5a8ef3325b0dc603e4225e778162"
+      },
+      "when": {
+        "missingBudget": "017"
+      },
+      "verifyProfile": "rehearsly-pg-current-v3",
+      "roots": [
+        "rehearsly-pg-current-v1",
+        "rehearsly-pg-domain13-v1",
+        "rehearsly-pg-domain13-pre-import-key-v1",
+        "rehearsly-pg-current-v2"
       ]
     }
   ],

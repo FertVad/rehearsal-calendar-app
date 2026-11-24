@@ -4,7 +4,8 @@ import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { timestampToISO } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
-import { AvailabilityInvalid, checkDays, checkBulkEntries, replaceManualDays, lockOwnAvailability, deleteManualDay } from '../../services/availability/manualDays.js';
+import { AvailabilityInvalid, checkDays, checkBulkEntries, replaceManualDays, lockOwnAvailability, clearOwnDay } from '../../services/availability/manualDays.js';
+import { ensureWeekendDefaults, readWeekends, setWeekendsBusy, WeekendsUnavailable } from '../../services/availability/weekendDefaults.js';
 import { ImportInvalid, checkSync, applySync } from '../../services/availability/importScope.js';
 
 const router = Router();
@@ -29,6 +30,10 @@ async function getUserTimezone(userId) {
 router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
+
+    // The weekends' defaults a year ahead first (T-406): this read is one of
+    // the two that lay them out (weekendDefaults.js). It never fails the read.
+    await ensureWeekendDefaults([userId]);
 
     // Get availability from DB using new TIMESTAMPTZ columns
     const availability = await db.all(
@@ -57,6 +62,46 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('Error fetching availability:', error);
     res.status(500).json({ error: 'Failed to fetch availability' });
+  }
+}));
+
+/**
+ * GET /api/native/availability/weekends - the switch "Weekends busy" (T-406):
+ * { enabled, days }, days the ISO weekdays (1 Monday … 7 Sunday) of the
+ * profile's zone's country. 503 WEEKENDS_UNAVAILABLE before migration 017.
+ */
+router.get('/weekends', requireAuth, asyncHandler(async (req, res) => {
+  try {
+    const weekends = await readWeekends(req.userId);
+    if (!weekends) return res.status(404).json({ error: 'User not found' });
+    res.json(weekends);
+  } catch (error) {
+    if (error instanceof WeekendsUnavailable) {
+      return res.status(503).json({ error: error.message, code: error.code });
+    }
+    throw error;
+  }
+}));
+
+/**
+ * PUT /api/native/availability/weekends - { enabled: boolean }. Off deletes
+ * the default busy rows from today on, on lays them out again from today on;
+ * the person's own marks and past days stay. Answers as GET.
+ */
+router.put('/weekends', requireAuth, asyncHandler(async (req, res) => {
+  const enabled = req.body?.enabled;
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: 'enabled must be true or false', code: 'WEEKENDS_INVALID' });
+  }
+  try {
+    const weekends = await setWeekendsBusy(req.userId, enabled);
+    if (!weekends) return res.status(404).json({ error: 'User not found' });
+    res.json(weekends);
+  } catch (error) {
+    if (error instanceof WeekendsUnavailable) {
+      return res.status(503).json({ error: error.message, code: error.code });
+    }
+    throw error;
   }
 }));
 
@@ -151,7 +196,7 @@ router.post('/bulk', requireAuth, asyncHandler(async (req, res) => {
       // older apps still replace days through here.
       await lockOwnAvailability(tx, userId);
       for (const date of affectedDates) {
-        await deleteManualDay(tx, userId, date, timezone);
+        await clearOwnDay(tx, userId, date, timezone);
       }
 
       for (const entry of entries) {
@@ -218,7 +263,7 @@ router.delete('/:date', requireAuth, asyncHandler(async (req, res) => {
     // saves take (manualDays.js). Rehearsal and imported rows stay.
     await db.transaction(async (tx) => {
       await lockOwnAvailability(tx, userId);
-      await deleteManualDay(tx, userId, date, timezone);
+      await clearOwnDay(tx, userId, date, timezone);
     });
 
     res.json({ success: true });
