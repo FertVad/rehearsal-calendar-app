@@ -1,0 +1,30 @@
+Each mutation applied to HEAD cd0d613, adminAnalytics.test.js run, then `git restore`.
+
+All four at once (people.js: service = onServiceDomain(email) only; roster.js seenBeforeStart FROM
+native_rehearsal_responses; analytics.js coverage: all-day branch disabled, every row read as an
+instant; admin.js: /api/analytics without requireAdmin):
+    ✕ count in no figure: both domains and the listed addresses
+    ✕ are hidden from the users table, and shown marked when asked
+    ✕ filters by period, source and language, and pages
+    ✕ projects: seen before the start leaves out the removed member; coverage stops at the 14th date
+    ✕ the source and language filters apply to every section
+    ✕ /admin/api/analytics refuses without the admin token
+Tests:       6 failed, 12 passed, 18 total
+
+Coverage mutation alone (-t "projects: seen"):
+    -     "people": 2,
+    -     "rate": 66.7,
+    +     "people": 3,
+    +     "rate": 100,
+Tests:       1 failed, 17 skipped, 18 total
+
+ROSTER mutation alone (-t "projects: seen"):
+    -     "of": 4,
+    -     "rate": 50,
+    -     "seen": 2,
+    +     "of": 5,
+    +     "rate": 60,
+    +     "seen": 3,
+Tests:       1 failed, 17 skipped, 18 total
+
+After restore: git status clean; the task's suites 181/181.

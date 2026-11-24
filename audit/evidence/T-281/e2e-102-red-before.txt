@@ -1,0 +1,23 @@
+T-281 — flow e2e/flows/102-refusal-in-russian.yaml on the old code.
+
+Files put back to d086ead for the run (git restore --source=d086ead):
+  rehearsal-calendar-native/server/routes/native/*.js
+  rehearsal-calendar-native/src/shared/utils/requestError.ts
+  rehearsal-calendar-native/src/features/projects/screens/JoinProjectScreen.tsx
+Seed and flow as in this commit. Restored from HEAD afterwards.
+
+$ npm run e2e -- e2e/flows/102-refusal-in-russian.yaml
+[e2e] installing the Debug app and running the flows
+Waiting for flows to complete...
+[Failed] A server refusal in Russian (1m 26s) (Assertion is false: ".*Access denied.*" is not visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshot (takeScreenshot 102-refusal-in-russian, artifacts 2026-11-20_001009):
+Russian app, project page "Quince Players", alert titled "Ошибка" with the
+text "Access denied" and an OK button. Server log: "[ROUTE] Access denied -
+user 116 not a member of project 60".
+
+(The run before this one, with the flow waiting for the Russian text first,
+failed the same way at "Вы больше не участник этого проекта…" is visible; the
+flow was then reordered to shoot the alert and name the English it shows.)

@@ -1,0 +1,51 @@
+T-284 - red before: the five flows on the unchanged tree (HEAD c7273f4; the
+flows, the stand e2e/server-with-mailbox.mjs, e2e/scripts/notify.js, the
+notification service and server/public/privacy.html are the same as on
+19ae506 - `git diff --stat 19ae506 HEAD` on them shows only seed.mjs, where
+T-283 added Oberon and Peaseblossom).
+
+$ npm run e2e -- e2e/flows/61-inbox-new-member-opens-members.yaml \
+    e2e/flows/62-inbox-says-when.yaml e2e/flows/70-privacy-lists-resend.yaml \
+    e2e/flows/86-rehearsal-notices-read-right.yaml \
+    e2e/flows/88-inbox-new-admin-opens-members.yaml
+...
+[Failed] Inbox, new member opens the members (16s)
+[Failed] Inbox says when (3s)
+[Failed] Privacy policy lists Resend in every language (1m 13s) (No visible element found: ".*sends the emails with your codes.*Ireland.*")
+[Failed] Rehearsal notices read right in Spanish, German and Russian (2s)
+[Failed] Inbox, new administrator opens the members (864ms)
+
+5/5 Flows Failed
+
+The four "Unknown error"s (junit.xml) are the first notify.js runScript of
+each flow; e2e/out/artifacts/2026-11-20_045510/<flow>/commands.json, for 61,
+62, 86 and 88 alike:
+
+  "message" : "Error: notify answered 500: {\"error\":\"TypeError: A notice that names someone takes { id, name }: whose name it is, too\"}"
+
+The cause
+---------
+61, 62, 86, 88: 045a5d7 (T-278). notifyMemberJoined, notifyAdminAppointed
+and notifyMemberResponse take { id, name } and refuse a bare name (named() in
+server/services/notifications/pushNotificationService.js). The stand's
+/notify route (e2e/server-with-mailbox.mjs) still passed the MEMBER query
+parameter, a string. Nothing in e2e/ changed in 444ade5..19ae506
+(`git diff --stat 444ade5 19ae506 -- e2e/server-with-mailbox.mjs
+e2e/scripts/notify.js e2e/flows/61-... e2e/flows/70-...` is empty), so the
+first commit of the range whose server refuses the string is the one: the
+error is named()'s own message, which 045a5d7 introduced. The server's own
+callers pass { id, name } (inviteRedemption.js, members.js, rehearsals.js):
+the app is not broken, the stand was out of date.
+
+A run of 61 with only the notification service restored to 621d3a5 (045a5d7's
+parent) is not possible: routes/native/members.js imports notifyMemberLeft,
+which T-271 (fd49782, later than 621d3a5) added, and the server does not
+start (server.log: "SyntaxError: The requested module
+'../../services/notifications/pushNotificationService.js' does not provide an
+export named 'notifyMemberLeft'").
+
+70: 64d7860 (T-269 review, the native editors' wording). The English row for
+Resend became "sends our emails: your codes for signing up, ... (EU,
+Ireland)" (server/public/privacy.html), the German "Versand unserer E-Mails:
+Codes für Registrierung, ...". The flow still looked for "sends the emails
+with your codes" and "Versand der E-Mails mit Codes".

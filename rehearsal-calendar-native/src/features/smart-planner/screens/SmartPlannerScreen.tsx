@@ -135,6 +135,8 @@ function PlannerBody({ projectId, onSelectProject }: {
     project,
     simpleMembers,
     membersProjectId,
+    membersLoading,
+    membersFailed,
     membersWithoutData,
     filteredSlots,
     slotsByDate,
@@ -359,6 +361,8 @@ function PlannerBody({ projectId, onSelectProject }: {
         people={simpleMembers}
         selectedIds={selectedMemberIds}
         onChange={setSelectedMemberIds}
+        loading={membersLoading}
+        failed={membersFailed}
         noneLabel={t.smartPlanner.allMembers}
       />
     </View>

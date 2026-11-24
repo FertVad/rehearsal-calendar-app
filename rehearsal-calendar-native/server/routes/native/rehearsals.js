@@ -73,7 +73,7 @@ router.get('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res) 
 
     if (!membership) {
       logger.debug(`[ROUTE] Access denied - user ${userId} not a member of project ${projectId}`);
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ error: 'Access denied', code: 'NOT_PROJECT_MEMBER' });
     }
 
     logger.debug(`[ROUTE] User is a member, calling getProjectRehearsals...`);
@@ -97,7 +97,7 @@ router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res)
     const isAdmin = await checkUserIsAdmin(projectId, userId);
 
     if (!isAdmin) {
-      return res.status(403).json({ error: 'Only admins can create rehearsals' });
+      return res.status(403).json({ error: 'Only admins can create rehearsals', code: 'ADMIN_ONLY' });
     }
 
     const { rehearsal, replayed } = await createRehearsal(projectId, userId, req.body, idempotencyKeyOf(req));
@@ -148,21 +148,21 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
     const isAdmin = await checkUserIsAdmin(projectId, userId);
 
     if (!isAdmin) {
-      return res.status(403).json({ error: 'Only admins can update rehearsals' });
+      return res.status(403).json({ error: 'Only admins can update rehearsals', code: 'ADMIN_ONLY' });
     }
 
     // Check if rehearsal exists
     const rehearsal = await checkRehearsalExists(rehearsalId, projectId);
 
     if (!rehearsal) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     const edit = await updateRehearsal(rehearsalId, projectId, req.body);
 
     // Deleted between the check above and the edit.
     if (!edit) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
     const updatedRehearsal = edit.rehearsal;
 
@@ -239,14 +239,14 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(a
     const isAdmin = await checkUserIsAdmin(projectId, userId);
 
     if (!isAdmin) {
-      return res.status(403).json({ error: 'Only admins can delete rehearsals' });
+      return res.status(403).json({ error: 'Only admins can delete rehearsals', code: 'ADMIN_ONLY' });
     }
 
     // Check if rehearsal exists
     const rehearsal = await checkRehearsalExists(rehearsalId, projectId);
 
     if (!rehearsal) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     // The roster, read BEFORE deletion — those rows go with the rehearsal.
@@ -285,14 +285,14 @@ router.post('/:rehearsalId/respond', requireAuth, asyncHandler(async (req, res) 
     const rehearsal = await checkRehearsalExists(rehearsalId);
 
     if (!rehearsal) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     // Someone who may not see it gets the same answer as for one that does not
     // exist. Seeing is not enough to answer: an admin not on it is refused by
     // the service, which never puts anyone on a rehearsal (roster.js).
     if (!(await viewerOf(db, rehearsal, userId))) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     const { stats, announce } = await markRehearsal(rehearsalId, userId, response, notes);
@@ -338,13 +338,13 @@ router.get('/:rehearsalId/responses', requireAuth, asyncHandler(async (req, res)
     const rehearsal = await checkRehearsalExists(rehearsalId);
 
     if (!rehearsal) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     // Visible to whoever may see the rehearsal itself, and to nobody else — the
     // cast of a rehearsal is not for project members who are not on it.
     if (!(await viewerOf(db, rehearsal, userId))) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     const result = await getRehearsalResponses(rehearsalId);
@@ -370,7 +370,7 @@ router.get('/:rehearsalId', requireAuth, asyncHandler(async (req, res) => {
     const rehearsal = await getRehearsalById(req.params.rehearsalId, req.userId);
 
     if (!rehearsal) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     res.json({ rehearsal });
@@ -390,13 +390,13 @@ router.get('/:rehearsalId/my-response', requireAuth, asyncHandler(async (req, re
     const rehearsal = await checkRehearsalExists(rehearsalId);
 
     if (!rehearsal) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     // Visible to whoever may see the rehearsal itself, and to nobody else — the
     // cast of a rehearsal is not for project members who are not on it.
     if (!(await viewerOf(db, rehearsal, userId))) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
+      return res.status(404).json({ error: 'Rehearsal not found', code: 'REHEARSAL_NOT_FOUND' });
     }
 
     const response = await getUserResponse(rehearsalId, userId);

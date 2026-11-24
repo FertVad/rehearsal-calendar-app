@@ -157,10 +157,23 @@ beforeEach(async () => {
       status TEXT DEFAULT 'new',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
-    -- The real stats API only counts these tables. No API stub is needed for
-    -- the browser's loadAll(), and no projects/rehearsals are created here.
-    CREATE TABLE native_projects (id INTEGER PRIMARY KEY);
-    CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY);
+    -- What the statistics read (T-293). No API stub is needed for the
+    -- browser's loadAll(). A project's name is stored text shown in the users
+    -- table and the analytics; its row is set directly (ownProject).
+    CREATE TABLE native_auth_providers (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, provider_type TEXT NOT NULL);
+    CREATE TABLE native_projects (id INTEGER PRIMARY KEY, name TEXT NOT NULL, created_at TEXT);
+    CREATE TABLE native_project_members (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, project_id INTEGER NOT NULL,
+      role TEXT NOT NULL, status TEXT NOT NULL, joined_at TEXT, created_at TEXT);
+    CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY, project_id INTEGER, starts_at TEXT, ends_at TEXT, created_by INTEGER);
+    CREATE TABLE native_rehearsal_responses (id INTEGER PRIMARY KEY, rehearsal_id INTEGER, user_id INTEGER,
+      response TEXT, notes TEXT, created_at TEXT, updated_at TEXT);
+    CREATE TABLE native_user_availability (id INTEGER PRIMARY KEY, user_id INTEGER, starts_at TEXT, ends_at TEXT,
+      is_all_day INTEGER, source TEXT, created_at TEXT);
+    CREATE TABLE native_calendar_connections (id INTEGER PRIMARY KEY, user_id INTEGER);
+    CREATE TABLE native_push_tokens (id INTEGER PRIMARY KEY, user_id INTEGER);
+    CREATE TABLE native_notifications (id INTEGER PRIMARY KEY, user_id INTEGER, type TEXT, created_at TEXT, read_at TEXT);
+    CREATE TABLE native_email_codes (id INTEGER PRIMARY KEY, user_id INTEGER, purpose TEXT, attempts INTEGER,
+      consumed_at TEXT, sent_at TEXT, failed_at TEXT, created_at TEXT);
   `);
   userId = Number(sqlite.prepare(
     'INSERT INTO native_users (email, first_name, last_name) VALUES (?, ?, ?)'
@@ -196,7 +209,16 @@ afterAll(async () => {
   }
 });
 
-async function checkStoredContentInBrowser({ userName, email, reportName, message, screen }) {
+// The author owns a project with this name: a project name is stored text too.
+function ownProject(name) {
+  const now = new Date().toISOString();
+  const projectId = Number(sqlite.prepare('INSERT INTO native_projects (name, created_at) VALUES (?, ?)')
+    .run(name, now).lastInsertRowid);
+  sqlite.prepare(`INSERT INTO native_project_members (user_id, project_id, role, status, joined_at, created_at)
+    VALUES (?, ?, 'owner', 'active', ?, ?)`).run(userId, projectId, now, now);
+}
+
+async function checkStoredContentInBrowser({ userName, email, reportName, message, screen, projectName, owner }) {
   if (!BROWSER_CHECK) return;
   const context = await browser.newContext();
   const origin = `http://127.0.0.1:${server.address().port}`;
@@ -241,9 +263,16 @@ async function checkStoredContentInBrowser({ userName, email, reportName, messag
     await page.locator('#users-body td:nth-child(4)').waitFor({ state: 'attached' });
     await page.locator('#bugs-body .status-btn').first().waitFor({ state: 'visible' });
 
+    await page.locator('#analytics-body .analytics-block').first().waitFor({ state: 'attached' });
+
     expect(await page.locator('#users-body tr').count()).toBe(1);
     expect(await page.locator('#bugs-body tr').count()).toBe(1);
-    expect(await page.locator('#users-body td').count()).toBe(4);
+    expect(await page.locator('#users-body td').count()).toBe(9);
+    expect(await page.locator('#users-body td').nth(5).textContent()).toBe(`own project “${projectName}”`);
+    // The projects table: name and owner, literally.
+    const projectRow = page.locator('#analytics-body tr', { has: page.locator('td', { hasText: projectName }) }).last();
+    const projectCells = await projectRow.locator('td').allTextContents();
+    expect(projectCells.slice(0, 2)).toEqual([projectName, owner ?? '-']);
     expect(await page.locator('#bugs-body td').count()).toBe(5);
     expect(await page.locator('#users-body td').nth(0).textContent()).toBe(userName);
     expect(await page.locator('#users-body td').nth(1).textContent()).toBe(email);
@@ -252,13 +281,13 @@ async function checkStoredContentInBrowser({ userName, email, reportName, messag
     expect(await page.locator('#bugs-body td').nth(2).textContent()).toBe(screen || '-');
     // CSP might hide execution while unsafe markup still enters the DOM.
     // Assert both the absence of payload-created elements and the probe state.
-    expect(await page.locator('#users-body, #bugs-body').locator('img, svg, script, form, b').count()).toBe(0);
+    expect(await page.locator('#users-body, #bugs-body, #analytics-body').locator('img, svg, script, form, b').count()).toBe(0);
     expect(await page.evaluate(() => window.__h01Probe)).toBeUndefined();
     expect(await page.evaluate(() => window.__h01Violations)).toEqual([]);
     expect(pageErrors).toEqual([]);
     expect(externalRequests).toEqual([]);
     expect(apiResponses).toEqual(expect.arrayContaining([
-      ['/admin/api/login', 200], ['/admin/api/stats', 200],
+      ['/admin/api/login', 200], ['/admin/api/stats', 200], ['/admin/api/analytics', 200],
       ['/admin/api/users', 200], ['/admin/api/bug-reports', 200],
     ]));
     expect(apiResponses.every(([, status]) => status === 200)).toBe(true);
@@ -324,9 +353,24 @@ describe('Admin stored text through authenticated writes and real database reads
       screen,
       status: 'new',
     });
+
+    // T-293: the project's name and its owner's short name, literally.
+    const projectName = `Project ${payload}`;
+    const owner = `${firstName} L.`;
+    ownProject(projectName);
+    const sourced = await request(server)
+      .get('/admin/api/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(sourced.body.users[0].source).toEqual({ kind: 'own', project: projectName, owner: null });
+    const analytics = await request(server)
+      .get('/admin/api/analytics')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(analytics.body.projects).toEqual([expect.objectContaining({ name: projectName, owner })]);
     await checkStoredContentInBrowser({
       userName: `${firstName} ${lastName}`, email: TEST_EMAIL,
-      reportName: `${firstName} ${lastName}`, message, screen,
+      reportName: `${firstName} ${lastName}`, message, screen, projectName, owner,
     });
   });
 
@@ -358,9 +402,10 @@ describe('Admin stored text through authenticated writes and real database reads
       message: 'Literal email fallback',
       screen: null,
     });
+    ownProject('Legacy project');
     await checkStoredContentInBrowser({
       userName: ' ', email: legacyEmail, reportName: legacyEmail,
-      message: 'Literal email fallback', screen: null,
+      message: 'Literal email fallback', screen: null, projectName: 'Legacy project', owner: null,
     });
   });
 
@@ -370,7 +415,7 @@ describe('Admin stored text through authenticated writes and real database reads
     expect(sqlite.prepare('SELECT first_name FROM native_users WHERE id = ?').get(userId).first_name).toBe('Original');
     expect(sqlite.prepare('SELECT COUNT(*) AS count FROM native_bug_reports').get().count).toBe(0);
 
-    for (const path of ['/admin/api/users', '/admin/api/bug-reports']) {
+    for (const path of ['/admin/api/users', '/admin/api/bug-reports', '/admin/api/stats', '/admin/api/analytics']) {
       await request(server).get(path).expect(401);
       await request(server).get(path).set('Authorization', `Bearer ${accessToken}`).expect(401);
     }

@@ -38,7 +38,7 @@
 # And as the native speakers of T-256 read them. Russian: «назначена на
 # завтра» (without «на», «назначена сегодня» read as when it was set), «Вас
 # позвали на репетицию», a project's name in quotes, a «seen» in the order of
-# the others, «Прогон, завтра в 18:00 — Марфа Кабанова в курсе», and a
+# the others, «Прогон, завтра в 18:00 — Варвара Кабанова в курсе», and a
 # cancelled one says which: «Репетиция «Прогон» на завтра в 18:00 отменена».
 # Spanish: the place after «Lugar:», no article to guess; a cancelled one
 # «Cancelado el ensayo «…» previsto para mañana a las 18:00». German: «Probe
@@ -47,6 +47,12 @@
 # «Projekt»; «hat die Probe … als gesehen markiert», not watched it. Clearing
 # the inbox is asked and left, «¿Borrar todas las notificaciones?» / «Borrar
 # todo», «Alle Mitteilungen löschen?» / «Alle löschen», not "Vaciar", "leeren".
+#
+# Whoever a notice names is a real account (T-278, T-284: one that names
+# someone is written only while it exists), the seed's NAMED: Jacinta
+# Labradora, Marthe Schwerdtlein, Варвара Кабанова — not Марфа, whose account
+# flow 89 deletes.
+#
 # Each card
 # is found by what both wordings share, its words checked and the flow goes
 # on; it fails at the end naming every one that was wrong.
@@ -396,7 +402,7 @@ tags:
       EMAIL: ${KATERINA_EMAIL}
       TYPE: member_joined
       PROJECT: Гроза
-      MEMBER: Марфа Кабанова
+      MEMBER: Варвара Кабанова
 - runScript:
     file: ../scripts/notify.js
     env:
@@ -404,7 +410,7 @@ tags:
       EMAIL: ${KATERINA_EMAIL}
       TYPE: member_response
       REHEARSAL: Прогон
-      MEMBER: Марфа Кабанова
+      MEMBER: Варвара Кабанова
 - runScript:
     file: ../scripts/notify.js
     env:
@@ -470,19 +476,19 @@ tags:
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: role, «Гроза» in quotes | '}"
 - scrollUntilVisible:
-    element: ".*Репетиция просмотрена.*Марфа Кабанова в курсе.*"
+    element: ".*Репетиция просмотрена.*Варвара Кабанова в курсе.*"
     direction: DOWN
 - runFlow:
     when:
-      notVisible: ".*Репетиция просмотрена.*Гроза: Прогон, (завтра|.*) в 18:00 — Марфа Кабанова в курсе.*"
+      notVisible: ".*Репетиция просмотрена.*Гроза: Прогон, (завтра|.*) в 18:00 — Варвара Кабанова в курсе.*"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: seen, in the order of the others | '}"
 - scrollUntilVisible:
-    element: ".*Новый участник.*Марфа Кабанова теперь в проекте .*Гроза.*"
+    element: ".*Новый участник.*Варвара Кабанова теперь в проекте .*Гроза.*"
     direction: DOWN
 - runFlow:
     when:
-      notVisible: ".*Новый участник.*Марфа Кабанова теперь в проекте «Гроза».*"
+      notVisible: ".*Новый участник.*Варвара Кабанова теперь в проекте «Гроза».*"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: joined, «Гроза» in quotes | '}"
 - scrollUntilVisible:

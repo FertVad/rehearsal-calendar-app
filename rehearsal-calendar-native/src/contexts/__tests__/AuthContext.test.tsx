@@ -159,7 +159,7 @@ it('does not let a late confirmation replace a newer sign-in (review R3-24)', as
   act(() => { confirming = auth.confirmEmail('123456'); });
   act(() => { auth.forgetPendingSignIn(); });
   mockApi.loginWithApple.mockResolvedValue({ data: { user: OTHER, accessToken: 'apple', refreshToken: 'apple' } });
-  await act(async () => { await auth.loginWithApple('apple-token'); });
+  await act(async () => { await auth.loginWithApple('apple-token', undefined, 'en'); });
   expect(screen.getByTestId('user').props.children).toBe('8');
   await act(async () => { answer.resolve({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } }); await confirming; });
   expect(screen.getByTestId('user').props.children).toBe('8');
@@ -246,7 +246,7 @@ it('two sign-ins of the same account in a row leave it signed in with its tokens
   act(() => { auth.forgetPendingSignIn(); });
   mockApi.loginWithApple.mockResolvedValue({ data: { user: USER, accessToken: 'same', refreshToken: 'same' } });
   let second: Promise<any>;
-  act(() => { second = auth.loginWithApple('apple-token'); });
+  act(() => { second = auth.loginWithApple('apple-token', undefined, 'en'); });
   await act(async () => { syncing.resolve(); await first; await second; });
   expect(screen.getByTestId('user').props.children).toBe('7');
   expect(mockStorage.accessToken).toBe('same');
@@ -263,7 +263,7 @@ it('an attempt left while it waits for its turn writes and wipes nothing (review
   const syncing = held<void>();
   mockSyncPreferences.mockReturnValueOnce(syncing.promise);
   let apple: Promise<any>;
-  act(() => { apple = auth.loginWithApple('apple-token'); });
+  act(() => { apple = auth.loginWithApple('apple-token', undefined, 'en'); });
   await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalledTimes(1));
   // The confirmation for 7 is answered and waits behind it; then the person leaves.
   mockApi.verifyEmail.mockResolvedValue({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } });
@@ -291,7 +291,7 @@ it('a newer sign-in starts writing only after the earlier one has finished (revi
   await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalled());
   mockApi.loginWithApple.mockResolvedValue({ data: { user: OTHER, accessToken: 'apple', refreshToken: 'apple' } });
   let second: Promise<any>;
-  act(() => { second = auth.loginWithApple('apple-token'); });
+  act(() => { second = auth.loginWithApple('apple-token', undefined, 'en'); });
   // The newer sign-in has its answer but waits: the device is still the first one's.
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
   expect(mockStorage['calendar-sync-owner']).toBe('7');
@@ -596,7 +596,7 @@ describe('the profile\'s time zone (HP04)', () => {
     mockApi.loginWithApple.mockResolvedValue({
       data: { user: { ...OTHER, timezone: 'UTC' }, isNewUser: true, accessToken: 'n', refreshToken: 'n' },
     });
-    await act(async () => { await auth.loginWithApple('token'); });
+    await act(async () => { await auth.loginWithApple('token', undefined, 'en'); });
 
     await waitFor(() => expect(mockApi.updateMe).toHaveBeenCalledWith({ timezone: 'America/New_York' }));
   });
@@ -606,7 +606,7 @@ describe('the profile\'s time zone (HP04)', () => {
     mockApi.loginWithApple.mockResolvedValue({
       data: { user: { ...OTHER, timezone: 'UTC' }, isNewUser: false, accessToken: 'n', refreshToken: 'n' },
     });
-    await act(async () => { await auth.loginWithApple('token'); });
+    await act(async () => { await auth.loginWithApple('token', undefined, 'en'); });
     await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
 
     expect(mockApi.updateMe).not.toHaveBeenCalled();

@@ -7,6 +7,7 @@ import * as availability from './translations/availability';
 import * as calendarSync from './translations/calendarSync';
 import * as notifications from './translations/notifications';
 import * as onboarding from './translations/onboarding';
+import * as errors from './translations/errors';
 
 export type Language = 'ru' | 'en' | 'es' | 'de';
 
@@ -36,6 +37,8 @@ export interface Translations {
   notifications: notifications.NotificationsTranslations;
   // Onboarding
   onboarding: onboarding.OnboardingTranslations;
+  // The server's refusals, by their code (T-281)
+  errors: errors.ErrorsTranslations;
   // The build is too old (T-265)
   update: common.UpdateTranslations;
   // Days
@@ -52,6 +55,7 @@ export const ru: Translations = {
   ...calendarSync.ru,
   ...notifications.ru,
   ...onboarding.ru,
+  ...errors.ru,
 };
 
 export const en: Translations = {
@@ -64,6 +68,7 @@ export const en: Translations = {
   ...calendarSync.en,
   ...notifications.en,
   ...onboarding.en,
+  ...errors.en,
 };
 
 export const es: Translations = {
@@ -76,6 +81,7 @@ export const es: Translations = {
   ...calendarSync.es,
   ...notifications.es,
   ...onboarding.es,
+  ...errors.es,
 };
 
 export const de: Translations = {
@@ -88,6 +94,7 @@ export const de: Translations = {
   ...calendarSync.de,
   ...notifications.de,
   ...onboarding.de,
+  ...errors.de,
 };
 
 export const translations: Record<Language, Translations> = { ru, en, es, de };

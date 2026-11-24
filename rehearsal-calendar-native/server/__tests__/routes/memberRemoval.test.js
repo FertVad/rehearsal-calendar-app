@@ -209,6 +209,8 @@ describe('What a removed member can still read', () => {
 
     const after = await getById(rehearsalId, removedUser());
     expect(after.status).toBe(404);
+    // With the code the app says in the person's language (T-281).
+    expect(after.body.code).toBe('REHEARSAL_NOT_FOUND');
   });
 
   it('and a stale roster row on its own is no longer enough', async () => {
@@ -283,6 +285,8 @@ describe('Leaving a project of your own accord', () => {
       .set(...auth(outsider));
 
     expect(res.status).toBe(403);
+    // Its English is for the logs; the app says the code (T-281).
+    expect(res.body.code).toBe('ADMIN_ONLY');
   });
 });
 });

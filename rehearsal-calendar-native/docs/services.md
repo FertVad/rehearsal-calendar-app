@@ -35,9 +35,12 @@ Runtime-раздел обновлён 2026-09-19 для ветки исправ�
 
 ### Neon — PostgreSQL
 
-Боевая база. Схема — двадцать три таблицы с префиксом `native_*`
-([init-native-schema.sql](../server/database/init-native-schema.sql)); фактический
-каталог production здесь не проверялся.
+Боевая база. Создана `migrate --fresh` 28.10.2026 и ведётся мигратором: корень
+истории `rehearsly-pg-current-v1`, схема версии 1 — двадцать три таблицы с
+префиксом `native_*` ([init-native-schema.sql](../server/database/init-native-schema.sql)).
+Версия 2 — те же таблицы и две таблицы статистики (миграция 016, T-294,
+[init-native-schema-v2.sql](../server/database/init-native-schema-v2.sql)); в
+боевую базу 016 добавляет владелец командой `--apply`.
 
 | | |
 |---|---|
@@ -218,6 +221,7 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 | `ADMIN_PASSWORD_HASH` | bcrypt-хеш пароля — рекомендуемый способ |
 | `ADMIN_PASSWORD` | открытый пароль, устаревший запасной вариант |
 | `ADMIN_JWT_SECRET` | подпись токена сессии; при отсутствии берётся `JWT_SECRET` |
+| `ADMIN_SERVICE_EMAILS` | необязательно: служебные адреса, которых нет в статистике админки, сверх доменов `rehearsly.me` и `demo.rehearsly.me`. Через запятую, пробелы вокруг и регистр не важны, например `me@example.com, review@example.com`. Сами аккаунты скрыты из цифр и таблицы пользователей (видны с переключателем «служебные»), а их проекты считаются: в них настоящие люди. Задаётся в Vercel руками, в коде адресов нет |
 
 ---
 
@@ -236,6 +240,7 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 | `EMAIL_CODE_SECRET` | коды из писем | берётся `JWT_SECRET` |
 | `ADMIN_PASSWORD_HASH` / `ADMIN_PASSWORD` | админка | не войти в `/admin` |
 | `ADMIN_JWT_SECRET` | админка | берётся `JWT_SECRET` |
+| `ADMIN_SERVICE_EMAILS` | статистика админки | служебными считаются только адреса на `rehearsly.me` и `demo.rehearsly.me` |
 | `HOST` | — | `0.0.0.0` нужен, чтобы зайти с физического устройства |
 | `PORT` | — | по умолчанию 3001 |
 | `EXPO_PUBLIC_API_URL` | клиент | адрес API определяется автоматически |

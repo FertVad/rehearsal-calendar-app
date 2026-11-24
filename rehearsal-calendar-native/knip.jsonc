@@ -100,6 +100,13 @@
         "!migrations/**",
         "!scripts/test.mjs!"
       ],
+      "ignore": [
+        // 477ea2f's migrator code, byte for byte (T-297): data for
+        // __tests__/postgres/t294Upgrade.mjs, which pins each file's sha256,
+        // copies it with 477ea2f's v1 artifacts into a temporary directory and
+        // runs it there. Its imports resolve only in that directory.
+        "__tests__/postgres/fixtures/**"
+      ],
       "ignoreDependencies": [
         // Comes with jest (jest-runtime depends on it); every server test
         // imports `jest` from it under native ES modules.

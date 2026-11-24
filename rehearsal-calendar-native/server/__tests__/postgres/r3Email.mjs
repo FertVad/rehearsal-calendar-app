@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
-import { inspectSchema } from '../../database/schema/inspect.mjs';
-import { manifest } from '../../database/schema/manifest.mjs';
+import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
 
 const EMAIL = 'race@fixture.invalid';

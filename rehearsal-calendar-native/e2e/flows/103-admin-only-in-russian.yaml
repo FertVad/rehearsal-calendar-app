@@ -1,0 +1,51 @@
+# The rule an admin's refusal names reads as the native speakers wrote it
+# (T-283, after T-281): «Это может сделать только администратор проекта.», the
+# full word the app's sentences use, not the badge's «админ».
+#
+# Peaseblossom, whose app speaks Russian, is an admin of Oberon's company and
+# has its page open; Oberon takes the role back from another device (no push
+# reaches the simulator, so the page still offers the invite code). She taps
+# "Показать код", the server refuses with ADMIN_ONLY, and the app says the rule.
+appId: ${APP_ID}
+name: An admin-only refusal in Russian
+tags:
+  - projects
+  - invite
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PEASEBLOSSOM_EMAIL}
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Fairy Court.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Fairy Court.*"
+- extendedWaitUntil:
+    visible:
+      id: project-invite-code
+    timeout: 15000
+- runScript:
+    file: ../scripts/set-role.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${OBERON_EMAIL}
+      PASSWORD: ${PASSWORD}
+      PROJECT: "Fairy Court"
+      MEMBER: Peaseblossom Fairy
+      ROLE: member
+- tapOn:
+    id: project-invite-code
+- extendedWaitUntil:
+    visible: "Ошибка"
+    timeout: 15000
+- takeScreenshot: 103-admin-only-in-russian
+- assertNotVisible: ".*Only admins.*"
+- assertVisible: "Это может сделать только администратор проекта\\."

@@ -15,14 +15,16 @@ const config = getDefaultConfig(__dirname);
 // while the flows run — is not watched either. Each file there was a change to
 // Metro, so an HMR "update-start", and the app put up and took down its
 // "Refreshing..." banner, a window of its own, over the screen under test and
-// in its screenshots (T-207). The app's own files are still watched, so an edit
-// still reaches the app.
+// in its screenshots (T-207). Nor e2e/store/out, where the App Store's tools
+// write theirs: the preview video's recordings, one a shot, put that banner
+// over the start of the next (T-275). The app's own files are still watched,
+// so an edit still reaches the app.
 if (process.env.REHEARSLY_E2E === '1') {
   const root = path.resolve(__dirname).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   config.resolver.blockList = [].concat(
     config.resolver.blockList ?? [],
     new RegExp(`^${root}[\\\\/]\\.env[^\\\\/]*$`),
-    new RegExp(`^${root}[\\\\/]e2e[\\\\/]out[\\\\/]`),
+    new RegExp(`^${root}[\\\\/]e2e[\\\\/](?:store[\\\\/])?out[\\\\/]`),
     // The iOS project e2e generates and its builds (e2e/native.mjs): a GB of
     // Pods and several of DerivedData, none of it the app's JS.
     new RegExp(`^${root}[\\\\/]e2e[\\\\/]\\.(?:native|build)[\\\\/]`),
@@ -41,10 +43,17 @@ if (process.env.REHEARSLY_E2E === '1') {
     'expo-device': path.join(device, 'expo-device.js'),
     'expo-notifications': path.join(device, 'expo-notifications.js'),
   };
+  // And the app itself, as index.ts takes it: the real App, which tells the
+  // App Store preview's recorder where its touches land only when a launch
+  // asks (e2e/device/App.js; T-289). No other import of ./App is touched.
+  const entry = path.join(__dirname, 'index.ts');
   const resolveRequest = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {
     if (standIns[moduleName] && !context.originModulePath.startsWith(device + path.sep)) {
       return { type: 'sourceFile', filePath: standIns[moduleName] };
+    }
+    if (moduleName === './App' && context.originModulePath === entry) {
+      return { type: 'sourceFile', filePath: path.join(device, 'App.js') };
     }
     return (resolveRequest ?? context.resolveRequest)(context, moduleName, platform);
   };

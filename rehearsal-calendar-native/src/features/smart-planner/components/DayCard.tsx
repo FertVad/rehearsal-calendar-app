@@ -34,7 +34,7 @@ export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCrea
   // A header of 28 pt and a row of 56 a slot, no card around them: a day of
   // one slot took 167 pt, and a week four screens (owner, 30.10.2026; T-020).
   return (
-    <View style={styles.day}>
+    <View testID={`planner-card-${date}`} style={styles.day}>
       <View testID={`planner-day-${date}`} style={styles.dateHeader}>
         <Text style={styles.dateText}>{formatDate(date, 'weekdayDayMonthShort', language)}</Text>
         <Text style={styles.slotCount}>{t.smartPlanner.slotsCount(slots.length)}</Text>

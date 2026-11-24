@@ -1,0 +1,65 @@
+T-294 red before — base 477ea2f, run 2026-11-24, Node 26.13.0, from rehearsal-calendar-native.
+
+The production files of the change restored to the base, the new tests kept:
+  git restore --source=477ea2f -- server/app.js server/middleware/jwtMiddleware.js
+    server/middleware/appBuild.js server/routes/native/inviteRedemption.js server/routes/admin.js
+    server/routes/admin/dashboardPage.js server/services/admin/analytics.js server/services/admin/people.js
+    server/public/admin/dashboard.js server/public/privacy.html server/database/init-native-schema.sql
+    server/database/schema/catalog.json server/database/schema/manifest.mjs server/database/schema/inspect.mjs
+    server/database/migrations/artifacts.mjs
+then: git restore --source=d771c31 -- <the same files>
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest server/__tests__/routes/usageStatistics.test.js \
+    server/__tests__/routes/adminUsage.test.js server/__tests__/routes/privacyPage.test.js \
+    server/__tests__/utils/privacyProcessors.test.js --verbose
+
+FAIL backend server/__tests__/utils/privacyProcessors.test.js
+    ✕ the update date is that of the last revision (T-269), as each language writes a date   (en, ru, es, de)
+FAIL backend server/__tests__/routes/adminUsage.test.js
+    ✕ active today, in 7 and in 30 days, by each person's own date; service accounts nowhere
+    ✕ retention by registration week: day 1, 7 and 30, only days that are over and recorded
+    ✕ builds among the people active in 30 days: each one's latest named build
+    ✕ each project's invitation from page to join, in the period, without the demo troupe
+    ✕ the users table has the last day in the app
+    ✕ opening the admin deletes what is older than 13 months
+    ✕ the figures of use say there is no data, not zeros; the rest still answers
+    ✕ another failure is a failure, not "no data"
+FAIL backend server/__tests__/routes/privacyPage.test.js
+    ✕ names the internal statistics as a purpose: what they use, who sees them, nothing to third parties   (en, ru, es, de)
+    ✕ lists the days in the app and the invitation counts in what we collect, with how long they are kept   (en, ru, es, de)
+    (every other policy test passes, as before)
+FAIL backend server/__tests__/routes/usageStatistics.test.js (17.531 s)
+    ✕ a request in a session records the day in the person's own zone, not UTC
+    ✕ a person without a stored zone is counted in UTC
+    ✕ a second request the same day writes nothing more
+    ✕ the row keeps the last build of the day; a request naming none keeps it
+    ✕ no build header: the build is empty
+    ✕ deleting the account deletes its days
+    ✓ refused requests record nothing: 401, 403 and 426            <- an invariant the old code keeps trivially
+    ✕ a failing write does not fail the request: one line in the log, no stack
+    ✕ the page opened in a browser is counted after it is sent
+    ✕ a link preview (Telegram|WhatsApp|iMessage|Slack|Discord|no user agent) is not counted   (6)
+    ✕ HEAD, a code of the wrong shape and an unknown code count nothing
+    ✓ the page goes out when the database is down, and nothing is read before it   <- invariant, kept
+    ✕ the invitation opened in the app is counted, an expired one too
+    ✕ a join is counted with the membership
+    ✕ a join that does not happen is not counted: already a member, or the transaction failing
+    ✕ a write deletes what is older than 13 months
+    ✕ the purge on writes runs at most once an hour on an instance
+    ✕ everything works as before, said once in the log
+Test Suites: 4 failed, 4 total
+Tests:       41 failed, 126 passed, 167 total
+
+PostgreSQL 15.13, same restore:
+$ node server/scripts/r0-postgres.mjs --t294-only
+{"scenario":"controls","outcome":"PASS",...}
+error: relation "native_usage_days" does not exist   (code 42P01 — the base fresh schema has no group 016)
+AssertionError [ERR_ASSERTION]: T294_USAGE probe failed unexpectedly
+
+The SKIP LOCKED fix (9d6fa2a), red on 012f49b, PostgreSQL 15.13:
+$ node server/scripts/r0-postgres.mjs --r3-auth-only
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:  401 !== 200
+    at probeR3Auth (r3Auth.mjs:455) — "password change just before the owner's Google sign-in":
+    the awaited day's write waited behind the sign-in's FOR UPDATE on the person's row,
+    and the sign-in overtook the request that came first.
+AssertionError [ERR_ASSERTION]: R3_AUTH probe failed unexpectedly

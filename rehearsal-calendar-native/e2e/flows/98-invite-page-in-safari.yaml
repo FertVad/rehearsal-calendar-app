@@ -19,11 +19,18 @@
 # the page because the address is invalid". Where the button leads
 # (apps.apple.com/app/id6830809401) is Jest's (server/__tests__/routes/
 # invitePage.test.js).
+#
+# Rehearsly is stopped first: the flow before this one leaves it running, and
+# with it behind Safari Maestro's driver read the app's screen, not the page -
+# ".*Rehearsly.*" was found there - and once waited 60 s on it as iOS
+# suspended it (T-277, docs/e2e.md). Safari's question still comes: it is
+# asked because the app is installed, not because it runs.
 appId: com.apple.mobilesafari
 name: Invite page in Safari reads Rehearsly and its App Store steps in every language
 tags:
   - invite
 ---
+- stopApp: ${APP_ID}
 - stopApp
 - openLink:
     link: ${API_URL.replace('/api', '')}/invite/${TWELFTH_INVITE}?lang=en

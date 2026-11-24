@@ -396,7 +396,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           {/* Mode Selection (only for future/today dates) */}
           {(!editor.selectedDate || editor.selectedDate >= today) && (
           <>
-          <View style={styles.modeSelector}>
+          <View testID="mode-selector" style={styles.modeSelector}>
             <TouchableOpacity
               testID="mode-free"
               accessibilityState={{ selected: shownMode === 'free' }}

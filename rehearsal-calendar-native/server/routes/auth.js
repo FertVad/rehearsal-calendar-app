@@ -182,6 +182,7 @@ router.post('/google', asyncHandler(async (req, res) => {
       emailVerified: googleUser.emailVerified,
       firstName: googleUser.firstName,
       lastName: googleUser.lastName,
+      locale: req.body.locale,
     }));
   } catch (err) {
     if (err instanceof ProviderSignInRefused) return res.status(err.status).json(err.body);
@@ -193,7 +194,7 @@ router.post('/google', asyncHandler(async (req, res) => {
 // Apple Sign-In Login/Register
 router.post('/apple', asyncHandler(async (req, res) => {
   try {
-    const { idToken, user } = req.body || {}; // Apple sends user data only on first sign-in
+    const { idToken, user, locale } = req.body || {}; // Apple sends user data only on first sign-in
 
     if (typeof idToken !== 'string' || !idToken.trim()) {
       return res.status(400).json({ error: 'ID token is required' });
@@ -213,6 +214,7 @@ router.post('/apple', asyncHandler(async (req, res) => {
       emailVerified: appleUser.emailVerified,
       firstName,
       lastName,
+      locale,
     }));
   } catch (err) {
     if (err instanceof AppleAuthUnavailableError) {

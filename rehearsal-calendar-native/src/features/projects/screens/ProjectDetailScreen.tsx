@@ -524,6 +524,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
             {/* The code is the fallback for when the link does not arrive, so
                 it is shown outright rather than hidden behind sharing first. */}
             <TouchableOpacity
+              testID="project-invite-code"
               style={styles.inviteCodeRow}
               onPress={inviteCode ? handleCopyCode : handleShowCode}
               disabled={revealingCode}

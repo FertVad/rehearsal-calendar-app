@@ -1,0 +1,61 @@
+$ node audit/evidence/T-295/patterns.mjs        # privacy.html at 315301f vs HEAD (986b3e8); patterns read from privacyPage.test.js
+en STATISTICS.purpose: red before, green after
+en STATISTICS.shows: red before, green after
+en STATISTICS.noThirdParty: red before, green after
+en STATISTICS.onlyOperator: green before and after (text unchanged)
+en STATISTICS.signInWhy: green before and after (text unchanged)
+en STATISTICS.reads[0]: red before, green after
+en STATISTICS.reads[1]: red before, green after
+en STATISTICS.reads[2]: red before, green after
+en STATISTICS.reads[3]: red before, green after
+en ROWS.exported (row, right after its neighbour): red before, green after
+en ROWS.introduction (row, right after its neighbour): red before, green after
+en ROWS.goesWithAccount: red before, green after
+en NO_SDK.lede: green before and after (text unchanged)
+en NO_SDK.notCollected: green before and after (text unchanged)
+en SIGN_IN.says (statistics): red before, green after
+ru STATISTICS.purpose: red before, green after
+ru STATISTICS.shows: red before, green after
+ru STATISTICS.noThirdParty: green before and after (text unchanged)
+ru STATISTICS.onlyOperator: red before, green after
+ru STATISTICS.signInWhy: red before, green after
+ru STATISTICS.reads[0]: red before, green after
+ru STATISTICS.reads[1]: red before, green after
+ru STATISTICS.reads[2]: red before, green after
+ru STATISTICS.reads[3]: red before, green after
+ru ROWS.exported (row, right after its neighbour): red before, green after
+ru ROWS.introduction (row, right after its neighbour): red before, green after
+ru ROWS.goesWithAccount: red before, green after
+ru NO_SDK.lede: red before, green after
+ru NO_SDK.notCollected: red before, green after
+ru SIGN_IN.says (statistics): red before, green after
+es STATISTICS.purpose: red before, green after
+es STATISTICS.shows: red before, green after
+es STATISTICS.noThirdParty: green before and after (text unchanged)
+es STATISTICS.onlyOperator: green before and after (text unchanged)
+es STATISTICS.signInWhy: green before and after (text unchanged)
+es STATISTICS.reads[0]: red before, green after
+es STATISTICS.reads[1]: red before, green after
+es STATISTICS.reads[2]: red before, green after
+es STATISTICS.reads[3]: red before, green after
+es ROWS.exported (row, right after its neighbour): red before, green after
+es ROWS.introduction (row, right after its neighbour): red before, green after
+es ROWS.goesWithAccount: red before, green after
+es NO_SDK.lede: red before, green after
+es NO_SDK.notCollected: red before, green after
+es SIGN_IN.says (statistics): red before, green after
+de STATISTICS.purpose: red before, green after
+de STATISTICS.shows: red before, green after
+de STATISTICS.noThirdParty: green before and after (text unchanged)
+de STATISTICS.onlyOperator: red before, green after
+de STATISTICS.signInWhy: red before, green after
+de STATISTICS.reads[0]: red before, green after
+de STATISTICS.reads[1]: red before, green after
+de STATISTICS.reads[2]: red before, green after
+de ROWS.exported (row, right after its neighbour): red before, green after
+de ROWS.introduction (row, right after its neighbour): red before, green after
+de ROWS.goesWithAccount: red before, green after
+de NO_SDK.lede: green before and after (text unchanged)
+de NO_SDK.notCollected: green before and after (text unchanged)
+de SIGN_IN.says (statistics): red before, green after
+exit 0 — 48 red before / green after; 11 green both times, all on texts T-295 leaves unchanged

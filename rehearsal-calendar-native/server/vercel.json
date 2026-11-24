@@ -6,7 +6,8 @@
       "claude/systematic-repair": false,
       "auto/main": false,
       "claude/server-for-app-review": false,
-      "claude/site-cinema": false
+      "claude/site-cinema": false,
+      "claude/release-admin-stats": false
     }
   },
   "builds": [

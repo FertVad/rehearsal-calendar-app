@@ -77,8 +77,9 @@ interface AuthContextType {
     => Promise<{ newAddress: DeliveryOutcome; currentAddress: DeliveryOutcome }>;
   /** Moves the account to the new address and writes the session the server replaced. */
   confirmEmailChange: (code: string, currentCode: string) => Promise<void>;
-  loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
-  loginWithApple: (idToken: string, user?: any) => Promise<{ linked: boolean }>;
+  /** `locale`: the language the app shows, for an account this sign-in creates (T-291). */
+  loginWithGoogle: (idToken: string, locale: string) => Promise<{ linked: boolean }>;
+  loginWithApple: (idToken: string, user: any, locale: string) => Promise<{ linked: boolean }>;
   logout: () => Promise<void>;
   updateUser: (data: ProfileUpdate) => Promise<void>;
   deleteAccount: () => Promise<{ deletedProjects: number }>;
@@ -455,10 +456,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [beginAttempt, endAttempt, startSession]);
 
-  const loginWithGoogle = useCallback(async (idToken: string) => {
+  const loginWithGoogle = useCallback(async (idToken: string, locale: string) => {
     const attempt = beginAttempt();
     try {
-      const response = await authAPI.loginWithGoogle(idToken);
+      const response = await authAPI.loginWithGoogle(idToken, locale);
       if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
       const started = await startSession(response.data, attempt);
 
@@ -474,10 +475,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [beginAttempt, endAttempt, startSession]);
 
-  const loginWithApple = useCallback(async (idToken: string, user?: any) => {
+  const loginWithApple = useCallback(async (idToken: string, user: any, locale: string) => {
     const attempt = beginAttempt();
     try {
-      const response = await authAPI.loginWithApple(idToken, user);
+      const response = await authAPI.loginWithApple(idToken, user, locale);
       if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
       const started = await startSession(response.data, attempt);
 

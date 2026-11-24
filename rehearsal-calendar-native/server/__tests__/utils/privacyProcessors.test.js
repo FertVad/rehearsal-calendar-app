@@ -13,11 +13,12 @@ const html = readFileSync(fileURLToPath(new URL('../../public/privacy.html', imp
 
 const IRELAND = { en: 'Ireland', ru: 'Ирландия', es: 'Irlanda', de: 'Irland' };
 // The American order in English, «г.» after the year in Russian (the editors, T-269).
+// The last revision: the days in the app and the invitation counts (T-294).
 const REVISED = {
-  en: 'November 19, 2026',
-  ru: '19 ноября 2026 г.',
-  es: '19 de noviembre de 2026',
-  de: '19. November 2026',
+  en: 'November 24, 2026',
+  ru: '24 ноября 2026 г.',
+  es: '24 de noviembre de 2026',
+  de: '24. November 2026',
 };
 
 function section(lang) {

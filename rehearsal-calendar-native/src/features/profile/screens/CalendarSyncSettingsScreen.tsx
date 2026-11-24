@@ -468,7 +468,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
           <>
             {/* Sync Toggle */}
             <View style={styles.section}>
-              <View style={styles.settingItem}>
+              <View testID="calendar-sync-row" style={styles.settingItem}>
                 <View style={styles.settingLeft}>
                   <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                     <Ionicons name="sync" size={20} color={Colors.accent.purple} />
@@ -522,6 +522,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               {/* Apple Calendar Option */}
               {hasAppleCalendar && (
                 <TouchableOpacity
+                  testID="calendar-provider-apple"
                   style={[
                     styles.calendarPickerButton,
                     selectedProvider === 'apple' && styles.calendarPickerButtonSelected,

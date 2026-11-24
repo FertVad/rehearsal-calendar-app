@@ -1,0 +1,40 @@
+T-289, the addendum of 21.11 and the review — red before.
+
+The tests of fd47eb6 (e2e/__tests__/store-video.test.mjs) on the code of 393a076:
+  git restore --source=393a076 -- e2e/store/montage.mjs e2e/store/compose.swift
+  node --test --test-reporter=spec e2e/__tests__/store-video.test.mjs
+  git restore --source=HEAD -- e2e/store/montage.mjs e2e/store/compose.swift
+
+ℹ tests 33 · pass 26 · fail 7
+
+✖ the cut never swaps two moments: one later in the recording is never earlier in the video (a light read, then the tap)
+  AssertionError: 0.50 s of the recording at 0.000 s, before 0.200 s of a moment before it
+
+✖ a touch mark outside the light that has begun is found: the storyboard has every tap on a lit element
+  TypeError: M.touchesOutside is not a function
+
+✖ a hole follows its element: the month pushed down after the first tap, the hole is where the day now is within 0.35 s of it being read there
+  AssertionError: no light at the day's new place: [{"t":5,"holes":[[555.8,794.9,257.6,116.7,58.3]],"dim":0.62,"instant":true},
+  {"t":6.4,"holes":[[32.3,1117.1,821.5,157.0,28]],"dim":0.62,"instant":false}]
+
+✖ the light on Done comes before the tap on it, whole by then, though the flow read it 0.1 s before the tap
+  AssertionError: Done lit at 0.750 s, tapped at 0.850 s
+
+✖ round every caption and the finale the app's white comes through no brighter than 20 of 255, outside the letters
+  AssertionError: "Who can make\n[Wednesday?]" at 2.47 s: 54 of 255 at 42,348
+
+✖ the darkness round a caption: its edge soft, 40 px or more; the shade beyond it as the storyboard has it; none in a hole
+  AssertionError: in the hole under the caption, 100,1353: 228,228,228
+
+✖ refused before anything is made: too few recordings, a missing one, no "ready", one far too long
+  AssertionError: Missing expected rejection. expected: /astray\.json: a touch at 0\.40 s .*outside the light/
+
+The rule on the real recording of 393a076 (out/clips/ru, shot 21.11 at 01:xx), with the new montage.mjs:
+  node e2e/store/montage.mjs ru
+Error: …/e2e/store/out/clips/ru/02.json: a touch at 4.90 s (6.14 s of the video, 93, 714 px) outside the light
+that has begun — read the light again where its element is (video.yaml) and record the scene again
+
+Day 30 is refused. Done is not: with the cut keeping the recording's order and
+the move whole by the tap, that recording's Done is lit before it is pressed.
+Under 393a076's own cut it was lit after the tap (11.69 s against 11.64 s) —
+the Done test above is that case.

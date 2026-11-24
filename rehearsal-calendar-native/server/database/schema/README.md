@@ -1,16 +1,21 @@
-# Canonical PostgreSQL schema, version 1
+# Canonical PostgreSQL schema, versions 1 and 2
 
-The canonical fresh snapshot is `../init-native-schema.sql`. The migration CLI
+The canonical fresh snapshot is `../init-native-schema-v2.sql` (version 2,
+profile `rehearsly-pg-current-v2`). The migration CLI
 selects it through the reviewed manifest; it is not a startup hook. Fresh requires
 an empty, explicitly selected application schema and commits DDL, verified
 postconditions and the new history record in one transaction. The snapshot has
 no table drops, historical data conversion or implicit environment loading.
 
-The snapshot defines 23 application tables: 13 domain tables, the six tables
+Version 1 — `../init-native-schema.sql`, `catalog.json`, `inspect.mjs` — defines
+23 application tables: 13 domain tables, the six tables
 of the approved 007/008/009 budget groups, the two of group 010 (email
 address proof, R3), the one of group 011 (push tickets awaiting their
 receipts, R8) and the one of group 012 (idempotency keys of creates, R4).
-It supplies the availability conflict
+Version 2 — `../init-native-schema-v2.sql`, `catalog-v2.json`, `inspect-v2.mjs`
+— is version 1 plus the two tables of group 016 (the days someone used the
+app and the invitation counts, T-294): 25 tables.
+Both supply the availability conflict
 key, notification indexes and other historical structural postconditions that
 the old mixed-dialect bootstrap omitted. Fresh `provider_metadata` is TEXT;
 `native_bug_reports.created_at` and other instant columns are TIMESTAMPTZ.
@@ -18,11 +23,15 @@ No existing column is silently cast to those types.
 
 ## Named profiles
 
-- `rehearsly-pg-current-v1`: all 23 tables, required constraints/indexes, and
-  consistent budget gate rows. Fresh and adoption are both allowed.
+- `rehearsly-pg-current-v2`: all 25 tables of version 2, required
+  constraints/indexes, and consistent budget gate rows. `--fresh` creates it;
+  adoption is allowed. Its checker is `inspect-v2.mjs`.
+- `rehearsly-pg-current-v1`: all 23 tables of version 1. No longer created by
+  `--fresh`, but production's history root (see below), so it stays exactly
+  as recorded. `--apply` adds 016.
 - `rehearsly-pg-domain13-v1`: the complete modern domain schema, with each budget
   group either wholly absent or fully compatible. After adoption, an explicit
-  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013 order.
+  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013 order, then 016.
 - `rehearsly-pg-domain13-pre-import-key-v1`: the same modern predecessor, except
   that the availability imported-event unique key is absent and the aggregate
   duplicate count is zero. Adoption requires this explicit profile. Apply first
@@ -117,6 +126,28 @@ than tables: the inspector counts it present when the token is unique on its
 own, and otherwise checks `native_push_tokens` against its predecessor shape.
 `migrations/013-push-token-owner.sql` is its forward step (dropping all but the
 most recently active holder of each token), installed by `--apply` after 012.
+
+That was the last change inside v1. Production's database `rehearsly` was
+created on 2026-10-28 by `migrate --fresh` (release 8a6dd5e, whose migrator and
+manifest are 477ea2f's) and is kept by this runner: its history root is
+`fresh` `rehearsly-pg-current-v1` with bootstrap `48284687…`, descriptor
+`3ed03aaa…` and inspector `a38f465f…`, and the owner's `--dry` on 16.11 and
+20.11 answered `state: managed`, budgets 007–013, no steps. From then on the
+rule above binds: re-pinning any v1 hash would make every later run there
+answer `HISTORY_INVALID`.
+
+T-294 (group 016: `native_usage_days`, `native_invite_counts`) is therefore
+version 2, on new paths: `../init-native-schema-v2.sql`, `catalog-v2.json`,
+`inspect-v2.mjs`, profile `rehearsly-pg-current-v2` (fresh and adopt), and the
+forward step `migrations/016-usage-statistics.sql`. The step's roots are the
+three v1 profiles and it is verified by `rehearsly-pg-current-v2`, so a v1
+database receives 016 by `--apply` after its own missing groups, and every run
+after that checks it with version 2's checker. The v1 artifacts are byte for
+byte those of 477ea2f, and the manifest keeps their hashes and definitions;
+`__tests__/database/schemaHistoryIdentity.test.js` pins the recorded
+identities, and `__tests__/postgres/t294Upgrade.mjs` creates a database with
+477ea2f's own CLI and upgrades it with this one. The checker is chosen per
+profile by the dispatcher `inspectSchema` that `manifest.mjs` exports.
 
 `r2Schema.mjs` checks actual fresh and adopted schemas through the real migration
 runner and application HTTP/adapter code, plus independent catalog drift and

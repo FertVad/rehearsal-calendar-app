@@ -1,0 +1,14 @@
+T-294 e2e — HEAD 9d6fa2a, 2026-11-24, simulator "Rehearsly E2E", Debug build, local server and PostgreSQL.
+No client change; run because the session check and the invite page changed on the server.
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (49s)
+1/1 Flow Passed in 49s
+
+$ npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml
+[Passed] Invite link before sign-in (2m 30s)
+1/1 Flow Passed in 2m 31s
+
+$ npm run e2e -- e2e/flows/01-login.yaml
+[Passed] Sign in (1m 23s)
+1/1 Flow Passed in 1m 23s

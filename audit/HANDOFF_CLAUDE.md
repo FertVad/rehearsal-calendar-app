@@ -136,8 +136,8 @@ R7 → R8 → R9**. С 26.09 R4–R9 идут по [разбору](TRIAGE_R4_R9
 
 ## 5. Среда и грабли
 
-- **Node 22.16.0** (`.nvmrc`):
-  `export PATH="$HOME/.nvm/versions/node/v22.16.0/bin:$PATH"`. На Node 20
+- **Node 26.13.0** (`.nvmrc`, `engines.node` 26.x, с 03.11.2026):
+  `export PATH="$HOME/.nvm/versions/node/v26.13.0/bin:$PATH"`. На другой версии
   нативный `better-sqlite3` падает с `NODE_MODULE_VERSION` — это среда, не регресс.
 - **`server/.env` — production**: там боевой `DATABASE_URL` Neon. Рантайм его сам
   не грузит; не подставляй его и через `SERVER_ENV_FILE`. Для PostgreSQL —
@@ -150,7 +150,7 @@ R7 → R8 → R9**. С 26.09 R4–R9 идут по [разбору](TRIAGE_R4_R9
 - **CLAUDE.md местами устарел, этим местам не верь:** «650 tests across 47 suites»
   (сейчас около 1270 в 88); раздел напоминаний — оба крона выключены с 12.09, а
   «a failed push releases the claim» неверно (GR01); «Transactions table» в
-  админке — платежей нет; «Node.js 18+» — закреплён 22.16.0. Раздел про мигратор
+  админке — платежей нет; «Node.js 18+» — закреплён 26.13.0. Раздел про мигратор
   (`--fresh`, `--adopt`, отказ от `--baseline`) пришёл вместе с WIP: описание
   опережает проверенный код, считай его утверждением, которое надо доказать.
 

@@ -1,0 +1,17 @@
+$ npm run test:r0-postgres -- --t293-only        # HEAD = 986b3e8
+{"harness":"R0","node":"v26.13.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:57693","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+{"scenario":"T293_ADMIN","outcome":"PASS","contracts":["the three statistics routes refuse without the admin token","cards: service accounts (both domains, ADMIN_SERVICE_EMAILS) and demo-owned projects count nowhere","users: source from the earliest active membership, steps and sign-in methods, service accounts marked","funnel and medians, and the projects that brought people, on PostgreSQL types","seen before start through ROSTER (the removed member counts nowhere); coverage stops at the 14th UTC date","inbox by type with median to read, email codes by purpose; no address in the summaries","coverage counts an all-day stretch begun before today and not yet over, not one that ended yesterday","calendar sync used: an import from a calendar or an export record; neither — no"],"externalConnections":0}
+T293_ADMIN REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+R0 cleanup: owned disposable container removed
+
+Red before — the same probe with services/admin/people.js from 315301f:
+$ git restore --source=315301f -- services/admin/people.js
+$ npm run test:r0-postgres -- --t293-only | grep -E "AssertionError|actual|expected|cleanup"
+$ git restore --source=HEAD -- services/admin/people.js
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  actual: [ false, false, true, false, false ],
+  expected: [ true, true, true, false, false ],
+R0 cleanup: owned disposable container removed
+AssertionError [ERR_ASSERTION]: T293_ADMIN probe failed unexpectedly
+(order: Ivan — import only; Anna — import, export record removed; Leo — export only; Olga, Lone — neither)

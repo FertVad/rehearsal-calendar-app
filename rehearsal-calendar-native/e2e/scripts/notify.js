@@ -15,6 +15,8 @@
 // With TYPE "rehearsal_created", "added_to_rehearsal" or "rehearsal_deleted":
 // the rehearsal titled ${REHEARSAL} new, ${EMAIL} put on it, or cancelled, as
 // a save and a delete send it (flow 86).
+// ${MEMBER} is the full name of one account of the seed (NAMED): a notice that
+// names someone is written only while that account exists (T-278).
 // Run by Maestro (runScript), which provides http.
 const type = typeof TYPE !== 'undefined' ? TYPE : '';
 const query = type === 'member_joined' || type === 'admin_appointed'

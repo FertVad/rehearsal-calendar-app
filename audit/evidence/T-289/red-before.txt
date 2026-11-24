@@ -1,0 +1,57 @@
+T-289 — red before: the new tests on the code before the task.
+
+  git restore --source=828384e -- e2e/store/montage.mjs e2e/store/compose.swift e2e/store/compose.mjs \
+    e2e/store/captions.json e2e/store/record.mjs metro.config.js
+  node --test e2e/__tests__/store-video.test.mjs e2e/__tests__/store-touches.test.mjs
+  (macOS, Node 26, ffmpeg from Homebrew; then git restore --source=HEAD -- the same files)
+
+✔ a production bundle gets the real App: no touch is ever reported (2052.300125ms)
+✖ an e2e bundle gets e2e/device/App.js for index.ts's ./App, and only for it (2090.420709ms)
+✔ without the launch argument the e2e bundle's app is the real App, as it is (16.192209ms)
+✔ with it, the app sits in a view that only listens (3.8005ms)
+✔ only a recorder on this machine is told, and told where, when and on what screen (0.675458ms)
+✖ captions.json for the video (13.980458ms)
+✖ the format App Store Connect takes, and the storyboard: nine shots, 29 s, from seven recordings (0.826417ms)
+✖ a recording's stillness is cut to STILL; what lies between "cut" and "resume" is taken out, but the frame on screen at "resume" (0.663375ms)
+✔ the poster frame's time code, as App Store Connect writes it (0.8115ms)
+✖ the hook's day is the day it was shot on in the page's country (0.600583ms)
+✖ a hole of light is the elements' frames as the hierarchy gives them, never placed by eye (1.069167ms)
+✖ a touch's place on the window is the tap Maestro's driver logged as the finger went down, at the same x (0.429916ms)
+✖ every language as compose.swift lays it out (5.318625ms)
+✖ made by ffmpeg, its layer by compose.swift (123019.911958ms)
+ℹ tests 32
+ℹ pass 7
+ℹ fail 25
+✖ failing tests:
+✖ an e2e bundle gets e2e/device/App.js for index.ts's ./App, and only for it
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+✖ en-US / en-GB / ru / es-ES / de-DE: a hook for every day, six captions, the finale and a sign-in line, broken only where the file breaks them
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:   (seven captions: the old slogan)
+✖ the format App Store Connect takes, and the storyboard: nine shots, 29 s, from seven recordings
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:   (eight shots)
+✖ a recording's stillness is cut to STILL; what lies between "cut" and "resume" is taken out, but the frame on screen at "resume"
+  TypeError [Error]: M.keeping is not a function
+✖ the hook's day is the day it was shot on in the page's country
+  TypeError [Error]: M.shotOn is not a function
+✖ a hole of light is the elements' frames as the hierarchy gives them, never placed by eye
+  TypeError [Error]: M.findHoles is not a function
+✖ a touch's place on the window is the tap Maestro's driver logged as the finger went down, at the same x
+  TypeError [Error]: M.driverTaps is not a function
+✖ en-US / en-GB / ru / es-ES / de-DE: the captions in «Пьеса», flush left on the app's margin, one size; the sign-in line at 40 px as the file breaks it
+  Error: ENOENT: no such file or directory, open 'tue'   (the old videoCaptions takes no day)
+✖ 886×1920 at 30 fps, H.264, 28 to 30 seconds, with a silent stereo AAC track at 48 kHz
+  AssertionError [ERR_ASSERTION]: 25.533333 s
+✖ the hook for the day recording 01 was shot on, typed over the Planner in the shade; its last frame the poster
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:   (no day: the old hook is captions.json `hook`)
+✖ the light falls where the hierarchy put the elements: inside the hole the recording as it is, beside it the shade
+  TypeError [Error]: Cannot read properties of undefined (reading 'find')   (no lights)
+✖ a touch mark where and when the app said the finger went down; none for a finger dragged; none where there was no touch
+  TypeError [Error]: Cannot read properties of undefined (reading 'filter')   (no taps)
+✖ no band under a caption; white and lilac read at 4.5:1 or more over white where its shadow is weakest
+  TypeError [Error]: Cannot read properties of undefined (reading 'captions')
+… and the rest of "made by ffmpeg" (12 of 12, the finale, the closing card, the refusals) likewise.
+
+The seven that pass on the old code: the poster's time code, which did not
+change; the production bundle getting the real App (true before as after:
+there was no stand-in at all); and three on e2e/device/App.js and
+storeTouches.js themselves, which are new files the restore does not remove.

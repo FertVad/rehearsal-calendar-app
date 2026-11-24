@@ -1,7 +1,18 @@
 // Reviewed immutable artifact identities. These hashes are literal constants,
 // never recomputed from ambient files at import or invocation. A source change
 // requires an explicit reviewed manifest update and the PostgreSQL regressions.
-export { inspectSchema } from './inspect.mjs';
+//
+// Version 1's artifacts and definitions are exactly those recorded by existing
+// histories (production: `--fresh` on 2026-10-28, root rehearsly-pg-current-v1)
+// and never change. Version 2 (T-294: group 016) has its own snapshot, catalog
+// and checker; `--fresh` creates it, and a v1 root receives 016 by `--apply`.
+import { inspectSchema as inspectV1 } from './inspect.mjs';
+import { inspectSchema as inspectV2 } from './inspect-v2.mjs';
+
+const v2Profiles = new Set(['rehearsly-pg-current-v2']);
+// Each profile is checked by the checker its manifest entry pins.
+export const inspectSchema = (query, options) =>
+  (v2Profiles.has(options?.profile) ? inspectV2 : inspectV1)(query, options);
 const freeze = value => {
   if (value && typeof value === 'object') {
     Object.values(value).forEach(freeze);
@@ -11,7 +22,7 @@ const freeze = value => {
 };
 export const manifest = freeze({
   "formatVersion": 1,
-  "currentProfile": "rehearsly-pg-current-v1",
+  "currentProfile": "rehearsly-pg-current-v2",
   "profiles": [
     {
       "id": "rehearsly-pg-current-v1",
@@ -58,6 +69,24 @@ export const manifest = freeze({
         "sha256": "a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317"
       },
       "completionProfile": "rehearsly-pg-current-v1"
+    },
+    {
+      "id": "rehearsly-pg-current-v2",
+      "descriptor": {
+        "file": "database/schema/catalog-v2.json",
+        "sha256": "00acaccbabb47d78549a12464366c9340978da1d227284f0e608d3dad611eabc"
+      },
+      "fresh": true,
+      "adopt": true,
+      "bootstrap": {
+        "file": "database/init-native-schema-v2.sql",
+        "sha256": "ab086450afd91fb61b5a0dab7c4a14c6306e6b40f714a558c58089783eeeece3"
+      },
+      "inspector": {
+        "file": "database/schema/inspect-v2.mjs",
+        "sha256": "3f9e371967c29a1b74969e95c9609d9aa04ce6389eaf9bce54b8723320cdcd5e"
+      },
+      "completionProfile": "rehearsly-pg-current-v2"
     }
   ],
   "steps": [
@@ -188,6 +217,22 @@ export const manifest = freeze({
         "rehearsly-pg-domain13-v1",
         "rehearsly-pg-domain13-pre-import-key-v1"
       ]
+    },
+    {
+      "id": "016-usage-statistics",
+      "sql": {
+        "file": "migrations/016-usage-statistics.sql",
+        "sha256": "50c70c74f69f5046b33dd7e30f7309374320857f142974c8dbbebb6a283a69e0"
+      },
+      "when": {
+        "missingBudget": "016"
+      },
+      "verifyProfile": "rehearsly-pg-current-v2",
+      "roots": [
+        "rehearsly-pg-current-v1",
+        "rehearsly-pg-domain13-v1",
+        "rehearsly-pg-domain13-pre-import-key-v1"
+      ]
     }
   ],
   "legacyFilenames": [
@@ -227,6 +272,7 @@ export const manifest = freeze({
     "native_email_identities",
     "native_idempotency_keys",
     "native_invite_account_rate_limits",
+    "native_invite_counts",
     "native_invite_ip_rate_limit_gate",
     "native_invite_ip_rate_limits",
     "native_member_availability_rate_limits",
@@ -240,6 +286,7 @@ export const manifest = freeze({
     "native_push_tokens",
     "native_rehearsal_responses",
     "native_rehearsals",
+    "native_usage_days",
     "native_user_availability",
     "native_users"
   ]

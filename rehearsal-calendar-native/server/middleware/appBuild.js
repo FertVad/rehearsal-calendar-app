@@ -36,16 +36,21 @@ export function minimumIosBuild(value = process.env.MIN_IOS_BUILD) {
   return 0;
 }
 
-/** The build a request names; a request that names none is build 0. */
-function requestBuild(req) {
+/**
+ * The build a request names in `X-App-Build`; null when it names none or
+ * something that is not a whole number. One reading for the refusal below and
+ * for the build the session check records with the day (T-294).
+ */
+export function appBuildOf(req) {
   const text = String(req.get('X-App-Build') ?? '').trim();
-  return WHOLE_NUMBER.test(text) ? Number(text) : 0;
+  return WHOLE_NUMBER.test(text) ? Number(text) : null;
 }
 
 /** Mounted on /api/native and /api/auth before the database is woken (app.js). */
 export function requireAppBuild(req, res, next) {
   const minimum = minimumIosBuild();
-  if (minimum > 0 && requestBuild(req) < minimum) {
+  // A request that names no build is build 0: TestFlight 1–5 send none.
+  if (minimum > 0 && (appBuildOf(req) ?? 0) < minimum) {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(426).json({ error: 'Update required', code: 'UPDATE_REQUIRED' });
   }

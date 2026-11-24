@@ -1,0 +1,37 @@
+# T-277 probe, not a flow of the suite: the night run's order, over and over.
+# A flow of the app ends with Rehearsly in front (69, 97); the next flow is
+# Safari's (70, 98): it stops Safari, opens a link and reads the page. Here the
+# app is brought to the front, then the invite page of flow 98 is opened and
+# read, eight times. probe-app-stopped.yaml is the same with the app stopped
+# first, as flows 70 and 98 now do.
+appId: com.apple.mobilesafari
+name: T-277 probe - Safari opened over the running app
+---
+- repeat:
+    times: 8
+    commands:
+      - launchApp:
+          appId: ${APP_ID}
+          stopApp: false
+      - extendedWaitUntil:
+          visible: ".+"
+          timeout: 10000
+      - stopApp
+      - openLink:
+          link: ${API_URL.replace('/api', '')}/invite/${TWELFTH_INVITE}?lang=en
+      - extendedWaitUntil:
+          visible: ".*Rehearsly.*"
+          timeout: 30000
+      - extendedWaitUntil:
+          visible: "Cancel"
+          timeout: 5000
+          optional: true
+      - runFlow:
+          when:
+            visible: "Cancel"
+          commands:
+            - tapOn: "Cancel"
+      - extendedWaitUntil:
+          visible: "Open in the App Store"
+          timeout: 15000
+      - assertVisible: "Install Rehearsly from the App Store."

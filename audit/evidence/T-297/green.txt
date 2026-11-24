@@ -1,0 +1,55 @@
+T-297 green after (fix 5cfeffd), PostgreSQL 15.13 in a disposable Docker container.
+
+1. T294_UPGRADE in a clone of depth 1 on 5cfeffd (as CI's actions/checkout):
+
+$ git clone --depth 1 --branch auto/main file:///Users/vadimfertik/Desktop/reh_app-auto /tmp/t297-green
+$ node audit/evidence/T-297/depth1.mjs /tmp/t297-green
+clone: /tmp/t297-green
+HEAD: 5cfeffd fix(test): T-297 - T294_UPGRADE runs 477ea2f's migrator from a pinned fixture, not from git history
+shallow: true; commits in clone: 1
+.git/shallow: 5cfeffd4f55e1c72fee03f682a52469311a0aba9
+477ea2f in clone: no
+$ node scripts/r0-postgres.mjs --t294-upgrade-only
+{"harness":"R0","node":"v26.13.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:59235","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+{"scenario":"T294_UPGRADE","outcome":"PASS","base":"477ea2f","contracts":["477ea2f's CLI --fresh: root fresh rehearsly-pg-current-v1 with production's hashes, 23 tables","this tree's --dry on that database: managed, root v1, plans 016-usage-statistics alone","--apply: 016 recorded after the untouched root; the next --dry plans nothing; the catalog equals this tree's --fresh (v2, 25 tables)","the server on the upgraded database records the day and the build"],"externalConnections":0}
+T294_UPGRADE REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+R0 cleanup: owned disposable container removed
+exit code: 0
+
+The contracts are those of T-294, unchanged: the root record is asserted
+literally (fresh rehearsly-pg-current-v1, bootstrap 48284687…, definition
+8bf27697…), --dry plans 016 alone, --apply applies it, the next --dry is clean,
+the catalog equals a fresh v2, the server records the day.
+
+2. A changed byte in the fixture fails the scenario (mutation, then
+   `git restore`): errors.mjs, this.name = 'MigrationErr0r'
+
+$ node scripts/r0-postgres.mjs --t294-upgrade-only
+{"scenario":"controls","outcome":"PASS",…}
+AssertionError [ERR_ASSERTION]: database/migrations/errors.mjs is not 477ea2f's
++ actual - expected
++ 'aa9b0a6da7dadc07fea386bcba83ddf4732c34527397dd4d6021d6766f3ff7b2'
+- 'e6aa24349f9e0ea9294b2aa9be47db5595f839c0243c164c95b91b66b1195c36'
+AssertionError [ERR_ASSERTION]: T294_UPGRADE probe failed unexpectedly
+
+3. The fixture is 477ea2f's bytes: `node audit/evidence/T-297/extract-fixture.mjs`
+   writes them from `git show 477ea2f:…` and prints the hashes pinned in
+   t294Upgrade.mjs (the committed fixture is what it wrote):
+1e5b28837b0b123f4cfec9daa748b676c8ffb802b97ee639bd03f4d3c788e1eb  scripts/migrate.js
+d779dae64754e6a282c729e22d1cbe8e25833edcc253fc58d724cc29c5c8c4ca  database/migrations/artifacts.mjs
+7bad6917bfb16177141dc807a2f10490981d5779c4776f55cf851c7376c28ca7  database/migrations/cli.mjs
+04640211c7ed29c1e538543fe395e02cdceca9c94d914d51da4ab602010a98fe  database/migrations/core.mjs
+e6aa24349f9e0ea9294b2aa9be47db5595f839c0243c164c95b91b66b1195c36  database/migrations/errors.mjs
+d9879c6104c22b3030949e202bbc8e83e5501db131827c8ffa16919c1b26a9ba  database/migrations/history.mjs
+ba70bf8dacc846ff23cef26f3b1853677ffd279dff7aa700644b06bc3c13e578  database/migrations/sql.mjs
+57497bde1283a48e5a69cc66110e8fd266d4f0d7c7d9d60faf26a44aaf34cba7  database/schema/manifest.mjs
+
+4. Other checks on 5cfeffd:
+npm run check:dead   -> clean (before the knip ignore: "Unresolved imports (1)
+                        ./inspect.mjs  server/__tests__/postgres/fixtures/migrator-477ea2f/database/schema/manifest.mjs")
+npm run lint         -> 0 errors (658 warnings, as before)
+npm run check:secrets -> {"summary":"pass","mode":"worktree","files":2457,"findings":0,"errors":0}
+server jest          -> 90 of 91 suites pass; runtimeStartup.test.js fails (8 tests),
+                        the same sandbox cause as R2_STARTUP below; its fixture copies
+                        no __tests__ file (entrypointFixture.mjs:27).

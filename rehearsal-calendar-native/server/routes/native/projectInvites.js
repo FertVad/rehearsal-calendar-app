@@ -26,7 +26,7 @@ router.post('/:projectId/invite', requireAuth, asyncHandler(async (req, res) => 
     const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
-      return res.status(403).json({ error: 'Only admins can create invite links' });
+      return res.status(403).json({ error: 'Only admins can create invite links', code: 'ADMIN_ONLY' });
     }
 
     // Generate unique invite code
@@ -90,7 +90,7 @@ router.get('/:projectId/invite', requireAuth, asyncHandler(async (req, res) => {
     const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
-      return res.status(403).json({ error: 'Only admins can view invite links' });
+      return res.status(403).json({ error: 'Only admins can view invite links', code: 'ADMIN_ONLY' });
     }
 
     // Get active invite from project
@@ -131,7 +131,7 @@ router.delete('/:projectId/invite', requireAuth, asyncHandler(async (req, res) =
     const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
-      return res.status(403).json({ error: 'Only admins can revoke invite links' });
+      return res.status(403).json({ error: 'Only admins can revoke invite links', code: 'ADMIN_ONLY' });
     }
 
     // Clear invite code from project

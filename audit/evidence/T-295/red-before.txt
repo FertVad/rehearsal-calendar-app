@@ -1,0 +1,30 @@
+$ git restore --source=315301f -- services/admin/people.js public/privacy.html
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminAnalytics.test.js __tests__/routes/privacyPage.test.js --verbose | grep -E "✕|Tests:|^(FAIL|PASS)|Expected|Received"
+$ git restore --source=HEAD -- services/admin/people.js public/privacy.html      # HEAD = 986b3e8
+FAIL __tests__/routes/adminAnalytics.test.js
+    ✕ calendar sync used: busy times imported from a calendar, or rehearsals exported to one (T-295) (32 ms)
+    Received: false
+FAIL __tests__/routes/privacyPage.test.js
+    ✕ names the internal statistics as a purpose: what they use, who sees them, nothing to third parties   (en, ru, es, de)
+    ✕ has a row for the calendar export records and one for the introduction, each beside its neighbour  (en, ru, es, de)
+    ✕ names the calendar export records among what goes with the account                                (en, ru, es, de)
+    ✕ says the app has no analytics or tracking SDK, in the lede and in what is not collected            (ru, es; en and de texts unchanged)
+    ✕ has its own section, saying what is received, why, where it goes and how it is removed            (en, ru, es, de)
+    Expected pattern: /also use some of the data listed above for statistics, both overall and for each account, on our own admin page/
+    Expected pattern: /the record of which rehearsals were added to\s+your phone’s calendar/
+    Expected pattern: /Часть перечисленных выше данных мы используем и для статистики в нашей собственной панели администратора/
+    Expected pattern: /записи о том, какие репетиции\s+добавлены в календарь вашего телефона/
+    Expected pattern: /в приложении нет SDK ни для аналитики, ни для отслеживания/
+    Expected pattern: /también se usan para elaborar estadísticas en nuestro propio panel de administración, tanto en conjunto como para cada cuenta/
+    Expected pattern: /registro de los ensayos añadidos al calendario de tu teléfono/
+    Expected pattern: /la aplicación no incluye ningún SDK de análisis ni de rastreo/
+    Expected pattern: /nutzen wir auch für Statistiken in unserem eigenen Admin-Bereich, sowohl insgesamt als auch für jedes einzelne Konto/
+    Expected pattern: /der Vermerk, welche Proben in den Kalender auf deinem iPhone eingetragen wurden/
+    Expected pattern: /include your account in the internal statistics described above/
+    Expected pattern: /учитывать ваш аккаунт во внутренней статистике \(о ней выше\)/
+    Expected pattern: /e incluir tu cuenta en las estadísticas internas/
+    Expected pattern: /deinen Namen zu zeigen und dein Konto in die oben beschriebene interne Statistik einzubeziehen/
+    (each row test: Received: -1, the row is not there)
+Tests:       19 failed, 121 passed, 140 total
+
+A test stops at its first failing pattern; patterns.txt checks each pattern on its own.

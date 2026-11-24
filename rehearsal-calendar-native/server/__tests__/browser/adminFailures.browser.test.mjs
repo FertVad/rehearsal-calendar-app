@@ -13,7 +13,7 @@ const PASSWORD = 'h04-fixture-password';
 const TOKEN = 'h04-synthetic-admin-token';
 const date = '2026-09-01T12:00:00Z';
 const attack = '<img data-h04-probe src="/probe" onerror="window.__h04Xss=1">';
-const endpoints = { login: 'login', stats: 'stats', users: 'users', bugs: 'bug-reports' };
+const endpoints = { login: 'login', stats: 'stats', analytics: 'analytics', users: 'users', bugs: 'bug-reports' };
 let browser;
 
 before(async () => {
@@ -88,8 +88,21 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
     return { total: 61, users: Array.from({ length: 61 }, (_, i) => ({
       id: i + 1, firstName: state.label + ' User', lastName: String(i + 1),
       email: `user${i + 1}@example.test`, createdAt: date, lastLoginAt: null,
-    })).slice(offset, offset + 30) };
+      service: false, source: { kind: 'none', project: null, owner: null }, signIn: ['email'],
+      locale: 'en', timezone: 'UTC', steps: { onboarding: false, projects: 0, roles: { owner: 0, admin: 0, member: 0 },
+        marks: 0, marksUntil: null, calendar: false, device: false, seen: 0, onRoster: 0, rehearsals: 0 },
+      lastAppDay: null,
+    })).slice(offset, offset + 30), appDaysRecorded: true };
   }));
+  const empty = { registered: 0, onboarding: 0, project: 0, marks: 0, engaged: 0 };
+  const noWait = { toProjectHours: null, toProjectOf: 0, toMarksHours: null, toMarksOf: 0 };
+  app.get('/admin/api/analytics', reply('analytics', () => ({
+    period: 'all', from: null, to: date, people: 0, languages: [],
+    funnel: { weeks: [], total: { invite: empty, other: empty }, medians: { invite: noWait, other: noWait } },
+    sources: { byDay: [], byWeek: [], projects: [], languages: [], timezones: [] },
+    projects: [], notifications: { devices: { people: 0, of: 0, rate: null }, inbox: [], emailCodes: [] },
+    usage: { recorded: false },
+  })));
   app.get('/admin/api/bug-reports', reply('bugs', req => {
     const offset = Number(req.query.offset);
     return { total: 61, reports: Array.from({ length: 61 }, (_, i) => ({
@@ -217,7 +230,8 @@ async function assertSessionCleared(page) {
 
 test('initial GET 500 stops loading and offers a visible section error and retry', async t => {
   const { page, state } = await fixture(t, { plans: { stats: [{ status: 500, body: { error: 'Temporary failure' } }] } });
-  const failed = page.waitForResponse(response => response.url().endsWith('/admin/api/stats') && response.status() === 500);
+  const failed = page.waitForResponse(response => new URL(response.url()).pathname === '/admin/api/stats'
+    && response.status() === 500);
   await login(page);
   await failed;
   await page.locator('#stats-error').waitFor({ state: 'visible' });
@@ -243,15 +257,16 @@ test('failed PATCH reports an unconfirmed change and does not silently reload re
 });
 
 test('each section recovers from an initial failure through its own Retry button', async t => {
-  for (const section of ['stats', 'users', 'bugs']) {
+  const all = ['stats', 'analytics', 'users', 'bugs'];
+  for (const section of all) {
     const { page, state } = await fixture(t, { plans: { [section]: [{ status: 500, body: { error: attack } }] } });
     await login(page);
     await sectionError(page, section);
-    for (const other of ['stats', 'users', 'bugs'].filter(value => value !== section)) {
+    for (const other of all.filter(value => value !== section)) {
       await page.locator(`#${other}-loading`).waitFor({ state: 'hidden' });
       assert.equal(await page.locator(`#${other}-error`).isVisible(), false);
     }
-    const before = Object.fromEntries(['stats', 'users', 'bugs'].map(key => [key, state.count(key)]));
+    const before = Object.fromEntries(all.map(key => [key, state.count(key)]));
     await retrySection(page, section);
     await loaded(page);
     assert.equal(state.count(section), before[section] + 1);
@@ -281,7 +296,7 @@ test('failed refresh preserves each confirmed section, labels it stale and retri
   const { page, state } = await fixture(t);
   await login(page);
   await loaded(page);
-  for (const section of ['stats', 'users', 'bugs']) {
+  for (const section of ['stats', 'analytics', 'users', 'bugs']) {
     const previous = await snapshot(page, section);
     state.enqueue(section, { status: 500, body: { error: attack } });
     await page.getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -291,7 +306,7 @@ test('failed refresh preserves each confirmed section, labels it stale and retri
     if (section === 'stats' && process.env.ADMIN_FAILURES_SCREENSHOT) {
       await page.screenshot({ path: process.env.ADMIN_FAILURES_SCREENSHOT });
     }
-    const counts = Object.fromEntries(['stats', 'users', 'bugs'].map(key => [key, state.count(key)]));
+    const counts = Object.fromEntries(['stats', 'analytics', 'users', 'bugs'].map(key => [key, state.count(key)]));
     await retrySection(page, section);
     assert.equal(state.count(section), counts[section] + 1);
     for (const other of Object.keys(counts).filter(value => value !== section)) assert.equal(state.count(other), counts[other]);
