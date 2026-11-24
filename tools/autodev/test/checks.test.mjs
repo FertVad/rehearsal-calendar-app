@@ -130,6 +130,27 @@ test("a task's checks run its own flows, not the whole set", () => {
   assert.deepEqual(pick([at('src/App.tsx')]), ['e2e/flows/01-login.yaml']);
 });
 
+test('a subflow or script run in the short form reaches its flows too', () => {
+  // 24.11.2026: flows 44, 70 and 98 say `- runFlow: ../subflows/fresh-safari.yaml`,
+  // which says `- runScript: ../scripts/fresh-safari.js`, and 67-69 run the
+  // availability subflows the same way. Only `file:` was read, so a task
+  // changing any of them was checked by the sign-in flow alone.
+  const app = appTree('short');
+  const at = (rel) => `rehearsal-calendar-native/${rel}`;
+  const write = (rel, text) => fs.writeFileSync(path.join(app, rel), text);
+  write('e2e/flows/70-privacy.yaml', '- stopApp\n- runFlow: ../subflows/fresh-safari.yaml\n- openLink: x\n');
+  write('e2e/flows/98-invite.yaml', "- runFlow: '../subflows/fresh-safari.yaml'  # tabs gone\n");
+  write('e2e/subflows/fresh-safari.yaml', '- runScript: ../scripts/fresh-safari.js\n');
+  write('e2e/scripts/fresh-safari.js', '');
+  const pick = (changedFiles) => e2eFlowsFor({ app, changedFiles });
+  assert.deepEqual(pick([at('e2e/subflows/fresh-safari.yaml')]), ['e2e/flows/70-privacy.yaml', 'e2e/flows/98-invite.yaml']);
+  assert.deepEqual(pick([at('e2e/scripts/fresh-safari.js')]), ['e2e/flows/70-privacy.yaml', 'e2e/flows/98-invite.yaml']);
+  // The long form still does, and a name is not found inside another one.
+  assert.deepEqual(pick([at('e2e/scripts/tap-again.js')]), ['e2e/flows/30-sync.yaml']);
+  write('e2e/subflows/safari.yaml', '- tapOn: x\n');
+  assert.deepEqual(pick([at('e2e/subflows/safari.yaml')]), ['e2e/flows/01-login.yaml']);
+});
+
 test('the e2e run is given only the chosen flows, and says which', async () => {
   const app = appTree('run');
   const folder = path.join(dir, 'run-bin');

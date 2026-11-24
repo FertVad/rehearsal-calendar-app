@@ -76,8 +76,11 @@ export function e2eFlowsFor({ app, changedFiles, taskText = '', seedLines = [] }
   const changed = changedFiles.filter((f) => f.startsWith(APP)).map((f) => f.slice(APP.length));
   const picked = new Set(changed.filter((f) => all.includes(f)));
   const helpers = new Set(changed.filter((f) => /^e2e\/(subflows\/[^/]+\.yaml|scripts\/[^/]+\.js)$/.test(f)).map((f) => path.basename(f)));
-  // Flows say `file: ../subflows/sign-in.yaml`, subflows `file: sign-in-form.yaml`.
-  const uses = (text) => [...helpers].some((name) => new RegExp(`file:\\s*(\\S*/)?${escape(name)}\\s*$`, 'm').test(text));
+  // Flows say `file: ../subflows/sign-in.yaml`, subflows `file: sign-in-form.yaml`;
+  // or in the short form, `- runFlow: ../subflows/fresh-safari.yaml` and
+  // `- runScript: ../scripts/fresh-safari.js` (flows 44, 67-70, 98), quoted or not.
+  const uses = (text) => [...helpers].some((name) =>
+    new RegExp(`(?:file|runFlow|runScript):\\s*["']?(\\S*/)?${escape(name)}["']?\\s*(#.*)?$`, 'm').test(text));
   let subflows = [];
   try { subflows = fs.readdirSync(path.join(app, 'e2e', 'subflows')).filter((f) => f.endsWith('.yaml')); } catch { /* none */ }
   for (let grew = helpers.size > 0; grew;) {
