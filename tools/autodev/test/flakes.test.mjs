@@ -77,6 +77,31 @@ test('a flaky test is queued with an id of its own and what failed', () => {
   assert.equal(nextFlakeId(queue), 'T-202');
 });
 
+// 24.11.2026: T-299 was queued, and the next id counted only "T-2" and two
+// digits — it would have been "T-2100", twice, since that heading is not two
+// digits after "T-2". Two found tasks with one id: the second is taken for the
+// first, whose state may already say done.
+test('the id after T-299 is free and stays free: above every id the queue and the state know', () => {
+  const late = `## T-298 Политика
+Тело.
+
+## T-299 Нестабильный тест: Onboarding
+Тело.
+
+## T-301 Старая задача аудита
+Тело.
+
+## T-402 Модель часового пояса
+Тело.
+`;
+  assert.equal(nextFlakeId(late), 'T-403');
+  // A task the state knows but TASKS.md no longer lists keeps its id too.
+  assert.equal(nextFlakeId(late, ['T-299', 'T-450']), 'T-451');
+  // An id that already went past three digits is counted, not repeated.
+  const past = `${late}\n## T-2100 Нестабильный тест: что-то\nТело.\n`;
+  assert.equal(nextFlakeId(past), 'T-2101');
+});
+
 
 test('an e2e run that failed before any flow is named by what it said', () => {
   const tail = '[e2e] starting Metro, pointed at the local server\n[e2e] checking the bundle talks to the local server\n[e2e] fetch failed';

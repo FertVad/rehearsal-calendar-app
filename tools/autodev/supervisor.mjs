@@ -599,7 +599,7 @@ function queueTask(state, title, block, again) {
     note(known, again);
     return known.id;
   }
-  const id = nextFlakeId(text);
+  const id = nextFlakeId(text, Object.keys(state.tasks));
   const waiting = tasks.filter((queued) => queued.id !== state.current
     && !['done', 'skipped', 'deferred'].includes(state.tasks[queued.id]?.phase));
   writeAtomic(file, queueFound(text, waiting, block(id)));
