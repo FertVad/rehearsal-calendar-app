@@ -7,7 +7,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES', 'T293_ADMIN', 'T294_USAGE'].includes(scenario));
+assert.ok(['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES', 'T293_ADMIN', 'T294_USAGE', 'T294_UPGRADE'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -44,7 +44,7 @@ await control.query('SET search_path TO r0_fixture');
 
 // Schema/migration suites start with the empty owned application schema; they
 // never mistake the diagnostic subset below for canonical provisioning.
-if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES', 'T293_ADMIN', 'T294_USAGE'].includes(scenario)) {
+if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES', 'T293_ADMIN', 'T294_USAGE', 'T294_UPGRADE'].includes(scenario)) {
   target.searchParams.set('options', '-c search_path=r0_fixture');
   process.env.DATABASE_URL = target.href;
   try {
@@ -70,6 +70,8 @@ if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PU
                   ? await (await import('./t293Admin.mjs')).probeT293Admin({ connectionString: target.href, control, allowedPorts })
                 : scenario === 'T294_USAGE'
                   ? await (await import('./t294Usage.mjs')).probeT294Usage({ connectionString: target.href, control, allowedPorts })
+                : scenario === 'T294_UPGRADE'
+                  ? await (await import('./t294Upgrade.mjs')).probeT294Upgrade({ connectionString: target.href, control, allowedPorts })
                 : await (await import('./r8Reminders.mjs')).probeR8Reminders({ connectionString: target.href, control, allowedPorts });
     assert.equal(deniedConnections, 0, 'A schema/migration contract attempted an external connection');
     console.log(JSON.stringify({ scenario, ...result, externalConnections: deniedConnections }));

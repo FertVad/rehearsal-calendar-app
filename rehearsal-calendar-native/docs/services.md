@@ -35,9 +35,12 @@ Runtime-раздел обновлён 2026-09-19 для ветки исправ�
 
 ### Neon — PostgreSQL
 
-Боевая база. Схема — двадцать три таблицы с префиксом `native_*`
-([init-native-schema.sql](../server/database/init-native-schema.sql)); фактический
-каталог production здесь не проверялся.
+Боевая база. Создана `migrate --fresh` 28.10.2026 и ведётся мигратором: корень
+истории `rehearsly-pg-current-v1`, схема версии 1 — двадцать три таблицы с
+префиксом `native_*` ([init-native-schema.sql](../server/database/init-native-schema.sql)).
+Версия 2 — те же таблицы и две таблицы статистики (миграция 016, T-294,
+[init-native-schema-v2.sql](../server/database/init-native-schema-v2.sql)); в
+боевую базу 016 добавляет владелец командой `--apply`.
 
 | | |
 |---|---|

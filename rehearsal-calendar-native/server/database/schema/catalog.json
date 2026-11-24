@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "schemaId": "rehearsly-pg-current-v1",
   "postgresCatalogMajor": 15,
-  "bootstrapSha256": "bf637fa815d81e5f7d72f6d08640d28b5642772eaa59a4b9df196a56b88b2f31",
+  "bootstrapSha256": "48284687247da9559e196a0175f427fd39c997fab04f2356de2f7ab204217cf9",
   "tables": [
     {
       "name": "native_auth_providers",
@@ -251,35 +251,6 @@
       ],
       "indexes": [
         {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
-      ]
-    },
-    {
-      "name": "native_invite_counts",
-      "kind": "r",
-      "persistence": "p",
-      "rowSecurity": false,
-      "forceRowSecurity": false,
-      "partition": false,
-      "inheritance": false,
-      "userTriggers": false,
-      "rules": false,
-      "columns": [
-        {"name":"app_opens","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"0","collationSchema":null,"collation":null},
-        {"name":"day","type":"date","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
-        {"name":"joins","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"0","collationSchema":null,"collation":null},
-        {"name":"page_opens","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"0","collationSchema":null,"collation":null},
-        {"name":"project_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
-      ],
-      "constraints": [
-        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["app_opens"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(app_opens >= 0)"},
-        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["joins"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(joins >= 0)"},
-        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["page_opens"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(page_opens >= 0)"},
-        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["project_id"],"foreignSchema":"@target","foreignTable":"native_projects","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
-        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["project_id","day"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
-      ],
-      "indexes": [
-        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["day"],"options":[0],"operatorClasses":["pg_catalog.date_ops"],"collations":[null],"included":[]},
-        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["project_id","day"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.date_ops"],"collations":[null,null],"included":[]}
       ]
     },
     {
@@ -667,31 +638,6 @@
         {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["starts_at","ends_at"],"options":[0,0],"operatorClasses":["pg_catalog.timestamptz_ops","pg_catalog.timestamptz_ops"],"collations":[null,null],"included":[]},
         {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["starts_at"],"options":[0],"operatorClasses":["pg_catalog.timestamptz_ops"],"collations":[null],"included":[]},
         {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
-      ]
-    },
-    {
-      "name": "native_usage_days",
-      "kind": "r",
-      "persistence": "p",
-      "rowSecurity": false,
-      "forceRowSecurity": false,
-      "partition": false,
-      "inheritance": false,
-      "userTriggers": false,
-      "rules": false,
-      "columns": [
-        {"name":"app_build","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
-        {"name":"day","type":"date","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
-        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
-      ],
-      "constraints": [
-        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["app_build"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(app_build >= 0)"},
-        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
-        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id","day"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
-      ],
-      "indexes": [
-        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["day"],"options":[0],"operatorClasses":["pg_catalog.date_ops"],"collations":[null],"included":[]},
-        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","day"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.date_ops"],"collations":[null,null],"included":[]}
       ]
     },
     {

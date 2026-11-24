@@ -19,7 +19,9 @@ data step (T-278) that deletes the "joined", "is now an administrator" and
 deleting an account cannot reach. Not in the manifest; nothing has applied it.
 
 `016-usage-statistics.sql` is a forward step of the runner, in the manifest
-like 007–013 (T-294): the days someone used the app and the invitation counts.
+(T-294): the days someone used the app and the invitation counts. It is schema
+version 2 (`database/schema/README.md`): `--apply` adds it to a database with a
+version 1 history, production's among them; `--fresh` creates version 2 with it.
 The server works without it and records nothing until it is applied.
 
 Order for 014 and 015, when the owner applies them to production:

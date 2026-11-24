@@ -145,8 +145,11 @@ server/public/
   Group 013 is a key, not a table; 014 and 015 are data steps outside the manifest.
   Migration history is separate. Retired
   payment/activity/participant tables are not created by fresh provisioning.
-  Actual production catalog and migration history have not been inspected here.
-- **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
+  Production's database was created by `migrate --fresh` on 2026-10-28 and is
+  kept by the migrator: history root `rehearsly-pg-current-v1` (23 tables).
+  Version 1's artifacts are therefore immutable; 016 is schema version 2, which
+  `--apply` adds to that root ([schema README](rehearsal-calendar-native/server/database/schema/README.md)).
+- **Schema**: [rehearsal-calendar-native/server/database/init-native-schema-v2.sql](rehearsal-calendar-native/server/database/init-native-schema-v2.sql) (version 2, what `--fresh` creates; version 1 is `init-native-schema.sql`)
 - **Note**: runtime SQL uses PostgreSQL types and constraints; fixture SQL conversion is test-only.
 - **Runtime/lifecycle and safe local startup**: [server runtime contract](rehearsal-calendar-native/docs/server-runtime.md).
 - **Provisioning**: [explicit schema/migration contract](rehearsal-calendar-native/docs/server-migrations.md); no automatic startup/deployment migrations.
