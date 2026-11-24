@@ -745,7 +745,7 @@ async function main() {
     await runFlows(debugFlows);
   }
   reportTapsAgain(earlierTaps);
-  reportSafari(artifacts, [...releaseFlows, ...debugFlows]);
+  await reportSafari(artifacts, [...releaseFlows, ...debugFlows]);
 }
 
 /** Metro for the Debug app, its bundle checked to talk to the local server only. */
@@ -809,14 +809,14 @@ function reportTapsAgain(earlier = []) {
  * last, so the tail of the output the supervisor keeps says why; junit.xml has
  * every flow green then.
  */
-function reportSafari(artifacts, ran) {
+async function reportSafari(artifacts, ran) {
   const junit = fs.existsSync(path.join(OUT, 'junit.xml')) ? fs.readFileSync(path.join(OUT, 'junit.xml'), 'utf8') : '';
   const passed = new Set([...junit.matchAll(/<testcase\b[^>]*?\bname="([^"]*)"[^>]*?\bstatus="SUCCESS"/g)]
     .map((match) => match[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;/g, '\'').replace(/&amp;/g, '&')));
   const fresh = ran.map((flow) => fs.readFileSync(flow, 'utf8')).filter(runsFreshSafari)
     .map((text) => /^name:\s*(.+?)\s*$/m.exec(text)?.[1].replace(/^(['"])(.*)\1$/, '$2'))
     .filter((name) => name && passed.has(name));
-  const { summary, failures } = safariVerdict({ launches: safariLaunches(artifacts), fresh });
+  const { summary, failures } = safariVerdict({ launches: await safariLaunches(artifacts), fresh });
   step(summary);
   if (!failures.length) return;
   process.exitCode = 1;

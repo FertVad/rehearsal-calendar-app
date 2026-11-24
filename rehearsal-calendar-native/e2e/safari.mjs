@@ -71,17 +71,44 @@ export async function freshSafari(device, { run = simctl } = {}) {
 // each flow (<run>/<flow name>/logs/device-simulator.log):
 // "… MobileSafari[50814]: (MobileSafariUI) [com.apple.mobilesafari:TabGroup] Read 0 normal tabs from saved state"
 const LAUNCH = /^(\S+ \S+).*MobileSafari.*Read (\d+) normal tabs from saved state/;
+const LAUNCH_TEXT = 'normal tabs from saved state';
 
-/** Every Safari launch in a run's artifacts, by flow: `Map<flow name, [{ at, tabs }]>`. */
-export function safariLaunches(runDir) {
+/**
+ * Every Safari launch in a run's artifacts, by flow: `Map<flow name, [{ at, tabs }]>`.
+ *
+ * A full run keeps about 2.3 GB of device logs, 127 MB the largest (T-405
+ * review): each log is read in pieces, not whole - a log over V8's longest
+ * string (~512 MB) could not be read at all - and LAUNCH runs only on the lines
+ * that have its text, found by indexOf: on every line it took 6 minutes of a
+ * full run, silent, after its last flow.
+ */
+export async function safariLaunches(runDir) {
   const launches = new Map();
   if (!fs.existsSync(runDir)) return launches;
   for (const flow of fs.readdirSync(runDir)) {
     const log = path.join(runDir, flow, 'logs', 'device-simulator.log');
     if (!fs.existsSync(log)) continue;
-    launches.set(flow, fs.readFileSync(log, 'utf8').split('\n')
-      .map((line) => LAUNCH.exec(line)).filter(Boolean)
-      .map((match) => ({ at: match[1], tabs: Number(match[2]) })));
+    const list = [];
+    const scan = (text) => {
+      let at = text.indexOf(LAUNCH_TEXT);
+      while (at !== -1) {
+        const start = text.lastIndexOf('\n', at) + 1;
+        const end = text.indexOf('\n', at) === -1 ? text.length : text.indexOf('\n', at);
+        const match = LAUNCH.exec(text.slice(start, end));
+        if (match) list.push({ at: match[1], tabs: Number(match[2]) });
+        at = text.indexOf(LAUNCH_TEXT, end);
+      }
+    };
+    // Each piece scanned up to its last line end; the line it cuts goes on with the next.
+    let rest = '';
+    for await (const piece of fs.createReadStream(log, { encoding: 'utf8', highWaterMark: 1 << 20 })) {
+      const text = rest + piece;
+      const cut = text.lastIndexOf('\n') + 1;
+      scan(text.slice(0, cut));
+      rest = text.slice(cut);
+    }
+    scan(rest);
+    launches.set(flow, list);
   }
   return launches;
 }

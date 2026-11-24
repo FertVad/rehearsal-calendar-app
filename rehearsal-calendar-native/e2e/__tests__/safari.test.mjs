@@ -3,6 +3,7 @@
 // restored a tab, or whose fresh flows left it nothing to check.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -73,18 +74,47 @@ function run(flows) {
 }
 const launch = (at, tabs) => `2026-11-24 ${at}-1000  localhost MobileSafari[50814]: (MobileSafariUI) [com.apple.mobilesafari:TabGroup] Read ${tabs} normal tabs from saved state`;
 
-test('every launch of Safari, by flow, from the device logs', () => {
+test('every launch of Safari, by flow, from the device logs', async () => {
   const dir = run({
     'Privacy policy lists Resend in every language': ['noise', launch('02:20:52.182893', 26)],
     "The profile's language, kept by the account": [launch('02:19:50.224056', 0), 'more noise', launch('02:20:06.818165', 0)],
     'Sign in': ['localhost Rehearsly[1]: nothing of Safari'],
   });
-  assert.deepEqual(Object.fromEntries(safariLaunches(dir)), {
+  assert.deepEqual(Object.fromEntries(await safariLaunches(dir)), {
     'Privacy policy lists Resend in every language': [{ at: '2026-11-24 02:20:52.182893-1000', tabs: 26 }],
     "The profile's language, kept by the account": [{ at: '2026-11-24 02:19:50.224056-1000', tabs: 0 }, { at: '2026-11-24 02:20:06.818165-1000', tabs: 0 }],
     'Sign in': [],
   });
-  assert.equal(safariLaunches(path.join(dir, 'none')).size, 0);
+  assert.equal((await safariLaunches(path.join(dir, 'none'))).size, 0);
+});
+
+test('a launch line cut between two pieces of the log: found once', async () => {
+  // The log is read a megabyte at a time: this line starts 40 bytes before the first piece ends.
+  const dir = run({ A: ['x'.repeat((1 << 20) - 41), launch('02:19:50.224056', 2), launch('02:20:00.000000', 0)] });
+  assert.deepEqual((await safariLaunches(dir)).get('A'),
+    [{ at: '2026-11-24 02:19:50.224056-1000', tabs: 2 }, { at: '2026-11-24 02:20:00.000000-1000', tabs: 0 }]);
+});
+
+// A device log over V8's longest string (~512 MB) cannot be read whole: the
+// check read each log whole, and such a run left with 1 and no reason (T-405
+// review). Safari's lines among MobileSafari noise, as in a real log.
+test('a device log over 512 MB: read, its launches found', async () => {
+  const dir = run({ 'A long flow': [] });
+  const log = path.join(dir, 'A long flow', 'logs', 'device-simulator.log');
+  const noise = '2026-11-24 02:20:52.000000-1000  localhost MobileSafari[50814]: (UIKitCore) [com.apple.UIKit:EventDispatch] '
+    + 'Sending event to the window, nothing of tabs here\n';
+  const chunk = Buffer.from(noise.repeat(Math.ceil((8 << 20) / noise.length)));
+  const fd = fs.openSync(log, 'w');
+  try {
+    fs.writeSync(fd, `${launch('02:19:50.224056', 0)}\n`);
+    for (let written = 0; written <= 520 << 20; written += chunk.length) fs.writeSync(fd, chunk);
+    fs.writeSync(fd, `${launch('02:30:00.000001', 3)}\n`);
+  } finally { fs.closeSync(fd); }
+  try {
+    assert.ok(fs.statSync(log).size > 0x1fffffe8, 'the log is longer than V8\'s longest string');
+    assert.deepEqual((await safariLaunches(dir)).get('A long flow'),
+      [{ at: '2026-11-24 02:19:50.224056-1000', tabs: 0 }, { at: '2026-11-24 02:30:00.000001-1000', tabs: 3 }]);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('no tab restored: green, and the line says how many launches', () => {
