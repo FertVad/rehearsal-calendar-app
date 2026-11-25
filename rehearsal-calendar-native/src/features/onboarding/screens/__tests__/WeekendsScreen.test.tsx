@@ -56,7 +56,12 @@ it('asks about Saturday and Sunday in Moscow, and in a zone of no country', () =
 // it is three lines by their sense, the days on one of their own, at 32 pt
 // made smaller until the longest fits whole — never below 26.
 it('gives the question its three lines, the days on one of their own, 32 pt down to 26', () => {
-  expect(openStep().getByTestId('onboarding-title').props).toMatchObject({ numberOfLines: 3, minimumFontScale: 26 / 32 });
+  // At 32 pt, made a point smaller while laid out in more than three lines,
+  // down to 26 (OnboardingStep.test.tsx), never cut.
+  const question = openStep().getByTestId('onboarding-title');
+  for (let i = 0; i < 10; i += 1) fireEvent(question, 'textLayout', { nativeEvent: { lines: Array(4).fill({}) } });
+  expect(question.props.numberOfLines).toBeUndefined();
+  expect(Object.assign({}, ...[question.props.style].flat(Infinity).filter(Boolean)).fontSize).toBe(26);
   const lines = (language: 'ru' | 'en' | 'es' | 'de', zone: string) => {
     mockLanguage.current = language;
     mockZone.current = zone;

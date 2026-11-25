@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight, TouchTarget } from '../../../shared/constants/colors';
@@ -36,6 +36,33 @@ interface OnboardingStepProps {
   answer?: StepAnswer;
   /** Its other answer, right under it: grey, the whole width; `note` under both. */
   secondAnswer?: StepAnswer & { note?: string };
+}
+
+const TITLE_SIZE = 32;
+
+/**
+ * A title of several lines — a question in its lines — at 32 pt, made smaller
+ * a point at a time while iOS wraps it into more lines than it has, down to
+ * its least (T-412: the weekends' question, 26). iOS's own shrinking
+ * (adjustsFontSizeToFit) did not shrink it: with its lines given, the text
+ * wrapped inside them and the last was cut off — «как занятые?» was not on
+ * the screen. Its lines are counted as laid out, and it is never cut.
+ */
+function FittedTitle({ title, lines, minimumScale }: { title: string; lines: number; minimumScale: number }) {
+  const least = Math.ceil(TITLE_SIZE * minimumScale);
+  const [size, setSize] = useState(TITLE_SIZE);
+  useEffect(() => setSize(TITLE_SIZE), [title]);
+  return (
+    <StepText
+      testID="onboarding-title"
+      style={[styles.title, { fontSize: size }]}
+      onTextLayout={(event) => {
+        if (event.nativeEvent.lines.length > lines && size > least) setSize(size - 1);
+      }}
+    >
+      {title}
+    </StepText>
+  );
 }
 
 /**
@@ -106,17 +133,20 @@ export default function OnboardingStep({
       >
         {/* A greeting is one line, made smaller to fit: "Добро пожаловать,
             Нина!" is about 402 pt at 32, and the iPhone 16 leaves 345 (T-022
-            review). A question has its lines, each whole: made smaller until
-            the longest fits, never wrapped inside (T-408, T-412). */}
-        <StepText
-          testID="onboarding-title"
-          style={styles.title}
-          numberOfLines={titleLines}
-          adjustsFontSizeToFit
-          minimumFontScale={titleMinimumScale}
-        >
-          {title}
-        </StepText>
+            review). A title of more lines is made smaller by FittedTitle. */}
+        {titleLines === 1 ? (
+          <StepText
+            testID="onboarding-title"
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={titleMinimumScale}
+          >
+            {title}
+          </StepText>
+        ) : (
+          <FittedTitle title={title} lines={titleLines} minimumScale={titleMinimumScale} />
+        )}
         {description && <StepText style={styles.description}>{description}</StepText>}
         <View style={styles.childrenContainer}>{children}</View>
       </ScrollView>
@@ -189,7 +219,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: TITLE_SIZE,
     fontWeight: FontWeight.bold,
     color: Colors.text.primary,
     marginBottom: 12,

@@ -170,6 +170,10 @@ export const PEOPLE = {
   // New here too, and her account speaks Russian: onboarding in Russian, her
   // name in Cyrillic, the longest greeting of the four languages (60).
   nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
+  // New, in Russian, and gives the app her calendar in onboarding (32,
+  // T-412): the step's choice and the calendar connected, in Russian. Nina
+  // above refuses it.
+  olga: { email: 'olga@e2e.test', firstName: 'Ольга', lastName: 'Ларина', onboarded: false, locale: 'ru' },
   // New too, one in Spanish and one in German (60, T-256): the steps as the
   // native speakers read them, the Spanish quotes and the German titles and
   // buttons. Neither finishes it.

@@ -10,6 +10,14 @@
 # English labels, and the card by its id, which says whether a calendar is
 # connected: since T-022 the step has no outcome text, and "Set up later" is
 # there only while nothing is.
+#
+# T-412: the step is "Calendar Sync", and the calendar picked is its answer —
+# connected, it opens Notifications by itself; there is no "Next", which did
+# what "Set up later" did. "‹ Back" is at the top left, across from "Skip",
+# and takes her back a step; the answers are at the bottom. Back on the step,
+# the calendar connected is ticked, and tapped it goes on without connecting
+# again. Then Olga walks it in Russian: «Синхронизация календаря», the choice,
+# and the calendar connected.
 appId: ${APP_ID}
 name: Onboarding shows the calendar that was saved
 tags:
@@ -24,18 +32,31 @@ tags:
     visible:
       id: onboarding-skip
     timeout: 20000
+# The greeting has no way back.
+- assertNotVisible:
+    id: onboarding-back
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Get Started"
       SEE: "Yes, Mark Them"
       WAIT_MS: 10000
-# The weekends' step since T-406, between the greeting and the calendar.
+# The weekends' step since T-406, between the greeting and the calendar:
+# "‹ Back" at the top, the answers at the bottom, "Yes" over "No".
+- assertVisible:
+    id: onboarding-back
+    text: "Back"
+    above:
+      id: onboarding-title
+- assertVisible:
+    text: "No, Leave Them Free"
+    below:
+      text: "Yes, Mark Them"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Yes, Mark Them"
-      SEE: "Your availability"
+      SEE: "Calendar Sync"
       WAIT_MS: 10000
 # Calendar access, where the app has not been given it yet.
 - tapOn:
@@ -47,27 +68,46 @@ tags:
 - extendedWaitUntil:
     visible: ".*Apple Calendar.*"
     timeout: 15000
-# Its one calendar is picked and saved; a second tap only saves it again.
+# The choice: no "Next" — the calendar is the answer, "Set up later" the other.
+- assertNotVisible: "Next"
+- assertVisible: "Set up later"
+- waitForAnimationToEnd
+- takeScreenshot: 32-onboarding-calendar-choice-en
+# Its one calendar is picked, saved, and the next step opens by itself.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Apple Calendar.*"
-      GONE: "Set up later"
+      SEE: "Not now"
       WAIT_MS: 10000
-- assertVisible:
-    id: onboarding-calendar-connected
-# Back a step, to the weekends', and forward again.
+- assertVisible: "Notifications"
+# "‹ Back" at the top: the calendar step again, the calendar ticked and
+# nothing to set up later.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Back"
+      TAP_ID: onboarding-back
+      SEE: "Calendar Sync"
+      WAIT_MS: 10000
+- extendedWaitUntil:
+    visible:
+      id: onboarding-calendar-connected
+    timeout: 10000
+- assertNotVisible: "Set up later"
+- waitForAnimationToEnd
+- takeScreenshot: 32-onboarding-calendar-connected-en
+# Back a step more, to the weekends', and forward again.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: onboarding-back
       SEE: "Yes, Mark Them"
       WAIT_MS: 10000
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Yes, Mark Them"
-      SEE: "Your availability"
+      SEE: "Calendar Sync"
       WAIT_MS: 10000
 # Back on the step: the calendar saved is the one shown as connected.
 - extendedWaitUntil:
@@ -76,3 +116,69 @@ tags:
     timeout: 10000
 - assertNotVisible: "Set up later"
 - takeScreenshot: 32-onboarding-calendar-as-saved
+# Tapped, the one connected goes on as it is.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Apple Calendar.*"
+      SEE: "Not now"
+      WAIT_MS: 10000
+
+# Olga, new, her account in Russian, gives the app her calendar.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${OLGA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Начать"
+      SEE: "Да, отметить"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Да, отметить"
+      SEE: "Синхронизация календаря"
+      WAIT_MS: 10000
+- tapOn:
+    text: "Разрешить доступ"
+    optional: true
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Календарь iPhone.*"
+    timeout: 15000
+- assertVisible:
+    id: onboarding-back
+    text: "Назад"
+- assertNotVisible: "Далее"
+- waitForAnimationToEnd
+- takeScreenshot: 32-onboarding-calendar-choice-ru
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Календарь iPhone.*"
+      SEE: "Не\u00a0сейчас"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: onboarding-back
+      SEE: "Синхронизация календаря"
+      WAIT_MS: 10000
+- extendedWaitUntil:
+    visible:
+      id: onboarding-calendar-connected
+    timeout: 10000
+- assertNotVisible: "Настроить позже"
+- waitForAnimationToEnd
+- takeScreenshot: 32-onboarding-calendar-connected-ru

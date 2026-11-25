@@ -27,6 +27,8 @@ jest.mock('../../../../contexts/I18nContext', () => ({
 afterEach(() => { mockLanguage.current = 'en'; });
 
 const NBSP = ' ';
+// A style as one object, whatever arrays it was given in.
+const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
 
 const step = (extra: Partial<React.ComponentProps<typeof OnboardingStep>> = {}) =>
   render(
@@ -120,11 +122,43 @@ it('takes no answer that is disabled', () => {
 
 // T-408: one line made smaller suits the greeting (T-022), not a question. A
 // step gives its title its lines, and how small it may be made to fit them.
-it('keeps a title on one line unless the step gives it more, made smaller only past them', () => {
-  const title = (view: ReturnType<typeof step>) => view.getByTestId('onboarding-title').props;
-  expect(title(step())).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.5 });
-  expect(title(step({ titleLines: 3, titleMinimumScale: 26 / 32 })))
-    .toMatchObject({ numberOfLines: 3, adjustsFontSizeToFit: true, minimumFontScale: 26 / 32 });
+it('keeps a greeting on one line, made smaller to fit', () => {
+  expect(step().getByTestId('onboarding-title').props)
+    .toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.5 });
+});
+
+// T-412: given numberOfLines 3 and iOS's own shrinking, the weekends' question
+// was not made smaller on the phone: its lines wrapped inside, and «как
+// занятые?» was cut off the screen. Its lines are counted as laid out: a point
+// smaller while there are more than three, never below 26, never cut.
+it('makes a question smaller a point at a time while it wraps past its lines, down to its least, never cut', () => {
+  const view = step({ title: 'Отметить все выходные\n(пт)\nкак занятые?', titleLines: 3, titleMinimumScale: 26 / 32 });
+  const title = () => view.getByTestId('onboarding-title');
+  const size = () => flat(title().props.style).fontSize;
+  const laidOut = (lines: number) => fireEvent(title(), 'textLayout', { nativeEvent: { lines: Array(lines).fill({}) } });
+
+  expect(title().props.numberOfLines).toBeUndefined();
+  expect(size()).toBe(32);
+  laidOut(3);
+  expect(size()).toBe(32);
+  laidOut(4);
+  expect(size()).toBe(31);
+  for (let i = 0; i < 10; i += 1) laidOut(4);
+  expect(size()).toBe(26);
+  laidOut(3);
+  expect(size()).toBe(26);
+});
+
+it('starts a new title at 32 again', () => {
+  const view = step({ title: 'A\nB\nC', titleLines: 3, titleMinimumScale: 26 / 32 });
+  fireEvent(view.getByTestId('onboarding-title'), 'textLayout', { nativeEvent: { lines: Array(5).fill({}) } });
+  expect(flat(view.getByTestId('onboarding-title').props.style).fontSize).toBe(31);
+  view.rerender(
+    <OnboardingStep title={'D\nE\nF'} titleLines={3} titleMinimumScale={26 / 32} currentStep={1} totalSteps={5} onSkip={jest.fn()}>
+      {null}
+    </OnboardingStep>
+  );
+  expect(flat(view.getByTestId('onboarding-title').props.style).fontSize).toBe(32);
 });
 
 it('typesets its texts in the app\'s language, the last line never one word alone', () => {
