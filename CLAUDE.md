@@ -498,8 +498,13 @@ would count as busy twice — once as itself and once as an imported event.
 
 **Deleting the event in the phone's calendar does not stick.** The next sync
 sees the mapping has no event and recreates it: the rehearsal is the source of
-truth, the calendar a mirror. The only ways out are deleting the rehearsal or
-"remove all exported" on the sync screen.
+truth, the calendar a mirror. The only ways out are deleting the rehearsal,
+"remove all exported" on the sync screen, or deleting the account: before
+`DELETE /me`, while the server still has the mappings, `deleteAccount` turns
+Auto Sync off and removes this phone's exported events the same way
+(`removeExportedBeforeDeletion`, T-409). It never stops the deletion; the alert
+after it says how many events stayed, or that it could not find out. Other
+devices' calendars keep theirs.
 
 **Only hours cross over, never what the events are.** The app sends each
 event's key and times and nothing else; the server titles the rows

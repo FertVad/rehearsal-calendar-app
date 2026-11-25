@@ -1,0 +1,81 @@
+T-409 — red before: the new test on the base code (1d3d6bd).
+Files put back as on the base: src/contexts/AuthContext.tsx, src/shared/services/calendarSync.ts,
+src/features/profile/screens/ProfileScreen.tsx, src/features/profile/screens/CalendarSyncSettingsScreen.tsx,
+src/i18n/translations/profile.ts; the test file as in the fix.
+
+$ npx jest --selectProjects frontend src/contexts/__tests__/AuthContext.deleteAccountCalendar --silent
+(stack lines "at ..." left out)
+
+Running one project: frontend
+FAIL frontend src/contexts/__tests__/AuthContext.deleteAccountCalendar.test.tsx
+  ● removes the exported events before DELETE /me, after Apple, and says nothing more when all went
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "apple",
+    -   "remove exported",
+        "DELETE /me",
+      ]
+
+  ● turns Auto Sync off both ways before removing, as the switch does
+
+    expect(received).toMatchObject(expected)
+
+    Matcher error: received value must be a non-null object
+
+    Received has value: undefined
+
+  ● runs as the session of the person deleting
+
+    TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+
+  ● deletes the account when events would not go, and says how many stayed
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "apple",
+    -   "remove exported",
+        "DELETE /me",
+      ]
+
+  ● deletes the account when the removal fails outright, and does not claim all went
+
+    expect(received).toBeNull()
+
+    Received: undefined
+
+  ● without calendar access deletes the account and counts what this phone recorded exporting
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 3
+    Received: undefined
+
+  ● without calendar access and nothing exported here, says nothing more
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: undefined
+
+Second run, same files back on the base after the fix commit 1d52a05 (Jest took
+the whole frontend project; the eighth failure is sentenceEnd.test.ts, whose new
+sample names profile.deleteAccountCalendarLeft, not yet in the base texts):
+
+  ● removes the exported events before DELETE /me, after Apple, and says nothing more when all went
+  ● turns Auto Sync off both ways before removing, as the switch does
+  ● runs as the session of the person deleting
+  ● deletes the account when events would not go, and says how many stayed
+  ● deletes the account when the removal fails outright, and does not claim all went
+  ● without calendar access deletes the account and counts what this phone recorded exporting
+  ● without calendar access and nothing exported here, says nothing more
+  ● T-263: a sentence that ends in English ends in every language › every function has sample arguments, and every exception is still a string
+Tests:       8 failed, 1743 passed, 1751 total

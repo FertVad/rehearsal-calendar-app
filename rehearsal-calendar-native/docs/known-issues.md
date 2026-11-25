@@ -234,6 +234,19 @@ calendars new ids, and rows imported under the old ones stay until "remove all
 imported" is pressed. It needs signing out of iCloud and back in, and costs
 extra busy hours the person can see and clear.
 
+### Deleting the account without calendar access counts only this install's exports (T-409)
+
+Before DELETE /me the app removes what it exported to this iPhone's calendar
+and says how many events stayed (`removeExportedBeforeDeletion`,
+services/calendarSync.ts). Without calendar access it can neither remove nor
+look, so it counts what this phone's own record says it exported. That record
+goes when the app is deleted, and iOS takes the calendar access with it: events
+exported by an earlier install, on a phone whose new install was never given
+the calendar, are not counted, and the alert says nothing of them. It needs a
+reinstall plus a refusal of the calendar, and costs events the person can
+delete in Calendar; the policy says other devices keep theirs the same way.
+Special case, minor: a line here.
+
 ### Android App Links wait for an Android release (IC01)
 
 `assetlinks.json` carries a placeholder where the app's signing fingerprint
