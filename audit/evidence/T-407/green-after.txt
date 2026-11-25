@@ -48,10 +48,15 @@ $ npm run e2e -- e2e/flows/23-profile-timezone.yaml e2e/flows/32-onboarding-cale
   [Passed] Onboarding shows the calendar that was saved (1m 6s)
   2/2 Flows Passed in 4m 54s; taps taken again: 0
 
+Once more on the commit itself (cc58acc; the device already set, so no reboot for it):
+$ npm run e2e -- e2e/flows/09-invite-during-onboarding.yaml
+  [Passed] Invite link during onboarding (2m 31s); taps taken again: 0
+  e2e/out/artifacts/2026-11-25_065137: sheet at - | bringup 0 | APIDisabled 0
+
 11 of 11 passed. In every flow's device log of these runs: no
 SFPasswordSavingRemoteViewController request, no signalAutofillUIBringup, no
 kAXErrorAPIDisabled (runs 2026-11-25_051712, _052345, _053346, _054127,
-_054918, _055926, _060901, _061844, _062444, _063440). On the base the same
+_054918, _055926, _060901, _061844, _062444, _063440, _065137). On the base the same
 flows asked for the sheet 17 times in one green run (red-before.txt).
 
 The bug flow 09-invite guards (HN01, fix 9: an invite link that comes during
