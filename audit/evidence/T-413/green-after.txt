@@ -1,0 +1,31 @@
+T-413, green after: the native speakers' strings in profile.ts and privacy.html.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes
+Test Suites: 49 passed, 49 total
+Tests:       797 passed, 797 total
+(privacyPage.test.js: the new T-409 paragraphs word for word, the button equal to
+calendarSync.removeAll, the neighbouring paragraphs (M6), no T-409 mark, no word
+of price and "no purchases or payments" in every language — all green)
+
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend --silent
+Test Suites: 1 failed, 165 passed, 166 total
+Tests:       1 failed, 1768 passed, 1769 total
+The one failure is AvailabilityQuietSave.test.tsx, not touched by this task; it
+failed in the same full run before the change too (6 failed = 5 new + this one),
+and alone it passes:
+$ npx jest --selectProjects frontend -- AvailabilityQuietSave
+Tests:       3 passed, 3 total
+deleteAccountCalendar.test.ts (5 tests), sentenceEnd.test.ts, proofreading*.test.ts — green.
+
+$ npm run e2e -- e2e/flows/106-delete-account-clears-calendar.yaml
+[Passed] Deleting the account takes the exported rehearsals out of the calendar (2m 37s)
+1/1 Flow Passed in 2m 38s
+
+Screenshots of this run (e2e/out/artifacts/2026-11-25_143311/…/takeScreenshot/,
+not copied: the shell's cp was denied in this session):
+- 106-question.png: "Rehearsly will also remove from your calendar any rehearsals
+  it added on this iPhone. Those it added on your other devices may remain."
+- 106-deleted.png: title "Account Deleted"; "1 project where you were the only
+  admin was deleted too." then "1 rehearsal could not be removed from your
+  calendar on this iPhone. You can delete it yourself in the Calendar app — its
+  title starts with the project name."

@@ -7,8 +7,9 @@
 # Vasily Zhadov exports his three rehearsals of «A Profitable Position» to the
 # simulator's calendar, which will not let "Office scene" go — as iOS refuses
 # the delete of an event a subscribed calendar owns (e2e/device/expo-calendar.js).
-# The confirmation says this iPhone's calendar is cleared and other devices'
-# are not. The account is deleted all the same, and the alert after it says
+# The confirmation says what this iPhone added goes, and what other devices
+# added may remain (T-413: a shared calendar is one calendar everywhere, so
+# "they will stay" was not true). The account is deleted all the same, and the alert after it says
 # the one event that stayed and how to delete it by hand: the other two went.
 # The count is the removal's own, as flow 92 reads "Remove Exported
 # Rehearsals"; on the old code nothing was removed and nothing said.
@@ -95,18 +96,18 @@ tags:
       WAIT_MS: "10000"
 - assertVisible:
     id: delete-account-calendar
-    text: "Rehearsals the app added to this iPhone’s calendar will be removed from it\\. On your other devices they will stay\\."
+    text: "Rehearsly will also remove from your calendar any rehearsals it added on this iPhone\\. Those it added on your other devices may remain\\."
 - waitForAnimationToEnd
 - takeScreenshot: 106-question
 - tapOn: "Yes, Delete"
 - extendedWaitUntil:
-    visible: "Account deleted"
+    visible: "Account Deleted"
     timeout: 60000
 - waitForAnimationToEnd
 - takeScreenshot: 106-deleted
 # "Finale" and "Tavern" went; "Office scene" stayed, and he is told so — under
 # the line on his project, which went with the account, in one message.
-- assertVisible: "(?s).*1 rehearsal could not be removed from this iPhone’s calendar\\. You can delete it yourself in the Calendar app: its title begins with the project’s name\\..*"
+- assertVisible: "(?s).*1 rehearsal could not be removed from your calendar on this iPhone\\. You can delete it yourself in the Calendar app — its title starts with the project name\\..*"
 - tapOn: "OK"
 - extendedWaitUntil:
     visible:
