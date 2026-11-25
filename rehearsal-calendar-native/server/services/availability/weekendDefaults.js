@@ -187,14 +187,18 @@ function needsLayout(user, now) {
 
 /**
  * Lay out one person's defaults up to a year ahead, under their row lock, in
- * the caller's transaction. `refill` lays every weekend day from today on
- * again (the switch turned on); otherwise only what is past weekends_through,
+ * the caller's transaction. `refill` (the switch turned on) takes the defaults
+ * from today on away and lays every weekend day of the zone's country from
+ * today on again; otherwise only what is past weekends_through,
  * plus a move to another country's weekend.
  */
 async function layOut(tx, userId, now, { refill = false } = {}) {
   const user = await tx.get(`SELECT ${USER_COLUMNS} FROM native_users WHERE id = $1 FOR NO KEY UPDATE`, [userId]);
   if (!user || !isOn(user.weekends_busy)) return;
   const { timezone, days, key, today, horizon } = plan(user, now);
+  // On means the weekends of the zone as it is now: whatever was laid out
+  // from today on, possibly for another country's weekend, goes first.
+  if (refill) await deleteWeekendDefaults(tx, userId, { from: today });
   // The last date laid out, while it is not yet past.
   const laid = !refill && user.through && user.through >= today ? user.through : null;
   const wanted = [];

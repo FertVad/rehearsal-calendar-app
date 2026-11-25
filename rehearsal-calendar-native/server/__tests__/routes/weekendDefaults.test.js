@@ -271,6 +271,19 @@ describe('a change of zone to another country', () => {
     expect(after).not.toContain(emptied);
     expect(ok(await request(app).get('/api/native/availability/weekends').set(...auth(member))).body.days).toEqual([6, 7]);
   });
+
+  it('the switch turned on right after it, with no read between, leaves no day of the old country\'s weekend', async () => {
+    await readOwn(member);
+    const today = todayOf('Asia/Jerusalem');
+    ok(await request(app).put('/api/auth/me').set(...auth(member)).send({ timezone: 'Europe/Moscow' }));
+    ok(await setSwitch(member, true));
+    await readOwn(member);
+
+    const after = weekendDates(member).filter((date) => date >= addDays(today, 1));
+    expect(new Set(after.map(isoWeekday))).toEqual(new Set([6, 7]));
+    expect(after).not.toContain(next('Asia/Jerusalem', 5));
+    expect(after).toContain(next('Europe/Moscow', 7));
+  });
 });
 
 describe('calendar import and rehearsals', () => {
