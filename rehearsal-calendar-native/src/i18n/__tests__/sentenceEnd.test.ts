@@ -47,6 +47,7 @@ const SAMPLES: Record<string, unknown[][]> = {
   'projects.deleteProjectMessage': NAME,
   'projects.leaveProjectMessage': NAME,
   'profile.deleteAccountProjectsWarning': COUNTS,
+  'profile.deleteAccountCalendarLeft': COUNTS,
   'profile.changeEmailSubtitle': EMAIL,
   'profile.currentAddressCode': EMAIL,
   'profile.newAddressCode': EMAIL,

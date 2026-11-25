@@ -18,9 +18,15 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/logger';
-import { getSyncSettings } from '../utils/calendarStorage';
+import {
+  getAllMappings as getRecordedMappings,
+  getLeftoverEvents,
+  getSyncSettings,
+  updateSyncSettings,
+} from '../utils/calendarStorage';
 import { getAllMappings } from '../utils/calendarMappings';
 import {
+  checkCalendarPermissions,
   importCalendarEventsToAvailability,
   removeAllExportedEvents,
   removeAllImportedSlots,
@@ -231,6 +237,62 @@ export function removeExportedEvents(
   onProgress?: (current: number, total: number) => void
 ): Promise<BatchSyncResult | null> {
   return runForSession((session) => removeAllExportedEvents(onProgress, session));
+}
+
+/**
+ * Auto Sync off, both ways: what the switch saves, and what a removal saves
+ * first, or the next run would put back what it took away (T-270, T-409).
+ */
+export const SYNC_OFF: Partial<CalendarSyncSettings> = {
+  exportEnabled: false,
+  importEnabled: false,
+  importCalendarIds: [],
+  importInterval: 'manual',
+};
+
+/**
+ * Before the account is deleted (T-409): the events the export put in this
+ * phone's calendar are taken back, as "Remove Exported Rehearsals" takes them
+ * (T-270), Auto Sync turned off first, as that button does.
+ *
+ * Only while the account is alive: the mappings on the server go with it, and
+ * after that nothing knows which events are the app's. Other phones' calendars
+ * are out of reach from here; their events stay.
+ *
+ * Never throws: deleting the account is the person's right and does not wait
+ * on the calendar. Resolves to how many of the app's events are still in this
+ * phone's calendar — 0 when every one went — or null when that could not be
+ * found out (CLAUDE.md 10: no success made up).
+ */
+export async function removeExportedBeforeDeletion(): Promise<number | null> {
+  try {
+    await updateSyncSettings(SYNC_OFF);
+  } catch (error) {
+    // Not a reason to stop: the deletion clears the settings with the rest.
+    logger.warn('[CalendarSync] Could not turn Auto Sync off before the deletion:', error);
+  }
+  try {
+    if (!(await checkCalendarPermissions())) return await recordedHere();
+    // In the sync's queue and as this session (sessionWork): a run alongside
+    // would put back what this takes, and the change of owner after the
+    // deletion waits for it.
+    const result = await runCalendarWork((session) => removeAllExportedEvents(undefined, session));
+    return result.failed;
+  } catch (error) {
+    logger.error('[CalendarSync] Removing the exported events before the deletion failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Without calendar access nothing can be removed or even looked at: what this
+ * phone's own record says the export put there is what stays. The record is
+ * written before every export, so it misses only the events of an install
+ * before this one (docs/known-issues.md).
+ */
+async function recordedHere(): Promise<number> {
+  const [mappings, leftovers] = await Promise.all([getRecordedMappings(), getLeftoverEvents()]);
+  return Object.keys(mappings).length + Object.keys(leftovers).length;
 }
 
 /** "Clear all imported", in its turn. Null: the session ended first. */

@@ -237,12 +237,17 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     try {
       hapticMedium();
       setDeletingAccount(true);
-      const { deletedProjects } = await deleteAccount();
+      const { deletedProjects, calendarEventsLeft } = await deleteAccount();
       hapticSuccess();
-      Alert.alert(
-        t.profile.deleteAccountSuccess,
-        deletedProjects > 0 ? t.profile.deleteAccountProjectsWarning(deletedProjects) : undefined
-      );
+      // What the deletion left in this phone's calendar is said, and how to
+      // delete it; when everything went, nothing more (T-409).
+      const notes = [
+        deletedProjects > 0 ? t.profile.deleteAccountProjectsWarning(deletedProjects) : null,
+        calendarEventsLeft === null
+          ? t.profile.deleteAccountCalendarUnknown
+          : calendarEventsLeft > 0 ? t.profile.deleteAccountCalendarLeft(calendarEventsLeft) : null,
+      ].filter(Boolean);
+      Alert.alert(t.profile.deleteAccountSuccess, notes.length > 0 ? notes.join('\n\n') : undefined);
     } catch (err: any) {
       Alert.alert(t.profile.deleteAccountError, requestErrorMessage(t, err, t.auth.requestFailed));
     } finally {
@@ -719,6 +724,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 />
                 <Text style={[styles.timezoneLabel, { textAlign: 'center', marginBottom: 12 }]}>
                   {t.profile.deleteAccountWarning}
+                </Text>
+                <Text
+                  testID="delete-account-calendar"
+                  style={[styles.settingValue, { textAlign: 'center', color: Colors.text.secondary, marginBottom: 12 }]}
+                >
+                  {t.profile.deleteAccountCalendar}
                 </Text>
                 <Text style={[styles.settingValue, { textAlign: 'center', color: Colors.text.secondary }]}>
                   {t.profile.deleteAccountFinalWarning}

@@ -40,6 +40,12 @@ export interface ProfileTranslations {
   deleteAccountWarning: string;
   deleteAccountProjectsWarning: (count: number) => string;
   deleteAccountFinalWarning: string;
+  /** The confirmation: this phone's calendar is cleared, other devices' are not (T-409). */
+  deleteAccountCalendar: string;
+  /** After the deletion: the app's events this phone's calendar still has, and how to delete them. */
+  deleteAccountCalendarLeft: (count: number) => string;
+  /** After the deletion: whether any are still there could not be found out. */
+  deleteAccountCalendarUnknown: string;
   deleteAccountSuccess: string;
   deleteAccountError: string;
   cancel: string;
@@ -129,6 +135,12 @@ export const ru = {
           ? `Также удалены ${count} проекта, где вы были единственным администратором.`
           : `Также удалено ${count} проектов, где вы были единственным администратором.`,
     deleteAccountFinalWarning: 'Вы уверены, что хотите удалить свой аккаунт?',
+    // T-409: new, for the native speakers' reading.
+    deleteAccountCalendar: 'Репетиции, которые приложение добавило в календарь этого iPhone, будут из него удалены. На других устройствах они останутся.',
+    deleteAccountCalendarLeft: (count: number) => (count === 1
+      ? 'Не удалось убрать из календаря этого iPhone репетиций: 1. Её можно удалить вручную в приложении «Календарь»: название начинается с названия проекта.'
+      : `Не удалось убрать из календаря этого iPhone репетиций: ${count}. Их можно удалить вручную в приложении «Календарь»: название каждой начинается с названия проекта.`),
+    deleteAccountCalendarUnknown: 'Не удалось проверить, остались ли репетиции в календаре этого iPhone. Если остались, их можно удалить вручную в приложении «Календарь»: название каждой начинается с названия проекта.',
     deleteAccountSuccess: 'Аккаунт удалён',
     deleteAccountError: 'Не удалось удалить аккаунт',
     cancel: 'Отменить',
@@ -215,6 +227,12 @@ export const en = {
         ? '1 project where you were the only admin was deleted too.'
         : `${count} projects where you were the only admin were deleted too.`,
     deleteAccountFinalWarning: 'Are you sure you want to delete your account?',
+    // T-409: new, for the native speakers' reading.
+    deleteAccountCalendar: 'Rehearsals the app added to this iPhone’s calendar will be removed from it. On your other devices they will stay.',
+    deleteAccountCalendarLeft: (count: number) => (count === 1
+      ? '1 rehearsal could not be removed from this iPhone’s calendar. You can delete it yourself in the Calendar app: its title begins with the project’s name.'
+      : `${count} rehearsals could not be removed from this iPhone’s calendar. You can delete them yourself in the Calendar app: each title begins with the project’s name.`),
+    deleteAccountCalendarUnknown: 'Could not check whether rehearsals from the app are still in this iPhone’s calendar. If they are, you can delete them yourself in the Calendar app: each title begins with the project’s name.',
     deleteAccountSuccess: 'Account deleted',
     deleteAccountError: 'Could not delete your account',
     cancel: 'Cancel',
@@ -300,6 +318,12 @@ export const es = {
         ? 'También se ha eliminado 1 proyecto que solo administrabas tú.'
         : `También se han eliminado ${count} proyectos que solo administrabas tú.`,
     deleteAccountFinalWarning: '¿Seguro que quieres eliminar tu cuenta?',
+    // T-409: new, for the native speakers' reading.
+    deleteAccountCalendar: 'Los ensayos que la app añadió al calendario de este iPhone se quitarán de él. En tus otros dispositivos se quedarán.',
+    deleteAccountCalendarLeft: (count: number) => (count === 1
+      ? 'No se pudo quitar 1 ensayo del calendario de este iPhone. Puedes borrarlo tú en la app Calendario: su título empieza por el nombre del proyecto.'
+      : `No se pudieron quitar ${count} ensayos del calendario de este iPhone. Puedes borrarlos tú en la app Calendario: el título de cada uno empieza por el nombre del proyecto.`),
+    deleteAccountCalendarUnknown: 'No se pudo comprobar si quedan ensayos de la app en el calendario de este iPhone. Si quedan, puedes borrarlos tú en la app Calendario: el título de cada uno empieza por el nombre del proyecto.',
     deleteAccountSuccess: 'Cuenta eliminada',
     deleteAccountError: 'No se pudo eliminar la cuenta',
     cancel: 'Cancelar',
@@ -385,6 +409,12 @@ export const de = {
         ? '1 Projekt, das nur du verwaltet hast, wurde ebenfalls gelöscht.'
         : `${count} Projekte, die nur du verwaltet hast, wurden ebenfalls gelöscht.`,
     deleteAccountFinalWarning: 'Möchtest du dein Konto wirklich löschen?',
+    // T-409: new, for the native speakers' reading.
+    deleteAccountCalendar: 'Proben, die die App in den Kalender dieses iPhones eingetragen hat, werden daraus entfernt. Auf deinen anderen Geräten bleiben sie.',
+    deleteAccountCalendarLeft: (count: number) => (count === 1
+      ? '1 Probe konnte nicht aus dem Kalender dieses iPhones entfernt werden. Du kannst sie in der Kalender-App selbst löschen: Ihr Titel beginnt mit dem Projektnamen.'
+      : `${count} Proben konnten nicht aus dem Kalender dieses iPhones entfernt werden. Du kannst sie in der Kalender-App selbst löschen: Ihr Titel beginnt jeweils mit dem Projektnamen.`),
+    deleteAccountCalendarUnknown: 'Es ließ sich nicht prüfen, ob noch Proben der App im Kalender dieses iPhones sind. Falls ja, kannst du sie in der Kalender-App selbst löschen: Ihr Titel beginnt jeweils mit dem Projektnamen.',
     deleteAccountSuccess: 'Konto gelöscht',
     deleteAccountError: 'Konto konnte nicht gelöscht werden',
     cancel: 'Abbrechen',
