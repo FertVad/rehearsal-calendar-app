@@ -260,17 +260,42 @@ export const SYNC_OFF: Partial<CalendarSyncSettings> = {
  * are out of reach from here; their events stay.
  *
  * Never throws: deleting the account is the person's right and does not wait
- * on the calendar. Resolves to how many of the app's events are still in this
- * phone's calendar — 0 when every one went — or null when that could not be
- * found out (CLAUDE.md 10: no success made up).
+ * on the calendar. `eventsLeft` is how many of the app's events are still in
+ * this phone's calendar — 0 when every one went — or null when that could not
+ * be found out (CLAUDE.md 10: no success made up).
+ *
+ * `restoreSync` puts Auto Sync back as it was, for when DELETE /me then fails:
+ * the account lives on, and its calendar must not stay switched off without a
+ * word. The next run puts the removed events back. It never throws either.
  */
-export async function removeExportedBeforeDeletion(): Promise<number | null> {
+export async function removeExportedBeforeDeletion(): Promise<{
+  eventsLeft: number | null;
+  restoreSync: () => Promise<void>;
+}> {
+  let before: Partial<CalendarSyncSettings> | null = null;
   try {
+    const settings = await getSyncSettings();
+    // Only the fields SYNC_OFF changes: the stamps the removal may write stay.
+    before = Object.fromEntries(
+      Object.keys(SYNC_OFF).map((key) => [key, settings[key as keyof CalendarSyncSettings]])
+    ) as Partial<CalendarSyncSettings>;
     await updateSyncSettings(SYNC_OFF);
   } catch (error) {
     // Not a reason to stop: the deletion clears the settings with the rest.
     logger.warn('[CalendarSync] Could not turn Auto Sync off before the deletion:', error);
   }
+  const restoreSync = async () => {
+    if (!before) return;
+    try {
+      await updateSyncSettings(before);
+    } catch (error) {
+      logger.error('[CalendarSync] Could not put Auto Sync back after a failed deletion:', error);
+    }
+  };
+  return { eventsLeft: await removeExported(), restoreSync };
+}
+
+async function removeExported(): Promise<number | null> {
   try {
     if (!(await checkCalendarPermissions())) return await recordedHere();
     // In the sync's queue and as this session (sessionWork): a run alongside

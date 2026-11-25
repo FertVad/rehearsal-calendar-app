@@ -590,12 +590,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // with it. Not under `loading` either — it can take seconds, and the
     // screen that asked shows its own wait (CLAUDE.md, pitfall 9). It never
     // throws: the account is deleted whatever the calendar does.
-    const calendarEventsLeft = await removeExportedBeforeDeletion();
+    const calendar = await removeExportedBeforeDeletion();
+    const calendarEventsLeft = calendar.eventsLeft;
     try {
       setLoading(true);
 
-      // Call delete account API
-      const response = await authAPI.deleteMe(appleAuthorizationCode ?? undefined);
+      // Call delete account API. When it fails the account lives on: Auto
+      // Sync goes back as it was, and its next run puts the events back.
+      const response = await authAPI.deleteMe(appleAuthorizationCode ?? undefined)
+        .catch(async (err) => {
+          await calendar.restoreSync();
+          throw err;
+        });
       const { deletedProjects } = response.data;
       // The session is over, as at a sign-out: nothing answered later writes it back.
       forgetPendingSignIn();

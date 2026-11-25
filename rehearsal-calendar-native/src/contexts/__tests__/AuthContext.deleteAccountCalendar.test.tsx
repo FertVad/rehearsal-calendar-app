@@ -216,6 +216,24 @@ it('without calendar access deletes the account and counts what this phone recor
   expect(screen.getByTestId('user').props.children).toBe('none');
 });
 
+it('puts Auto Sync back as it was when DELETE /me fails after the removal', async () => {
+  const screen = await signedIn();
+  mockApi.deleteMe.mockImplementation(async () => {
+    order.push('DELETE /me');
+    throw Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' });
+  });
+
+  await act(async () => {
+    await expect(auth.deleteAccount()).rejects.toBeTruthy();
+  });
+
+  expect(order).toEqual(['apple', 'remove exported', 'DELETE /me']);
+  // The account lives on: its calendar is not left switched off without a
+  // word; the next run puts the removed events back.
+  expect(JSON.parse(mockStorage['calendar-sync-settings'])).toMatchObject(SYNC_ON);
+  expect(screen.getByTestId('user').props.children).toBe('7');
+});
+
 it('without calendar access and nothing exported here, says nothing more', async () => {
   await signedIn();
   mockCalendar.checkCalendarPermissions.mockResolvedValue(false);
