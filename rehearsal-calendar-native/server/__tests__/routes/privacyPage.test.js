@@ -220,6 +220,15 @@ const RETENTION = {
     /Die Tage der App-Nutzung und die Zählungen der Einladungen speichern wir höchstens 13 Monate, und die Zählungen einer Einladung werden außerdem mit ihrem Projekt gelöscht/],
 };
 
+// T-409: deleting the account on a phone takes the rehearsals Rehearsly put in
+// that phone's calendar out of it; other devices keep theirs until removed by hand.
+const CALENDAR_ON_DELETION = {
+  en: /When you delete your account on a phone, the rehearsals Rehearsly added to that phone’s calendar are removed from it; on your other devices they stay until you delete them yourself\./,
+  ru: /Репетиции, которые Rehearsly добавил в календарь телефона, при удалении аккаунта убираются с того телефона, на котором вы его удаляете; на других ваших устройствах они остаются, пока вы не удалите их сами\./,
+  es: /Al eliminar tu cuenta, los ensayos que Rehearsly añadió al calendario del teléfono se quitan del teléfono desde el que la eliminas; en tus otros dispositivos se quedan hasta que los borres tú\./,
+  de: /Löschst du dein Konto, werden die Proben, die Rehearsly in den Kalender eingetragen hat, von dem Gerät entfernt, auf dem du es löschst; auf deinen anderen Geräten bleiben sie, bis du sie selbst löschst\./,
+};
+
 // T-298: the native speakers' fixes, by meaning. The days row records only a day
 // and a version, so it shows how *often* the app is used, not how; both new rows
 // keep their records *at most* 13 months, as "How long we keep it" says, never a
@@ -339,6 +348,10 @@ describe.each(LANGS)('privacy policy, %s', lang => {
   test('says how long the days in the app and the invitation counts are kept, and what deletes them', () => {
     const page = text('privacy', lang);
     for (const claim of RETENTION[lang]) expect(page).toMatch(claim);
+  });
+
+  test('says the deletion takes the exported rehearsals out of this phone’s calendar, not other devices’', () => {
+    expect(text('privacy', lang)).toMatch(CALENDAR_ON_DELETION[lang]);
   });
 
   test('has a row for the calendar export records and one for the introduction, each beside its neighbour', () => {
