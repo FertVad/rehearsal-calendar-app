@@ -1,5 +1,5 @@
 # Asking for a rating (T-410). Only iOS's own window (App Review 5.6.1), and
-# only after a save, once the editor has gone down; the app used on three
+# only after a save, once "Mark Busy" is closed (T-414); the app used on three
 # days on this phone, past the onboarding, not the first launch, not asked in
 # this version, fourteen days since the last ask (reviewPrompt.ts, Jest
 # reviewPrompt.test.ts takes each condition alone).
@@ -8,7 +8,9 @@
 # never asked unless the launch says `rehearslyStoreReview: "due"`; then the
 # app gets the real module and a phone used on the three days before today
 # (e2e/device/expo-store-review.js). Sonya saves MARK_DAY, busy all day, free:
-# the window comes. She saves it busy again: in the same version it does not.
+# no window while the screen is open; she closes it, and the window comes over
+# the calendar. She opens it again, saves the day busy and closes it: in the
+# same version no window.
 #
 # Then the profile's "Rate Rehearsly", in About under "Report a Bug", opens the
 # App Store's review page in Safari, every time and with no conditions.
@@ -33,7 +35,9 @@ tags:
       text: "Calendar, tab.*"
     timeout: 30000
 
-# The first save: iOS's window, once the editor is down.
+# The first visit. The save leaves "Mark Busy" open for the next day (T-021),
+# and iOS's window does not break into it (T-414): it used to come a second
+# after the save; given six here, it would have been in time.
 - runFlow: ../subflows/availability-pick-mark-day.yaml
 - tapOn:
     id: mode-free
@@ -46,17 +50,47 @@ tags:
     timeout: 15000
 - extendedWaitUntil:
     visible: "Not Now"
+    timeout: 6000
+    optional: true
+- assertNotVisible: "Not Now"
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Free"
+- assertVisible:
+    id: availability-legend
+- takeScreenshot: 107-saved-screen-open-no-window
+
+# Closed by Cancel: now the window, over the calendar the screen came from.
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Not Now"
     timeout: 15000
 - takeScreenshot: 107-apple-rating-window
 - tapOn: "Not Now"
 - extendedWaitUntil:
     notVisible: "Not Now"
     timeout: 10000
+# While Apple's window is up iOS hides the app from the tree Maestro reads, so
+# what was under it is read once it has gone: the calendar, not "Mark Busy".
 - assertVisible:
-    id: day-${MARK_DAY}
-    text: ".*, Free"
+    id: tab-calendar
+- assertNotVisible:
+    id: availability-legend
 
-# The second, in the same version: no window.
+# The second visit, in the same version: a save and a close, no window.
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: day-${MARK_DAY}
+      text: ".*, Free"
+    timeout: 30000
 - runFlow:
     file: ../subflows/day-in-reach.yaml
     env:
@@ -77,25 +111,25 @@ tags:
       id: toast
       text: "Saved"
     timeout: 15000
-# The window came a second after the first save; given six here, it would
-# have been in time.
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 6000
-    optional: true
-- assertNotVisible: "Not Now"
 - assertVisible:
     id: day-${MARK_DAY}
     text: ".*, Busy"
-- takeScreenshot: 107-second-save-no-window
-
-# "Rate Rehearsly", under "Report a Bug": the App Store's review page.
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
     timeout: 10000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 6000
+    optional: true
+- assertNotVisible: "Not Now"
+- assertVisible:
+    id: tab-calendar
+- takeScreenshot: 107-second-visit-no-window
+
+# "Rate Rehearsly", under "Report a Bug": the App Store's review page.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
