@@ -33,11 +33,35 @@ regex has to match the whole. Fixed in the flow with `(?s).*…*`. The app was r
 1/1 Flow Passed in 2m 29s
 ```
 
-Screenshots of the green run (106-exported, 106-question, 106-deleted) are in
-`rehearsal-calendar-native/e2e/out/artifacts/2026-11-25_104640/…/takeScreenshot/`;
-copying them here was not allowed in this session.
+Screenshots of the green run are here: `106-exported.png`, `106-question.png`,
+`106-deleted.png` (taken from the round-1 run below, on the round-1 fix).
+
+## Review round 1, remark 1 — DELETE /me fails after the removal
+
+Cause: `removeExportedBeforeDeletion` saved `SYNC_OFF` and nothing put the settings
+back when `DELETE /me` then failed (no network, server error). The account lived on
+with Auto Sync silently off and its events gone. Now the helper remembers the four
+fields `SYNC_OFF` changes before saving it and hands back `restoreSync`; `deleteAccount`
+calls it when `deleteMe` rejects, before the error goes to the screen. The next run
+exports the events again. Only `deleteMe`'s own failure restores: once the server has
+deleted the account, the settings stay off.
+
+- Red before: the new test "puts Auto Sync back as it was when DELETE /me fails after
+  the removal", with AuthContext.tsx and calendarSync.ts at f92edd2:
+  `Tests: 1 failed, 7 passed, 8 total` (settings received off). See `round1-red-before-jest.txt`.
+- Green after: that file 8 of 8; the whole frontend project `Tests: 1752 passed, 1752 total`;
+  `tsc --noEmit` clean; ESLint on the changed files 0 errors.
+- e2e 106 on the fix:
+
+```
+[Passed] Deleting the account takes the exported rehearsals out of the calendar (1m 56s)
+1/1 Flow Passed in 1m 57s
+```
 
 ## Not run
+
+- Flow 89, round 1: run again alone, cut off again at 10 minutes (`Exit code 143`).
+  It needs the supervisor's run before acceptance.
 
 - Flow 89 (which also deletes an account) was cut off by the 10-minute limit on commands:
   `Exit code 143`. Left for the supervisor's night run. Kabanikha never turns sync on in 89,
