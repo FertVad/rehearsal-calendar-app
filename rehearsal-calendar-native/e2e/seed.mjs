@@ -339,6 +339,12 @@ export const PEOPLE = {
   // "Office scene" go, and deletes his account: the other two leave the
   // calendar with it, and he is told the one that stayed (106, T-409).
   zhadov: { email: 'zhadov@e2e.test', firstName: 'Vasily', lastName: 'Zhadov', onboarded: true },
+  // Sonya has used the app on three days before today (the launch says so)
+  // and saves MARK_DAY, busy all day, free: iOS's rating window comes. She
+  // saves it busy again, and in the same version it does not. Then the
+  // profile's "Rate Rehearsly" opens the App Store's review page (107, T-410).
+  // In no project, so nothing another flow books lands on her days.
+  sonya: { email: 'sonya@e2e.test', firstName: 'Sonya', lastName: 'Serebryakova', onboarded: true },
 };
 
 /**
@@ -1336,9 +1342,9 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.mackie, localInstant(0, 12), localInstant(0, 14)]);
-  // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
-  // save of that day writes it.
-  for (const key of ['yelena', 'mariya', 'astrov']) {
+  // Yelena's (64), Mariya's and Astrov's (67-69), Sonya's (107): MARK_DAY busy
+  // all day, as a save of that day writes it.
+  for (const key of ['yelena', 'mariya', 'astrov', 'sonya']) {
     await client.query(
       `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
        VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,

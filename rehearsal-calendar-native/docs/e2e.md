@@ -582,6 +582,14 @@ and the sync counts a step failed only when EventKit threw — failures of the
 server's mappings are swallowed — so without it no flow could show what the
 sync says then (flow 92, T-256).
 
+iOS's rating window (T-410) the same way: a Debug build shows it on every
+request, and the app asks after a save when its own rule says so
+(`reviewPrompt.ts`), so `e2e/device/expo-store-review.js` answers
+`isAvailableAsync` false and iOS is never asked in any flow — unless the
+launch gives `rehearslyStoreReview: "due"`: then the real module, and the
+three days before today written as days the app was used, so the app's rule
+is met and still decides (flow 107).
+
 A profile's zone where it is late evening now, from 22:45 to 23:44:
 `e2e/scripts/late-evening.js` with `API_URL`, `EMAIL` and `PASSWORD` saves it
 as the zone picker does and puts that zone's today in `${output.lateDay}`. The
