@@ -243,8 +243,16 @@ that form. A flow that needs the 24-hour clock launches with `arguments: {
 AppleICUForce24HourTime: "<true/>" }` — the key Settings writes, read among the
 user defaults as a property list: `"YES"` is a string and is ignored (flow 53).
 
-AutoFill Passwords is off (`noPasswordOffer` in `run.mjs`): iOS offers no
-"Save Password?" sheet after a sign-in, and no flow waits for one.
+Password AutoFill is not allowed (`noPasswordOffer` in `run.mjs`): iOS offers
+no "Save Password?" sheet after a sign-in, and no flow waits for one. The
+Settings toggle alone (com.apple.WebUI `AutoFillPasswords`) was not enough: the
+keyboard still asked for the sheet at every sign-in, SafariViewService started
+to host it and took it down unseen a second or two later, and Maestro's driver
+read the screen into that starting service (next section, T-407). What stops
+the asking is ManagedConfiguration's `allowPasswordAutoFill`, the setting a
+restriction turns off: the runner writes it false into the device's own user
+settings with the device shut down, iOS reads it at boot, and the runner
+refuses to go on if the effective value is not false.
 
 ## A lost driver
 
@@ -260,6 +268,17 @@ it hid, with the sheet off, at flow 54 on d74e9d2 (T-246,
 take it out - not with waits and not with repeats. The supervisor runs every
 flow that failed after the first lost driver once more, on its own; those are
 not unstable flows. Turning the sheet off left it one cause fewer, not none.
+
+It ended a second way too, which was not a race of the keyboard. The driver's
+read of the screen ("Fetch Safari WebView hierarchy") queries
+SafariViewService whenever that service runs, and the password sheet started
+it after every sign-in even with AutoFill Passwords off in Settings. Asked
+before the starting service was ready, XCTest answered `kAXErrorAPIDisabled`
+(8.6 s, three tries) and ended the test. On a freshly booted simulator the
+service's first start is slow, so the first sign-in of a run lost the driver
+four runs in five: 09-invite-during-onboarding, then every flow after it
+(T-407, `audit/evidence/T-407/`). With `allowPasswordAutoFill` off nothing
+starts the service at a sign-in, and this one is gone.
 
 ## Safari over a running app
 
@@ -677,10 +696,10 @@ whether it has gone, which waited seven seconds every time.
   report focus, so there is nothing else to wait on. It taps "Sign In"
   through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
   left flow 59 on a filled-in form (T-225). iOS's "Save Password?" sheet
-  after a sign-in is off on the e2e simulator: the runner turns AutoFill
-  Passwords off at boot (`noPasswordOffer` in `e2e/run.mjs`), so no flow waits
-  for it or taps "Not Now" (T-213 did, T-246 took it out). Flow 01 sees that it
-  stays away. A flow that acts before
+  after a sign-in is off on the e2e simulator: the runner turns password
+  AutoFill off at boot (`noPasswordOffer` in `e2e/run.mjs`; T-246, T-407), so
+  no flow waits for it or taps "Not Now" (T-213 did, T-246 took it out). Flow
+  01 sees that it stays away. A flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
 - Maestro's `launchApp` grants the app every permission unless it is given
   `permissions:`, so the sign-in subflow's launch leaves calendar access

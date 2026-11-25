@@ -360,22 +360,60 @@ function quietKeyboard(udid) {
 /**
  * iOS offers to keep the password after every sign-in: a "Save Password?"
  * sheet over the whole screen, which hid the app from Maestro until a flow
- * tapped "Not Now". With AutoFill Passwords off (Settings → Passwords) iOS
- * offers nothing: one sheet and one tap fewer at every sign-in, and no waits
- * for it in the flows. Kept across reboots.
+ * tapped "Not Now". AutoFill Passwords off (Settings → Passwords,
+ * com.apple.WebUI AutoFillPasswords) only keeps the sheet from being shown:
+ * the app's keyboard still asks for it at every sign-in, SafariViewService is
+ * launched to host it, reads the setting and takes it down a second or two
+ * later. While that service was starting, Maestro's driver (2.11.0) read the
+ * screen — its "Fetch Safari WebView hierarchy" queries SafariViewService
+ * whenever it runs — and XCTest answered kAXErrorAPIDisabled, which ended the
+ * driver's one test: every flow after it failed with
+ * DeviceUnreachableException. On a freshly booted simulator the service's
+ * first start is slow, and the first sign-in of a run ended the driver four
+ * runs in five (T-407, audit/evidence/T-407).
  *
- * It does not keep Maestro's driver alive. The driver (Maestro 2.11.0) is one
- * long XCTest test; its status-bar query can meet a scene of InputUI, the
- * keyboard's process, as SpringBoard takes it down — the sheet's, or the
- * keyboard's own seconds after it hid — and XCTest's kAXErrorInvalidUIElement
- * ends the test, the driver with it, and every flow after it fails with
- * DeviceUnreachableException. It ended under the sheet at flow 66 (3b38601) and
- * under the keyboard at flow 54 with the sheet off (d74e9d2) (T-246,
- * audit/evidence/T-246). That race is Maestro's and stays; the supervisor runs
- * the flows lost after it once more.
+ * The keyboard asks only while password AutoFill is allowed at all — the
+ * ManagedConfiguration setting allowPasswordAutoFill, the one a restriction
+ * turns off. So the runner turns it off among the device's own user settings
+ * (UserConfigurationProfiles/UserSettings.plist), with the device shut down;
+ * iOS works out the effective value from it at boot. Then nothing asks for the
+ * sheet and SafariViewService is not started by a sign-in. Kept across reboots.
+ *
+ * Maestro's other race stays: its status-bar query can meet a scene of
+ * InputUI, the keyboard's process, as SpringBoard takes it down, and
+ * kAXErrorInvalidUIElement ends the driver the same way (T-246, flow 54 on
+ * d74e9d2). The supervisor runs the flows lost after it once more.
  */
-function noPasswordOffer(udid) {
-  simctl('spawn', udid, 'defaults', 'write', 'com.apple.WebUI', 'AutoFillPasswords', '-bool', 'false');
+const mcSettings = (udid) => path.join(os.homedir(), 'Library/Developer/CoreSimulator/Devices', udid,
+  'data/Library/UserConfigurationProfiles');
+
+const plutil = (...args) => execFileSync('plutil', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+
+/** allowPasswordAutoFill as iOS worked it out at the last boot: 'true', 'false', or '' before the first. */
+function passwordAutoFill(udid) {
+  try {
+    return plutil('-extract', 'restrictedBool.allowPasswordAutoFill.value', 'raw',
+      path.join(mcSettings(udid), 'EffectiveUserSettings.plist'));
+  } catch {
+    return '';
+  }
+}
+
+/** The Settings toggle, and the user setting under it (written with the device shut down; read at the next boot). */
+function noPasswordOffer(udid, { booted }) {
+  if (booted) {
+    simctl('spawn', udid, 'defaults', 'write', 'com.apple.WebUI', 'AutoFillPasswords', '-bool', 'false');
+    return;
+  }
+  const file = path.join(mcSettings(udid), 'UserSettings.plist');
+  if (!fs.existsSync(file)) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict/></plist>\n');
+  }
+  const has =(key) => { try { plutil('-extract', key, 'xml1', '-o', '-', file); return true; } catch { return false; } };
+  if (!has('restrictedBool')) plutil('-insert', 'restrictedBool', '-dictionary', file);
+  if (!has('restrictedBool.allowPasswordAutoFill')) plutil('-insert', 'restrictedBool.allowPasswordAutoFill', '-dictionary', file);
+  plutil('-replace', 'restrictedBool.allowPasswordAutoFill.value', '-bool', 'NO', file);
 }
 
 /**
@@ -657,17 +695,24 @@ async function main() {
     step(`booting ${DEVICE.name} (${udid})`);
     simctl('bootstatus', udid, '-b');
     teardown.push(() => simctl('shutdown', udid));
-    if (pinLocale(udid)) {
-      step('switching it to English and rebooting');
+    noPasswordOffer(udid, { booted: true });
+    const english = pinLocale(udid);
+    const autoFill = passwordAutoFill(udid) !== 'false';
+    if (english || autoFill) {
+      step(`${[english && 'switching it to English', autoFill && 'turning password AutoFill off'].filter(Boolean).join(', ')} and rebooting`);
       simctl('shutdown', udid);
+      if (autoFill) noPasswordOffer(udid, { booted: false });
       simctl('bootstatus', udid, '-b');
     }
     quietKeyboard(udid);
-    noPasswordOffer(udid);
     pinZone(udid);
     if (storeLocale) storeStatusBar(udid);
     showSimulator(udid);
   });
+  // Not the machine's failure: with AutoFill allowed every sign-in starts the
+  // sheet's service under Maestro's driver again (noPasswordOffer).
+  assert.equal(passwordAutoFill(udid), 'false',
+    `password AutoFill is still allowed on ${DEVICE.name} after a reboot with allowPasswordAutoFill off: iOS no longer reads UserSettings.plist (noPasswordOffer in e2e/run.mjs)`);
 
   if (stayUp) {
     simctl('install', udid, apps.Debug);
