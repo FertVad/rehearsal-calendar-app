@@ -116,9 +116,21 @@ tags:
 - runFlow: ../subflows/fresh-safari.yaml
 - tapOn:
     id: profile-rate-app
+# Safari comes up with the page; apps.apple.com sends it on to the App Store
+# (itms-appss://), which a simulator does not have: "Safari cannot open the
+# page". On a phone the App Store opens on the review. Safari's address field
+# names the site only, so the address the app handed to iOS is read where
+# SpringBoard logged it. (Waiting for the row to go, with the app behind
+# Safari, Maestro takes for the app stopped.)
 - extendedWaitUntil:
     visible: ".*apps\\.apple\\.com.*"
     timeout: 20000
 - assertNotVisible:
     id: profile-rate-app
 - takeScreenshot: 107-app-store-review-page
+- runScript:
+    file: ../scripts/opened-url.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SIMULATOR: ${SIMULATOR}
+      URL: "https://apps.apple.com/app/id6830809401?action=write-review"

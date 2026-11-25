@@ -624,6 +624,24 @@ http.createServer((request, response) => {
     });
     return;
   }
+  // The links the app handed to iOS in the last two minutes, as SpringBoard
+  // logs each ("Handling OpenURL from Rehearsly:<pid>: <url>"), the latest
+  // last (flow 107, T-410). The App Store's page goes on to the App Store,
+  // which a simulator does not have, so what Safari shows cannot say which
+  // address the app opened; this can.
+  if (request.method === 'GET' && url.pathname === '/opened-urls') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    execFile('xcrun', ['simctl', 'spawn', device, 'log', 'show', '--last', '2m', '--style', 'compact',
+      '--predicate', 'process == "SpringBoard" AND eventMessage CONTAINS "Handling OpenURL from Rehearsly"'],
+    { timeout: 60000, maxBuffer: 8 * 1024 * 1024 }, (error, stdout) => {
+      if (error) return answer(500, { error: String(error) });
+      const urls = [...String(stdout).matchAll(/Handling OpenURL from Rehearsly:\d+: (\S+)/g)].map((m) => m[1]);
+      console.log(`[e2e] links the app opened: ${urls.join(', ') || 'none'}`);
+      return answer(200, { urls });
+    });
+    return;
+  }
   if (request.method === 'GET' && url.pathname === '/push') {
     const device = url.searchParams.get('device') || '';
     if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
