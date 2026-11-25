@@ -1,0 +1,58 @@
+T-406 — green. Commits deda857 (server, migration 017), d584775 (policy), 5ab19a2 (client, e2e).
+Node 26.13.0, PostgreSQL 15.13 (postgres:15 image), iOS simulator "Rehearsly E2E" (iOS 26.5).
+
+== Server Jest, whole backend (root config: TZ=America/New_York) ==
+$ NODE_OPTIONS=--experimental-vm-modules npx jest --selectProjects backend --silent
+FAIL backend server/__tests__/startup/runtimeStartup.test.js
+Tests:       8 failed, 1488 passed, 1496 total
+(runtimeStartup fails the same on the base: this sandbox forbids reading .env
+files — as in T-294's evidence.)
+The task's suites: weekendDefaults.test.js 16/16, weekendTable.test.js 9/9,
+privacyWeekends.test.js 12/12, schemaHistoryIdentity.test.js 6/6,
+membersAvailabilityRange.test.js and the other availability suites green.
+
+== Client Jest, whole frontend ==
+$ npx jest --selectProjects frontend --silent
+Tests:       1714 passed, 1714 total
+$ npx tsc --noEmit -p .            (clean)
+$ npm run lint                     ✖ 665 problems (0 errors, 665 warnings)
+$ npm run check:dead               (knip and knip --production: clean)
+
+== PostgreSQL ==
+$ npm run test:r0-postgres -- --t406-only
+{"scenario":"T406_UPGRADE","outcome":"PASS","contracts":[
+ "477ea2f's --fresh, then b8722df's --apply: root fresh v1 and 016, as production after T-294",
+ "this tree's --dry on it: managed, root v1, plans 017-weekend-defaults alone, writes nothing",
+ "--apply: 017 recorded after them; the next --dry plans nothing; the catalog equals this tree's --fresh (v3)",
+ "six reads and three planners at once: every weekend day of both written once, a year ahead",
+ "the planner: the member from Asia/Jerusalem busy all Friday, the one from Europe/Moscow all Sunday",
+ "weekends_through reads back as the date a year on, weekends_days as 5,6"],"externalConnections":0}
+T406_UPGRADE REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+
+$ npm run test:r0-postgres -- --r2-migrations-schema-only
+{"scenario":"R2_SCHEMA","outcome":"PASS","checks":40,"catalogTables":25,...}   (catalog-v3.json equals a real --fresh)
+{"scenario":"R2_MIGRATIONS","outcome":"PASS",...}
+R2_SCHEMA+R2_MIGRATIONS REGRESSION PASS
+
+$ npm run test:r0-postgres -- --t294-upgrade-only
+{"scenario":"T294_UPGRADE","outcome":"PASS","base":"477ea2f","contracts":["477ea2f's CLI --fresh: root fresh rehearsly-pg-current-v1 with production's hashes, 23 tables","this tree's --dry on that database: managed, root v1, plans 016-usage-statistics then 017-weekend-defaults","--apply: 016 and 017 recorded after the untouched root; the next --dry plans nothing; the catalog equals this tree's --fresh (v3, 25 tables)","the server on the upgraded database records the day and the build"]}
+
+$ npm run test:r0-postgres -- --r4-push-token-only   R4_PUSH_TOKEN REGRESSION PASS
+$ npm run test:r0-postgres -- --r6-only              R6_AVAILABILITY REGRESSION PASS
+$ npm run test:r0-postgres -- --r7-only              R7_IMPORT REGRESSION PASS
+$ npm run test:r0-postgres -- --t293-only            T293_ADMIN REGRESSION PASS
+$ npm run test:r0-postgres -- --t294-only            T294_USAGE+T294_UPGRADE REGRESSION PASS
+
+== e2e (one flow or two per run) ==
+[Passed] Weekends busy by default, and the profile's switch (2m 11s)      104-weekends-busy-by-default.yaml
+[Passed] Onboarding to the end, nothing granted (2m 33s)                  09-onboarding.yaml
+[Passed] Onboarding shows the calendar that was saved (57s)               32-onboarding-calendar-as-saved.yaml
+[Passed] The profile's timezone, not the device's (3m 24s)                23-profile-timezone.yaml
+[Passed] Onboarding in Russian, the greeting on one line (4m 29s)         60-onboarding-russian.yaml
+[Passed] Availability saves the day it changed (4m 21s)                   10-availability-days.yaml
+[Passed] Invite link during onboarding (1m 18s)                           09-invite-during-onboarding.yaml
+[Passed] First launch in the phone's language (1m 25s)                    100-first-launch-phone-language.yaml
+Taps taken again (tap-and-see.yaml): 0 in each. Some first tries of 60, 23,
+09-invite and 100 ended in maestro.DeviceUnreachableException (XCUITest:
+kAXErrorAPIDisabled, before the flow reached the app's steps); each passed on
+the next run.
