@@ -31,6 +31,7 @@ import {
 import { explainPushRegistration } from '../../../shared/utils/pushAlert';
 import { availabilityAPI, privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
 import { APP_STORE_REVIEW_URL } from '../../../shared/services/reviewPrompt';
+import { logger } from '../../../shared/utils/logger';
 import { weekendDaysOf, weekendDayNames } from '../../../shared/utils/weekends';
 import { useTimezone } from '../../../shared/hooks/useClock';
 
@@ -528,13 +529,16 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
           {/* The App Store's review page, whenever asked (T-410): not iOS's
               rating window, which comes after a save only now and then
-              (reviewPrompt.ts) and is never ours to show. */}
+              (reviewPrompt.ts) and is never ours to show. Should iOS refuse
+              to open it, the refusal is logged, not left unhandled (T-414). */}
           <TouchableOpacity
             testID="profile-rate-app"
             style={styles.settingItem}
             onPress={() => {
               hapticLight();
-              Linking.openURL(APP_STORE_REVIEW_URL);
+              Linking.openURL(APP_STORE_REVIEW_URL).catch((error) => {
+                logger.warn('[review] could not open the App Store review page', error);
+              });
             }}
           >
             <View style={styles.settingLeft}>

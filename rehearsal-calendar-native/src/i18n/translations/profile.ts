@@ -126,7 +126,6 @@ export const ru = {
     reportBugSend: 'Отправить',
     reportBugSent: 'Спасибо! Отчёт отправлен',
     reportBugFailed: 'Не удалось отправить отчёт',
-    // T-410: new, for the native speakers' reading.
     rateApp: 'Оценить Rehearsly',
     logout: 'Выйти из аккаунта',
     deleteAccount: 'Удалить аккаунт',
@@ -233,7 +232,6 @@ export const en = {
     reportBugSend: 'Send',
     reportBugSent: 'Thanks! Report sent',
     reportBugFailed: 'Could not send the report',
-    // T-410: new, for the native speakers' reading.
     rateApp: 'Rate Rehearsly',
     // "Sign Out", as the app says "Sign In".
     logout: 'Sign Out',
@@ -327,8 +325,7 @@ export const es = {
     reportBugSend: 'Enviar',
     reportBugSent: '¡Gracias! Informe enviado',
     reportBugFailed: 'No se pudo enviar el informe',
-    // T-410: new, for the native speakers' reading.
-    rateApp: 'Valorar Rehearsly',
+    rateApp: 'Calificar Rehearsly',
     logout: 'Cerrar sesión',
     deleteAccount: 'Eliminar cuenta',
     deleteAccountConfirm: '¿Eliminar cuenta?',
@@ -419,7 +416,6 @@ export const de = {
     reportBugSend: 'Senden',
     reportBugSent: 'Danke! Bericht gesendet',
     reportBugFailed: 'Der Bericht konnte nicht gesendet werden',
-    // T-410: new, for the native speakers' reading.
     rateApp: 'Rehearsly bewerten',
     logout: 'Abmelden',
     deleteAccount: 'Konto löschen',

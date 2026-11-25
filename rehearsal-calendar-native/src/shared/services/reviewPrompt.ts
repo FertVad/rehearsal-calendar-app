@@ -9,8 +9,9 @@
  *
  * When, by the Human Interface Guidelines ("Ratings and reviews"): after
  * something done, in a pause — a rehearsal or one's own busy days saved, the
- * form or the editor already gone — never on the first launch, never in the
- * onboarding, and not again soon. All of it at once (`reviewDue`):
+ * form or the "Mark Busy" screen already closed — never on the first launch,
+ * never in the onboarding, and not again soon. All of it at once
+ * (`reviewDue`):
  *
  * - the app used on this device on at least three different days;
  * - past the onboarding, and not the first launch;
@@ -45,7 +46,7 @@ const ASKED_KEY = 'review-asked';
 
 const MIN_DAYS = 3;
 const MIN_GAP_MS = 14 * 24 * 60 * 60 * 1000;
-/** The form's or the editor's way off the screen, before Apple's window comes up. */
+/** The form's or the "Mark Busy" screen's way off, before Apple's window comes up. */
 const AFTER_CLOSE_MS = 1000;
 
 interface LastAsk {
@@ -146,7 +147,8 @@ function askIfDue(onboardingCompleted: boolean): Promise<void> {
 
 /**
  * After a save, once the screen it was made on has gone: the rehearsal form
- * closed, the busy-days editor down (useAddRehearsalSubmit, AvailabilityScreen).
+ * closed after its "OK" (useAddRehearsalSubmit), "Mark Busy" closed by the
+ * person after at least one save in that visit (AvailabilityScreen, T-414).
  * Whether to ask is decided then, not now.
  */
 export function askForReviewAfterSave(onboardingCompleted: boolean): void {

@@ -48,6 +48,11 @@ jest.mock('react-native', () => {
   });
 });
 jest.mock('../../../../shared/components/AppModal', () => ({ AppModal: () => null }));
+const mockWarn = jest.fn();
+jest.mock('../../../../shared/utils/logger', () => ({
+  ...jest.requireActual('../../../../shared/utils/logger'),
+  logger: { ...jest.requireActual('../../../../shared/utils/logger').logger, warn: (...args: unknown[]) => mockWarn(...args) },
+}));
 
 async function profile() {
   const view = render(<ProfileScreen navigation={{ navigate: jest.fn() } as any} route={{ key: 'p', name: 'ProfileMain' } as any} />);
@@ -55,7 +60,10 @@ async function profile() {
   return view;
 }
 
-beforeEach(() => mockOpenURL.mockClear());
+beforeEach(() => {
+  mockOpenURL.mockClear();
+  mockWarn.mockClear();
+});
 
 it('opens the support page in the app’s language from Help', async () => {
   mockLanguage.current = 'ru';
@@ -93,4 +101,39 @@ it('shows the version the app was built as, not one written into the screen', as
   const view = await profile();
   expect(view.getByText('2.4.1')).toBeTruthy();
   expect(view.queryByText('1.0.0')).toBeNull();
+});
+
+// T-414: "Rate Rehearsly" (T-410) opened the review page with no catch, so an
+// iOS refusal was a rejection nobody handled. Now it is caught and logged, as
+// the update screen does.
+describe('Rate Rehearsly', () => {
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+  beforeEach(() => {
+    unhandled.length = 0;
+    process.on('unhandledRejection', onUnhandled);
+  });
+  afterEach(() => { process.off('unhandledRejection', onUnhandled); });
+
+  it('opens the App Store’s review page', async () => {
+    mockLanguage.current = 'en';
+    const view = await profile();
+    fireEvent.press(view.getByTestId('profile-rate-app'));
+    expect(mockOpenURL).toHaveBeenCalledWith('https://apps.apple.com/app/id6830809401?action=write-review');
+  });
+
+  it('when iOS refuses to open it, the refusal is logged, not left unhandled', async () => {
+    mockLanguage.current = 'en';
+    const refused = new Error('Unable to open URL');
+    mockOpenURL.mockImplementationOnce(() => Promise.reject(refused));
+    const view = await profile();
+
+    fireEvent.press(view.getByTestId('profile-rate-app'));
+    // Node reports an unhandled rejection after the microtasks, on a macrotask.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+
+    expect(mockOpenURL).toHaveBeenCalledTimes(1);
+    expect(unhandled).toEqual([]);
+    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('review'), refused);
+  });
 });

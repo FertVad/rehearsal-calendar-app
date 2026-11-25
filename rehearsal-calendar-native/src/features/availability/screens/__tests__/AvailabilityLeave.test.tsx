@@ -186,8 +186,6 @@ it('Save saves the days, without an alert over the closing sheet, and then close
   // The sheet closing says it went through; no notice is left behind it (T-021).
   expect(screen.queryByTestId('toast')).toBeNull();
   expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
-  // Saved and closing: the moment for iOS's rating window, if due (T-410).
-  expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
 });
 
 it('a day edited while that save was out is not closed away: the question comes again (review)', async () => {
@@ -218,7 +216,102 @@ it('a save that fails leaves the sheet open', async () => {
 
   expect(mockSave).toHaveBeenCalled();
   expect(navigation.dispatch).not.toHaveBeenCalled();
-  expect(mockReviewAfterSave).not.toHaveBeenCalled();
+});
+
+// iOS's rating window comes once the person has closed "Mark Busy", not over
+// it while they go on marking days (T-414; HIG "Ratings and reviews": a
+// natural stopping point). The route's removal unmounts the screen, however
+// it was closed — Cancel, the swipe, the close question's Save — so the
+// closing is played here by unmount.
+describe('iOS\'s rating window (T-414)', () => {
+  const saveFromBar = async (screen: ReturnType<typeof render>) => {
+    await act(async () => { fireEvent.press(screen.getByTestId('availability-save')); });
+  };
+
+  it('a save with the screen still open asks nothing', async () => {
+    mockHasChanges = true;
+    mockSave.mockResolvedValue(true);
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    await saveFromBar(screen);
+
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockReviewAfterSave).not.toHaveBeenCalled();
+  });
+
+  it('closed after a save: asked once', async () => {
+    mockHasChanges = true;
+    mockSave.mockResolvedValue(true);
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    await saveFromBar(screen);
+    screen.unmount();
+
+    expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('closed with no save: not asked', () => {
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    screen.unmount();
+
+    expect(mockReviewAfterSave).not.toHaveBeenCalled();
+  });
+
+  it('closed after a save that failed: not asked', async () => {
+    mockHasChanges = true;
+    mockSave.mockResolvedValue(false);
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    await saveFromBar(screen);
+    screen.unmount();
+
+    expect(mockReviewAfterSave).not.toHaveBeenCalled();
+  });
+
+  it('two saves, then closed: asked once', async () => {
+    mockHasChanges = true;
+    mockSave.mockResolvedValue(true);
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    await saveFromBar(screen);
+    await saveFromBar(screen);
+    expect(mockSave).toHaveBeenCalledTimes(2);
+    expect(mockReviewAfterSave).not.toHaveBeenCalled();
+
+    screen.unmount();
+    expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('a save, then the close question\'s Save on the way out: asked once, not twice', async () => {
+    mockHasChanges = true;
+    mockSave.mockResolvedValue(true);
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    await saveFromBar(screen);
+    // A day changed again; the way out asks, and Save there goes through.
+    mockSave.mockImplementation(async () => { mockHasChanges = false; return true; });
+    __remove();
+    await choose(t.common.save);
+    expect(mockSave).toHaveBeenCalledTimes(2);
+    expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+
+    screen.unmount();
+    expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('saved by the close question alone: asked once the screen is gone', async () => {
+    mockHasChanges = true;
+    mockSave.mockImplementation(async () => { mockHasChanges = false; return true; });
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    __remove();
+    await choose(t.common.save);
+    expect(mockReviewAfterSave).not.toHaveBeenCalled();
+
+    screen.unmount();
+    expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
+  });
 });
 
 it('changes that cannot be saved as they are offer no Save', () => {
