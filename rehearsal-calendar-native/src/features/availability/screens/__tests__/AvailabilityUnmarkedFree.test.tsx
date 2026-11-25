@@ -19,6 +19,7 @@ jest.mock('../../../../contexts/I18nContext', () => ({
 }));
 jest.mock('../../../../hooks/useWeekStart', () => ({ useWeekStart: () => 'monday' }));
 jest.mock('../../../../shared/hooks/useClock', () => ({ useToday: () => '2026-11-24' }));
+jest.mock('../../../../shared/hooks/useReviewAfterSave', () => ({ useReviewAfterSave: () => () => undefined }));
 jest.mock('../../../../shared/hooks/useAutoCalendarSync', () => ({
   useAutoCalendarSync: () => ({ performAutoSync: jest.fn(), forceSync: jest.fn() }),
 }));

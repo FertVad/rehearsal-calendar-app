@@ -49,6 +49,7 @@ module.exports = {
         '^expo-constants$': '<rootDir>/src/__tests__/__mocks__/expo-constants.js',
         '^expo-font$': '<rootDir>/src/__tests__/__mocks__/expo-font.js',
         '^expo-haptics$': '<rootDir>/src/__tests__/__mocks__/expo-haptics.js',
+        '^expo-store-review$': '<rootDir>/src/__tests__/__mocks__/expo-store-review.js',
         '^expo-notifications$': '<rootDir>/src/__tests__/__mocks__/expo-notifications.js',
         '^expo-device$': '<rootDir>/src/__tests__/__mocks__/expo-device.js',
         '^expo-localization$': '<rootDir>/src/__tests__/__mocks__/expo-localization.js',

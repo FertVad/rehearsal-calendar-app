@@ -19,6 +19,7 @@ import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 import { useTimezone } from '../../../shared/hooks/useClock';
+import { useReviewAfterSave } from '../../../shared/hooks/useReviewAfterSave';
 import type { RehearsalFields } from './useAddRehearsalForm';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
@@ -85,6 +86,8 @@ export function useAddRehearsalSubmit({
   const [loading, setLoading] = useState(false);
   const idempotency = useIdempotencyKey();
   const userTimezone = useTimezone();
+  // iOS's rating window, once the form has closed after a save (T-410).
+  const reviewAfterSave = useReviewAfterSave();
 
   /**
    * True once saved. `leaving`: saved from the question on the way out, which
@@ -169,7 +172,10 @@ export function useAddRehearsalSubmit({
       // Saved, as it was sent: the way out after it is not asked about
       // (useLeaveGuard).
       markSaved(sent);
-      if (leaving) return true;
+      if (leaving) {
+        reviewAfterSave();
+        return true;
+      }
 
       // Success message based on mode
       const successMessage = isEditMode
@@ -185,6 +191,7 @@ export function useAddRehearsalSubmit({
             onPress: () => {
               resetForm();
               navigation.goBack();
+              reviewAfterSave();
             },
           },
         ]

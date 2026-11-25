@@ -38,6 +38,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 import { useLeaveGuard } from '../../../shared/hooks/useLeaveGuard';
+import { useReviewAfterSave } from '../../../shared/hooks/useReviewAfterSave';
 import { PickerModal } from '../../../shared/components/PickerModal';
 import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 import { Toast, useToast } from '../../../shared/components/Toast';
@@ -73,6 +74,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // Save hook for validation and API submission
   const { saveAvailability, canSave, error: saveError, clearError } = useAvailabilitySave();
   const toast = useToast();
+  const reviewAfterSave = useReviewAfterSave();
 
   // Why the load failed, in the app's language — no connection is not the
   // server down — then that what is shown is the last that loaded (T-228).
@@ -161,6 +163,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     discard: discardChanges,
     save: async (leaving) => {
       const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
+      // Saved, the editor goes down — or the screen closes, on the way out —
+      // and then iOS's rating window may come (T-410).
+      if (saved) reviewAfterSave();
       if (leaving || !saved) return saved;
       // Said without stopping anyone: a notice and a tap of the haptics, the
       // calendar where it was. An alert had to be dismissed first (T-021).

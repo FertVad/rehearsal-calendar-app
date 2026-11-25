@@ -25,6 +25,9 @@ jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../../i18n/translations').translations.en, language: 'en' }),
 }));
 jest.mock('../../../../shared/hooks/useClock', () => ({ useToday: () => '2026-11-02' }));
+// iOS's rating window after a save (T-410): asked for once a save went through.
+const mockReviewAfterSave = jest.fn();
+jest.mock('../../../../shared/hooks/useReviewAfterSave', () => ({ useReviewAfterSave: () => mockReviewAfterSave }));
 jest.mock('../../../../shared/hooks/useAutoCalendarSync', () => ({
   useAutoCalendarSync: () => ({ performAutoSync: jest.fn(), forceSync: jest.fn() }),
 }));
@@ -183,6 +186,8 @@ it('Save saves the days, without an alert over the closing sheet, and then close
   // The sheet closing says it went through; no notice is left behind it (T-021).
   expect(screen.queryByTestId('toast')).toBeNull();
   expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+  // Saved and closing: the moment for iOS's rating window, if due (T-410).
+  expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
 });
 
 it('a day edited while that save was out is not closed away: the question comes again (review)', async () => {
@@ -213,6 +218,7 @@ it('a save that fails leaves the sheet open', async () => {
 
   expect(mockSave).toHaveBeenCalled();
   expect(navigation.dispatch).not.toHaveBeenCalled();
+  expect(mockReviewAfterSave).not.toHaveBeenCalled();
 });
 
 it('changes that cannot be saved as they are offer no Save', () => {
