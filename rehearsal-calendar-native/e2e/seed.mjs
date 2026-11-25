@@ -334,6 +334,11 @@ export const PEOPLE = {
   voinitskaya: { email: 'voinitskaya@e2e.test', firstName: 'Maria', lastName: 'Voinitskaya', onboarded: true, locale: 'ru', weekendsBusy: true },
   poncia: { email: 'poncia@e2e.test', firstName: 'Poncia', lastName: 'Criada', onboarded: true, locale: 'es', weekendsBusy: true },
   franziska: { email: 'franziska@e2e.test', firstName: 'Franziska', lastName: 'Willig', onboarded: true, locale: 'de', weekendsBusy: true },
+  // Zhadov runs «A Profitable Position» alone, three rehearsals of his in the
+  // coming days. He exports them to the phone's calendar, which will not let
+  // "Office scene" go, and deletes his account: the other two leave the
+  // calendar with it, and he is told the one that stayed (106, T-409).
+  zhadov: { email: 'zhadov@e2e.test', firstName: 'Vasily', lastName: 'Zhadov', onboarded: true },
 };
 
 /**
@@ -811,6 +816,27 @@ export async function seed({ client, apiUrl, timezone }) {
         `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
          VALUES ($1, $2, 'no', NOW(), NOW())`,
         [made.id, ids.tortsov]);
+    }
+  }
+  // Zhadov's (106, T-409), as Tortsov's: he alone in it, on each of his three
+  // rehearsals. Deleting his account deletes it. Inserted: the sign-ins are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('A Profitable Position', 'Ostrovsky', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids.zhadov]);
+    for (const [title, day] of [['Office scene', 1], ['Tavern', 2], ['Finale', 3]]) {
+      const { rows: [made] } = await client.query(
+        `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3::timestamptz, $4::timestamptz, 'Main hall', $5, NOW(), NOW()) RETURNING id`,
+        [own.id, title, localInstant(day, 18), localInstant(day, 20), ids.zhadov]);
+      await client.query(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())`,
+        [made.id, ids.zhadov]);
     }
   }
 
