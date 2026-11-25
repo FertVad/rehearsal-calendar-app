@@ -259,6 +259,23 @@ made on one phone. Keeping these keys through the clear would carry one
 person's traces past the deletion of their account, which is worse than the
 repeat. Special case, minor: a line here.
 
+### The rating window can follow Availability closed by something other than the person (T-414, T-415)
+
+On Availability the rating request is tied to the screen's unmount after a
+save went through (`visit`, features/availability/screens/AvailabilityScreen.tsx).
+But the screen is also unmounted when the stack is reset from outside while it
+is open and the person never closed it: a tapped notification takes the stack
+back to the tabs, or the session ends and sign-in is shown. Apple's window then
+comes a second later over whatever is on the screen by then, and at the end of
+a session it is asked with the `onboardingCompleted` the user had before. It
+needs three things at once: a save in this visit, the rule for asking holding
+(`reviewDue`, shared/services/reviewPrompt.ts), and an outside reset of the
+stack while the screen is open. It costs one of Apple's windows out of place,
+which "Not Now" closes and which iOS shows no more than three times a year
+anyway. A fix would ask only when the person left on their own — `beforeRemove`
+with a back or modal-dismiss action, the close question's Save included —
+which the unmount cannot tell apart. Special case, minor: a line here.
+
 ### Android App Links wait for an Android release (IC01)
 
 `assetlinks.json` carries a placeholder where the app's signing fingerprint
