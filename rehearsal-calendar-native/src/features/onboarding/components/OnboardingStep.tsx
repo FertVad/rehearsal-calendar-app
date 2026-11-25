@@ -8,6 +8,11 @@ import { useI18n } from '../../../contexts/I18nContext';
 
 interface OnboardingStepProps {
   title: string;
+  /**
+   * How many lines the title may wrap to before it is made smaller. One for a
+   * name or a greeting (T-022); a question wraps (T-408).
+   */
+  titleLines?: number;
   description?: string;
   children: ReactNode;
   currentStep: number; // 0-based: 0, 1, 2
@@ -28,6 +33,7 @@ interface OnboardingStepProps {
 
 export default function OnboardingStep({
   title,
+  titleLines = 1,
   description,
   children,
   currentStep,
@@ -71,11 +77,14 @@ export default function OnboardingStep({
         showsVerticalScrollIndicator={false}
       >
         {/* One line, made smaller to fit: "Добро пожаловать, Нина!" is about
-            402 pt at 32, and the iPhone 16 leaves 345 (T-022 review). */}
+            402 pt at 32, and the iPhone 16 leaves 345 (T-022 review). A
+            question has its lines: squeezed into one, the weekends' was about
+            14.5 pt in Russian, smaller than the text under it, and cut with
+            "…" at 375 pt (T-408). */}
         <Text
           testID="onboarding-title"
           style={styles.title}
-          numberOfLines={1}
+          numberOfLines={titleLines}
           adjustsFontSizeToFit
           minimumFontScale={0.5}
         >

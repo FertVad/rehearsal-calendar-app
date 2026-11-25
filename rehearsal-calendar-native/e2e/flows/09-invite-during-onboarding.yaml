@@ -32,6 +32,9 @@ tags:
 - extendedWaitUntil:
     visible: "Settings Are in Your Profile"
     timeout: 10000
+# The weekends among what is set later: whoever skips keeps them busy (T-408).
+- assertVisible: "You can choose the first day of the week, decide whether your weekends are marked as busy, and set up calendar sync at any time in Profile → Settings\\."
+- takeScreenshot: 09-invite-skip-en
 - assertNotVisible: "Yes"
 - tapOn: "OK"
 - extendedWaitUntil:

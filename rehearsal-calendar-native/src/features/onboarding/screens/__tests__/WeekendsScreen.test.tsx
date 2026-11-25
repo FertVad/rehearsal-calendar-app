@@ -19,9 +19,10 @@ jest.mock('../../hooks/useOnboarding', () => ({ useOnboarding: () => ({ skipOnbo
 jest.mock('../../components', () => {
   const { Text } = require('react-native');
   return {
-    OnboardingStep: ({ title, description, children, onNext, nextButtonTitle, secondaryAction }: any) => (
+    OnboardingStep: ({ title, titleLines, description, children, onNext, nextButtonTitle, secondaryAction }: any) => (
       <>
         <Text testID="title">{title}</Text>
+        <Text testID="title-lines">{titleLines}</Text>
         <Text>{description}</Text>
         {children}
         <Text onPress={secondaryAction.onPress}>{secondaryAction.title}</Text>
@@ -43,19 +44,42 @@ beforeEach(() => {
   mockZone.current = 'Asia/Jerusalem';
 });
 
+// The days and the path never break inside a line (T-408).
+const NBSP = '\u00a0';
+
 it('asks a Russian speaker in Israel about Friday and Saturday, and says where to change it later', () => {
   const view = openStep();
-  expect(view.getByTestId('title').props.children).toBe('Отметить все выходные (пт и сб) как занятые?');
+  expect(view.getByTestId('title').props.children).toBe(`Отметить все выходные (пт${NBSP}и${NBSP}сб) как занятые?`);
   expect(view.getByTestId('onboarding-weekends-note').props.children)
-    .toBe('Это можно включить и выключить позже: Профиль → Выходные заняты');
+    .toBe(`Это можно включить или выключить позже: Профиль${NBSP}→${NBSP}Выходные${NBSP}заняты`);
 });
 
 it('asks about Saturday and Sunday in Moscow, and in a zone of no country', () => {
   mockZone.current = 'Europe/Moscow';
-  expect(openStep().getByTestId('title').props.children).toBe('Отметить все выходные (сб и вс) как занятые?');
+  expect(openStep().getByTestId('title').props.children).toBe(`Отметить все выходные (сб${NBSP}и${NBSP}вс) как занятые?`);
   mockZone.current = 'UTC';
   mockLanguage.current = 'en';
-  expect(openStep().getByTestId('title').props.children).toBe('Mark all weekends (Sat and Sun) as busy?');
+  expect(openStep().getByTestId('title').props.children).toBe(`Mark all weekends (Sat${NBSP}and${NBSP}Sun) as busy?`);
+});
+
+// T-408: on the phone the question was squeezed into one line — about 14.5 pt
+// in Russian, smaller than the text under it, cut with "…" at 375 pt. It
+// wraps to three lines and is made smaller only past them.
+it('lets the question wrap to three lines', () => {
+  expect(openStep().getByTestId('title-lines').props.children).toBe(3);
+});
+
+// T-408: iOS names a day alone with a capital ("Пт", Foundation's standalone
+// form), Node in lower case: the question said "(Пт и Сб)" on the phone.
+it('writes the days inside the question in lower case whatever case iOS gives them', () => {
+  const spy = jest.spyOn(Date.prototype, 'toLocaleDateString').mockImplementation(function mock(this: Date) {
+    return ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][(this.getDay() + 6) % 7];
+  });
+  try {
+    expect(openStep().getByTestId('title').props.children).toBe(`Отметить все выходные (пт${NBSP}и${NBSP}сб) как занятые?`);
+  } finally {
+    spy.mockRestore();
+  }
 });
 
 it('"Yes" keeps the switch on, "No" turns it off, each saved before the next step', async () => {
@@ -83,10 +107,10 @@ it('stays on the step when the answer could not be saved', async () => {
 it('names the days in each language from the date formats (T-028)', () => {
   const names = (zone: string, language: 'ru' | 'en' | 'es' | 'de') =>
     weekendDayNames(weekendDaysOf(zone), language, translations[language].profile.weekendDaysJoin);
-  expect(names('Asia/Jerusalem', 'ru')).toBe('пт и сб');
-  expect(names('Asia/Jerusalem', 'en')).toBe('Fri and Sat');
-  expect(names('Europe/Berlin', 'de')).toBe('Sa und So');
-  expect(names('Europe/Madrid', 'es')).toBe('sáb y dom');
+  expect(names('Asia/Jerusalem', 'ru')).toBe(`пт${NBSP}и${NBSP}сб`);
+  expect(names('Asia/Jerusalem', 'en')).toBe(`Fri${NBSP}and${NBSP}Sat`);
+  expect(names('Europe/Berlin', 'de')).toBe(`Sa${NBSP}und${NBSP}So`);
+  expect(names('Europe/Madrid', 'es')).toBe(`sáb${NBSP}y${NBSP}dom`);
   expect(names('Asia/Kolkata', 'en')).toBe('Sun');
-  expect(names('Asia/Kabul', 'ru')).toBe('чт и пт');
+  expect(names('Asia/Kabul', 'ru')).toBe(`чт${NBSP}и${NBSP}пт`);
 });

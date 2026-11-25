@@ -25,7 +25,8 @@ describe('T-261: the strings the second reading changed', () => {
     expect(es.auth.requestFailed).toBe('Algo salió mal. Inténtalo de nuevo.');
     expect(de.auth.noConnection).toBe('Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.');
     expect(de.auth.requestFailed).toBe('Etwas ist schiefgelaufen. Versuche es erneut.');
-    expect(de.onboarding.skipMessage).toBe('Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen ändern.');
+    // Reworded with the weekends in it (T-408), still with its full stop.
+    expect(de.onboarding.skipMessage).toBe('Du kannst jederzeit den Wochenbeginn ändern, die Kalendersynchronisation einrichten und festlegen, ob deine Wochenenden als belegt gelten – alles unter Profil → Einstellungen.');
   });
 
   it('the question before deleting a rehearsal: its date in brackets', () => {

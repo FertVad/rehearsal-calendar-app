@@ -31,9 +31,10 @@ export function weekendDaysOf(timezone: string | undefined): number[] {
 const dateOfWeekday = (day: number) => `2026-01-${String(4 + day).padStart(2, '0')}`;
 
 /**
- * The days' short names in the app's language, as Intl writes them inside a
- * sentence ("пт", "Fri", "vie", "Fr."; dateFormat.ts, T-028), joined by
- * `join` — the language's "и", "and".
+ * The days' short names in the app's language, as they are written inside a
+ * sentence ("пт", "Fri", "vie", "Fr."; dateFormat.ts, T-028, T-408), joined
+ * by `join` — the language's "и", "and", with no-break spaces: the days stay
+ * on one line.
  */
 export function weekendDayNames(days: number[], language: string, join: (...names: string[]) => string): string {
   return join(...days.map((day) => formatDate(dateOfWeekday(day), 'weekdayShort', language, { midSentence: true })));

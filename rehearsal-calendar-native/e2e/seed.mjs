@@ -328,6 +328,12 @@ export const PEOPLE = {
   // green once he turns the profile's switch off, red again once on. In no
   // project, so nothing another flow books lands on his days.
   telyegin: { email: 'waffles@e2e.test', firstName: 'Waffles', lastName: 'Telyegin', onboarded: true, weekendsBusy: true },
+  // The same in Russian, Spanish and German (105, T-408): the editor's hint on
+  // a weekend day and the profile's switch, each in the native speaker's
+  // words. In no project, as he is; nothing is changed.
+  voinitskaya: { email: 'voinitskaya@e2e.test', firstName: 'Maria', lastName: 'Voinitskaya', onboarded: true, locale: 'ru', weekendsBusy: true },
+  poncia: { email: 'poncia@e2e.test', firstName: 'Poncia', lastName: 'Criada', onboarded: true, locale: 'es', weekendsBusy: true },
+  franziska: { email: 'franziska@e2e.test', firstName: 'Franziska', lastName: 'Willig', onboarded: true, locale: 'de', weekendsBusy: true },
 };
 
 /**
@@ -1194,8 +1200,10 @@ export async function seed({ client, apiUrl, timezone }) {
   // The weekend of the profiles' zone (T-406; every profile's is the
   // machine's), by the table the server and the app read it from: its first
   // day after today, and the first day after today that is not one — both in
-  // the week the editor opens on (104). And its days as the app names them:
-  // "Fri and Sat", "пт и сб" (09, 60).
+  // the week the editor opens on (104). And its days as the app names them
+  // inside a sentence: "Fri and Sat", "пт и сб", "vie y sáb", "Fr und Sa" —
+  // no-break spaces between them, Russian and Spanish in lower case whatever
+  // case Intl gives (09, 60, 105; T-408).
   const zoneCountry = weekendTable.zones[timezone];
   const weekend = (zoneCountry && weekendTable.weekends[zoneCountry]) || weekendTable.world;
   const isoWeekday = (date) => ((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7) + 1;
@@ -1204,12 +1212,16 @@ export async function seed({ client, apiUrl, timezone }) {
   };
   days.weekend = firstAfterToday((isWeekend) => isWeekend);
   days.weekday = firstAfterToday((isWeekend) => !isWeekend);
-  const dayNames = (locale, and) => {
-    const names = weekend.map((day) => new Date(Date.UTC(2026, 0, 4 + day)).toLocaleDateString(locale, { weekday: 'short', timeZone: 'UTC' }));
-    return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} ${and} ${names[names.length - 1]}`;
+  const NBSP = '\u00a0';
+  const dayNames = (locale, and, lower = false) => {
+    const names = weekend.map((day) => new Date(Date.UTC(2026, 0, 4 + day)).toLocaleDateString(locale, { weekday: 'short', timeZone: 'UTC' }))
+      .map((name) => (lower ? name.toLocaleLowerCase(locale) : name));
+    return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}${and}${NBSP}${names[names.length - 1]}`;
   };
   labels.weekend_days_en = dayNames('en-US', 'and');
-  labels.weekend_days_ru = dayNames('ru-RU', 'и');
+  labels.weekend_days_ru = dayNames('ru-RU', 'и', true);
+  labels.weekend_days_es = dayNames('es-ES', 'y', true);
+  labels.weekend_days_de = dayNames('de-DE', 'und');
 
   // Zarechnaya's own slot past midnight (25), the row PUT /availability/days
   // writes for it — written here, since the sign-ins are spent.

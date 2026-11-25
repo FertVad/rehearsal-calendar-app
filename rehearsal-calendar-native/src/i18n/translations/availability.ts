@@ -92,7 +92,7 @@ export const ru = {
     nextDay: 'след. дня',
     importedNote: 'Эти часы видят остальные, когда подбирают время. Чтобы освободить их, удалите событие в календаре телефона.',
     // T-406: new, for the native speakers' reading.
-    weekendDefault: (path: string) => `Выходной: занят по умолчанию. Его можно поменять, как любой день, а отметку по умолчанию выключить: ${path}`,
+    weekendDefault: (path: string) => `Выходной: занят по умолчанию. Его, как любой день, можно отметить иначе, а выключить это сразу для всех выходных: ${path}.`,
     startTime: 'Время начала',
     endTime: 'Время окончания',
     deleteData: 'Удалить отметки за этот день',
@@ -160,7 +160,7 @@ export const en = {
     nextDay: 'next day',
     importedNote: 'Everyone else sees these hours when looking for a time. To free them up, delete the event in your phone calendar.',
     // T-406: new, for the native speakers' reading.
-    weekendDefault: (path: string) => `Weekend: busy by default. Change it like any other day, or turn the default off in ${path}`,
+    weekendDefault: (path: string) => `Weekend day: busy by default. Change it like any other day, or turn off the default for all weekends in ${path}.`,
     startTime: 'Start Time',
     endTime: 'End Time',
     deleteData: 'Delete This Day’s Entries',
@@ -220,7 +220,7 @@ export const es = {
     nextDay: 'día sig.',
     importedNote: 'Los demás ven estas horas cuando buscan un horario. Para liberarlas, elimina el evento en el calendario del teléfono.',
     // T-406: new, for the native speakers' reading.
-    weekendDefault: (path: string) => `Fin de semana: ocupado por defecto. Cámbialo como cualquier otro día o desactiva esta opción en ${path}`,
+    weekendDefault: (path: string) => `Ocupado por defecto: cámbialo como cualquier otro día. Para desactivarlo en todos los fines de semana: ${path}.`,
     startTime: 'Hora de inicio',
     endTime: 'Hora de fin',
     deleteData: 'Eliminar las marcas de este día',
@@ -282,7 +282,7 @@ export const de = {
     nextDay: 'am Folgetag',
     importedNote: 'Diese Zeiten sehen die anderen bei der Terminsuche. Um sie freizugeben, lösche den Termin in deiner Kalender-App.',
     // T-406: new, for the native speakers' reading.
-    weekendDefault: (path: string) => `Wochenende: standardmäßig belegt. Ändere ihn wie jeden anderen Tag oder schalte das unter ${path} aus`,
+    weekendDefault: (path: string) => `Wochenendtag: standardmäßig belegt. Ändere ihn wie jeden anderen Tag oder schalte das für alle Wochenenden aus: ${path}.`,
     startTime: 'Startzeit',
     endTime: 'Endzeit',
     deleteData: 'Einträge für diesen Tag löschen',

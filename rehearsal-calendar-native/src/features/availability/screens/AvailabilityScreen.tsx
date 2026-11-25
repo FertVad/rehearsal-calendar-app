@@ -17,6 +17,7 @@ import { endsNextDay } from '../../../shared/utils/time';
 import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { settingPath } from '../../../shared/utils/settingPath';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
@@ -477,7 +478,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               theirs, and the note goes with the default. */}
           {selectedDayState?.weekendDefault && (
             <Text testID="availability-weekend-default" style={[styles.importedNote, { marginHorizontal: Spacing.xl }]}>
-              {t.availability.weekendDefault(`${t.nav.profile} → ${t.profile.weekendsBusy}`)}
+              {t.availability.weekendDefault(settingPath(t.nav.profile, t.profile.weekendsBusy))}
             </Text>
           )}
 

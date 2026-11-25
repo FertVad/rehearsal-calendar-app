@@ -54,9 +54,35 @@ it('reads a Date by its local fields, as a string by its calendar date', () => {
   expect(formatDate('2026-11-01', 'dayMonth', 'en')).toBe('November 1');
 });
 
-it('inside a sentence a date keeps the first letter Intl gives it', () => {
+it('inside a sentence a date is written by the language\'s rule', () => {
   expect(formatDate(DAY, 'weekdayDayMonthShort', 'ru', { midSentence: true })).toBe('чт, 29 окт.');
   expect(formatDate(DAY, 'weekdayDayMonthShort', 'en', { midSentence: true })).toBe('Thu, Oct 29');
+});
+
+// T-408: iOS's Foundation (ru_RU, pattern EEE) gives a day of the week alone
+// in its standalone form, with a capital — "Пт" — where Node gives "пт", so
+// "(Пт и Сб)" and "Ваши выходные: Пт и Сб" stood inside sentences on the
+// phone and Jest could not see it. Here Intl answers as iOS does.
+describe('inside a sentence, whatever case Intl gives (T-408)', () => {
+  const IOS: Record<string, string> = { 'ru-RU': 'Пт', 'es-ES': 'Vie', 'en-US': 'Fri', 'de-DE': 'Fr' };
+  let spy: jest.SpyInstance;
+  beforeEach(() => {
+    spy = jest.spyOn(Date.prototype, 'toLocaleDateString').mockImplementation(function mock(locale) {
+      return IOS[String(locale)];
+    });
+  });
+  afterEach(() => spy.mockRestore());
+
+  it('Russian and Spanish write the day in lower case, English and German as Intl does', () => {
+    expect(formatDate('2026-01-09', 'weekdayShort', 'ru', { midSentence: true })).toBe('пт');
+    expect(formatDate('2026-01-09', 'weekdayShort', 'es', { midSentence: true })).toBe('vie');
+    expect(formatDate('2026-01-09', 'weekdayShort', 'en', { midSentence: true })).toBe('Fri');
+    expect(formatDate('2026-01-09', 'weekdayShort', 'de', { midSentence: true })).toBe('Fr');
+  });
+
+  it('on its own, as a column\'s head, the day keeps its capital', () => {
+    expect(formatDate('2026-01-09', 'weekdayShort', 'ru')).toBe('Пт');
+  });
 });
 
 it('an interval of dates is the two short dates joined by a spaced en dash', () => {

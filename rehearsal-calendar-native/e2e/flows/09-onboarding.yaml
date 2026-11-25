@@ -64,9 +64,28 @@ onFlowComplete:
       TAP: "Get Started"
       SEE: "Mark all weekends \\(${WEEKEND_DAYS_EN_LABEL}\\) as busy\\?"
       WAIT_MS: 10000
-# Weekends: asked outright, with where to change it later (T-406).
-- assertVisible: "You can turn this on or off later in Profile → Weekends Busy"
+# Weekends: asked outright, with where to change it later (T-406), the path
+# whole on its line — no-break spaces in it — and in the native speaker's
+# words (T-408).
+- assertVisible: "You can turn this on or off later in Profile\u00a0→\u00a0Mark\u00a0Weekends\u00a0as\u00a0Busy"
+- assertVisible: "When someone looks for a rehearsal time, they will see you as busy on those days\\. You can still change any individual day in Availability\\."
+# The question wraps at the title's size rather than shrinking to one line
+# (T-408): squeezed to one line it was about 18 pt here, 21 high; wrapped it
+# is two or three lines at about 32.
+- assertVisible:
+    id: onboarding-title
+    height: 90
+    tolerance: 30
 - takeScreenshot: 09-onboarding-weekends
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 09-onboarding-weekends
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

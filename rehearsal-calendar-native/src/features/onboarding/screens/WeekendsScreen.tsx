@@ -9,6 +9,7 @@ import { availabilityAPI } from '../../../shared/services/api';
 import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useTimezone } from '../../../shared/hooks/useClock';
 import { weekendDaysOf, weekendDayNames } from '../../../shared/utils/weekends';
+import { settingPath } from '../../../shared/utils/settingPath';
 import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 
 type WeekendsScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Weekends'>;
@@ -44,6 +45,9 @@ export default function WeekendsScreen({ navigation }: WeekendsScreenProps) {
   return (
     <OnboardingStep
       title={t.onboarding.weekends.question(days)}
+      // The question whole, in the owner's words: up to three lines at the
+      // title's size, smaller only past them (T-408).
+      titleLines={3}
       description={t.onboarding.weekends.description}
       currentStep={1}
       totalSteps={5}
@@ -57,7 +61,7 @@ export default function WeekendsScreen({ navigation }: WeekendsScreenProps) {
     >
       <View style={styles.content}>
         <Text testID="onboarding-weekends-note" style={styles.note}>
-          {t.onboarding.weekends.note(`${t.nav.profile} → ${t.profile.weekendsBusy}`)}
+          {t.onboarding.weekends.note(settingPath(t.nav.profile, t.profile.weekendsBusy))}
         </Text>
       </View>
     </OnboardingStep>

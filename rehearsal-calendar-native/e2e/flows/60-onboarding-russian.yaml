@@ -66,12 +66,35 @@ onFlowComplete:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Начать"
-      SEE: "Отметить все выходные \\(${WEEKEND_DAYS_RU_LABEL}\\) как занятые\\?"
+      SEE: "(?-i)Отметить все выходные \\(${WEEKEND_DAYS_RU_LABEL}\\) как занятые\\?"
       WAIT_MS: 10000
 # The weekends, asked outright in her language with the days of her zone's
 # country, and where to change it later in the Profile's words (T-406).
-- assertVisible: "Это можно включить и выключить позже: Профиль → Выходные заняты"
+#
+# T-408: the days in lower case inside the question, «(пт и сб)» — the phone
+# said «(Пт и Сб)»: iOS names a day alone with a capital. Maestro matches text
+# whatever its case (this flow passed with «пт и сб» then), so the question is
+# asked with "(?-i)", which turns that off. The question wraps, up to three
+# lines at the title's size, rather than shrinking to one line: there it was
+# about 14.5 pt, smaller than the text under it, 17 high; wrapped it is two or
+# three lines at about 32. The path whole on its line, no-break spaces in it,
+# and the text in the native speaker's words.
+- assertVisible: "Это можно включить или выключить позже: Профиль\u00a0→\u00a0Выходные\u00a0заняты"
+- assertVisible: "Тогда при подборе времени ваши выходные будут считаться занятыми\\. Любой выходной можно отметить иначе в «Занятости»\\."
+- assertVisible:
+    id: onboarding-title
+    height: 90
+    tolerance: 30
 - takeScreenshot: 60-onboarding-weekends-ru
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-weekends-ru
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -142,7 +165,9 @@ onFlowComplete:
 - extendedWaitUntil:
     visible: "Настройки доступны в профиле"
     timeout: 10000
-- assertVisible: ".*в разделе «Профиль» → «Настройки»\\."
+# With the weekends among what is set later: whoever skips keeps them busy
+# (T-408).
+- assertVisible: "Начало недели, синхронизацию календаря и то, отмечать ли выходные занятыми, можно настроить в любое время: Профиль → Настройки\\."
 - takeScreenshot: 60-onboarding-skip-ru
 - assertNotVisible: "Да"
 - runFlow:
@@ -175,6 +200,38 @@ onFlowComplete:
       TAP: "Empezar"
       SEE: "Sí, marcarlos"
       WAIT_MS: 10000
+# Her weekends' step in the native speaker's words (T-408): the days in lower
+# case — "(?-i)", as in Russian — the question whole, wrapped at the title's
+# size, the path whole on its line.
+- runFlow:
+    when:
+      notVisible: "(?-i)¿Marcar todos los fines de semana \\(${WEEKEND_DAYS_ES_LABEL}\\) como ocupados\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the question, its days in lower case | '}"
+- runFlow:
+    when:
+      notVisible: "Así, cuando alguien busque un horario, tus fines de semana contarán como ocupados\\. Puedes cambiar cualquier día por separado en Disponibilidad\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the weekends description | '}"
+- runFlow:
+    when:
+      notVisible: "Puedes activarlo o desactivarlo más tarde en Perfil\u00a0→\u00a0Fines\u00a0de\u00a0semana\u00a0ocupados"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the weekends note, the path whole | '}"
+- assertVisible:
+    id: onboarding-title
+    height: 90
+    tolerance: 30
+- takeScreenshot: 60-onboarding-weekends-es
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-weekends-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -222,6 +279,13 @@ onFlowComplete:
 - extendedWaitUntil:
     visible: "Ajustes disponibles en el perfil"
     timeout: 10000
+# The weekends among what is set later (T-408).
+- runFlow:
+    when:
+      notVisible: "Puedes elegir el inicio de la semana, decidir si tus fines de semana se marcan como ocupados y configurar la sincronización del calendario cuando quieras en Perfil → Ajustes\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the skip message names the weekends | '}"
+- takeScreenshot: 60-onboarding-skip-es
 - runFlow:
     when:
       notVisible: "OK"
@@ -263,6 +327,42 @@ onFlowComplete:
       TAP: "Loslegen"
       SEE: "Ja, markieren"
       WAIT_MS: 10000
+# Her weekends' step in the native speaker's words (T-408), the question
+# whole, wrapped at the title's size, the path whole on its line.
+- runFlow:
+    when:
+      notVisible: "(?-i)Alle Wochenenden \\(${WEEKEND_DAYS_DE_LABEL}\\) als belegt markieren\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the question | '}"
+- runFlow:
+    when:
+      notVisible: "Dann gelten deine Wochenenden bei der Terminsuche als belegt\\. Einzelne Tage kannst du unter Verfügbarkeit ändern\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the weekends description | '}"
+- runFlow:
+    when:
+      notVisible: "Ein- und ausschalten kannst du das später unter Profil\u00a0→\u00a0Wochenenden\u00a0belegt"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the weekends note, the path whole | '}"
+- runFlow:
+    when:
+      notVisible: "Nein, nicht markieren"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Nein, nicht markieren | '}"
+- assertVisible:
+    id: onboarding-title
+    height: 90
+    tolerance: 30
+- takeScreenshot: 60-onboarding-weekends-de
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-weekends-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -341,9 +441,10 @@ onFlowComplete:
     timeout: 10000
 - runFlow:
     when:
-      notVisible: ".*unter Profil → Einstellungen ändern\\."
+      notVisible: "Du kannst jederzeit den Wochenbeginn ändern, die Kalendersynchronisation einrichten und festlegen, ob deine Wochenenden als belegt gelten – alles unter Profil → Einstellungen\\."
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'de: the skip message ends with a full stop | '}"
+      - evalScript: "${output.wrong = output.wrong + 'de: the skip message names the weekends, ends with a full stop | '}"
+- takeScreenshot: 60-onboarding-skip-de
 - runFlow:
     when:
       notVisible: "OK"

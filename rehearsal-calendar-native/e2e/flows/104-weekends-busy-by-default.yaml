@@ -13,6 +13,9 @@
 # On again: busy again.
 #
 # Before T-406 the weekend day was free and the profile had no such switch.
+# T-408: the hint and the switch's label in the native speaker's words, "Mark
+# Weekends as Busy", not the calque "Weekends Busy"; the path in the hint
+# whole on its line (no-break spaces). Flow 105 has them in ru, es and de.
 appId: ${APP_ID}
 name: Weekends busy by default, and the profile's switch
 tags:
@@ -51,7 +54,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: availability-weekend-default
-      text: "Weekend: busy by default\\..*Profile → Weekends Busy"
+      text: "Weekend day: busy by default\\. Change it like any other day, or turn off the default for all weekends in Profile\u00a0→\u00a0Mark\u00a0Weekends\u00a0as\u00a0Busy\\."
     timeout: 10000
 - takeScreenshot: 104-weekend-default-in-editor
 - tapOn:
@@ -83,7 +86,7 @@ tags:
     id: profile-weekends-days
     text: "Your weekend: ${WEEKEND_DAYS_EN_LABEL}"
 - assertVisible:
-    text: "Weekends Busy"
+    text: "Mark Weekends as Busy"
     below: ".*Start Week On.*"
 - takeScreenshot: 104-switch-on
 # Off, and saved: the switch takes taps again once the server has answered.

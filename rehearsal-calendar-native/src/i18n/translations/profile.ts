@@ -1,3 +1,6 @@
+/** Between the days of a weekend: they stay on one line (T-408). */
+const NBSP = '\u00a0';
+
 export interface ProfileTranslations {
   title: string;
   settings: string;
@@ -20,7 +23,7 @@ export interface ProfileTranslations {
   weekendsBusy: string;
   /** Under the switch: the days, "пт и сб" (weekendDayNames). */
   weekendsBusyDays: (days: string) => string;
-  /** Joins the days' names: "пт и сб", "Fri and Sat". */
+  /** Joins the days' names: "пт и сб", "Fri and Sat", with no-break spaces (T-408). */
   weekendDaysJoin: (...names: string[]) => string;
   about: string;
   version: string;
@@ -102,7 +105,7 @@ export const ru = {
     weekendsBusy: 'Выходные заняты',
     weekendsBusyDays: (days: string) => `Ваши выходные: ${days}`,
     weekendDaysJoin: (...names: string[]) =>
-      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} и ${names[names.length - 1]}`),
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}и${NBSP}${names[names.length - 1]}`),
     about: 'О приложении',
     version: 'Версия',
     help: 'Помощь',
@@ -154,7 +157,7 @@ export const ru = {
     timezoneError: 'Не удалось изменить часовой пояс',
     weekStartError: 'Не удалось изменить начало недели',
     // T-406: new, for the native speakers' reading.
-    weekendsBusyError: 'Не удалось изменить выходные',
+    weekendsBusyError: 'Не удалось сохранить настройку выходных',
     changeEmail: 'Сменить адрес',
     changeEmailTitle: 'Смена адреса',
     changeEmailSubtitle: (email: string) => `Мы пришлём по коду на ${email} и на новый адрес. Адрес сменится, когда вы введёте оба.`,
@@ -189,10 +192,10 @@ export const en = {
     weekStartMonday: 'Monday',
     weekStartSunday: 'Sunday',
     // T-406: new, for the native speakers' reading.
-    weekendsBusy: 'Weekends Busy',
+    weekendsBusy: 'Mark Weekends as Busy',
     weekendsBusyDays: (days: string) => `Your weekend: ${days}`,
     weekendDaysJoin: (...names: string[]) =>
-      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`),
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}and${NBSP}${names[names.length - 1]}`),
     about: 'About',
     version: 'Version',
     help: 'Help',
@@ -240,7 +243,7 @@ export const en = {
     timezoneError: 'Could not update the time zone',
     weekStartError: 'Could not change the first day of the week',
     // T-406: new, for the native speakers' reading.
-    weekendsBusyError: 'Could not change the weekends',
+    weekendsBusyError: 'Could not save your weekend setting',
     changeEmail: 'Change Email',
     changeEmailTitle: 'Change Email',
     changeEmailSubtitle: (email: string) => `We will send a code to ${email} and one to the new address. The address changes once you enter both.`,
@@ -278,7 +281,7 @@ export const es = {
     weekendsBusy: 'Fines de semana ocupados',
     weekendsBusyDays: (days: string) => `Tu fin de semana: ${days}`,
     weekendDaysJoin: (...names: string[]) =>
-      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`),
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}y${NBSP}${names[names.length - 1]}`),
     about: 'Acerca de',
     version: 'Versión',
     help: 'Ayuda',
@@ -325,7 +328,7 @@ export const es = {
     timezoneError: 'No se pudo actualizar la zona horaria',
     weekStartError: 'No se pudo actualizar el inicio de la semana',
     // T-406: new, for the native speakers' reading.
-    weekendsBusyError: 'No se pudieron cambiar los fines de semana',
+    weekendsBusyError: 'No se pudo guardar el ajuste de los fines de semana',
     changeEmail: 'Cambiar dirección',
     changeEmailTitle: 'Cambiar dirección',
     changeEmailSubtitle: (email: string) => `Enviaremos un código a ${email} y otro a la dirección nueva. La dirección cambiará cuando escribas los dos.`,
@@ -363,7 +366,7 @@ export const de = {
     weekendsBusy: 'Wochenenden belegt',
     weekendsBusyDays: (days: string) => `Dein Wochenende: ${days}`,
     weekendDaysJoin: (...names: string[]) =>
-      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} und ${names[names.length - 1]}`),
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}und${NBSP}${names[names.length - 1]}`),
     about: 'Über die App',
     version: 'Version',
     help: 'Hilfe',
@@ -410,7 +413,7 @@ export const de = {
     timezoneError: 'Zeitzone konnte nicht aktualisiert werden',
     weekStartError: 'Wochenbeginn konnte nicht aktualisiert werden',
     // T-406: new, for the native speakers' reading.
-    weekendsBusyError: 'Die Wochenenden konnten nicht geändert werden',
+    weekendsBusyError: 'Die Einstellung für die Wochenenden konnte nicht gespeichert werden',
     changeEmail: 'Adresse ändern',
     changeEmailTitle: 'Adresse ändern',
     changeEmailSubtitle: (email: string) => `Wir schicken einen Code an ${email} und einen an die neue Adresse. Die Adresse ändert sich, sobald du beide eingibst.`,

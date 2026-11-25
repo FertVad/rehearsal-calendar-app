@@ -71,7 +71,7 @@ export interface OnboardingTranslations {
 export const ru = {
   onboarding: {
     skipTitle: 'Настройки доступны в профиле',
-    skipMessage: 'Вы сможете настроить начало недели и синхронизацию календаря в любое время в разделе «Профиль» → «Настройки».',
+    skipMessage: 'Начало недели, синхронизацию календаря и то, отмечать ли выходные занятыми, можно настроить в любое время: Профиль → Настройки.',
     skip: 'Пропустить',
     next: 'Далее',
     welcome: {
@@ -93,8 +93,8 @@ export const ru = {
     // T-406: new, for the native speakers' reading.
     weekends: {
       question: (days: string) => `Отметить все выходные (${days}) как занятые?`,
-      description: 'Тогда в подборе времени ваши выходные будут заняты. Любой отдельный день можно поменять в «Занятости».',
-      note: (path: string) => `Это можно включить и выключить позже: ${path}`,
+      description: 'Тогда при подборе времени ваши выходные будут считаться занятыми. Любой выходной можно отметить иначе в «Занятости».',
+      note: (path: string) => `Это можно включить или выключить позже: ${path}`,
       yes: 'Да, отметить',
       no: 'Нет, оставить свободными',
     },
@@ -131,7 +131,7 @@ export const ru = {
 export const en = {
   onboarding: {
     skipTitle: 'Settings Are in Your Profile',
-    skipMessage: 'You can choose the first day of the week and set up calendar sync at any time in Profile → Settings.',
+    skipMessage: 'You can choose the first day of the week, decide whether your weekends are marked as busy, and set up calendar sync at any time in Profile → Settings.',
     skip: 'Skip',
     next: 'Next',
     welcome: {
@@ -153,7 +153,7 @@ export const en = {
     // T-406: new, for the native speakers' reading.
     weekends: {
       question: (days: string) => `Mark all weekends (${days}) as busy?`,
-      description: 'Then the planner will count your weekends as busy. Any single day can be changed in Availability.',
+      description: 'When someone looks for a rehearsal time, they will see you as busy on those days. You can still change any individual day in Availability.',
       note: (path: string) => `You can turn this on or off later in ${path}`,
       yes: 'Yes, Mark Them',
       no: 'No, Leave Them Free',
@@ -190,7 +190,7 @@ export const en = {
 export const es = {
   onboarding: {
     skipTitle: 'Ajustes disponibles en el perfil',
-    skipMessage: 'Puedes configurar el inicio de la semana y la sincronización del calendario en cualquier momento en Perfil → Ajustes.',
+    skipMessage: 'Puedes elegir el inicio de la semana, decidir si tus fines de semana se marcan como ocupados y configurar la sincronización del calendario cuando quieras en Perfil → Ajustes.',
     skip: 'Omitir',
     next: 'Siguiente',
     welcome: {
@@ -213,7 +213,7 @@ export const es = {
     // T-406: new, for the native speakers' reading.
     weekends: {
       question: (days: string) => `¿Marcar todos los fines de semana (${days}) como ocupados?`,
-      description: 'Así, al buscar un horario, tus fines de semana contarán como ocupados. Cualquier día suelto se puede cambiar en Disponibilidad.',
+      description: 'Así, cuando alguien busque un horario, tus fines de semana contarán como ocupados. Puedes cambiar cualquier día por separado en Disponibilidad.',
       note: (path: string) => `Puedes activarlo o desactivarlo más tarde en ${path}`,
       yes: 'Sí, marcarlos',
       no: 'No, dejarlos libres',
@@ -250,7 +250,7 @@ export const es = {
 export const de = {
   onboarding: {
     skipTitle: 'Einstellungen im Profil verfügbar',
-    skipMessage: 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen ändern.',
+    skipMessage: 'Du kannst jederzeit den Wochenbeginn ändern, die Kalendersynchronisation einrichten und festlegen, ob deine Wochenenden als belegt gelten – alles unter Profil → Einstellungen.',
     skip: 'Überspringen',
     next: 'Weiter',
     welcome: {
@@ -272,10 +272,10 @@ export const de = {
     // T-406: new, for the native speakers' reading.
     weekends: {
       question: (days: string) => `Alle Wochenenden (${days}) als belegt markieren?`,
-      description: 'Dann gelten deine Wochenenden bei der Terminsuche als belegt. Jeden einzelnen Tag kannst du unter Verfügbarkeit ändern.',
-      note: (path: string) => `Du kannst das später unter ${path} ein- oder ausschalten`,
+      description: 'Dann gelten deine Wochenenden bei der Terminsuche als belegt. Einzelne Tage kannst du unter Verfügbarkeit ändern.',
+      note: (path: string) => `Ein- und ausschalten kannst du das später unter ${path}`,
       yes: 'Ja, markieren',
-      no: 'Nein, frei lassen',
+      no: 'Nein, nicht markieren',
     },
     calendarSync: {
       title: 'Deine Verfügbarkeit',

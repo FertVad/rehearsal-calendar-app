@@ -76,11 +76,12 @@ tags:
     centerElement: true
 - assertNotVisible: ".*Honolulu.*"
 # His weekend is the one of his profile's zone, Israel's: Friday and Saturday,
-# named under the switch below "Start Week On" (T-406).
+# named under the switch below "Start Week On" (T-406), with no-break spaces
+# between the days (T-408).
 - scrollUntilVisible:
     element:
       id: profile-weekends-days
-      text: "Your weekend: Fri and Sat"
+      text: "Your weekend: Fri\u00a0and\u00a0Sat"
     direction: DOWN
     centerElement: true
 - scrollUntilVisible:
@@ -115,7 +116,7 @@ tags:
 - scrollUntilVisible:
     element:
       id: profile-weekends-days
-      text: "Your weekend: Sat and Sun"
+      text: "Your weekend: Sat\u00a0and\u00a0Sun"
     direction: DOWN
     centerElement: true
 # The calendar follows: Night watch at Tokyo's time — today's or tomorrow's,

@@ -47,6 +47,16 @@ it('has the same bottom bar with a quieter way past the step and without one', (
   expect([footerOf(withAction)].flat().filter(Boolean)).toHaveLength([footerOf(plain)].flat().filter(Boolean).length);
 });
 
+// T-408: one line made smaller suits the greeting (T-022), not a question: the
+// weekends' was squeezed to about 14.5 pt in Russian, smaller than the text
+// under it, and cut with "…" at 375 pt. A step may let its title wrap; it is
+// made smaller only once it does not fit in those lines.
+it('keeps a title on one line unless the step lets it wrap, made smaller only past its lines', () => {
+  const title = (view: ReturnType<typeof step>) => view.getByTestId('onboarding-title').props;
+  expect(title(step())).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
+  expect(title(step({ titleLines: 3 }))).toMatchObject({ numberOfLines: 3, adjustsFontSizeToFit: true });
+});
+
 it('says "Skip" and "Next" in the app\'s language', () => {
   mockLanguage.current = 'ru';
   const view = step();

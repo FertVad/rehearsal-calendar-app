@@ -1,0 +1,179 @@
+# The weekends busy by default in Russian, Spanish and German (T-408), as the
+# native speakers wrote them: the editor's hint on a weekend day and the
+# profile's switch with its days. Flow 104 has them in English.
+#
+# Maria Voinitskaya (ru), Poncia (es) and Franziska (de) have the switch on and
+# nothing of their own marked; nothing is changed. Each opens the editor on
+# the next weekend day of the zone (WEEKEND_DAY), reads the hint, and the
+# profile's row under "Start Week On".
+#
+# What T-408 found here: inside a sentence the days were Intl's own, and iOS
+# names a day alone with a capital — "Ваши выходные: Пт и Сб". Maestro matches
+# text whatever its case, so the rows are asked with "(?-i)", which turns that
+# off. The path in the hint is whole on its line: no-break spaces inside the
+# labels and around "→", as the days are between them (WEEKEND_DAYS_*_LABEL).
+appId: ${APP_ID}
+name: Weekends busy by default in Russian, Spanish and German
+tags:
+  - availability
+  - profile
+  - language
+---
+# Russian.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${VOINITSKAYA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Отметить занятость"
+      WAIT_MS: 5000
+- tapOn: "Отметить занятость"
+- extendedWaitUntil:
+    visible:
+      id: day-${WEEKEND_DAY}
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${WEEKEND_DAY}
+- tapOn:
+    id: day-${WEEKEND_DAY}
+- extendedWaitUntil:
+    visible:
+      id: availability-weekend-default
+      text: "(?-i)Выходной: занят по умолчанию\\. Его, как любой день, можно отметить иначе, а выключить это сразу для всех выходных: Профиль\u00a0→\u00a0Выходные\u00a0заняты\\."
+    timeout: 10000
+- takeScreenshot: 105-weekend-default-in-editor-ru
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-busy
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-weekends-busy
+      checked: true
+      enabled: true
+    timeout: 10000
+- assertVisible:
+    id: profile-weekends-days
+    text: "(?-i)Ваши выходные: ${WEEKEND_DAYS_RU_LABEL}"
+- assertVisible:
+    text: "(?-i)Выходные заняты"
+    below: ".*Начало недели.*"
+- takeScreenshot: 105-switch-ru
+
+# Spanish.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PONCIA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Marcar horas ocupadas"
+      WAIT_MS: 5000
+- tapOn: "Marcar horas ocupadas"
+- extendedWaitUntil:
+    visible:
+      id: day-${WEEKEND_DAY}
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${WEEKEND_DAY}
+- tapOn:
+    id: day-${WEEKEND_DAY}
+- extendedWaitUntil:
+    visible:
+      id: availability-weekend-default
+      text: "(?-i)Ocupado por defecto: cámbialo como cualquier otro día\\. Para desactivarlo en todos los fines de semana: Perfil\u00a0→\u00a0Fines\u00a0de\u00a0semana\u00a0ocupados\\."
+    timeout: 10000
+- takeScreenshot: 105-weekend-default-in-editor-es
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-busy
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-weekends-busy
+      checked: true
+      enabled: true
+    timeout: 10000
+- assertVisible:
+    id: profile-weekends-days
+    text: "(?-i)Tu fin de semana: ${WEEKEND_DAYS_ES_LABEL}"
+- takeScreenshot: 105-switch-es
+
+# German.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${FRANZISKA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Als beschäftigt markieren"
+      WAIT_MS: 5000
+- tapOn: "Als beschäftigt markieren"
+- extendedWaitUntil:
+    visible:
+      id: day-${WEEKEND_DAY}
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${WEEKEND_DAY}
+- tapOn:
+    id: day-${WEEKEND_DAY}
+- extendedWaitUntil:
+    visible:
+      id: availability-weekend-default
+      text: "(?-i)Wochenendtag: standardmäßig belegt\\. Ändere ihn wie jeden anderen Tag oder schalte das für alle Wochenenden aus: Profil\u00a0→\u00a0Wochenenden\u00a0belegt\\."
+    timeout: 10000
+- takeScreenshot: 105-weekend-default-in-editor-de
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-busy
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-weekends-busy
+      checked: true
+      enabled: true
+    timeout: 10000
+- assertVisible:
+    id: profile-weekends-days
+    text: "(?-i)Dein Wochenende: ${WEEKEND_DAYS_DE_LABEL}"
+- takeScreenshot: 105-switch-de
