@@ -72,7 +72,8 @@ try {
     console.log('[tests] Running the e2e lock regressions with real processes.');
     runNode(['--test', 'e2e/__tests__/lock.test.mjs', 'e2e/__tests__/watchdog.test.mjs', 'e2e/__tests__/http.test.mjs',
       'e2e/__tests__/metro-watch.test.mjs', 'e2e/__tests__/junit.test.mjs', 'e2e/__tests__/midnight.test.mjs',
-      'e2e/__tests__/native.test.mjs', 'e2e/__tests__/ink.test.mjs', 'e2e/__tests__/safari.test.mjs'], appDirectory);
+      'e2e/__tests__/native.test.mjs', 'e2e/__tests__/ink.test.mjs', 'e2e/__tests__/safari.test.mjs',
+      'e2e/__tests__/seed-keys.test.mjs'], appDirectory);
     console.log('[tests] Running the App Store pictures\' composer (T-274) and the preview video\'s (T-275, T-289).');
     runNode(['--test', 'e2e/__tests__/store-compose.test.mjs', 'e2e/__tests__/store-seed.test.mjs',
       'e2e/__tests__/store-video.test.mjs', 'e2e/__tests__/store-touches.test.mjs'], appDirectory);

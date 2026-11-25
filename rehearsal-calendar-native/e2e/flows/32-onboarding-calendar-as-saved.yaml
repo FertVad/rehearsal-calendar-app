@@ -124,14 +124,14 @@ tags:
       SEE: "Not now"
       WAIT_MS: 10000
 
-# Olga, new, her account in Russian, gives the app her calendar.
+# Olga Larina, new, her account in Russian, gives the app her calendar.
 - launchApp:
     clearState: true
     clearKeychain: true
 - runFlow:
     file: ../subflows/sign-in-form.yaml
     env:
-      EMAIL: ${OLGA_EMAIL}
+      EMAIL: ${LARINA_EMAIL}
 - extendedWaitUntil:
     visible:
       id: onboarding-skip

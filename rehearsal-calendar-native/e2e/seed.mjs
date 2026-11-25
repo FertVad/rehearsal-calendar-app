@@ -172,8 +172,9 @@ export const PEOPLE = {
   nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
   // New, in Russian, and gives the app her calendar in onboarding (32,
   // T-412): the step's choice and the calendar connected, in Russian. Nina
-  // above refuses it.
-  olga: { email: 'olga@e2e.test', firstName: 'Ольга', lastName: 'Ларина', onboarded: false, locale: 'ru' },
+  // above refuses it. A key and an address of her own: Olga Prozorova above is
+  // another account (42, 66, 78), and a second `olga:` would replace her.
+  larina: { email: 'larina@e2e.test', firstName: 'Ольга', lastName: 'Ларина', onboarded: false, locale: 'ru' },
   // New too, one in Spanish and one in German (60, T-256): the steps as the
   // native speakers read them, the Spanish quotes and the German titles and
   // buttons. Neither finishes it.
@@ -347,8 +348,9 @@ export const PEOPLE = {
   // and saves MARK_DAY, busy all day, free: iOS's rating window comes. She
   // saves it busy again, and in the same version it does not. Then the
   // profile's "Rate Rehearsly" opens the App Store's review page (107, T-410).
-  // In no project, so nothing another flow books lands on her days.
-  sonya: { email: 'sonya@e2e.test', firstName: 'Sonya', lastName: 'Serebryakova', onboarded: true },
+  // She is the `sonya` above (45): a second `sonya:` here only replaced her with
+  // the same values, and a key twice is what hid a new Olga over Olga
+  // Prozorova (T-412, e2e/__tests__/seed-keys.test.mjs).
 };
 
 /**
