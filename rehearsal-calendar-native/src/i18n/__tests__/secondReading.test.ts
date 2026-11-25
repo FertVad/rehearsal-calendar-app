@@ -76,9 +76,9 @@ describe('T-261: the strings the second reading changed', () => {
       .toBe('Alle Proben, die Mitgliederliste und alle anderen Projektdaten werden unwiderruflich gelöscht.');
   });
 
-  it('German: one verb for being put on a rehearsal', () => {
-    expect(de.onboarding.notifications.description)
-      .toBe('Du erfährst es, wenn dich jemand für eine Probe einteilt und wenn sich ihre Zeit ändert. Ohne Mitteilungen erfährst du es zuletzt.');
+  // Written again in T-412 from the owner's text; "einteilen" is not in it.
+  it('German: the notifications step as T-412 wrote it', () => {
+    expect(de.onboarding.notifications.description).toBe('Neue Probe, Absage oder Verschiebung\u00a0–\ndu erfährst es sofort.');
   });
 
   it('Spanish: the project in the invitation\'s title is in quotes', () => {

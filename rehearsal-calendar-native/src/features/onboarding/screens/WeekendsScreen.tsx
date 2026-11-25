@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors, FontSize } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
+import StepText from '../components/StepText';
 import { availabilityAPI } from '../../../shared/services/api';
 import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -45,24 +46,24 @@ export default function WeekendsScreen({ navigation }: WeekendsScreenProps) {
   return (
     <OnboardingStep
       title={t.onboarding.weekends.question(days)}
-      // The question whole, in the owner's words: up to three lines at the
-      // title's size, smaller only past them (T-408).
+      // The question in its three lines, the days on one of their own: 32 pt,
+      // made smaller until the longest line fits whole, never below 26 (T-412).
       titleLines={3}
+      titleMinimumScale={26 / 32}
       description={t.onboarding.weekends.description}
       currentStep={1}
       totalSteps={5}
       onBack={() => navigation.goBack()}
-      onNext={() => answer(true)}
       onSkip={skipOnboarding}
-      nextButtonTitle={t.onboarding.weekends.yes}
-      nextButtonDisabled={saving}
-      showBackButton
-      secondaryAction={{ title: t.onboarding.weekends.no, onPress: () => { if (!saving) answer(false); } }}
+      // Both answers at the bottom, "Yes" over "No", and neither while one is
+      // being saved: "No" used to do nothing then, silently (T-412).
+      answer={{ title: t.onboarding.weekends.yes, onPress: () => answer(true), disabled: saving }}
+      secondAnswer={{ title: t.onboarding.weekends.no, onPress: () => answer(false), disabled: saving }}
     >
       <View style={styles.content}>
-        <Text testID="onboarding-weekends-note" style={styles.note}>
+        <StepText testID="onboarding-weekends-note" style={styles.note}>
           {t.onboarding.weekends.note(settingPath(t.nav.profile, t.profile.weekendsBusy))}
-        </Text>
+        </StepText>
       </View>
     </OnboardingStep>
   );

@@ -8,6 +8,7 @@ import { render, fireEvent, act } from '@testing-library/react-native';
 import { getCalendars } from 'expo-localization';
 import WhatWhereScreen from '../WhatWhereScreen';
 import { translations } from '../../../../i18n/translations';
+import { typeset } from '../../../../shared/utils/typeset';
 
 // The real button, without the rest of the components' index.
 jest.mock('../../../../shared/components', () => ({
@@ -43,13 +44,15 @@ it.each(['ru', 'en', 'es', 'de'] as const)('names each place by the label the ap
     return typeof node === 'string' ? [node] : (node.children ?? []).flatMap(all);
   }).join(' ');
 
+  // Typeset, as every text of the steps is (T-412): "Join with a Code" glued.
+  const label = (words: string) => typeset(words, language);
   const project = text('project');
-  expect(project).toContain(t.actionSheet.createProject);
-  expect(project).toContain(t.nav.projects);
-  expect(project).toContain(t.projects.haveInvite);
-  expect(text('rehearsal')).toContain(t.actionSheet.createRehearsal);
-  expect(text('availability')).toContain(t.actionSheet.markBusy);
-  expect(text('planner')).toContain(t.smartPlanner.title);
+  expect(project).toContain(label(t.actionSheet.createProject));
+  expect(project).toContain(label(t.nav.projects));
+  expect(project).toContain(label(t.projects.haveInvite));
+  expect(text('rehearsal')).toContain(label(t.actionSheet.createRehearsal));
+  expect(text('availability')).toContain(label(t.actionSheet.markBusy));
+  expect(text('planner')).toContain(label(t.smartPlanner.title));
 });
 
 it.each([

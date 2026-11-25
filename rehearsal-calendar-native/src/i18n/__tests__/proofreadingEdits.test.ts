@@ -8,6 +8,8 @@
  *
  * "After" is the wording now: where the second reading (T-261) changed a T-256
  * edit again, its row has the newer one, and T-261 has its own rows below.
+ * T-412 wrote five onboarding strings again; their rows have its wording, and
+ * onboardingNatives.test.ts holds the whole set.
  *
  * A function is called with the arguments of its row: a name where it takes a
  * name, numbers where the number chooses the words (one row per wording).
@@ -82,7 +84,7 @@ const EDITS: Edit[] = [
   ['ru', 'calendarSync.daysAgo', [1, 1], '1 дн. назад', 'вчера'],
   ['ru', 'notifications.markAllRead', null, 'Отметить все', 'Прочитать все'],
   ['ru', 'onboarding.skipMessage', null, 'Вы сможете настроить день начала недели и синхронизацию календаря в любое время в разделе Профиль → Настройки', 'Начало недели, синхронизацию календаря и то, отмечать ли выходные занятыми, можно настроить в любое время: Профиль → Настройки.'],
-  ['ru', 'onboarding.notifications.description', null, 'Придёт сообщение, когда вас позовут на репетицию или когда её время изменится. Без них об изменении легко узнать последним.', 'Придёт уведомление, когда вас позовут на репетицию или изменят её время. Без уведомлений легко узнать об изменениях позже всех.'],
+  ['ru', 'onboarding.notifications.description', null, 'Придёт сообщение, когда вас позовут на репетицию или когда её время изменится. Без них об изменении легко узнать последним.', 'Новая репетиция, отменили или перенесли —\nвы узнаете сразу.'],
   ['ru', 'onboarding.notifications.exampleAdded', null, 'Вас добавили в репетицию', 'Вас позвали на репетицию'],
   ['ru', 'onboarding.calendarSync.google', null, 'Google Calendar', 'Google Календарь'],
   ['ru', 'onboarding.calendarSync.apple', null, 'Apple Calendar', 'Календарь iPhone'],
@@ -188,10 +190,10 @@ const EDITS: Edit[] = [
   ['en', 'notifications.clearAllConfirmBody', null, 'The list will be empty. This cannot be undone.', 'All notifications will be deleted. This cannot be undone.'],
   ['en', 'onboarding.skipMessage', null, 'You can set the first day of the week and calendar sync at any time in Profile → Settings', 'You can choose the first day of the week, decide whether your weekends are marked as busy, and set up calendar sync at any time in Profile → Settings.'],
   ['en', 'onboarding.welcome.feature3', null, 'The rehearsal lands in everyone\'s calendar', 'The rehearsal lands in everyone’s calendar'],
-  ['en', 'onboarding.notifications.description', null, 'You will hear when someone puts you on a rehearsal, and when its time changes. Without them, you find out last.', 'You will hear when someone puts you on a rehearsal or its time changes. Without notifications, you may be the last to know.'],
+  ['en', 'onboarding.notifications.description', null, 'You will hear when someone puts you on a rehearsal, and when its time changes. Without them, you find out last.', 'A new rehearsal, a new time, or a cancellation —\nyou’ll know right away.'],
   ['en', 'onboarding.notifications.exampleAdded', null, 'You were added to a rehearsal', 'You Were Added to a Rehearsal'],
   ['en', 'onboarding.notifications.exampleTimeChanged', null, 'A rehearsal’s time changed', 'Rehearsal Time Changed'],
-  ['en', 'onboarding.calendarSync.description', null, 'Your company sees only the hours you are busy, never what you are doing. Pick a calendar on your phone and those hours come across on their own.', 'Your team sees only the hours you are busy, never what you are doing. Pick a calendar on your phone, and those hours will be added automatically.'],
+  ['en', 'onboarding.calendarSync.description', null, 'Your company sees only the hours you are busy, never what you are doing. Pick a calendar on your phone and those hours come across on their own.', 'Rehearsals appear in your calendar automatically,\nand Rehearsly picks up your busy hours from\u00a0it.\nYour team sees only those hours,\nnot what you’re doing.'],
   ['en', 'onboarding.whatWhere.planner', null, 'Finding a time', 'Finding a Time'],
   // es
   ['es', 'common.loading', null, 'Cargando...', 'Cargando…'],
@@ -325,8 +327,8 @@ const EDITS: Edit[] = [
   ['de', 'onboarding.skipMessage', null, 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen einrichten', 'Du kannst jederzeit den Wochenbeginn ändern, die Kalendersynchronisation einrichten und festlegen, ob deine Wochenenden als belegt gelten – alles unter Profil → Einstellungen.'],
   ['de', 'onboarding.welcome.feature3', null, 'Die Probe landet in jedem Kalender', 'Die Probe landet bei allen im Kalender'],
   ['de', 'onboarding.notifications.exampleAdded', null, 'Du wurdest zu einer Probe hinzugefügt', 'Du wurdest für eine Probe eingeteilt'],
-  ['de', 'onboarding.calendarSync.title', null, 'Deine Zeiten', 'Deine Verfügbarkeit'],
-  ['de', 'onboarding.calendarSync.description', null, 'Das Ensemble sieht nur die Stunden, in denen du beschäftigt bist, nie womit. Wähle einen Kalender deines Telefons, und diese Stunden kommen von selbst herüber.', 'Die anderen im Projekt sehen nur, wann du beschäftigt bist – nie, womit. Wähle einen deiner Kalender aus, dann kommen diese Zeiten von selbst herüber.'],
+  ['de', 'onboarding.calendarSync.title', null, 'Deine Zeiten', 'Kalender-Sync'],
+  ['de', 'onboarding.calendarSync.description', null, 'Das Ensemble sieht nur die Stunden, in denen du beschäftigt bist, nie womit. Wähle einen Kalender deines Telefons, und diese Stunden kommen von selbst herüber.', 'Proben landen von selbst in deinem Kalender,\nbelegte Zeiten von dort in Rehearsly.\nDie anderen im Projekt sehen nur diese Zeiten,\naber nicht, was du vorhast.'],
   ['de', 'onboarding.calendarSync.google', null, 'Google Calendar', 'Google Kalender'],
   ['de', 'onboarding.calendarSync.apple', null, 'Apple Calendar', 'Apple Kalender'],
   // The ellipsis after a no-break space, as in the rest (de 1, 34).

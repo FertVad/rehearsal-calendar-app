@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { WelcomeScreen, WeekendsScreen, WhatWhereScreen, CalendarSyncScreen, NotificationsScreen } from '../screens';
+import { ONBOARDING_STEPS } from './steps';
 
 /**
  * Order matters here. Settings used to come before meaning and permissions
@@ -8,6 +8,7 @@ import { WelcomeScreen, WeekendsScreen, WhatWhereScreen, CalendarSyncScreen, Not
  * what it needs, and last says where things are. The week's first day is no
  * step: it is the phone's, written to the profile on the last step (T-022).
  * Where it was, right after the greeting, the weekends are asked about (T-406).
+ * The steps are `ONBOARDING_STEPS`, in their order: the stack has no other.
  */
 export type OnboardingStackParamList = {
   Welcome: undefined;
@@ -28,11 +29,9 @@ export function OnboardingNavigator() {
         animation: 'slide_from_right',
       }}
     >
-      <OnboardingStack.Screen name="Welcome" component={WelcomeScreen} />
-      <OnboardingStack.Screen name="Weekends" component={WeekendsScreen} />
-      <OnboardingStack.Screen name="CalendarSync" component={CalendarSyncScreen} />
-      <OnboardingStack.Screen name="Notifications" component={NotificationsScreen} />
-      <OnboardingStack.Screen name="WhatWhere" component={WhatWhereScreen} />
+      {ONBOARDING_STEPS.map((step) => (
+        <OnboardingStack.Screen key={step.name} name={step.name} component={step.component} />
+      ))}
     </OnboardingStack.Navigator>
   );
 }

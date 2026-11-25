@@ -11,7 +11,9 @@
  *
  * And the path to the switch and the days in the question do not break inside
  * a line: no-break spaces inside the labels, around "→", and between the days
- * ("(пт / и сб)" was possible). No text has a line break of its own.
+ * ("(пт / и сб)" was possible). No text has a line break of its own but the
+ * onboarding's question and description, which T-412 sets in lines by their
+ * sense, as the native speakers broke them.
  */
 import { translations } from '../translations';
 import { settingPath } from '../../shared/utils/settingPath';
@@ -41,7 +43,7 @@ const EXPECTED: Record<Lang, {
   ru: {
     weekendsBusy: 'Выходные заняты',
     weekendsBusyError: 'Не удалось сохранить настройку выходных',
-    description: 'Тогда при подборе времени ваши выходные будут считаться занятыми. Любой выходной можно отметить иначе в «Занятости».',
+    description: 'Тогда при подборе времени\nваши выходные будут считаться занятыми.\nЛюбой выходной можно отметить иначе\nв «Занятости».',
     note: `Это можно включить или выключить позже: ${PATH.ru}`,
     no: 'Нет, оставить свободными',
     weekendDefault: `Выходной: занят по умолчанию. Его, как любой день, можно отметить иначе, а выключить это сразу для всех выходных: ${PATH.ru}.`,
@@ -50,7 +52,7 @@ const EXPECTED: Record<Lang, {
   en: {
     weekendsBusy: 'Mark Weekends as Busy',
     weekendsBusyError: 'Could not save your weekend setting',
-    description: 'When someone looks for a rehearsal time, they will see you as busy on those days. You can still change any individual day in Availability.',
+    description: 'When someone looks for a rehearsal time,\nthey will see you as busy on those days.\nYou can still change any individual day\nin Availability.',
     note: `You can turn this on or off later in ${PATH.en}`,
     no: 'No, Leave Them Free',
     weekendDefault: `Weekend day: busy by default. Change it like any other day, or turn off the default for all weekends in ${PATH.en}.`,
@@ -59,7 +61,7 @@ const EXPECTED: Record<Lang, {
   es: {
     weekendsBusy: 'Fines de semana ocupados',
     weekendsBusyError: 'No se pudo guardar el ajuste de los fines de semana',
-    description: 'Así, cuando alguien busque un horario, tus fines de semana contarán como ocupados. Puedes cambiar cualquier día por separado en Disponibilidad.',
+    description: 'Así, cuando alguien busque un horario,\ntus fines de semana contarán como ocupados.\nPuedes cambiar cualquier día\npor separado en Disponibilidad.',
     note: `Puedes activarlo o desactivarlo más tarde en ${PATH.es}`,
     no: 'No, dejarlos libres',
     weekendDefault: `Ocupado por defecto: cámbialo como cualquier otro día. Para desactivarlo en todos los fines de semana: ${PATH.es}.`,
@@ -68,7 +70,7 @@ const EXPECTED: Record<Lang, {
   de: {
     weekendsBusy: 'Wochenenden belegt',
     weekendsBusyError: 'Die Einstellung für die Wochenenden konnte nicht gespeichert werden',
-    description: 'Dann gelten deine Wochenenden bei der Terminsuche als belegt. Einzelne Tage kannst du unter Verfügbarkeit ändern.',
+    description: 'Dann gelten deine Wochenenden\nbei der Terminsuche als belegt.\nEinzelne Tage kannst du\nunter Verfügbarkeit ändern.',
     note: `Ein- und ausschalten kannst du das später unter ${PATH.de}`,
     no: 'Nein, nicht markieren',
     weekendDefault: `Wochenendtag: standardmäßig belegt. Ändere ihn wie jeden anderen Tag oder schalte das für alle Wochenenden aus: ${PATH.de}.`,
@@ -118,10 +120,10 @@ describe.each(LANGS)('the weekends in %s, as the native speaker wrote them (T-40
   });
 });
 
-it('no weekends text has a line break of its own', () => {
+it('no weekends text has a line break of its own but the onboarding\'s question and description (T-412)', () => {
   const texts = LANGS.flatMap((lang) => {
     const t = translations[lang];
-    return [t.profile.weekendsBusy, t.profile.weekendsBusyError, t.onboarding.weekends.question('A'), t.onboarding.weekends.description,
+    return [t.profile.weekendsBusy, t.profile.weekendsBusyError,
       t.onboarding.weekends.note('P'), t.onboarding.weekends.yes, t.onboarding.weekends.no, t.availability.weekendDefault('P'), t.onboarding.skipMessage];
   });
   expect(texts.filter((text) => /[\n\r\u2028]/.test(text))).toEqual([]);
