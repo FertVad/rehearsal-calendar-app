@@ -12,6 +12,12 @@
 # text whatever its case, so the rows are asked with "(?-i)", which turns that
 # off. The path in the hint is whole on its line: no-break spaces inside the
 # labels and around "→", as the days are between them (WEEKEND_DAYS_*_LABEL).
+#
+# T-411: the hint is the mode buttons' footnote. It had 20 pt of its own on
+# each side, so its text began at 40 pt where the buttons begin at 20; now
+# its edges are theirs — its ink is looked for at 0-31 pt (icon-size.js), where
+# before there was none. In ru and de the next working day (WEEKDAY_DAY) is
+# shown too: no hint there, as it was.
 appId: ${APP_ID}
 name: Weekends busy by default in Russian, Spanish and German
 tags:
@@ -47,6 +53,38 @@ tags:
       text: "(?-i)Выходной: занят по умолчанию\\. Его, как любой день, можно отметить иначе, а выключить это сразу для всех выходных: Профиль\u00a0→\u00a0Выходные\u00a0заняты\\."
     timeout: 10000
 - takeScreenshot: 105-weekend-default-in-editor-ru
+# T-411: the hint's left edge is the buttons' (20 pt), not 20 pt inside them.
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 105-weekend-default-in-editor-ru
+      COLOUR: "#7d8590"
+      MIN_WIDTH: "3"
+      LEFT: "0"
+      RIGHT: "0.08"
+      TOP: "0.728"
+      BOTTOM: "0.8"
+# A working day's editor, as it was: no hint, the plate under the buttons.
+- tapOn:
+    id: availability-deselect
+- extendedWaitUntil:
+    notVisible:
+      id: mode-selector
+    timeout: 10000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${WEEKDAY_DAY}
+- tapOn:
+    id: day-${WEEKDAY_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-selector
+    timeout: 10000
+- assertNotVisible:
+    id: availability-weekend-default
+- takeScreenshot: 105-weekday-in-editor-ru
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
@@ -154,6 +192,36 @@ tags:
       text: "(?-i)Wochenendtag: standardmäßig belegt\\. Ändere ihn wie jeden anderen Tag oder schalte das für alle Wochenenden aus: Profil\u00a0→\u00a0Wochenenden\u00a0belegt\\."
     timeout: 10000
 - takeScreenshot: 105-weekend-default-in-editor-de
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 105-weekend-default-in-editor-de
+      COLOUR: "#7d8590"
+      MIN_WIDTH: "3"
+      LEFT: "0"
+      RIGHT: "0.08"
+      TOP: "0.728"
+      BOTTOM: "0.8"
+- tapOn:
+    id: availability-deselect
+- extendedWaitUntil:
+    notVisible:
+      id: mode-selector
+    timeout: 10000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${WEEKDAY_DAY}
+- tapOn:
+    id: day-${WEEKDAY_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-selector
+    timeout: 10000
+- assertNotVisible:
+    id: availability-weekend-default
+- takeScreenshot: 105-weekday-in-editor-de
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
