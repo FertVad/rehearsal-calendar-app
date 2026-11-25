@@ -247,6 +247,18 @@ reinstall plus a refusal of the calendar, and costs events the person can
 delete in Calendar; the policy says other devices keep theirs the same way.
 Special case, minor: a line here.
 
+### Deleting the account forgets that iOS's rating window was asked for (T-410, T-414)
+
+What the rating request counts — the days of use and the version and time of
+the last ask (`reviewPrompt.ts`) — lives in AsyncStorage, and `deleteAccount`
+(contexts/AuthContext.tsx) clears AsyncStorage whole. A new account on the same
+phone, used on three days, can therefore be asked a second time in the same
+version. It costs at most one more of Apple's windows, which iOS itself shows
+no more than three times in 365 days, and needs an account deleted and another
+made on one phone. Keeping these keys through the clear would carry one
+person's traces past the deletion of their account, which is worse than the
+repeat. Special case, minor: a line here.
+
 ### Android App Links wait for an Android release (IC01)
 
 `assetlinks.json` carries a placeholder where the app's signing fingerprint
