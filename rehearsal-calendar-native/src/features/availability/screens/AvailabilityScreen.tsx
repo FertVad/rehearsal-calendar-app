@@ -423,7 +423,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           {/* Mode Selection (only for future/today dates) */}
           {(!editor.selectedDate || editor.selectedDate >= today) && (
           <>
-          <View testID="mode-selector" style={styles.modeSelector}>
+          <View
+            testID="mode-selector"
+            style={[styles.modeSelector, selectedDayState?.weekendDefault && styles.modeSelectorWithNote]}
+          >
             <TouchableOpacity
               testID="mode-free"
               accessibilityState={{ selected: shownMode === 'free' }}
@@ -496,9 +499,11 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
           {/* A weekend busy by default, not by the person (T-406): said, with
               where the default is turned off. Any change above makes the day
-              theirs, and the note goes with the default. */}
+              theirs, and the note goes with the default. A footnote to the
+              buttons: their edges, 8 pt under them, 20 pt to what follows
+              (T-411). */}
           {selectedDayState?.weekendDefault && (
-            <Text testID="availability-weekend-default" style={[styles.importedNote, { marginHorizontal: Spacing.xl }]}>
+            <Text testID="availability-weekend-default" style={[styles.importedNote, styles.weekendDefaultNote]}>
               {t.availability.weekendDefault(settingPath(t.nav.profile, t.profile.weekendsBusy))}
             </Text>
           )}
