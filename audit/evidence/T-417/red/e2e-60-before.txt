@@ -1,0 +1,22 @@
+T-417 — red before: flow 60 (as committed in 59175dd) on the app of the base 07b6a76.
+
+$ git restore --source=07b6a76 -- src/i18n/translations/onboarding.ts src/i18n/translations/calendarSync.ts \
+    src/features/onboarding/hooks/useOnboarding.ts src/features/onboarding/screens/CalendarSyncScreen.tsx \
+    src/features/onboarding/components/StepText.tsx
+$ npm run e2e -- e2e/flows/60-onboarding-russian.yaml
+
+[e2e] installing the Debug app and running the flows
+Waiting for flows to complete...
+[Failed] Onboarding in Russian, the greeting on one line (1m 15s) (Assertion is false: "Rehearsly находит время, когда свободны все" is visible)
+
+1/1 Flow Failed
+
+(The text asserted is «Rehearsly находит⍽время, когда⍽свободны⍽все», U+00A0 where ⍽ is: on the old
+strings iOS was free to break «…время, когда / свободны все».)
+
+$ git restore --source=HEAD -- <the same files>
+
+The screens before the change are those of T-412 (audit/evidence/T-412/after/): the onboarding's
+strings and screens did not change between T-412 and 07b6a76. On them: es «…en los proyectos que /
+administras», ru «…Профиль / → Настройки.», en «lands in / everyone’s calendar», «“Projects” → /
+“Join with a Code”», de «die Stunden, die / allen passen», «in denen du / Admin bist».
