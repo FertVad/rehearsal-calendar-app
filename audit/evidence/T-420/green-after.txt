@@ -1,0 +1,63 @@
+T-420 - green after. Flow 107 waits after the tap for Safari opened from
+Rehearsly (e2e/subflows/safari-from-app.yaml: Safari's address field,
+id TabBarItemTitle, 20 s as before; then "Return to Rehearsly", id breadcrumb),
+then as before: the row gone, and opened-url.js - the address the app handed
+to iOS, exactly, from SpringBoard's log. 2026-11-26.
+
+1. The probe, the subflow as committed (the wait under test after the leap):
+
+$ npm run e2e -- ../audit/evidence/T-420/probe-leap-then-wait.yaml
+[Passed] T-420 probe - Rate Rehearsly, the wait after Safari has left the page (2m 8s)
+1/1 Flow Passed in 2m 8s
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
+
+node order.mjs <2026-11-26_105528/T-420 probe ...>, both taps:
+  link 1: load 10:58:40.744, leap 10:58:41.215, load failed 10:58:41.463
+          10:58:41.630 "Safari cannot open the page ..." COMPLETED
+          10:58:41.692-41.921 TabBarItemTitle visible COMPLETED
+          10:58:41.922-42.075 "Return to Rehearsly", id: breadcrumb COMPLETED
+          10:58:42.918-48.262 opened-url.js COMPLETED
+  link 2: load 10:58:59.786, leap 10:59:00.144, load failed 10:59:00.331
+          10:59:00.452 "Safari cannot open the page ..." COMPLETED
+          10:59:00.468-00.635 TabBarItemTitle visible COMPLETED
+          10:59:00.635-00.777 breadcrumb COMPLETED
+          10:59:01.540-05.349 opened-url.js COMPLETED
+The wait began after the leap both times, and passed both times.
+(probe-green-105528/t420-probe-after-the-leap.png)
+
+2. Flow 107 alone, five runs, each its own boot:
+
+$ npm run e2e -- e2e/flows/107-rate-the-app.yaml        (five times)
+  run                 the runner's first Safari         result
+  2026-11-26_110229   89852, its home readable; stopped  [Passed] (2m 58s)
+  2026-11-26_110940   92528, its home readable; stopped  [Passed] (3m 7s)
+  2026-11-26_111648   95194, its home readable; stopped  [Passed] (2m 58s)
+  2026-11-26_112420   97921, its home readable; stopped  [Passed] (2m 55s)
+  2026-11-26_113125   764, its home readable; stopped    [Passed] (2m 56s)
+  each: [e2e] taps taken again (tap-and-see.yaml): 0
+        [e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+The order in each (node order.mjs <run>/<flow>; host time):
+
+  run     load starts   leap         load failed   wait passed on the read     the state it read
+  110229  11:06:47.994  11:06:48.338 11:06:48.524  11:06:48.086-48.283         the page loading
+  110940  11:14:08.201  11:14:08.519 11:14:08.792  11:14:07.872-08.042         Safari up, the load not begun
+  111648  11:21:08.009  11:21:08.362 11:21:08.606  11:21:08.691-08.854         after the leap (only read after it)
+  112420  11:28:33.533  11:28:33.735 11:28:33.950  11:28:33.148-33.340         Safari up, the load not begun
+  113125  11:35:47.448  11:35:47.691 11:35:47.958  11:35:47.055-47.281         Safari up, the load not begun
+
+  111648: reads of Safari 7 - before the leap 0, after it 7 - the order the
+  old wait lost at 082731; it passed. 110229: the one read before the leap
+  came while the page loaded. The rest: Safari read before its load began.
+  In every run opened-url.js passed: SpringBoard's last link from the app was
+  https://apps.apple.com/app/id6830809401?action=write-review.
+
+The guarded bugs. Each of the five runs passed the flow whole:
+  T-410 - after the first save with "Mark Busy" open, "Not Now" not seen in
+  6 s; after Cancel, iOS's window ("Enjoying Rehearsly?", green-111648/
+  107-apple-rating-window.png) over the calendar; the second save and close
+  in the same version: no window (107-second-visit-no-window.png).
+  T-414 - the window not over "Mark Busy": assertNotVisible "Not Now" with
+  the legend still on screen (107-saved-screen-open-no-window.png), and the
+  calendar, not the legend, under it once it went.

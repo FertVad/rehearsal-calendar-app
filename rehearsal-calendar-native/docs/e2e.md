@@ -381,6 +381,21 @@ Every flow's Safari is then a later one, flows 44 and 107 run alone among
 them; no flow needs a step of its own for it. A Safari that never says it
 started stops the run as the machine's (75).
 
+## A link to an app the simulator does not have
+
+A link that leaves Safari for another app - apps.apple.com, which sends
+Safari on to the App Store (`itms-appss://`) - shows no page here: the load
+ends 0.2-0.6 s after it starts with no page committed, and Safari says "Safari
+cannot open the page because the address is invalid." over an empty address
+field. A flow must not wait for anything of that page, its address included:
+flow 107 waited for "apps.apple.com" and passed only when one of Maestro's
+reads fell inside that half second (T-420, `audit/evidence/T-420/order.mjs`
+tells the order from a run's logs). It waits instead for Safari opened from
+the app, the same whether the page is loading or gone
+(`e2e/subflows/safari-from-app.yaml`: Safari's address field, and "Return to
+Rehearsly"), and checks the address the app handed to iOS where SpringBoard
+logged it (`e2e/scripts/opened-url.js`, exact).
+
 ## A lost tap
 
 The simulator loses about one tap in 250, and Maestro does not notice. For

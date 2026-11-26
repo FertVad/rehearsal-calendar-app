@@ -150,18 +150,18 @@ tags:
 - runFlow: ../subflows/fresh-safari.yaml
 - tapOn:
     id: profile-rate-app
-# Safari comes up with the page; apps.apple.com sends it on to the App Store
-# (itms-appss://), which a simulator does not have: "Safari cannot open the
-# page". On a phone the App Store opens on the review. Safari's address field
-# names the site only, so the address the app handed to iOS is read where
-# SpringBoard logged it. (Waiting for the row to go, with the app behind
-# Safari, Maestro takes for the app stopped.)
-- extendedWaitUntil:
-    visible: ".*apps\\.apple\\.com.*"
-    timeout: 20000
+# Safari comes up; apps.apple.com sends it on to the App Store (itms-appss://)
+# before any page shows, and a simulator has no App Store: "Safari cannot open
+# the page". On a phone the App Store opens on the review. So the flow waits
+# for Safari opened from Rehearsly, whether the page is loading or already
+# gone (safari-from-app.yaml; the site's name, waited for before, was on the
+# screen for half a second at most - T-420), and the address the app handed
+# to iOS is read where SpringBoard logged it. (Waiting for the row to go,
+# with the app behind Safari, Maestro takes for the app stopped.)
+- runFlow: ../subflows/safari-from-app.yaml
 - assertNotVisible:
     id: profile-rate-app
-- takeScreenshot: 107-app-store-review-page
+- takeScreenshot: 107-safari-from-rate-row
 - runScript:
     file: ../scripts/opened-url.js
     env:
