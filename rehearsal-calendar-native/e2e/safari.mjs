@@ -7,6 +7,7 @@
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { setTimeout as pause } from 'node:timers/promises';
 
 const SAFARI = 'com.apple.mobilesafari';
 
@@ -72,6 +73,49 @@ export async function freshSafari(device, { run = simctl } = {}) {
 // "… MobileSafari[50814]: (MobileSafariUI) [com.apple.mobilesafari:TabGroup] Read 0 normal tabs from saved state"
 const LAUNCH = /^(\S+ \S+).*MobileSafari.*Read (\d+) normal tabs from saved state/;
 const LAUNCH_TEXT = 'normal tabs from saved state';
+
+// What CoreFoundation says, at the start of a Safari that cannot read its
+// preferences, for each domain it reads, com.apple.Accessibility among them:
+// "Disabling saving preferences for { com.apple.Accessibility, kCFPreferencesCurrentUser, any host, (null) } because home directory is inaccessible"
+const HOMELESS_TEXT = 'because home directory is inaccessible';
+
+
+/**
+ * Safari launched once after the simulator's boot and stopped, before any
+ * flow (T-418, docs/e2e.md "Safari's first launch"). The first Safari of a
+ * boot came up in half the runs alone unable to read its preferences - its
+ * home directory "inaccessible", com.apple.Accessibility with the rest - and
+ * so with its accessibility off ("app ax: 0") for its whole life: Maestro's
+ * driver could not read it, and failed the flow as a crash. No later Safari of
+ * a boot ever did, the one after such a first among them. So the runner takes
+ * the boot's first.
+ *
+ * It must have started, not only been launched: a Safari Maestro launched and
+ * a flow stopped 0.2 s later never logged a line, and the next one, the tap's,
+ * came up as a first. So its process's lines are read in the device log until
+ * it says it started (LAUNCH_TEXT), then it is stopped. Returns `{ pid, home }`,
+ * home 'inaccessible' when CoreFoundation said so by then, else 'readable' -
+ * for the run's log; throws when it never said it started. Safari is left
+ * stopped, with no tabs (freshSafari).
+ */
+export async function firstSafari(device, { run = simctl, wait = pause, startMs = 30000 } = {}) {
+  await freshSafari(device, { run });
+  const said = await run('launch', device, SAFARI);
+  const pid = Number(/^com\.apple\.mobilesafari: (\d+)$/m.exec(said)?.[1]);
+  if (!pid) throw new Error(`simctl launch ${SAFARI} gave no process: ${said}`);
+  let log = '';
+  for (let waited = 0; !log.includes(LAUNCH_TEXT); waited += 1000) {
+    if (waited >= startMs) {
+      await freshSafari(device, { run });
+      throw new Error(`Safari (${pid}) did not say it had started ("${LAUNCH_TEXT}") in ${startMs / 1000} s`);
+    }
+    await wait(1000);
+    log = await run('spawn', device, 'log', 'show', '--last', '5m', '--info', '--debug', '--style', 'compact', '--predicate',
+      `processIdentifier == ${pid} AND (eventMessage CONTAINS "${LAUNCH_TEXT}" OR eventMessage CONTAINS "${HOMELESS_TEXT}")`);
+  }
+  await freshSafari(device, { run });
+  return { pid, home: log.includes(HOMELESS_TEXT) ? 'inaccessible' : 'readable' };
+}
 
 /**
  * Every Safari launch in a run's artifacts, by flow: `Map<flow name, [{ at, tabs }]>`.

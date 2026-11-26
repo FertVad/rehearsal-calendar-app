@@ -133,32 +133,7 @@ tags:
 - takeScreenshot: 44-profile-about
 # Safari with no tabs (T-404): a restored support page of an earlier run would
 # answer the wait below before this tap's page came.
-# The tap's Safari is not the first Safari Maestro meets in the run (T-418).
-# Run alone, it was, and it came up with its accessibility off and kept it off
-# ("app ax: 0" in the device log): every read of Safari was
-# kAXErrorAPIDisabled, and Maestro, the app not in front, failed the step as a
-# crash, the page on the screen. Once Maestro's driver has asked Safari for its
-# screen, every later launch of Safari comes up with it on (docs/e2e.md,
-# "Safari's first launch"). So Maestro launches Safari and reads it until the
-# app is no longer what it reads - the read of a Safari with accessibility off
-# fails, which is why it is optional: the asking is what counts, not the answer
-# - then fresh-safari.yaml stops it, and the tap launches it again.
 - runFlow: ../subflows/fresh-safari.yaml
-- launchApp:
-    appId: com.apple.mobilesafari
-    stopApp: false
-- extendedWaitUntil:
-    notVisible:
-      id: tab-profile
-    timeout: 20000
-    optional: true
-- runFlow: ../subflows/fresh-safari.yaml
-- launchApp:
-    stopApp: false
-- extendedWaitUntil:
-    visible:
-      id: profile-help
-    timeout: 20000
 - tapOn:
     id: profile-help
 - extendedWaitUntil:

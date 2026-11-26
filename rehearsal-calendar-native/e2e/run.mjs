@@ -66,7 +66,7 @@ import { mergeJunit } from './junit.mjs';
 import { LOCK, takeLock } from './lock.mjs';
 import { exitCode, flattenBatches, limitMs, nextStep, startClock } from './midnight.mjs';
 import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, requireInstalledAsLocked, splitFlows } from './native.mjs';
-import { runsFreshSafari, safariLaunches, safariVerdict } from './safari.mjs';
+import { firstSafari, runsFreshSafari, safariLaunches, safariVerdict } from './safari.mjs';
 import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -713,6 +713,13 @@ async function main() {
   // sheet's service under Maestro's driver again (noPasswordOffer).
   assert.equal(passwordAutoFill(udid), 'false',
     `password AutoFill is still allowed on ${DEVICE.name} after a reboot with allowPasswordAutoFill off: iOS no longer reads UserSettings.plist (noPasswordOffer in e2e/run.mjs)`);
+  // The boot's first Safari, taken here and not by a flow: it could come up
+  // unable to read its home, its accessibility off for Maestro (T-418,
+  // e2e/safari.mjs firstSafari; docs/e2e.md "Safari's first launch").
+  await environment(async () => {
+    const { pid, home } = await firstSafari(udid);
+    step(`Safari's first launch since the boot: ${pid}, its home ${home}; stopped`);
+  });
 
   if (stayUp) {
     simctl('install', udid, apps.Debug);

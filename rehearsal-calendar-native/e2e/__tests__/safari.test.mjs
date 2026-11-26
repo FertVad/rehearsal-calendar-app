@@ -7,7 +7,7 @@ import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { freshSafari, runsFreshSafari, safariLaunches, safariVerdict } from '../safari.mjs';
+import { firstSafari, freshSafari, runsFreshSafari, safariLaunches, safariVerdict } from '../safari.mjs';
 
 const UDID = '0E96462E-BD5B-4C19-9847-8E63D550B36E';
 const STORES = ['BrowserState.db', 'SafariTabs.db', 'SafariTabs.db-shm', 'SafariTabs.db-wal'];
@@ -143,4 +143,61 @@ test('the flows that run fresh-safari.yaml', () => {
   assert.equal(runsFreshSafari('---\n- runFlow:\n    file: ../subflows/fresh-safari.yaml\n'), true);
   assert.equal(runsFreshSafari('---\n- runFlow:\n    file: ../subflows/open-link.yaml\n'), false);
   assert.equal(runsFreshSafari('# Safari starts with no tabs (fresh-safari.yaml, T-404).\n---\n- openLink: x\n'), false);
+});
+
+// The boot's first Safari (T-418): launched by the runner, read in the device
+// log by its process until it says it started, stopped.
+const HOMELESS = 'MobileSafari[38622]: (CoreFoundation) [com.apple.defaults:User Defaults] Disabling saving preferences for '
+  + '{ com.apple.Accessibility, kCFPreferencesCurrentUser, any host, (null) } because home directory is inaccessible';
+const STARTED = 'MobileSafari[38622]: (MobileSafariUI) [com.apple.mobilesafari:TabGroup] Read 0 normal tabs from saved state';
+
+/** simctl for firstSafari: each launch a new pid, its log `logs[i]` (a list of answers, one per read, the last repeated). */
+function booted(home, logs) {
+  const calls = [];
+  let launched = 0;
+  const reads = new Map();
+  const run = async (command, ...args) => {
+    calls.push(command);
+    if (command === 'getenv') return home;
+    if (command === 'terminate') return '';
+    if (command === 'launch') { launched += 1; return `com.apple.mobilesafari: ${1000 + launched}`; }
+    if (command === 'spawn') {
+      const pid = Number(/processIdentifier == (\d+)/.exec(args.at(-1))[1]);
+      const answers = logs[pid - 1001];
+      const at = reads.get(pid) ?? 0;
+      reads.set(pid, at + 1);
+      return answers[Math.min(at, answers.length - 1)];
+    }
+    throw new Error(`unexpected simctl ${command}`);
+  };
+  return { run, calls, wait: async () => {} };
+}
+
+test('the first Safari of the boot: launched, stopped once it said it started, its home readable', async () => {
+  const { home, left } = device();
+  const { run, calls, wait } = booted(home, [['', STARTED]]);
+  assert.deepEqual(await firstSafari(UDID, { run, wait }), { pid: 1001, home: 'readable' });
+  assert.deepEqual(calls.filter((c) => c !== 'getenv'), ['terminate', 'launch', 'spawn', 'spawn', 'terminate']);
+  assert.deepEqual(left(), ['Bookmarks.db', 'History.db']);
+});
+
+test('its home inaccessible: said so, launched once all the same, and stopped', async () => {
+  const { home } = device();
+  const { run, calls, wait } = booted(home, [[`${HOMELESS}\n${STARTED}`]]);
+  assert.deepEqual(await firstSafari(UDID, { run, wait }), { pid: 1001, home: 'inaccessible' });
+  assert.equal(calls.filter((c) => c === 'launch').length, 1);
+  assert.equal(calls.filter((c) => c !== 'getenv').at(-1), 'terminate');
+});
+
+test('a Safari that never says it started: an error, Safari stopped', async () => {
+  const { home } = device();
+  const { run, calls, wait } = booted(home, [['']]);
+  await assert.rejects(firstSafari(UDID, { run, wait, startMs: 5000 }), /Safari \(1001\) did not say it had started .* in 5 s/);
+  assert.equal(calls.filter((c) => c !== 'getenv').at(-1), 'terminate');
+});
+
+test('a launch with no process in simctl\'s answer: an error', async () => {
+  const { home } = device();
+  const run = async (command) => (command === 'getenv' ? home : command === 'launch' ? 'An error was encountered' : '');
+  await assert.rejects(firstSafari(UDID, { run, wait: async () => {} }), /gave no process: An error was encountered/);
 });
