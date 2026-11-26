@@ -78,9 +78,11 @@ mechanism for such a link.
 - `red-before.txt` - the probe `probe-leap-then-wait.yaml` (waits for the
   alert after the leap, then the wait under test) with the subflow holding the
   old wait (`old-wait.yaml`): red, every time by construction; screen in
-  `probe-red-104908/` - step-091 is the failure; step-018, -083 and -089 are
-  Maestro's screenshots of that run's earlier steps (the sign-in form, the
-  profile at the repeat, Safari at the subflow), kept as the runner wrote them.
+  `probe-red-104908/` - step-091 is the failed wait; step-083 (the repeat)
+  and step-089 (the subflow) are the same screen, which Maestro saves again
+  for each step the failure ended; step-018 is the empty sign-in form at the
+  optional check of the email field in sign-in-form.yaml. Kept as the runner
+  wrote them.
   The monitor's 082731 and 084243 timed.
 - `green-after.txt` - the same probe with the new wait: green, two taps;
   flow 107 alone five times, each its own boot: five green, both orders
