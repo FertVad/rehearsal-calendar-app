@@ -567,7 +567,7 @@
   function renderNotifications(notifications) {
     const d = notifications.devices;
     return block('Уведомления и письма',
-      element('p', 'metric', 'Есть устройство для уведомлений: ' + d.people + ' из ' + d.of + ' (' + percent(d.rate) + ')'),
+      element('p', 'metric', 'Есть устройство для уведомлений: ' + ratio(d.people, d.of, d.rate)),
       note('Зарегистрировавшиеся за период, у которых есть хотя бы одно устройство, подключённое к push-уведомлениям.'),
       table(['Тип уведомления', 'Создано', 'Прочитано', 'Доля прочитанных', 'Медиана до прочтения'],
         notifications.inbox.map(row => [named(INBOX_TYPES, row.type), row.created, row.read, percent(row.readRate),

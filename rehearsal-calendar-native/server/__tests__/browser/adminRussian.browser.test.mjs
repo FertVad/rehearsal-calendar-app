@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { chromium } from 'playwright';
 import { closeOwnedBrowserFixture } from './ownedFixture.mjs';
-import { PASSWORD, ZONE, held, login, startAdminFixture } from './adminRussianFixture.mjs';
+import { PASSWORD, ZONE, analytics, held, login, startAdminFixture } from './adminRussianFixture.mjs';
 
 // The admin page is in Russian (T-419, the owner, 26.11.2026): every word on it
 // is the native editor's (audit/evidence/T-419/natives-ru.md), only the data is
@@ -25,7 +25,7 @@ before(async () => {
 }, { timeout: 30000 });
 after(async () => { await browser?.close(); }, { timeout: 10000 });
 
-async function fixture(t) {
+async function fixture(t, options = {}) {
   const diagnostic = stage => console.log(`[admin-russian] ${t.name}: ${stage}`);
   const { base, state, owned } = await startAdminFixture();
   let context;
@@ -33,7 +33,7 @@ async function fixture(t) {
     state.held.forEach(plan => plan.release());
     await closeOwnedBrowserFixture({ context, owned, diagnostic });
   }, { timeout: 12000 });
-  context = await browser.newContext({ timezoneId: ZONE, locale: 'en-US' });
+  context = await browser.newContext({ timezoneId: ZONE, locale: 'en-US', ...options });
   await context.route('**/*', route => (new URL(route.request().url()).origin === base ? route.continue() : route.abort()));
   const page = await context.newPage();
   page.setDefaultTimeout(5000);
@@ -233,4 +233,53 @@ test('loading, failure, stale data and the status messages are in Russian', { ti
   await page.locator('#login-screen').waitFor({ state: 'visible' });
   assert.equal(await loginError(page).textContent(), 'Сессия истекла. Войдите снова.');
   await assertRussian(page, 'session expired');
+});
+
+test('nobody registered in the period: the devices line is one "—", not "0 из 0 (—)"', { timeout: 30000 }, async t => {
+  const { page, state } = await fixture(t);
+  state.plans.analytics.push({ status: 200, body: { ...analytics,
+    notifications: { ...analytics.notifications, devices: { people: 0, of: 0, rate: null } } } });
+  await login(page);
+  const lines = await page.locator('#analytics-body .metric').allTextContents();
+  assert.ok(lines.includes('Есть устройство для уведомлений: —'), lines.join('\n'));
+});
+
+/**
+ * Widths that do not fit, in CSS pixels: the document against the window, and
+ * each table against the .table-scroll it scrolls in (a table outside one is
+ * reported as such). The Russian words are longer than the English were (T-419).
+ */
+async function overflow(page) {
+  return page.evaluate(() => {
+    const found = [];
+    const { scrollWidth } = document.documentElement;
+    if (scrollWidth > window.innerWidth) found.push(`document ${scrollWidth} > window ${window.innerWidth}`);
+    for (const table of document.querySelectorAll('table')) {
+      const name = table.closest('section')?.id + ' ' + table.querySelector('th')?.textContent;
+      const wrap = table.parentElement.classList.contains('table-scroll') ? table.parentElement : null;
+      if (!wrap) found.push(`${name}: not in a .table-scroll`);
+      else if (table.offsetWidth > wrap.clientWidth) found.push(`${name}: ${table.offsetWidth} > ${wrap.clientWidth}`);
+    }
+    return found;
+  });
+}
+
+for (const [width, height] of [[1440, 900], [1280, 800]]) {
+  test(`at ${width} px every table of the dashboard fits without scrolling sideways`, { timeout: 30000 }, async t => {
+    const { page } = await fixture(t, { viewport: { width, height } });
+    await login(page);
+    assert.deepEqual(await overflow(page), []);
+  });
+}
+
+test('at 390 px the page itself does not scroll sideways; wide tables scroll in their wrappers', { timeout: 30000 }, async t => {
+  const { page } = await fixture(t, { viewport: { width: 390, height: 844 } });
+  await assertRussian(page, 'login screen');
+  assert.deepEqual((await overflow(page)).filter(line => line.startsWith('document')), [], 'login screen');
+  await login(page);
+  const found = await overflow(page);
+  // A phone is narrower than the tables: they scroll, each in its own wrapper.
+  assert.deepEqual(found.filter(line => line.startsWith('document') || line.endsWith('not in a .table-scroll')), []);
+  // The users' table does scroll there, and the page around it does not.
+  assert.ok(await page.locator('#users-section .table-scroll').evaluate(wrap => wrap.scrollWidth > wrap.clientWidth));
 });

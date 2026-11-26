@@ -32,7 +32,7 @@ const users = [
     steps: { ...steps, projects: 0, roles: { owner: 0, admin: 0, member: 0 } }, lastAppDay: null },
 ];
 const counts = { registered: 3, onboarding: 2, project: 2, marks: 1, engaged: 1 };
-const analytics = {
+export const analytics = {
   period: 'all', from: null, to: '2026-09-11T12:00:00Z', people: 3, languages: ['en', 'ru'],
   funnel: { weeks: [{ week: '2026-09-07', invite: counts, other: counts }], total: { invite: counts, other: counts },
     medians: { invite: { toProjectHours: 2.5, toProjectOf: 12, toMarksHours: null, toMarksOf: 0 },

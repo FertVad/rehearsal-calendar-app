@@ -86,6 +86,7 @@ export function generateAdminPageHTML() {
       <div id="bugs-error" class="section-error hidden" role="alert"></div>
       <div id="bugs-stale" class="stale-note hidden" role="status"></div>
       <div id="bugs-mutation-status" class="mutation-status hidden" role="status"></div>
+      <div class="table-scroll">
       <table>
         <thead>
           <tr>
@@ -98,6 +99,7 @@ export function generateAdminPageHTML() {
         </thead>
         <tbody id="bugs-body"></tbody>
       </table>
+      </div>
       <div class="pagination" id="bugs-pagination"></div>
     </section>
 

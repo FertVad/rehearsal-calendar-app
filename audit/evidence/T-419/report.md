@@ -93,3 +93,42 @@ login screen, «Log in» among it.
 
 None: `/admin` is a server page, not the app («Сервер … — без сценария»); the
 browser tests above are its scenario.
+
+## Review 1 — the layout holds the Russian words (task item 8)
+
+**Cause.** The users' table is laid out at its least width everywhere: nine
+columns of words that do not break — dates `10.09.2026`, addresses, `America/New_York`,
+upper-case headers «РЕГИСТРАЦИЯ», «ПОСЛЕДНИЙ», «ПРИЛОЖЕНИИ» — and «Шаги» at
+`min-width: 260px` sum to 1195 px, while `.container { max-width: 1100px }` leaves
+1052. The bug reports' table was the one table straight in its `<section>`, not
+in a `.table-scroll`, so on a phone it widened the document (488 px at 390).
+
+**Fix (no string changed):**
+- `dashboardPage.js` — the bug reports' table in a `.table-scroll` like the others;
+- `dashboard.css` — `.container` up to 1320 px, cells `10px 12px` instead of
+  `10px 14px`, «Шаги» `min-width: 220px`. The table's least width is now 1123 px:
+  whole at 1280 (wrapper 1232) and 1440 (1272); narrower screens scroll it inside
+  its wrapper.
+
+**Red before** (`red-before-layout.txt`, the page as at 12877f0): at 1440 and 1280
+`users-section: 1195 > 1052` and `bugs-section: not in a .table-scroll`; at 390
+`document 488 > window 390`. The test asks for no overflow at all, not "as
+before": the English page had 414 at 390 and the users' table 1 px over.
+
+**Green after:** `adminRussian.browser.test.mjs` 7/7 (the four new tests: devices
+«—», 1440, 1280, 390), `test:admin-browser` 17+18, `test:admin-errors-browser` 18,
+`test:admin-stored-browser` 6; Jest `adminLoginNotConfigured.test.js`, `adminHttp.test.js`.
+
+**Screenshots** `after-*` taken again: the laptop's dashboard shows every column
+of «Пользователи»; the phone's is 780 px wide at scale 2, a 390 px document.
+
+**«0 из 0 (—)» of the devices line** (`dashboard.js`): now through `ratio()`, one
+«—» with nobody registered; the test above was red on «Есть устройство для
+уведомлений: 0 из 0 (—)». «просмотрено: 0 из 0» in «Шаги» stays: it has no share
+in brackets, and the native editor's string is «просмотрено: {seen} из {onRoster}»
+(row 178); their proposal was about the «0 из 0 (—)» cells.
+
+**The 503 text.** `__tests__/middleware/adminLoginNotConfigured.test.js` calls
+`adminLogin` without a password and checks the 503 body is
+`{ error: 'Admin panel not configured' }` and that `dashboard.js` compares with
+that very text: a change on either side fails it.
