@@ -341,6 +341,60 @@ reinstalls the app, and the simulator refuses to uninstall Safari
 (IXErrorDomain 22); emptying Safari's data container (`simctl get_app_container
 … data`) leaves the tabs, which are not in it.
 
+## Safari's first launch
+
+Maestro's driver reads an app through accessibility, and a process's
+accessibility is set when it starts: "AXS AccessibilityEnabled: (app ax: 1)"
+in `device-simulator.log` (each WebContent process of Safari logs its
+parent's). The first Safari of a run - the runner boots the simulator for
+every run - came up with it off ("app ax: 0") in most runs, whoever launched
+it, Maestro or a link from the app, and kept it off: every read of it was
+"Error getting main window kAXErrorAPIDisabled". Once the driver had asked
+Safari for its screen - XCTest's handshake with it, "Got availability
+notification from test daemon" in Safari's log, whatever the read answered -
+every later launch of Safari in the run came up with it on, before the
+driver asked anything.
+
+Flow 44, run alone, met it at its support page: the tap on "Help" was the
+run's first Safari, its reads failed, and with the app not in front Maestro
+failed the step as "App crashed or stopped while executing flow", the page on
+the screen (T-416's first try, T-418's supervisor check). In the night run
+earlier flows had opened Safari, and it passed. The evidence (T-418,
+`audit/evidence/T-418/`; `safari-ax-scan.mjs` lists, for any run's
+`device-xctest.log`, the openings of Safari the driver could not read):
+
+- a probe tapping "Help" twelve times, each after `fresh-safari.yaml`, so each
+  a launch of its own: the first lost, the eleven after it read, all eleven
+  "app ax: 1" from their start;
+- Maestro launching Safari first and leaving it at once, unasked: in one run
+  that Safari came up on, in another off; and stopping it unasked before the
+  tap left the tap's Safari off too;
+- Maestro launching Safari and reading it until the app is no longer what it
+  reads, then stopping it: the tap's Safari and the policy's came up on, both
+  when the first came up off (its read failed) and when it came up on.
+
+So a flow in which the app opens Safari as the run's first has Maestro meet
+Safari first, as flow 44 does before "Help":
+
+    - runFlow: ../subflows/fresh-safari.yaml
+    - launchApp:
+        appId: com.apple.mobilesafari
+        stopApp: false
+    - extendedWaitUntil:
+        notVisible:
+          id: tab-profile
+        timeout: 20000
+        optional: true
+    - runFlow: ../subflows/fresh-safari.yaml
+    - launchApp:
+        stopApp: false
+
+The wait reads the app behind Safari until iOS suspends it (the driver takes
+the app for the one in front till then, "Safari over a running app"), then
+Safari. It is optional because a Safari with accessibility off fails the read:
+the asking is what turns the later launches on, not the answer.
+`fresh-safari.yaml` runs before the launch too, so it has no tab to restore.
+
 ## A lost tap
 
 The simulator loses about one tap in 250, and Maestro does not notice. For
