@@ -1,46 +1,55 @@
-T-418 - green after: flow 44 with Safari met by Maestro before "Help"
-(launched, read until the app is not what is read - optional - and stopped by
-fresh-safari.yaml), run alone on 2026-11-26, twice, each on a fresh boot.
+T-418 - green after (review 1): the runner takes the boot's first Safari
+(firstSafari, e2e/safari.mjs; e2e/run.mjs right after the boot), and flow 44
+is back to its steps at e0e2c9d - the old order, "fresh-safari.yaml" and the
+tap on "Help". Flow 107 unchanged. Each run alone, each its own boot,
+2026-11-26.
 
-$ npm run e2e -- e2e/flows/44-profile-language.yaml
-[Passed] The profile's language, kept by the account (4m 15s)
-1/1 Flow Passed in 4m 15s
-[e2e] taps taken again (tap-and-see.yaml): 0
-[e2e] Safari launches: 3, tabs restored: 0 (fresh-safari.yaml)
+$ npm run e2e -- e2e/flows/44-profile-language.yaml        (five times)
 
-  The first Safari came up with its accessibility off; its read failed, the
-  wait warned (06:47:27.506 Assert that (Optional) id: tab-profile is not
-  visible WARNED). The tap's Safari and the policy's came up with it on:
-    MobileSafari[99100]  18:46:53 launched by Maestro, asked 18:46:54.50, app ax: 0 (14 lines)
-    MobileSafari[99318]  18:47:34 the tap on "Help",     asked 18:47:35.39, app ax: 1
-    MobileSafari[99428]  18:47:51 the policy's link,     asked 18:47:52.71, app ax: 1
+  run                 the runner's line                                         result
+  2026-11-26_075530   Safari's first launch since the boot: 22954 home readable  [Passed] (3m 14s)
+  2026-11-26_080318   ... 25816 home readable                                    [Passed] (3m 50s)
+  2026-11-26_081139   ... 28875 home readable                                    [Passed] (3m 36s)
+  2026-11-26_081930   ... 31774 home readable                                    [Passed] (3m 22s)
+  2026-11-26_085223   ... 43391, its home readable; stopped (the step as committed) [Passed] (3m 48s)
+  each: [e2e] taps taken again (tap-and-see.yaml): 0
+        [e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
 
-$ npm run e2e -- e2e/flows/44-profile-language.yaml
-[Passed] The profile's language, kept by the account (3m 59s)
-1/1 Flow Passed in 4m
-[e2e] taps taken again (tap-and-see.yaml): 0
-[e2e] Safari launches: 3, tabs restored: 0 (fresh-safari.yaml)
+$ npm run e2e -- e2e/flows/107-rate-the-app.yaml           (twice)
 
-  The first Safari came up with it on; the wait passed at once (06:55:47.699
-  ... COMPLETED):
-    MobileSafari[2476]  18:55:44 launched by Maestro, app ax: 1
-    MobileSafari[2584]  18:55:56 the tap on "Help",   app ax: 1
-    MobileSafari[2744]  18:56:19 the policy's link,   app ax: 1
+  2026-11-26_082731   ... 34733 home readable   [Failed] (2m 47s) (Assertion is false: ".*apps\.apple\.com.*" is visible)
+  2026-11-26_084243   ... 40133 home readable   [Passed] (2m 40s)
 
-Both runs read, after the support page, the policy in Russian ("Политика
-конфиденциальности", no "Privacy Policy"), went back to English and found
-"Start Week On" (44 not as a native speaker writes it: "").
+The flows' Safaris (safari-starts.mjs, safari-ax-scan.mjs on each run's logs):
 
-Two orders that did not hold, on the way (README.md):
+  075530  MobileSafari[24237] app ax: 1 home readable   reads 15, kAXErrorAPIDisabled 0
+          MobileSafari[24355] app ax: 1 home readable   reads 13, kAXErrorAPIDisabled 0
+  080318  MobileSafari[27394], [27518]  app ax: 1 home readable
+  081139  MobileSafari[30299], [30410]  app ax: 1 home readable
+  081930  MobileSafari[33132], [33243]  app ax: 1 home readable
+  085223  MobileSafari[44866], [44996]  app ax: 1 home readable
+  082731  MobileSafari[36076] app ax: 1 home readable   reads 116, kAXErrorAPIDisabled 0
+  084243  MobileSafari[41551] app ax: 1 home readable   reads 5, kAXErrorAPIDisabled 0
 
-1. Maestro launching Safari, leaving it unasked, the link opening in it
-   (probe-safari-up-first.yaml's order): the probe passed 12 of 12, its
-   first Safari "app ax: 1"; flow 44 in that order, its second run:
-     [Failed] The profile's language, kept by the account (3m 46s) (App crashed or stopped ...)
-     18:28:38.063588  Safari reads: 0, kAXErrorAPIDisabled: 2   <- lost
-     MobileSafari[92754] launched by Maestro, app ax: 0 (17 lines)
+Twelve Safaris of flows in seven boots, none "app ax: 0", none lost. Before
+the change the boot's first Safari came up "home inaccessible" in 5 of 8 runs
+alone (first-safari.txt): seven boots in a row without it would be about
+(3/8)^7, 0.1 %. The runner's own Safari came up readable in all seven, so its
+being inaccessible has not been met here; what the step relies on is that no
+later Safari of a boot ever was (first-safari.txt, 99318).
 
-2. Maestro launching Safari and fresh-safari.yaml stopping it unasked, 1.5 s
-   later, before the tap:
-     [Failed] The profile's language, kept by the account (3m 18s) (App crashed or stopped ...)
-     MobileSafari[96102] the tap's, app ax: 0 (16 lines)
+Flow 107's failure at 082731 is another thing, not Safari's accessibility:
+Safari was read 116 times, and the screen was "Safari cannot open the page
+because the address is invalid." over an empty address field - apps.apple.com
+had sent Safari on to itms-appss:// (20:31:29.6, "Unable to convert
+"itms-appss" to port"), and the field no longer named the site the flow waits
+for. On 084243 the read came while the field still named it, and it passed.
+A race of flow 107's own wait, which no run alone reached before (its Safari
+was lost first); left to a task of its own (the report).
+
+Flow 44 passed whole each time - the support page, the policy in Russian, back
+to English and "Start Week On": T-005, T-011, T-039 and T-256 did not come back.
+
+$ node --test e2e/__tests__/safari.test.mjs
+ℹ pass 18
+ℹ fail 0

@@ -55,3 +55,26 @@ Each Safari's accessibility at its start (device-simulator.log, its first
   MobileSafari[83225]  18:01:44 app ax: 1 at 18:01:46.55, before it was asked at 18:01:47.60
   MobileSafari[83388]  18:02:05 app ax: 1 at 18:02:07.09, before it was asked at 18:02:08.11
   ... and so to the twelfth.
+
+Review 1: flow 107, the same order ("fresh-safari.yaml", then a tap in the app
+that launches Safari), run alone on the runner as it is at 347cebc (e2e/run.mjs
+without firstSafari), 2026-11-26 08:34:
+
+$ npm run e2e -- e2e/flows/107-rate-the-app.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[Failed] iOS's rating window after a save, once a version; Rate Rehearsly in the profile (3m 19s) (App crashed or stopped while executing flow, please check diagnostic logs: ~/Library/Logs/DiagnosticReports directory)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+maestro.log: 08:39:18.172 Assert that ".*apps\.apple\.com.*" is visible FAILED
+
+$ node ../audit/evidence/T-418/safari-ax-scan.mjs ".../2026-11-26_083451/iOS's rating window .../logs/device-xctest.log"
+  20:38:41.926134  Safari reads: 0, kAXErrorAPIDisabled: 2   <- lost
+Safari opened 1 time(s); lost: 1
+
+$ node ../audit/evidence/T-418/safari-starts.mjs ".../2026-11-26_083451/.../logs/device-simulator.log"
+  MobileSafari[38622] 20:38:41.210  app ax: 0  home inaccessible: com.apple.mobilesafari, kCFPreferencesAnyApplication, com.apple.ImageIO, com.apple.UIKit, com.apple.Accessibility, ...
+
+The first Safari of the boot, its home inaccessible, its accessibility off:
+flow 44's failure, on flow 107 (first-safari.txt).
