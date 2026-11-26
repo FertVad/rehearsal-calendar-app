@@ -1,0 +1,48 @@
+T-416 - flow 87 on a seed whose two days are at a month's end (the owner's way (b)).
+
+The seed changed for these runs only, not committed (e2e/seed.mjs):
+  evening: localDate(5), morning: localDate(6)   ->  localDate(4), localDate(5)
+  Anna's night [ids.courage, localInstant(5, 23), localInstant(6, 1)]
+                                                 ->  localInstant(4, 23), localInstant(5, 1)
+Run on 2026-11-26: EVENING_DAY 2026-11-30, MORNING_DAY 2026-12-01 - the dates of
+the red full run of 25.11 (30.11 and 1.12, "Dezember 2026" between them).
+
+## Red before: flow 87 as on d82db11 (git restore --source=d82db11 -- e2e/flows/87-...yaml)
+
+$ npm run e2e -- e2e/flows/87-planner-and-calendar-titles-german.yaml
+Waiting for flows to complete...
+[Failed] Planner and the calendar's top in German (2m 45s) (Assertion is false: "Ausgewählte (Tage|Daten): 2" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-26T00:42:37.376Z  tapped "id day-2026-12-01" again: no "Ausgewählte (Tage|Daten): 2" after the first tap
+
+The failure of the full run, the same message.
+
+## A first try of the fix that stayed red (kept here: it is why the flow asks the row under the day)
+
+The day drawn up until `day-<MORNING_DAY>` was `above: availability-deselect`,
+then `above: availability-sheet` (the testID added to the sheet): both red, the same
+message. The loop never swiped (commands.json: the repeat SKIPPED), and the
+hierarchy at the failure had
+  day-2026-12-01         [67,369][114,416]
+  availability-sheet     [0,383][393,852]
+  availability-deselect  [138,407][268,451]
+Maestro's `above` compares the top edges: 369 < 383, the day counted above the
+sheet while its middle, 392, where the tap goes, was on it.
+
+## Green after: flow 87 as committed (the day a week on, in the row under it, above the sheet)
+
+$ npm run e2e -- e2e/flows/87-planner-and-calendar-titles-german.yaml
+Waiting for flows to complete...
+[Passed] Planner and the calendar's top in German (3m 19s)
+
+1/1 Flow Passed in 3m 20s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+commands.json of that run: the new repeat COMPLETED with one swipe (50% 35% -> 50% 25%),
+then the asserts "day-2026-12-08 above availability-sheet" and
+"day-2026-12-01 below availability-legend" passed, and the first tap on
+day-2026-12-01 gave "Ausgewählte Tage: 2".

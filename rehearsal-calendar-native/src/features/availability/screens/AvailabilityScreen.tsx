@@ -348,8 +348,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         />
       )}
 
-      {/* Animated Bottom Panel */}
+      {/* Animated Bottom Panel. Its testID is its top for e2e: a day is
+          tapped above it, where the sheet does not cover it (flow 87, T-416). */}
       <Animated.View
+        testID="availability-sheet"
         style={[
           styles.bottomPanel,
           {
