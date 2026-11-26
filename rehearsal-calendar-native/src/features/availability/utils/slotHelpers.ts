@@ -13,7 +13,10 @@ export function applyToSelectedDates(
   const updated = { ...availability };
   selectedDates.forEach(dateKey => {
     const currentState = getDayState(dateKey);
-    updated[dateKey] = updateFn(currentState, dateKey);
+    // An edited day is the person's own, whatever it says now: a weekend's
+    // default it held is replaced by their save (T-406).
+    const { weekendDefault: _replaced, ...next } = updateFn(currentState, dateKey);
+    updated[dateKey] = next;
   });
   return updated;
 }

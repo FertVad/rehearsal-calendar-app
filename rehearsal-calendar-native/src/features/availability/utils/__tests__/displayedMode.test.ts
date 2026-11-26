@@ -84,6 +84,25 @@ describe('the dot on the calendar grid', () => {
     expect(getDayStatus('2026-09-08', {})).toBe('none');
   });
 
+  // T-292: unmarked is free, as the planner reads it — from today on.
+  it('calls a day with no entry free from today on, and says nothing before', () => {
+    expect(getDayStatus('2026-09-08', {}, '2026-09-08')).toBe('free');
+    expect(getDayStatus('2026-09-09', {}, '2026-09-08')).toBe('free');
+    expect(getDayStatus('2026-09-07', {}, '2026-09-08')).toBe('none');
+  });
+
+  it('leaves a day with an entry as it was, whatever the date', () => {
+    const availability = {
+      '2026-09-09': { mode: 'busy' },
+      '2026-09-07': { mode: 'free' },
+      '2026-09-10': { mode: 'custom', importedSlots: event },
+    };
+
+    expect(getDayStatus('2026-09-09', availability, '2026-09-08')).toBe('busy');
+    expect(getDayStatus('2026-09-07', availability, '2026-09-08')).toBe('free');
+    expect(getDayStatus('2026-09-10', availability, '2026-09-08')).toBe('partial');
+  });
+
   it('shows busy for a day a multi-day event runs straight through', () => {
     const availability = {
       '2026-09-05': {

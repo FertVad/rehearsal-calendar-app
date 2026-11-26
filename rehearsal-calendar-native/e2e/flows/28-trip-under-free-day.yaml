@@ -35,6 +35,16 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
+# The day after the trip, nothing on it and nothing marked, is free: green
+# beside the trip's red (T-292). It had no dot, as if unknown.
+- scrollUntilVisible:
+    element:
+      id: day-${OTHER_DAY}
+      text: "\\d+, Free"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- takeScreenshot: 28-free-after-trip
 # A tap while the list still glides only stops it, and one under the legend
 # lands on the legend; it is tapped once it rests below it.
 - runFlow:

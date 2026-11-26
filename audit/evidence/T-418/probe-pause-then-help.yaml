@@ -1,0 +1,49 @@
+# T-418 probe, not a flow of the suite (review 1): flow 44's old order - Safari
+# stopped and its tabs gone (fresh-safari.yaml), "Help" tapped, Safari launched
+# by the link - but only after the app has been read, Safari untouched, for
+# four minutes more. A run alone reaches "Help" 3-4 min after the boot, a night run
+# 28-67 min after it: if the first Safari is off because the simulator is fresh,
+# the pause turns it on. Then a second opening, to see the one after it.
+appId: ${APP_ID}
+name: T-418 probe - a pause, then Help opened from the app
+---
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${VERSHININA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 30000
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-help
+    direction: DOWN
+    centerElement: true
+# The pause: the app read over and over, nothing on the screen answers it.
+- extendedWaitUntil:
+    visible: "T-418 no such text"
+    timeout: 240000
+    optional: true
+- repeat:
+    times: 2
+    commands:
+      - runFlow: ../../../rehearsal-calendar-native/e2e/subflows/fresh-safari.yaml
+      - tapOn:
+          id: profile-help
+      - extendedWaitUntil:
+          visible: ".*support@rehearsly.me.*"
+          timeout: 20000
+          optional: true
+      - launchApp:
+          stopApp: false
+      - extendedWaitUntil:
+          visible:
+            id: profile-help
+          timeout: 20000

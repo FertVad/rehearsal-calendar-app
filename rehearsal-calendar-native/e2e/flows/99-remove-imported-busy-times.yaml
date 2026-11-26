@@ -9,8 +9,8 @@
 # day by his own hand. His phone refuses the app the calendar and Auto Sync is
 # off: the button is there all the same (the exported one, which needs the
 # calendar, is not), it asks first and says what stays, and says nothing of
-# Auto Sync, which is off. Afterwards the editor shows MARK_DAY with no mark
-# and AFTER_DAY still busy.
+# Auto Sync, which is off. Afterwards the editor shows MARK_DAY with no mark,
+# so free (T-292), and AFTER_DAY still busy.
 appId: ${APP_ID}
 name: Imported busy times removed, what was marked by hand kept
 tags:
@@ -127,9 +127,9 @@ tags:
       id: day-${AFTER_DAY}
       text: ".*, Busy"
     timeout: 30000
+# The hour gone and nothing marked by hand: free, as a day not marked is
+# (T-292), no longer partly busy.
 - assertVisible:
     id: day-${MARK_DAY}
-- assertNotVisible:
-    id: day-${MARK_DAY}
-    text: ".*, .*"
+    text: "\\d+, Free"
 - takeScreenshot: 99-after

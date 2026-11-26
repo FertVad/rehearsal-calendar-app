@@ -1,0 +1,19 @@
+T-416 - green after: flow 44 of c02cf74 (the profile taken back to the top, the
+language row below the title, before "Язык, Русский" is checked), run alone on 2026-11-26.
+
+First try: [Failed] (App crashed or stopped while executing flow) at step 244,
+the wait for the support page, before the part changed: the screenshot shows the
+support page open in Safari, "support@rehearsly.me" on it - Maestro's view of the
+app gone to Safari, not the flow's change. Run again:
+
+$ npm run e2e -- e2e/flows/44-profile-language.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Passed] The profile's language, kept by the account (4m 32s)
+
+1/1 Flow Passed in 4m 33s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)

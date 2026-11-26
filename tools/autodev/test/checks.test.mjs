@@ -130,6 +130,27 @@ test("a task's checks run its own flows, not the whole set", () => {
   assert.deepEqual(pick([at('src/App.tsx')]), ['e2e/flows/01-login.yaml']);
 });
 
+test('a subflow or script run in the short form reaches its flows too', () => {
+  // 24.11.2026: flows 44, 70 and 98 say `- runFlow: ../subflows/fresh-safari.yaml`,
+  // which says `- runScript: ../scripts/fresh-safari.js`, and 67-69 run the
+  // availability subflows the same way. Only `file:` was read, so a task
+  // changing any of them was checked by the sign-in flow alone.
+  const app = appTree('short');
+  const at = (rel) => `rehearsal-calendar-native/${rel}`;
+  const write = (rel, text) => fs.writeFileSync(path.join(app, rel), text);
+  write('e2e/flows/70-privacy.yaml', '- stopApp\n- runFlow: ../subflows/fresh-safari.yaml\n- openLink: x\n');
+  write('e2e/flows/98-invite.yaml', "- runFlow: '../subflows/fresh-safari.yaml'  # tabs gone\n");
+  write('e2e/subflows/fresh-safari.yaml', '- runScript: ../scripts/fresh-safari.js\n');
+  write('e2e/scripts/fresh-safari.js', '');
+  const pick = (changedFiles) => e2eFlowsFor({ app, changedFiles });
+  assert.deepEqual(pick([at('e2e/subflows/fresh-safari.yaml')]), ['e2e/flows/70-privacy.yaml', 'e2e/flows/98-invite.yaml']);
+  assert.deepEqual(pick([at('e2e/scripts/fresh-safari.js')]), ['e2e/flows/70-privacy.yaml', 'e2e/flows/98-invite.yaml']);
+  // The long form still does, and a name is not found inside another one.
+  assert.deepEqual(pick([at('e2e/scripts/tap-again.js')]), ['e2e/flows/30-sync.yaml']);
+  write('e2e/subflows/safari.yaml', '- tapOn: x\n');
+  assert.deepEqual(pick([at('e2e/subflows/safari.yaml')]), ['e2e/flows/01-login.yaml']);
+});
+
 test('the e2e run is given only the chosen flows, and says which', async () => {
   const app = appTree('run');
   const folder = path.join(dir, 'run-bin');
@@ -363,4 +384,68 @@ test('a person changed in the seed brings the flows that sign in as them', () =>
   ];
   assert.deepEqual(e2eFlowsFor({ app, changedFiles: ['rehearsal-calendar-native/e2e/flows/42-count.yaml', 'rehearsal-calendar-native/e2e/seed.mjs'], seedLines }),
     ['e2e/flows/20-save.yaml', 'e2e/flows/31-late.yaml', 'e2e/flows/42-count.yaml']);
+});
+
+/** A tree with the app's and the server's locks and node_modules linked to `main`'s, and an npm that records its calls. */
+function lockedTree(name) {
+  const root = path.join(dir, name);
+  const main = path.join(dir, `${name}-main`);
+  for (const rel of ['rehearsal-calendar-native', 'rehearsal-calendar-native/server']) {
+    fs.mkdirSync(path.join(root, rel), { recursive: true });
+    fs.writeFileSync(path.join(root, rel, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: { '': {}, 'node_modules/expo-store-review': { version: '9.0.9' } } }));
+    fs.mkdirSync(path.join(main, rel, 'node_modules'), { recursive: true });
+    fs.writeFileSync(path.join(main, rel, 'node_modules', 'kept'), "the main tree's install");
+    fs.symlinkSync(path.join(main, rel, 'node_modules'), path.join(root, rel, 'node_modules'));
+  }
+  const folder = path.join(dir, `${name}-bin`);
+  fs.mkdirSync(folder);
+  const calls = path.join(dir, `${name}-calls`);
+  fs.writeFileSync(calls, '');
+  fs.writeFileSync(path.join(folder, 'npm'), `#!/bin/sh\necho "$(pwd) $*" >> '${calls}'\nif [ "$1" = ci ]; then mkdir -p node_modules; [ -f "$(pwd)/fail-ci" ] && { echo 'npm error code E404'; exit 1; }; fi\nexit 0\n`, { mode: 0o755 });
+  fs.writeFileSync(path.join(folder, 'node'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  const installs = () => fs.readFileSync(calls, 'utf8').split('\n').filter((line) => / ci --no-audit --no-fund$/.test(line))
+    .map((line) => (line.includes('rehearsal-calendar-native/server ') ? 'server' : 'app'));
+  return { root, main, node: path.join(folder, 'node'), calls, installs };
+}
+
+const docsOnly = ['docs/notes.md']; // no e2e, no PostgreSQL: the always-run checks only
+
+test("checks install the tree's own packages first when they were not made from its lock (25.11: the review tree's were the main tree's)", async () => {
+  const tree = lockedTree('locked');
+  const first = await runChecks({ root: tree.root, changedFiles: docsOnly, node: tree.node, log: path.join(dir, 'locked.log'), env });
+  assert.equal(first.ok, true);
+  assert.deepEqual(first.steps.map((step) => step.name).slice(0, 3), ['npm ci (app)', 'npm ci (server)', 'secrets']);
+  assert.deepEqual(tree.installs(), ['app', 'server']);
+  const lines = fs.readFileSync(tree.calls, 'utf8').split('\n');
+  assert.ok(lines.findIndex((line) => line.endsWith(' ci --no-audit --no-fund')) < lines.findIndex((line) => line.endsWith('run check:secrets')));
+  for (const rel of ['rehearsal-calendar-native', 'rehearsal-calendar-native/server']) {
+    // The link went, not what it pointed at: npm ci empties node_modules.
+    assert.equal(fs.lstatSync(path.join(tree.root, rel, 'node_modules')).isSymbolicLink(), false);
+    assert.equal(fs.readFileSync(path.join(tree.main, rel, 'node_modules', 'kept'), 'utf8'), "the main tree's install");
+  }
+
+  // The same locks: nothing to install.
+  const again = await runChecks({ root: tree.root, changedFiles: docsOnly, node: tree.node, log: path.join(dir, 'locked.log'), env });
+  assert.equal(again.steps[0].name, 'secrets');
+  assert.deepEqual(tree.installs(), ['app', 'server']);
+
+  // A commit changed the app's lock (T-410: expo-store-review): the app's again, not the server's.
+  fs.writeFileSync(path.join(tree.root, 'rehearsal-calendar-native', 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: { '': {} } }));
+  const changed = await runChecks({ root: tree.root, changedFiles: docsOnly, node: tree.node, log: path.join(dir, 'locked.log'), env });
+  assert.deepEqual(changed.steps.map((step) => step.name).slice(0, 2), ['npm ci (app)', 'secrets']);
+  assert.deepEqual(tree.installs(), ['app', 'server', 'app']);
+});
+
+test('an install that fails is a red check, and the next run installs again', async () => {
+  const tree = lockedTree('unlocked');
+  fs.unlinkSync(path.join(tree.root, 'rehearsal-calendar-native', 'node_modules'));
+  fs.writeFileSync(path.join(tree.root, 'rehearsal-calendar-native', 'fail-ci'), '');
+  const red = await runChecks({ root: tree.root, changedFiles: docsOnly, node: tree.node, log: path.join(dir, 'unlocked.log'), env });
+  assert.equal(red.ok, false);
+  assert.deepEqual(red.steps.map(({ name, ok }) => ({ name, ok })), [{ name: 'npm ci (app)', ok: false }]);
+  assert.match(red.steps[0].tail, /E404/);
+  fs.unlinkSync(path.join(tree.root, 'rehearsal-calendar-native', 'fail-ci'));
+  const green = await runChecks({ root: tree.root, changedFiles: docsOnly, node: tree.node, log: path.join(dir, 'unlocked.log'), env });
+  assert.equal(green.ok, true);
+  assert.deepEqual(tree.installs(), ['app', 'app', 'server']);
 });

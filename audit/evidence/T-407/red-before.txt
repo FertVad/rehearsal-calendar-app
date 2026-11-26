@@ -1,0 +1,161 @@
+T-407 - unstable "Invite link during onboarding": red before, on the base 3043d55
+=================================================================================
+
+What failed (supervisor's checks of T-406, c8b1b5c, 25.11.2026 03:25, and again at ~04:00)
+-------------------------------------------------------------------------------------------
+All 11 flows of the set failed with maestro.DeviceUnreachableException. Only the
+first, 09-invite-during-onboarding, ever ran: the driver died in it and every
+flow after it found no driver. Four of the five T-406 runs died at this spot.
+
+Cause, from the logs (lines copied below; the folders are pruned after 3 days)
+-------------------------------------------------------------------------------
+1. The tap on "Sign In" (sign-in-submit.yaml -> tap-and-see.yaml) is taken: the
+   keyboard goes away and the app goes on. Not a lost tap: no backboardd, the
+   tap's own subflow saw the button go.
+2. Right after it the app's keyboard (UIKit, in the app's process) asks for the
+   "Save Password?" sheet: signalAutofillUIBringup, then
+   SFPasswordSavingRemoteViewController "Requesting remote view controller ...
+   from service com.apple.SafariViewService", and SpringBoard launches
+   SafariViewService to host it.
+3. com.apple.WebUI AutoFillPasswords = false (noPasswordOffer, T-246) does not
+   stop that. The setting is read by SafariViewService itself once it is up; it
+   then takes the sheet down unseen 1-2 s later. So the sheet was asked for at
+   EVERY sign-in of every run, green ones too (table below) - flow 01's
+   assertNotVisible "Not Now" cannot see that, because the sheet is never drawn.
+4. Maestro's driver (2.11.0), reading the screen, runs "Fetch Safari WebView
+   hierarchy": while SafariViewService runs it queries it for WebViews. Asked
+   while the service was still starting (its XCTest bootstrap "Got availability
+   notification from test daemon" at the same millisecond), XCTest answered
+   kAXErrorAPIDisabled three times (8.5 s) and failed the driver's one test,
+   testHttpServer. That is the end of the driver.
+5. On a freshly booted simulator (every supervisor run boots it anew) the
+   service's first start is slow; the first sign-in of the run meets it.
+   09-invite is the first flow of the set.
+
+Not T-246's race (kAXErrorInvalidUIElement in the status-bar query of an InputUI
+scene): here kAXErrorAPIDisabled in the WebView query of SafariViewService.
+
+The supervisor's red run 1: e2e/out/failed/T-406-2026-11-25T00-41-02-458Z/artifacts/Invite link during onboarding
+--- maestro.log
+96: 02:38:18.089 Tap on id: ${TAP_ID} RUNNING
+97: 02:38:18.375 Tapping on element: ... accessibilityText=Sign In ... resource-id=login-submit
+103: 02:38:20.415 Tap on id: ${TAP_ID} COMPLETED
+--- device-simulator.log (52646 lines)
+45315: 2026-11-25 02:38:19.572255+0200 SpringBoard: RX com.rehearsal.app(31124) signalAutofillUIBringup
+45640: 2026-11-24 14:38:19.584529-1000 Rehearsly[31124]: (UIKitCore) [com.apple.UIKit:ViewServices] <SFPasswordSavingRemoteViewController: 0x108a1e800>: Requesting remote view controller SFPasswordSavingServiceViewController from service com.apple.SafariViewService
+45643: 2026-11-25 02:38:19.587291+0200 SpringBoard: Received request to open "com.apple.SafariViewService" from Rehearsly:31124.
+46751: 2026-11-24 14:38:20.626790-1000 SafariViewService[31234]: Set materialized view controller: <SFPasswordSavingServiceViewController: 0x105ca9900>
+48347: 2026-11-24 14:38:21.035301-1000 SafariViewService[31234]: (XCTTargetBootstrap) Got availability notification from test daemon.
+--- device-xctest.log
+741: 14:38:18.801421 Tapping 196.0, 410.0
+768: 14:38:21.034138 [ViewHierarchyHandler] Fetch Safari WebView hierarchy - start
+769:     t =    54.21s Get number of matches for: Descendants matching type WebView
+770:     t =    57.65s Get number of matches for: <XCUIElementQuery: 0x114238000> (retry 1)
+771:     t =    60.67s Get number of matches for: <XCUIElementQuery: 0x114238000> (retry 2)
+772: <unknown>:0: error: -[maestro_driver_iosUITests.maestro_driver_iosUITests testHttpServer] : Failed to get matching snapshots: Error getting main window kAXErrorAPIDisabled
+773: 14:38:29.623035 Fetch Safari WebView hierarchy - duration 8.588705062866211
+777: Test Case '-[maestro_driver_iosUITests.maestro_driver_iosUITests testHttpServer]' failed (62.852 seconds).
+
+The supervisor's red run 2: e2e/out/failed/T-406-2026-11-25T02-01-21-191Z/artifacts/Invite link during onboarding
+--- device-simulator.log (53195 lines)
+43981: 2026-11-25 03:58:42.035557+0200 SpringBoard: RX com.rehearsal.app(59590) signalAutofillUIBringup
+44312: 2026-11-24 15:58:42.046503-1000 Rehearsly[59590]: <SFPasswordSavingRemoteViewController: 0x124116800>: Requesting remote view controller SFPasswordSavingServiceViewController from service com.apple.SafariViewService
+44315: 2026-11-25 03:58:42.049603+0200 SpringBoard: Received request to open "com.apple.SafariViewService" from Rehearsly:59590.
+45446: 2026-11-24 15:58:43.160430-1000 SafariViewService[59714]: Set materialized view controller: <SFPasswordSavingServiceViewController: 0x101d65900>
+47008: 2026-11-24 15:58:43.519544-1000 SafariViewService[59714]: (XCTTargetBootstrap) Got availability notification from test daemon.
+--- device-xctest.log
+695: 15:58:41.120572 Tapping 196.0, 410.0
+724:     t =    56.18s Get number of matches for: Descendants matching type WebView
+725:     t =    59.55s Get number of matches for: <XCUIElementQuery: 0x115e28230> (retry 1)
+726:     t =    62.57s Get number of matches for: <XCUIElementQuery: 0x115e28230> (retry 2)
+727: <unknown>:0: error: -[maestro_driver_iosUITests.maestro_driver_iosUITests testHttpServer] : Failed to get matching snapshots: Error getting main window kAXErrorAPIDisabled
+728: 15:58:51.988425 Fetch Safari WebView hierarchy - duration 8.470919966697693
+732: Test Case '-[maestro_driver_iosUITests.maestro_driver_iosUITests testHttpServer]' failed (64.690 seconds).
+
+Red before, reproduced here (base code: run.mjs of 3043d55, the simulator as the base leaves it)
+-------------------------------------------------------------------------------------------------
+$ npm run e2e -- e2e/flows/09-invite-during-onboarding.yaml     (fresh boot, the flow first, as the supervisor runs it)
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+[Failed] Invite link during onboarding (1m 6s)
+1/1 Flow Failed
+
+e2e/out/artifacts/2026-11-25_050919/Invite link during onboarding
+--- maestro.log
+96: 05:12:22.385 Tap on id: ${TAP_ID} RUNNING
+97: 05:12:22.794 Tapping on element: ... accessibilityText=Sign In ... resource-id=login-submit
+103: 05:12:25.274 Tap on id: ${TAP_ID} COMPLETED
+--- device-simulator.log (53182 lines)
+47120: 2026-11-25 05:12:24.154449+0200 SpringBoard: RX com.rehearsal.app(86670) signalAutofillUIBringup
+47443: 2026-11-24 17:12:24.176682-1000 Rehearsly[86670]: <SFPasswordSavingRemoteViewController: 0x123d3a300>: Requesting remote view controller SFPasswordSavingServiceViewController from service com.apple.SafariViewService
+47446: 2026-11-25 05:12:24.180829+0200 SpringBoard: Received request to open "com.apple.SafariViewService" from Rehearsly:86670.
+48594: 2026-11-24 17:12:25.485030-1000 SafariViewService[86775]: Set materialized view controller: <SFPasswordSavingServiceViewController: 0x1028f1900>
+50291: 2026-11-24 17:12:25.999336-1000 SafariViewService[86775]: (XCTTargetBootstrap) Got availability notification from test daemon.
+--- device-xctest.log
+786: 17:12:23.273073 Tapping 196.0, 410.0
+815:     t =    52.54s Get number of matches for: Descendants matching type WebView
+816:     t =    56.05s Get number of matches for: <XCUIElementQuery: 0x115e30000> (retry 1)
+817:     t =    59.09s Get number of matches for: <XCUIElementQuery: 0x115e30000> (retry 2)
+818: <unknown>:0: error: -[maestro_driver_iosUITests.maestro_driver_iosUITests testHttpServer] : Failed to get matching snapshots: Error getting main window kAXErrorAPIDisabled
+819: 17:12:34.657541 Fetch Safari WebView hierarchy - duration 8.660255074501038
+823: Test Case '-[maestro_driver_iosUITests.maestro_driver_iosUITests testHttpServer]' failed (61.234 seconds).
+
+The same failure, line for line, as the supervisor's two.
+
+The sheet was asked for at every sign-in on the base, in green runs too
+-----------------------------------------------------------------------
+Per flow's device-simulator.log: times SFPasswordSavingRemoteViewController was
+requested, and kAXErrorAPIDisabled lines. (A flow's log covers its own minutes.)
+
+e2e/out/artifacts/2026-11-25_041713 (T-406 set, all 11 passed):
+  Address change by emailed codes                     | sheet at 16:28:12.122,16:29:11.406 | APIDisabled 0
+  Availability saves the day it changed               | sheet at 16:22:50.908 | APIDisabled 0
+  English seconds and busy people read right          | sheet at 16:42:31.777,16:43:51.821 | APIDisabled 0
+  First launch in the phone's language                | sheet at 16:26:17.656 | APIDisabled 0
+  Invite link during onboarding                       | sheet at 16:19:41.953 | APIDisabled 0
+  Onboarding in Russian, the greeting on one line     | sheet at 16:33:38.143,16:34:47.630,16:35:45.563 | APIDisabled 0
+  Onboarding shows the calendar that was saved        | sheet at 16:32:45.116 | APIDisabled 0
+  Onboarding to the end, nothing granted              | sheet at 16:20:40.846,16:22:07.450 | APIDisabled 0
+  Spanish buttons read right and fit                  | sheet at 16:37:13.499,16:40:00.648 | APIDisabled 0
+  The profile's timezone, not the device's            | sheet at 16:29:41.756 | APIDisabled 0
+  Weekends busy by default, and the profile's switch  | sheet at 16:26:52.748 | APIDisabled 0
+e2e/out/artifacts/2026-11-25_034856 (red): Invite link during onboarding | sheet at 15:51:20.870 | APIDisabled 45
+e2e/out/artifacts/2026-11-25_022829 (red): Invite link during onboarding | sheet at 14:31:17.679 | APIDisabled 45
+e2e/out/failed/T-291-2026-11-24T04-36-22-458Z: Onboarding to the end, nothing granted | sheet at 18:33:13.878 | APIDisabled 0 (the driver lived)
+
+In the green run the service lived 1.9 s and took the sheet down itself
+(041713, Invite link during onboarding, device-simulator.log):
+  55212: 16:19:41.953477 Rehearsly: <SFPasswordSavingRemoteViewController>: Requesting remote view controller ... SafariViewService
+  56481: 16:19:43.024804 SafariViewService: Set materialized view controller: <SFPasswordSavingServiceViewController>
+  59730: 16:19:43.826182 Rehearsly: View service session ended with error 'com.apple.SafariViewService' : ... Message=Invalidation requested
+  59733: 16:19:43.826433 Rehearsly: Invalidating scene: UISceneHosting-com.rehearsal.app:UIHostedScene-com.apple.SafariViewService-...
+
+What makes the keyboard ask: ManagedConfiguration's allowPasswordAutoFill
+--------------------------------------------------------------------------
+In the iOS 26.5 runtime, UIKitCore's -[UIKeyboardImpl handleAutofillCredentialSaveIfNeeded:]
+sits next to -[UIKeyboardPreferencesController isPasswordAutoFillAllowed];
+ManagedConfiguration has isPasswordAutoFillAllowed / MCFeaturePasswordAutoFillAllowed
+(the "allowPasswordAutoFill" restriction). On the e2e simulator, as the base left it:
+
+  data/Library/Preferences/com.apple.WebUI.plist:  "AutoFillPasswords" => false
+  data/Library/UserConfigurationProfiles/UserSettings.plist: {}
+  data/Library/UserConfigurationProfiles/EffectiveUserSettings.plist:
+      restrictedBool.allowPasswordAutoFill.value = true
+
+The experiment: flow 01 (one sign-in), the same app and runner, only the user setting differs.
+
+  UserSettings.plist = { restrictedBool = { allowPasswordAutoFill = { value = false } } }, written with the device shut down
+  $ npm run e2e -- e2e/flows/01-login.yaml
+  [Passed] Sign in (1m 24s)
+  effective allowPasswordAutoFill: false        (iOS worked it out at boot)
+  e2e/out/artifacts/2026-11-25_045644: Sign in | sheet at - | signalAutofillUIBringup 0 | APIDisabled 0
+
+  UserSettings.plist = {} again (as the base leaves it)
+  $ npm run e2e -- e2e/flows/01-login.yaml
+  [Passed] Sign in (1m 52s)
+  effective allowPasswordAutoFill: true
+  e2e/out/artifacts/2026-11-25_050237: Sign in | sheet at 17:06:12.986 | signalAutofillUIBringup 3 | APIDisabled 0
+
+With allowPasswordAutoFill off nothing asks for the sheet and SafariViewService
+is not started; with it on (the base) it is, at every sign-in. The red run above
+was taken after the second experiment, on the base's state.

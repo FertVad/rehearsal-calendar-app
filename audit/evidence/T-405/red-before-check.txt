@@ -1,0 +1,34 @@
+T-405 red before (review point 3): the runner's own check of restored tabs
+(run.mjs, reportSafari; e2e/safari.mjs) with Safari not made fresh - flow 70
+with its `- runFlow: ../subflows/fresh-safari.yaml` removed locally (not
+committed; restored with `git restore --source=HEAD` after), 2026-11-24 17:46.
+
+$ npm --prefix rehearsal-calendar-native run e2e -- <tree>/rehearsal-calendar-native/e2e/flows/70-privacy-lists-resend.yaml
+[e2e] native inputs 2cb470c34aaf (app.json, locales, assets, packages)
+...
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Passed] Privacy policy lists Resend in every language (55s)
+
+1/1 Flow Passed in 56s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 4 (fresh-safari.yaml)
+[e2e] FAILED: Safari did not start with no tabs (fresh-safari.yaml, docs/e2e.md "A fresh Safari"):
+[e2e]   "Privacy policy lists Resend in every language": Safari restored 4 tab(s) at launch (4 at 2026-11-24 05:46:20.931021-1000)
+Exit code 1
+
+The flow passed and junit.xml is green; the run is red, exit 1, the flow and
+the number in its last lines.
+
+Two runs of the same before it, the same 4 restored each time:
+- 17:34, flow passed, the same FAILED lines ("4 at 2026-11-24 05:34:48.577517-1000");
+  its exit code was lost to a pipe in the command.
+- 17:40, flow failed ("App crashed or stopped while executing flow"), the same
+  FAILED lines ("4 at 2026-11-24 05:40:24.172645-1000"), exit 1 - ambiguous
+  with the flow's own failure, so run again: the run above.
+
+On the code before T-405 there is no such check at all: a run like this one
+is green with exit 0 (as red-before-terminate.txt's run was, its Safari
+restoring whatever was left).

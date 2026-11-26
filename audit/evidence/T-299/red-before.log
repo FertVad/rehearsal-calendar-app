@@ -1,0 +1,34 @@
+T-299 red before, 2026-11-24, base 292e41c (flows 09/60 and subflows unchanged).
+The check flow 09-dont-allow-lost.yaml is flow 09 to iOS's calendar prompt with
+its "Don't Allow" tap left out: what backboardd made of that tap in the red run
+of T-291 (see lost-tap-journal.txt). Run before 100 and 65, the order of the
+supervisor's run.
+
+$ npm --prefix rehearsal-calendar-native run e2e -- ../audit/evidence/T-299/09-dont-allow-lost.yaml e2e/flows/100-first-launch-phone-language.yaml e2e/flows/65-dates-russian.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs ../audit/evidence/T-299/09-dont-allow-lost.yaml e2e/flows/100-first-launch-phone-language.yaml e2e/flows/65-dates-russian.yaml
+
+[e2e] native inputs 2cb470c34aaf (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] T-299 check, the Don't Allow tap lost (1m 49s) (Assertion is false: "OK" is visible)
+[Failed] First launch in the phone's language (1m 16s) (Assertion is false: id: login-submit is visible)
+[Failed] Dates in Russian, one format (1m 24s) (Assertion is false: id: login-submit is visible)
+
+3/3 Flows Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+One lost tap, three red flows: the same three failures, the same assertions,
+as the supervisor's run on T-291 (23f9b48).

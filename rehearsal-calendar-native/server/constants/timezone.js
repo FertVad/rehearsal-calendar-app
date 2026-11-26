@@ -27,4 +27,7 @@ export const AVAILABILITY_SOURCES = {
   REHEARSAL: 'rehearsal',
   GOOGLE: 'google_calendar',
   APPLE: 'apple_calendar',
+  // A weekend day busy by default, written by the server, not by the person
+  // (T-406, services/availability/weekendDefaults.js).
+  WEEKEND: 'weekend',
 };

@@ -10,6 +10,7 @@
  * - the server changed: the PostgreSQL harness on a throwaway database.
  */
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isFailureLine } from './flakes.mjs';
@@ -76,8 +77,11 @@ export function e2eFlowsFor({ app, changedFiles, taskText = '', seedLines = [] }
   const changed = changedFiles.filter((f) => f.startsWith(APP)).map((f) => f.slice(APP.length));
   const picked = new Set(changed.filter((f) => all.includes(f)));
   const helpers = new Set(changed.filter((f) => /^e2e\/(subflows\/[^/]+\.yaml|scripts\/[^/]+\.js)$/.test(f)).map((f) => path.basename(f)));
-  // Flows say `file: ../subflows/sign-in.yaml`, subflows `file: sign-in-form.yaml`.
-  const uses = (text) => [...helpers].some((name) => new RegExp(`file:\\s*(\\S*/)?${escape(name)}\\s*$`, 'm').test(text));
+  // Flows say `file: ../subflows/sign-in.yaml`, subflows `file: sign-in-form.yaml`;
+  // or in the short form, `- runFlow: ../subflows/fresh-safari.yaml` and
+  // `- runScript: ../scripts/fresh-safari.js` (flows 44, 67-70, 98), quoted or not.
+  const uses = (text) => [...helpers].some((name) =>
+    new RegExp(`(?:file|runFlow|runScript):\\s*["']?(\\S*/)?${escape(name)}["']?\\s*(#.*)?$`, 'm').test(text));
   let subflows = [];
   try { subflows = fs.readdirSync(path.join(app, 'e2e', 'subflows')).filter((f) => f.endsWith('.yaml')); } catch { /* none */ }
   for (let grew = helpers.size > 0; grew;) {
@@ -356,12 +360,50 @@ export async function runE2e({ root, node, log, env, flows = [], limitMs, prepar
  * @param taskText the task's statement, for the flows it names
  * @returns {{ok: boolean, steps: {name, ok, code, tail, environment?, flows?}[]}}
  */
+// In a tree's node_modules: the hash of the package-lock.json they were installed from.
+const INSTALLED_FROM = '.autodev-lock-sha256';
+
+/**
+ * A tree's packages, the app's and the server's, as its own package-lock.json
+ * says. They were symlinks to the main tree's, and the main tree's lock is not
+ * the commit's: T-410 added expo-store-review on auto/main, and on 25.11.2026
+ * the control run in the review tree stopped on it, an hour at a time, until
+ * someone installed by hand (the e2e runner refuses packages the lock does not
+ * say, as a machine not ready). An install keeps the hash of the lock it was
+ * made from; a folder with another hash, with none, or a symlink is installed
+ * again, `npm ci` from the tree's own lock. The link goes first and only the
+ * link: npm ci empties node_modules, through a link the main tree's.
+ * A step per folder installed — none when nothing had to be.
+ */
+export async function installAsLocked({ root, node, log, env }) {
+  const npm = path.join(path.dirname(node), 'npm');
+  const steps = [];
+  for (const [label, rel] of [['app', 'rehearsal-calendar-native'], ['server', 'rehearsal-calendar-native/server']]) {
+    const dir = path.join(root, rel);
+    const lock = path.join(dir, 'package-lock.json');
+    if (!fs.existsSync(lock)) continue;
+    const hash = createHash('sha256').update(fs.readFileSync(lock)).digest('hex');
+    const modules = path.join(dir, 'node_modules');
+    const stamp = path.join(modules, INSTALLED_FROM);
+    const linked = () => { try { return fs.lstatSync(modules).isSymbolicLink(); } catch { return false; } };
+    if (!linked() && fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8').trim() === hash) continue;
+    if (linked()) fs.unlinkSync(modules);
+    const step = await run(`npm ci (${label})`, npm, ['ci', '--no-audit', '--no-fund'], { cwd: dir, env, log, timeoutMs: 20 * 60 * 1000 });
+    steps.push(step);
+    if (!step.ok) return { ok: false, steps };
+    fs.writeFileSync(stamp, `${hash}\n`);
+  }
+  return { ok: true, steps };
+}
+
 export async function runChecks({ root, changedFiles, taskText, seedLines, node, log, env, e2eLimit, e2ePrepare }) {
   const app = path.join(root, 'rehearsal-calendar-native');
   const want = checksFor(changedFiles);
-  const steps = [];
   const opts = (timeoutMs) => ({ cwd: app, env, log, timeoutMs });
   const npm = path.join(path.dirname(node), 'npm');
+  const installed = await installAsLocked({ root, node, log, env });
+  const steps = [...installed.steps];
+  if (!installed.ok) return { ok: false, steps };
 
   for (const [name, args] of [
     ['secrets', ['run', 'check:secrets']],

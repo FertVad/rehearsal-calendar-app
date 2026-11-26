@@ -111,14 +111,22 @@ export const displayedMode = (state?: {
 };
 
 /**
- * Get day status based on availability data
+ * The day's dot on the month grid.
+ *
+ * A day with no entry is free — the planner reads it so and the editor opens
+ * it so — and it is drawn free from `unmarkedFreeFrom` on (today, normally).
+ * Left without a dot it read as "unknown", and people marked whole weeks
+ * "Free" by hand to make them green (T-292). Days before that keep no dot:
+ * nobody plans them. Without `unmarkedFreeFrom` nothing is known about the
+ * unmarked days, and none is called free.
  */
 export const getDayStatus = (
   date: string,
-  availability: { [date: string]: { mode: string; importedSlots?: ImportedSlot[] } }
+  availability: { [date: string]: { mode: string; importedSlots?: ImportedSlot[] } },
+  unmarkedFreeFrom?: string
 ): 'free' | 'busy' | 'partial' | 'none' => {
   const state = availability[date];
-  if (!state) return 'none';
+  if (!state) return unmarkedFreeFrom !== undefined && date >= unmarkedFreeFrom ? 'free' : 'none';
 
   const mode = displayedMode(state);
   if (mode === 'free') return 'free';

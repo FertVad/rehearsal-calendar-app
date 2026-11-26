@@ -63,7 +63,9 @@ tags:
       TAP: "Grant Access"
       SEE: "Access Denied"
       WAIT_MS: 10000
-- assertVisible: "Calendar access is required to use this feature"
+# The onboarding's string, changed with it (T-417): "to use this feature"
+# whole, the sentence with its full stop (HIG, Alerts).
+- assertVisible: "Calendar access is required to\u00a0use\u00a0this\u00a0feature\\."
 - takeScreenshot: 10-calendar-sync-access-denied
 - tapOn: "OK"
 # Still the same screen, still without access.

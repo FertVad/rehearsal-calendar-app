@@ -21,18 +21,12 @@ import { styles } from '../styles/calendarSyncSettingsScreenStyles';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
 import { formatLastSync } from '../../../shared/utils/formatLastSync';
 import { CalendarSyncSettings, DeviceCalendar } from '../../../shared/types/calendar';
+// Auto Sync off, both directions: the switch, the removals and the account's deletion save the same.
+import { SYNC_OFF } from '../../../shared/services/calendarSync';
 
 type CalendarSyncSettingsScreenProps = NativeStackScreenProps<any, 'CalendarSyncSettings'>;
 
 type CalendarProvider = 'google' | 'apple' | null;
-
-/** Auto Sync off, both directions: what the switch saves, and what a removal saves first. */
-const SYNC_OFF: Partial<CalendarSyncSettings> = {
-  exportEnabled: false,
-  importEnabled: false,
-  importCalendarIds: [],
-  importInterval: 'manual',
-};
 
 export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncSettingsScreenProps) {
   const { t } = useI18n();

@@ -46,8 +46,8 @@ acquire their own lock and inspect the target again. Normal PostgreSQL read lock
 and compute usage still occur during dry; READ ONLY does not mean zero I/O.
 
 Fresh refuses a nonempty schema, including an old migration ledger or an unrelated
-sentinel table. It executes the current profile's snapshot — since T-294
-`database/init-native-schema-v2.sql`, profile `rehearsly-pg-current-v2`, 25
+sentinel table. It executes the current profile's snapshot — since T-406
+`database/init-native-schema-v3.sql`, profile `rehearsly-pg-current-v3`, 25
 tables — validates its catalog/data postconditions and records one fresh root
 atomically. It does not
 pretend that every historical migration ran. Existing IDs are int4; fresh generated
@@ -79,7 +79,21 @@ after any of its own missing groups; the result is checked by version 2's
 checker, and later runs on that database use it. For production `--dry` plans
 `016-usage-statistics` alone. The server runs without 016 — it records nothing
 and the admin says so — so it may be applied before or after the deploy that
-writes to it; applying it first means no day is missed. The explicit
+writes to it; applying it first means no day is missed.
+
+017 is weekends busy by default (T-406): three columns of `native_users` —
+`weekends_busy` (the profile's switch, `NOT NULL DEFAULT TRUE`: on for
+everyone, those already registered included), `weekends_through` and
+`weekends_days` (how far, and for which weekdays, the server has laid the
+default busy rows out). No table and no data. It is version 3 — its own
+snapshot (`database/init-native-schema-v3.sql`), catalog
+(`database/schema/catalog-v3.json`) and checker (`database/schema/inspect-v3.mjs`)
+— for the same reason as 016: version 2 is pinned by the histories that
+recorded 016. Every v1 root receives 016 and 017 by `--apply`, a v2 root 017;
+`--fresh` creates version 3. For production after 016, `--dry` plans
+`017-weekend-defaults` alone (before 016: both, in that order). Apply it
+before the server of T-406: that server lays nothing out and answers the
+switch with 503 without it, and works otherwise. The explicit
 pre-import-key profile permits a missing availability conflict key only when
 the duplicate preflight is clean; its first forward step creates that key.
 No duplicate is deleted to make the index fit. Manual entries with NULL external
@@ -130,7 +144,7 @@ without credentials, raw SQL errors or business row values.
 runner reads those filenames only to verify an existing `native_migrations`
 ledger; the only files it executes are the reviewed forward steps named in
 `database/schema/manifest.mjs` (007–013 and the availability key of version 1,
-016 of version 2). Do not
+016 of version 2, 017 of version 3). Do not
 run the others with `psql` either. Two of them are known to corrupt data:
 
 - **FM01.** `migrate-*-to-timestamptz.sql` cast `date + time` with a bare
@@ -158,11 +172,14 @@ no database URL and requires an already installed postgres:15 image:
 ```sh
 npm run test:r0-postgres -- --r2-migrations-schema-only
 npm run test:r0-postgres -- --t294-upgrade-only
+npm run test:r0-postgres -- --t406-only
 ```
 
 The second creates a database with 477ea2f's own CLI (taken from git; the
 migrator and manifest production's `--fresh` ran), then runs this tree's
-`--dry` and `--apply` on it and starts the server against the result.
+`--dry` and `--apply` on it and starts the server against the result. The third
+creates production's database as it will be after T-294 — 477ea2f's `--fresh`,
+then 016 by b8722df's own migrator — and applies 017 with this tree's.
 
 The same schema/migration cases are required in the PostgreSQL CI job. They must
 verify fresh and supported-upgrade catalog parity, actual application operations,

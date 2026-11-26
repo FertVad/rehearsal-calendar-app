@@ -17,6 +17,7 @@ import { endsNextDay } from '../../../shared/utils/time';
 import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { settingPath } from '../../../shared/utils/settingPath';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
@@ -37,6 +38,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 import { useLeaveGuard } from '../../../shared/hooks/useLeaveGuard';
+import { useReviewAfterSave } from '../../../shared/hooks/useReviewAfterSave';
 import { PickerModal } from '../../../shared/components/PickerModal';
 import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 import { Toast, useToast } from '../../../shared/components/Toast';
@@ -72,6 +74,23 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // Save hook for validation and API submission
   const { saveAvailability, canSave, error: saveError, clearError } = useAvailabilitySave();
   const toast = useToast();
+  const reviewAfterSave = useReviewAfterSave();
+  // iOS's rating window comes once the person has closed the screen, not over
+  // it: after a save it usually stays open for the next day (T-021), and the
+  // window broke into that (T-414; HIG "Ratings and reviews", a natural
+  // stopping point). Asked once a visit, and only if a save went through in
+  // it. Every way out — Cancel, the swipe, the close question's Save — removes
+  // the route and so unmounts the screen; a screen opened over it does not.
+  const visit = useRef({ saved: false, ask: reviewAfterSave });
+  useEffect(() => {
+    visit.current.ask = reviewAfterSave;
+  }, [reviewAfterSave]);
+  useEffect(() => {
+    const thisVisit = visit.current;
+    return () => {
+      if (thisVisit.saved) thisVisit.ask();
+    };
+  }, []);
 
   // Why the load failed, in the app's language — no connection is not the
   // server down — then that what is shown is the last that loaded (T-228).
@@ -160,6 +179,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     discard: discardChanges,
     save: async (leaving) => {
       const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
+      // Saved: iOS's rating window may come once the screen has closed, not
+      // now (T-414, `visit` above).
+      if (saved) visit.current.saved = true;
       if (leaving || !saved) return saved;
       // Said without stopping anyone: a notice and a tap of the haptics, the
       // calendar where it was. An alert had to be dismissed first (T-021).
@@ -200,6 +222,11 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // writes, and this only decides what is drawn.
   const shownMode = displayedMode(selectedDayState ?? undefined);
 
+  // A day not marked is free, from today on, as the planner reads it (T-292).
+  // Unless nothing loaded at all: an empty screen is not proof of an empty
+  // diary, and the banner above already says so.
+  const unmarkedFreeFrom = loadFailed && Object.keys(availability).length === 0 ? undefined : today;
+
   const renderMonth = ({ item, index }: { item: { year: number; month: number; key: string }; index: number }) => {
     // The list begins with today's month, at the top of the list's content.
     return (
@@ -209,7 +236,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         selectedDates={editor.selectedDates}
         today={today}
         onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
-        getDayStatus={(date) => getDayStatus(date, availability)}
+        getDayStatus={(date) => getDayStatus(date, availability, unmarkedFreeFrom)}
         onTodayLayout={index === 0 ? scrollToToday : undefined}
       />
     );
@@ -321,8 +348,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         />
       )}
 
-      {/* Animated Bottom Panel */}
+      {/* Animated Bottom Panel. Its testID is its top for e2e: a day is
+          tapped above it, where the sheet does not cover it (flow 87, T-416). */}
       <Animated.View
+        testID="availability-sheet"
         style={[
           styles.bottomPanel,
           {
@@ -396,7 +425,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           {/* Mode Selection (only for future/today dates) */}
           {(!editor.selectedDate || editor.selectedDate >= today) && (
           <>
-          <View testID="mode-selector" style={styles.modeSelector}>
+          <View
+            testID="mode-selector"
+            style={[styles.modeSelector, selectedDayState?.weekendDefault && styles.modeSelectorWithNote]}
+          >
             <TouchableOpacity
               testID="mode-free"
               accessibilityState={{ selected: shownMode === 'free' }}
@@ -466,6 +498,17 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* A weekend busy by default, not by the person (T-406): said, with
+              where the default is turned off. Any change above makes the day
+              theirs, and the note goes with the default. A footnote to the
+              buttons: their edges, 8 pt under them, 20 pt to what follows
+              (T-411). */}
+          {selectedDayState?.weekendDefault && (
+            <Text testID="availability-weekend-default" style={[styles.importedNote, styles.weekendDefaultNote]}>
+              {t.availability.weekendDefault(settingPath(t.nav.profile, t.profile.weekendsBusy))}
+            </Text>
+          )}
 
           {/* Time Slots (only for custom mode) */}
           {shownMode === 'custom' && selectedDayState && (

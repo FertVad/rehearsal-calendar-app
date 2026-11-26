@@ -8,6 +8,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "migrate": "node scripts/migrate.js",
+    "build:admin-quote-name": "node scripts/admin-quote-name.mjs",
     "test:r0-postgres": "node scripts/r0-postgres.mjs",
     "test": "node scripts/test.mjs backend",
     "test:unit": "ADMIN_BROWSER_CHECK=0 NODE_OPTIONS=--experimental-vm-modules jest",

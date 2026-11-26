@@ -528,8 +528,13 @@ would count as busy twice — once as itself and once as an imported event.
 
 **Deleting the event in the phone's calendar does not stick.** The next sync
 sees the mapping has no event and recreates it: the rehearsal is the source of
-truth, the calendar a mirror. The only ways out are deleting the rehearsal or
-"remove all exported" on the sync screen.
+truth, the calendar a mirror. The only ways out are deleting the rehearsal,
+"remove all exported" on the sync screen, or deleting the account: before
+`DELETE /me`, while the server still has the mappings, `deleteAccount` turns
+Auto Sync off and removes this phone's exported events the same way
+(`removeExportedBeforeDeletion`, T-409). It never stops the deletion; the alert
+after it says how many events stayed, or that it could not find out. Other
+devices' calendars keep theirs.
 
 **Only hours cross over, never what the events are.** The app sends each
 event's key and times and nothing else; the server titles the rows
@@ -727,6 +732,8 @@ Two rules it exists to enforce:
 **Location**: `server/routes/admin.js`, `server/routes/admin/dashboardPage.js`
 
 Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWORD` env var.
+
+The page is in Russian only, no language switch (the owner, 26.11.2026; T-419): every word is the native editor's (`audit/evidence/T-419/natives-ru.md`), API values and JSON errors stay English; project names are quoted by `public/admin/quoteName.js`, generated from `shared/quoteName.cjs` (`npm run build:admin-quote-name` in `server/` after editing it).
 
 **Features**:
 - User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)

@@ -36,7 +36,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude, stopAgents } from './lib/agents.mjs';
-import { failedFlows, keepFailedFlows, runChecks, runE2e, SEED_FILE, stopChecks } from './lib/checks.mjs';
+import { failedFlows, installAsLocked, keepFailedFlows, runChecks, runE2e, SEED_FILE, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
@@ -235,13 +235,23 @@ function ensureTrees() {
   git(REPO, 'config', 'extensions.worktreeConfig', 'true');
   git(WORKTREE, 'config', '--worktree', 'remote.origin.pushurl', 'disabled://the-developer-does-not-push');
   git(REVIEW_TREE, 'config', '--worktree', 'remote.origin.pushurl', 'disabled://the-reviewer-does-not-push');
-  // Dependencies are the main tree's: the same lockfile, no second install.
-  for (const tree of [WORKTREE, REVIEW_TREE]) {
-    for (const rel of ['rehearsal-calendar-native/node_modules', 'rehearsal-calendar-native/server/node_modules']) {
-      const link = path.join(tree, rel);
-      if (!fs.existsSync(link)) fs.symlinkSync(path.join(REPO, rel), link);
-    }
+  // Each tree's packages are its own, from its own lock, installed before they
+  // are used (installed() below): a link to the main tree's carried another
+  // lock's packages (25.11.2026, T-410's expo-store-review).
+}
+
+/**
+ * The tree's packages as its package-lock.json says (lib/checks.mjs,
+ * installAsLocked) before a step that uses them; nothing to do when they are.
+ * False when an install failed — said in the log `name` and in the task's line.
+ */
+async function installed(tree, task, name) {
+  const log = path.join(LOGS, name);
+  const result = await installAsLocked({ root: tree, node: NODE, log, env: ENV });
+  for (const step of result.steps) {
+    note(task, `${path.basename(tree)}: ${step.name} — ${step.ok ? 'пакеты поставлены по package-lock.json' : `не вышло (${step.tail.trim().split('\n').at(-1)}), лог — .state/logs/${name}`}`);
   }
+  return result.ok;
 }
 
 function singleInstance() {
@@ -394,6 +404,9 @@ async function develop(state, task, t) {
   const starting = t.sessionStarted === false;
   t.sessionStarted = true;
   saveState(STATE, state);
+  // The developer runs the tests itself: on the packages its commit says. A
+  // failed install is in its line; the checks install again and stop on it.
+  await installed(WORKTREE, task, `${task.id}-install.log`);
   const note_ = takeNote(task);
   const prompt = P.withDecisions(P.withNote(starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind)), note_?.text), t.ownerDecided);
   const startedAt = Date.now();
@@ -599,7 +612,7 @@ function queueTask(state, title, block, again) {
     note(known, again);
     return known.id;
   }
-  const id = nextFlakeId(text);
+  const id = nextFlakeId(text, Object.keys(state.tasks));
   const waiting = tasks.filter((queued) => queued.id !== state.current
     && !['done', 'skipped', 'deferred'].includes(state.tasks[queued.id]?.phase));
   writeAtomic(file, queueFound(text, waiting, block(id)));
@@ -670,6 +683,9 @@ async function fullE2e(state, queueEmpty) {
   }
   saveState(STATE, state);
   writeStatus(state);
+  if (!await installed(REVIEW_TREE, null, 'full-e2e-install.log')) {
+    return finish({ machine: true }, 'пакеты дерева ревью не поставились — повторю через час');
+  }
   note(null, `${kind} полный прогон e2e: запущен на ${head.slice(0, 7)}`);
   const log = path.join(LOGS, 'full-e2e.log');
   const offset = fs.existsSync(log) ? fs.statSync(log).size : 0;
@@ -712,6 +728,9 @@ async function fullE2e(state, queueEmpty) {
 
 async function review(state, task, t) {
   git(REVIEW_TREE, 'checkout', '--detach', '--quiet', t.head);
+  // The reviewer runs tests in its tree too. Not a reason to skip the round:
+  // a failed install is in the task's line for whoever reads the answer.
+  await installed(REVIEW_TREE, task, `${task.id}-review-install.log`);
   // `round` is which of the two rounds a decision gives this is; `no`, every
   // round the task has had — the one people read and the answer's file name,
   // so a continued task does not write over its first answers (nextReview).

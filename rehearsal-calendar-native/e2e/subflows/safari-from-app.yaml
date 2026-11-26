@@ -1,0 +1,28 @@
+# Safari in front, opened by a link from Rehearsly - for a link whose page may
+# not stay: the App Store's review page (flow 107, T-410). What the page does
+# is not waited for; the address the app handed to iOS is checked after this,
+# exactly, where SpringBoard logged it (scripts/opened-url.js).
+#
+# apps.apple.com never shows a page in the simulator. It answers the link by
+# sending Safari on to itms-appss://, the App Store's own address, 0.2 s into
+# the load; no App Store here, so the load ends with no page ("didFail-
+# ProvisionalLoad", code 102) and Safari says "Safari cannot open the page
+# because the address is invalid." over an empty address field. The site's
+# name was in the field only for those 0.2-0.6 s, and the flow that waited for
+# it passed only when one of Maestro's reads fell inside them (T-420,
+# audit/evidence/T-420): Safari began the load about 5 s after the tap, and the
+# reads before it were of Rehearsly's tree, the app still counted as running.
+#
+# Safari's address field (TabBarItemTitle) is there while Safari starts, while
+# the page loads, and under "cannot open the page"; it is in Safari's tree
+# alone, so it is found only once Maestro reads Safari, not the app behind it.
+# "Return to Rehearsly" in the status bar says an app - Rehearsly - opened it.
+appId: com.apple.mobilesafari
+---
+- extendedWaitUntil:
+    visible:
+      id: TabBarItemTitle
+    timeout: 20000
+- assertVisible:
+    id: breadcrumb
+    text: "Return to Rehearsly"

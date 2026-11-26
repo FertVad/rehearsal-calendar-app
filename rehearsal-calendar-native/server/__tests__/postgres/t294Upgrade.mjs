@@ -15,11 +15,15 @@ import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 // such a database; its history is never touched by hand.
 // Then this tree's real CLI: --dry plans 016 alone, --apply applies it, the
 // next --dry is clean, and the server records the days. A database created by
-// this tree's --fresh is version 2 with all 25 tables.
+// this tree's --fresh is the current version with all 25 tables.
 // On 43b5e86 (016 re-pinned into v1) the first --dry answers HISTORY_INVALID.
+// Since T-406 this tree plans 017 after 016 on that database (version 3); the
+// database as production will have it after 016 — 016 applied by T-294's own
+// migrator — is t406Upgrade.mjs.
 const base = '477ea2f';
 const v1 = 'rehearsly-pg-current-v1';
-const v2 = 'rehearsly-pg-current-v2';
+const current = 'rehearsly-pg-current-v3';
+const steps = ['016-usage-statistics', '017-weekend-defaults'];
 const serverRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 // 477ea2f's migrator code is kept in fixtures/migrator-477ea2f byte for byte
@@ -122,37 +126,38 @@ export async function probeT294Upgrade({ connectionString, control, allowedPorts
     assert.equal((await tables('r0_fixture')).length, 23);
     contracts.push(`${base}'s CLI --fresh: root fresh ${v1} with production's hashes, 23 tables`);
 
-    // 2. This tree: --dry plans 016 alone and changes nothing.
+    // 2. This tree: --dry plans 016, then 017, and changes nothing.
     const dry = await newCLI('--dry');
     assert.deepEqual(dry, { code: 0, type: 'result', mode: 'dry', outcome: 'planned', state: 'managed', rootId: v1,
-      stepIds: ['016-usage-statistics'], eligibleActions: ['apply'],
+      stepIds: steps, eligibleActions: ['apply'],
       frontier: { domain: 'v1', availabilityConflictKey: true,
-        budgets: ['007', '008', '009', '010', '011', '012', '013', '016'] } });
+        budgets: ['007', '008', '009', '010', '011', '012', '013', '016', '017'] } });
     assert.deepEqual(await history('r0_fixture'), recorded);
-    contracts.push('this tree\'s --dry on that database: managed, root v1, plans 016-usage-statistics alone');
+    contracts.push('this tree\'s --dry on that database: managed, root v1, plans 016-usage-statistics then 017-weekend-defaults');
 
-    // 3. --apply applies 016 after the untouched root; the next --dry is clean.
+    // 3. --apply applies them after the untouched root; the next --dry is clean.
     assert.deepEqual(await newCLI('--apply'), { code: 0, type: 'result', mode: 'apply', outcome: 'applied',
-      state: 'managed', rootId: v1, stepIds: ['016-usage-statistics'] });
+      state: 'managed', rootId: v1, stepIds: steps });
     const after = await history('r0_fixture');
     assert.deepEqual(after[0], recorded[0], 'the root record is exactly as the fresh wrote it');
-    assert.deepEqual(after.slice(1).map(({ row }) => [row.ordinal, row.id, row.kind]), [[1, '016-usage-statistics', 'migration']]);
+    assert.deepEqual(after.slice(1).map(({ row }) => [row.ordinal, row.id, row.kind]),
+      steps.map((id, index) => [index + 1, id, 'migration']));
     assert.equal((await newCLI('--dry')).stepIds.length, 0);
     assert.equal((await newCLI('--apply')).outcome, 'unchanged');
     assert.deepEqual(await tables('r0_fixture'), await (async () => {
       await control.query(`CREATE SCHEMA ${freshSchema}`);
       assert.deepEqual(await newCLI('--fresh', freshSchema), { code: 0, type: 'result', mode: 'fresh', outcome: 'applied',
-        state: 'managed', rootId: v2, stepIds: [] });
+        state: 'managed', rootId: current, stepIds: [] });
       return tables(freshSchema);
     })());
     assert.equal((await tables(freshSchema)).length, 25);
-    assert.equal((await history(freshSchema))[0].row.id, v2);
-    const upgraded = await inspectSchema(control.query.bind(control), { schema: 'r0_fixture', profile: v2 });
-    const fresh = await inspectSchema(control.query.bind(control), { schema: freshSchema, profile: v2 });
+    assert.equal((await history(freshSchema))[0].row.id, current);
+    const upgraded = await inspectSchema(control.query.bind(control), { schema: 'r0_fixture', profile: current });
+    const fresh = await inspectSchema(control.query.bind(control), { schema: freshSchema, profile: current });
     assert.equal(upgraded.compatible, true, JSON.stringify(upgraded.issues));
-    assert.equal(upgraded.evidenceSha256, fresh.evidenceSha256, 'the upgraded catalog is the fresh v2 catalog');
-    assert.equal(manifest.currentProfile, v2);
-    contracts.push('--apply: 016 recorded after the untouched root; the next --dry plans nothing; the catalog equals this tree\'s --fresh (v2, 25 tables)');
+    assert.equal(upgraded.evidenceSha256, fresh.evidenceSha256, 'the upgraded catalog is the fresh catalog');
+    assert.equal(manifest.currentProfile, current);
+    contracts.push('--apply: 016 and 017 recorded after the untouched root; the next --dry plans nothing; the catalog equals this tree\'s --fresh (v3, 25 tables)');
 
     // 4. The server on the upgraded database records the day.
     const database = await import('../../database/db.js');

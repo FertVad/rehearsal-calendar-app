@@ -1,0 +1,27 @@
+$ npx jest --selectProjects frontend --silent --testPathPatterns AvailabilityWeekendNote
+# on the base's AvailabilityScreen.tsx and availabilityScreenStyles.ts (d84294b), the new test only
+
+Running one project: frontend
+FAIL frontend src/features/availability/screens/__tests__/AvailabilityWeekendNote.test.tsx
+  ● a weekend busy by default › the hint has no side margins or padding of its own: its edges are the buttons'
+    expect(received).toBeUndefined()
+    Received: 20
+  ● a weekend busy by default › the hint has room under it, at least as much as between the buttons and it
+    expect(received).toBeGreaterThan(expected)
+    Matcher error: received value must be a number or bigint
+    Received has value: undefined
+  ● a weekend busy by default › the hint is nearer the buttons it explains than what follows it
+    expect(received).toBeLessThan(expected)
+    Matcher error: expected value must be a number or bigint
+    Expected has value: undefined
+  ● a weekend busy by default › with events from the calendar, the same room before their section
+    expect(received).toBeGreaterThanOrEqual(expected)
+    Matcher error: received value must be a number or bigint
+    Received has value: undefined
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 3 passed, 7 total
+Snapshots:   0 total
+Time:        6.4 s
+
+(The 3 that pass are what must stay as it was: a working day — no hint, 20 pt
+under the buttons; the "From calendar" note's style; no negative margin.)

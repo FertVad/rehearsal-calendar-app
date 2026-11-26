@@ -10,10 +10,13 @@ import { SeenProvider } from './src/contexts/SeenContext';
 import { UnreadProvider } from './src/contexts/UnreadContext';
 import Navigation from './src/navigation';
 import { useAutoCalendarSync } from './src/shared/hooks/useAutoCalendarSync';
+import { useUsageDays } from './src/shared/hooks/useUsageDays';
 
 function AppContent() {
   // Enable automatic calendar sync on app foreground
   useAutoCalendarSync();
+  // The days of use, on this phone only, for when to ask for a rating (T-410).
+  useUsageDays();
 
   // Note: Push notifications are handled inside Navigation component
   // after NavigationContainer is ready

@@ -36,10 +36,11 @@ jest.mock('../../../features/onboarding/components', () => {
   const React = require('react');
   const { View, Text, TouchableOpacity } = require('react-native');
   return {
-    OnboardingStep: ({ children, onNext, nextButtonTitle, secondaryAction }: any) => React.createElement(View, null,
+    // The step's two answers (T-412).
+    OnboardingStep: ({ children, answer, secondAnswer }: any) => React.createElement(View, null,
       children,
-      React.createElement(TouchableOpacity, { onPress: onNext }, React.createElement(Text, null, nextButtonTitle)),
-      React.createElement(TouchableOpacity, { onPress: secondaryAction.onPress }, React.createElement(Text, null, secondaryAction.title))),
+      React.createElement(TouchableOpacity, { onPress: answer.onPress }, React.createElement(Text, null, answer.title)),
+      React.createElement(TouchableOpacity, { onPress: secondAnswer.onPress }, React.createElement(Text, null, secondAnswer.title))),
   };
 });
 

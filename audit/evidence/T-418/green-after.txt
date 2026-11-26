@@ -1,0 +1,55 @@
+T-418 - green after (review 1): the runner takes the boot's first Safari
+(firstSafari, e2e/safari.mjs; e2e/run.mjs right after the boot), and flow 44
+is back to its steps at e0e2c9d - the old order, "fresh-safari.yaml" and the
+tap on "Help". Flow 107 unchanged. Each run alone, each its own boot,
+2026-11-26.
+
+$ npm run e2e -- e2e/flows/44-profile-language.yaml        (five times)
+
+  run                 the runner's line                                         result
+  2026-11-26_075530   Safari's first launch since the boot: 22954 home readable  [Passed] (3m 14s)
+  2026-11-26_080318   ... 25816 home readable                                    [Passed] (3m 50s)
+  2026-11-26_081139   ... 28875 home readable                                    [Passed] (3m 36s)
+  2026-11-26_081930   ... 31774 home readable                                    [Passed] (3m 22s)
+  2026-11-26_085223   ... 43391, its home readable; stopped (the step as committed) [Passed] (3m 48s)
+  each: [e2e] taps taken again (tap-and-see.yaml): 0
+        [e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
+
+$ npm run e2e -- e2e/flows/107-rate-the-app.yaml           (twice)
+
+  2026-11-26_082731   ... 34733 home readable   [Failed] (2m 47s) (Assertion is false: ".*apps\.apple\.com.*" is visible)
+  2026-11-26_084243   ... 40133 home readable   [Passed] (2m 40s)
+
+The flows' Safaris (safari-starts.mjs, safari-ax-scan.mjs on each run's logs):
+
+  075530  MobileSafari[24237] app ax: 1 home readable   reads 15, kAXErrorAPIDisabled 0
+          MobileSafari[24355] app ax: 1 home readable   reads 13, kAXErrorAPIDisabled 0
+  080318  MobileSafari[27394], [27518]  app ax: 1 home readable
+  081139  MobileSafari[30299], [30410]  app ax: 1 home readable
+  081930  MobileSafari[33132], [33243]  app ax: 1 home readable
+  085223  MobileSafari[44866], [44996]  app ax: 1 home readable
+  082731  MobileSafari[36076] app ax: 1 home readable   reads 116, kAXErrorAPIDisabled 0
+  084243  MobileSafari[41551] app ax: 1 home readable   reads 5, kAXErrorAPIDisabled 0
+
+Twelve Safaris of flows in seven boots, none "app ax: 0", none lost. Before
+the change the boot's first Safari came up "home inaccessible" in 5 of 8 runs
+alone (first-safari.txt): seven boots in a row without it would be about
+(3/8)^7, 0.1 %. The runner's own Safari came up readable in all seven, so its
+being inaccessible has not been met here; what the step relies on is that no
+later Safari of a boot ever was (first-safari.txt, 99318).
+
+Flow 107's failure at 082731 is another thing, not Safari's accessibility:
+Safari was read 116 times, and the screen was "Safari cannot open the page
+because the address is invalid." over an empty address field - apps.apple.com
+had sent Safari on to itms-appss:// (20:31:29.6, "Unable to convert
+"itms-appss" to port"), and the field no longer named the site the flow waits
+for. On 084243 the read came while the field still named it, and it passed.
+A race of flow 107's own wait, which no run alone reached before (its Safari
+was lost first); left to a task of its own (the report).
+
+Flow 44 passed whole each time - the support page, the policy in Russian, back
+to English and "Start Week On": T-005, T-011, T-039 and T-256 did not come back.
+
+$ node --test e2e/__tests__/safari.test.mjs
+ℹ pass 18
+ℹ fail 0

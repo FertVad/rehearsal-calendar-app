@@ -154,8 +154,13 @@ never fires twice.
 ## How it runs
 
 - Its own trees: `../reh_app-auto` on `auto/main` (the developer's) and
-  `../reh_app-auto-review` (detached, the reviewer's). `node_modules` are links
-  to the main tree's. Only `auto/main` is pushed; nothing is merged.
+  `../reh_app-auto-review` (detached, the reviewer's). Each has its own
+  `node_modules`, the app's and the server's, as its own `package-lock.json`
+  says: before the developer's turn, the checks, a review round and a full e2e
+  run the supervisor runs `npm ci` where the lock is not the one the packages
+  were installed from (`installAsLocked`, `lib/checks.mjs`). They used to be
+  links to the main tree's, whose lock is not the commit's. Only `auto/main` is
+  pushed; nothing is merged.
 - The checks are its own, not an agent's: secrets, types, dead code (knip),
   the lint's errors and every test; the
   task's e2e flows when the app changed (with the main tree's built app,

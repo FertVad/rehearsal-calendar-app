@@ -520,6 +520,13 @@ export const availabilityAPI = {
   delete: (date: string) =>
     api.delete(`/native/availability/${date}`),
 
+  // The switch "Weekends busy" (T-406): its state and the ISO weekdays of the
+  // profile's zone; on or off, answered the same way.
+  getWeekends: () =>
+    api.get<{ enabled: boolean; days: number[] }>('/native/availability/weekends'),
+  setWeekends: (enabled: boolean) =>
+    api.put<{ enabled: boolean; days: number[] }>('/native/availability/weekends', { enabled }),
+
   // Delete all imported calendar events
   deleteAllImported: (session?: SessionStamp) =>
     api.delete('/native/availability/imported/all', inSession(session)),

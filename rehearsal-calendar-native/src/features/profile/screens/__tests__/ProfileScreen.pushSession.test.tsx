@@ -30,6 +30,8 @@ const mockApi = {
   logout: jest.fn(() => Promise.resolve({ data: {} })),
 };
 jest.mock('../../../../shared/services/api', () => ({
+  // The weekends switch (T-406) reads its state on focus.
+  availabilityAPI: { getWeekends: () => Promise.resolve({ data: { enabled: true, days: [6, 7] } }), setWeekends: jest.fn() },
   authAPI: new Proxy({}, { get: (_target, key: string) => (...args: any[]) => (mockApi as any)[key](...args) }),
 }));
 const mockStorage: Record<string, string> = {};

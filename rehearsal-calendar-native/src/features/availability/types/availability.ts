@@ -50,6 +50,12 @@ export interface DayState {
    * make "remove the second one" mean different things in different places.
    */
   importedSlots?: TimeSlot[];
+  /**
+   * Busy because it is a weekend, by default — the server's row, not the
+   * person's (T-406). Shown as busy; the editor says where it comes from,
+   * and any change makes the day the person's own, which replaces it.
+   */
+  weekendDefault?: boolean;
 }
 
 export interface AvailabilityData {

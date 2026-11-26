@@ -1,7 +1,7 @@
-# Canonical PostgreSQL schema, versions 1 and 2
+# Canonical PostgreSQL schema, versions 1, 2 and 3
 
-The canonical fresh snapshot is `../init-native-schema-v2.sql` (version 2,
-profile `rehearsly-pg-current-v2`). The migration CLI
+The canonical fresh snapshot is `../init-native-schema-v3.sql` (version 3,
+profile `rehearsly-pg-current-v3`). The migration CLI
 selects it through the reviewed manifest; it is not a startup hook. Fresh requires
 an empty, explicitly selected application schema and commits DDL, verified
 postconditions and the new history record in one transaction. The snapshot has
@@ -14,7 +14,10 @@ address proof, R3), the one of group 011 (push tickets awaiting their
 receipts, R8) and the one of group 012 (idempotency keys of creates, R4).
 Version 2 — `../init-native-schema-v2.sql`, `catalog-v2.json`, `inspect-v2.mjs`
 — is version 1 plus the two tables of group 016 (the days someone used the
-app and the invitation counts, T-294): 25 tables.
+app and the invitation counts, T-294): 25 tables. Version 3 —
+`../init-native-schema-v3.sql`, `catalog-v3.json`, `inspect-v3.mjs` — is version 2
+plus group 017, three columns of `native_users` (weekends busy by default,
+T-406): `weekends_busy`, `weekends_through`, `weekends_days`. Still 25 tables.
 Both supply the availability conflict
 key, notification indexes and other historical structural postconditions that
 the old mixed-dialect bootstrap omitted. Fresh `provider_metadata` is TEXT;
@@ -23,15 +26,19 @@ No existing column is silently cast to those types.
 
 ## Named profiles
 
+- `rehearsly-pg-current-v3`: all 25 tables of version 3 with the three
+  weekends_* columns. `--fresh` creates it; adoption is allowed. Its checker is
+  `inspect-v3.mjs`.
 - `rehearsly-pg-current-v2`: all 25 tables of version 2, required
-  constraints/indexes, and consistent budget gate rows. `--fresh` creates it;
-  adoption is allowed. Its checker is `inspect-v2.mjs`.
+  constraints/indexes, and consistent budget gate rows. No longer created by
+  `--fresh` (its manifest entry stays as recorded); adoption is allowed; `--apply`
+  adds 017. Its checker is `inspect-v2.mjs`.
 - `rehearsly-pg-current-v1`: all 23 tables of version 1. No longer created by
   `--fresh`, but production's history root (see below), so it stays exactly
-  as recorded. `--apply` adds 016.
+  as recorded. `--apply` adds 016, then 017.
 - `rehearsly-pg-domain13-v1`: the complete modern domain schema, with each budget
   group either wholly absent or fully compatible. After adoption, an explicit
-  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013 order, then 016.
+  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013 order, then 016 and 017.
 - `rehearsly-pg-domain13-pre-import-key-v1`: the same modern predecessor, except
   that the availability imported-event unique key is absent and the aggregate
   duplicate count is zero. Adoption requires this explicit profile. Apply first
@@ -154,3 +161,15 @@ runner and application HTTP/adapter code, plus independent catalog drift and
 data-preservation controls. It explicitly reproduces PostgreSQL `42P10` on an
 owned missing-key fixture. That negative control is not a claim that the original
 mixed-dialect bootstrap successfully provisioned PostgreSQL.
+
+T-406 (group 017: the weekends_* columns of `native_users`) is version 3 the
+same way: `../init-native-schema-v3.sql`, `catalog-v3.json` (version 2's catalog
+plus the three columns, checked against a `--fresh` on PostgreSQL 15 by
+`r2Schema.mjs`), `inspect-v3.mjs`, profile `rehearsly-pg-current-v3`, and the
+forward step `migrations/017-weekend-defaults.sql`, rooted in the three v1
+profiles and in `rehearsly-pg-current-v2` and verified by v3. Like 013 it is no
+table: the checker finds the group by the three columns. Version 2's artifacts
+and definitions are byte for byte those of b8722df, pinned by
+`schemaHistoryIdentity.test.js` with v1's; `__tests__/postgres/t406Upgrade.mjs`
+builds production's database with 477ea2f's `--fresh` and b8722df's 016 and
+applies 017 with this tree.

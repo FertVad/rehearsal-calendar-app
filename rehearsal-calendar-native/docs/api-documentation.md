@@ -1270,7 +1270,7 @@ Retrieve all availability slots for the authenticated user.
 - `title` (string|null): Optional title for the slot
 - `notes` (string|null): Optional notes
 - `isAllDay` (boolean): Whether this is an all-day event
-- `source` (string): Source of the slot - "manual", "rehearsal", "google_calendar", or "apple_calendar"
+- `source` (string): Source of the slot - "manual", "rehearsal", "google_calendar", "apple_calendar", or "weekend" (a weekend day busy by default, T-406: `type: "busy"`, all day, `externalEventId: "weekend:YYYY-MM-DD"`)
 - `externalEventId` (string|null): ID of the external event (e.g., rehearsal ID)
 - `createdAt` (string): Creation timestamp
 
@@ -1278,6 +1278,33 @@ Retrieve all availability slots for the authenticated user.
 - All timestamps are in ISO 8601 format (UTC)
 - Slots are sorted by start time (ascending)
 - Slots from rehearsals have `source: "rehearsal"` and reference the rehearsal ID in `externalEventId`
+- Before answering, the person's weekends are laid out a year ahead as `weekend` rows while their switch is on (`GET /native/availability/weekends` below); every planner read (`GET /native/projects/:projectId/members/availability`) does the same for the members it shows
+
+---
+
+#### 1a. Weekends Busy by Default (T-406)
+
+**Endpoints:** `GET /native/availability/weekends`, `PUT /native/availability/weekends`
+
+**Authentication Required:** Yes
+
+The profile's switch "Weekends busy". Each person's weekends — the days of the country of their profile's zone, by tzdata zone.tab and CLDR weekData (`shared/contracts/weekends.json`; a zone without a country takes Saturday and Sunday) — are written as real busy all-day rows of source `weekend`, a year ahead, on the days without a mark of the person's own. On for everyone by default.
+
+**PUT Request Body:** `{ "enabled": false }` — off deletes the `weekend` rows from the person's today on; on lays them out again from today on, on every weekend day without their own mark. Their own marks and past days are not touched.
+
+**Success Response (200), both:**
+```json
+{ "enabled": true, "days": [5, 6] }
+```
+`days` are ISO weekdays (1 Monday … 7 Sunday) of the profile's zone: `[5, 6]` for Asia/Jerusalem, `[6, 7]` for Europe/Moscow.
+
+**Error Responses:**
+- `400 Bad Request`, `code: "WEEKENDS_INVALID"`: `enabled` is not `true` or `false`
+- `503 Service Unavailable`, `code: "WEEKENDS_UNAVAILABLE"`: migration 017 is not applied
+
+**Notes:**
+- A change of the profile's zone to another country moves the rows from today on at the next read
+- Calendar import, "Delete imported" and rehearsal rows neither touch nor replace them
 
 ---
 
@@ -1325,6 +1352,7 @@ is written, and one person's saves run one at a time.
 
 **Notes:**
 - Only hand-entered rows are replaced; rehearsal and imported rows on the same day stay
+- A weekend's default row (`source: "weekend"`) on a day named goes too: the day is the person's now, `[]` leaves it free, and no default is laid on it again. `POST /bulk` and `DELETE /:date` (older apps) do the same
 - The app sends only days with unsaved edits, and keeps an edit made while a save was out as unsaved
 
 ---

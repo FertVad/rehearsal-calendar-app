@@ -1,0 +1,35 @@
+T-417 — red before: the new Jest tests on the code of auto/main 07b6a76 (strings and screens not yet changed).
+
+$ npx jest --selectProjects frontend --testPathPatterns 'nativeBreaks|useOnboarding.test|onboarding/screens/__tests__/CalendarSyncScreen' --verbose
+
+FAIL frontend src/i18n/__tests__/nativeBreaks.test.ts
+  ✕ "What's Where" keeps a label whole where the native speaker said so; not Russian "Присоединиться по коду"
+  ✕ the alerts' texts end a sentence with its mark (HIG, Alerts)
+  ru: ✕ welcome.feature2 ✕ weekends.note ✕ skipTitle ✕ skipMessage ✕ permissionDeniedMessage
+      ✕ projectWhere ✕ rehearsalWhere ✕ availabilityWhere ✕ plannerWhere
+  en: ✕ welcome.feature1 ✕ welcome.feature2 ✕ welcome.feature3 ✕ notifications.exampleAdded
+      ✕ weekends.note ✕ calendarSync.laterWhere ✕ skipTitle ✕ skipMessage ✕ permissionDeniedMessage
+      ✕ projectWhere ✕ rehearsalWhere ✕ availabilityWhere ✕ plannerWhere
+  es: ✕ welcome.feature1 ✕ welcome.feature2 ✕ welcome.feature3 ✕ weekends.note ✕ calendarSync.laterWhere
+      ✕ skipTitle ✕ skipMessage ✕ permissionDeniedMessage ✕ projectWhere ✕ rehearsalWhere
+      ✕ availabilityWhere ✕ plannerWhere
+  de: ✕ welcome.feature1 ✕ welcome.feature2 ✕ welcome.feature3 ✕ notifications.exampleAdded
+      ✕ notifications.exampleTimeChanged ✕ weekends.note ✕ calendarSync.laterWhere ✕ skipTitle
+      ✕ skipMessage ✕ permissionDeniedMessage ✕ projectWhere ✕ rehearsalWhere ✕ availabilityWhere
+      ✕ plannerWhere
+  (passing, as they should be unchanged: ru feature1, feature3, exampleAdded, exampleTimeChanged,
+   laterWhere, permissionRequired; en exampleTimeChanged, permissionRequired; es exampleAdded,
+   exampleTimeChanged, permissionRequired; de permissionRequired; the buttons' labels kept as they are)
+  e.g. ru skipMessage: expected "…можно настроить в любое время: Профиль⍽→⍽Настройки.",
+       received "…можно настроить в любое время: Профиль → Настройки." (a plain space before "→")
+
+FAIL frontend src/features/onboarding/hooks/__tests__/useOnboarding.test.ts
+  ✕ typesets the "Skip" alert's title and message in the app's language (T-417)
+    expected "Это в⍽профиле", received "Это в профиле" (Alert.alert took the string as it was)
+
+FAIL frontend src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx
+  ✕ typesets the access alert in the app's language (T-417)
+    expected "Нужен доступ к⍽календарю", received "Нужен доступ к календарю"
+
+Test Suites: 3 failed, 3 total
+Tests:       52 failed, 31 passed, 83 total

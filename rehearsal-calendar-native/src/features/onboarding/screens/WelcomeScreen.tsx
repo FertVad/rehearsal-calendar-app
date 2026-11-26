@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
+import StepText from '../components/StepText';
 import { UserAvatar } from '../../../shared/components';
 
 type WelcomeScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
@@ -18,7 +19,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
   const { skipOnboarding } = useOnboarding();
 
   const handleNext = () => {
-    navigation.navigate('CalendarSync');
+    navigation.navigate('Weekends');
   };
 
   return (
@@ -28,11 +29,10 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
       title={t.onboarding.welcome.greeting(user?.firstName || undefined)}
       description={t.onboarding.welcome.description}
       currentStep={0}
-      totalSteps={4}
-      onNext={handleNext}
+      totalSteps={5}
       onSkip={skipOnboarding}
-      nextButtonTitle={t.onboarding.welcome.next}
-      showBackButton={false}
+      // No way back from the first step: no "‹ Back" (T-412).
+      answer={{ title: t.onboarding.welcome.next, onPress: handleNext }}
     >
       <View style={styles.content}>
         {/* User Avatar */}
@@ -50,21 +50,21 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
             <View style={[styles.featureIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
               <Ionicons name="calendar-outline" size={24} color={Colors.accent.purple} />
             </View>
-            <Text style={styles.featureText}>{t.onboarding.welcome.feature1}</Text>
+            <StepText style={styles.featureText}>{t.onboarding.welcome.feature1}</StepText>
           </View>
 
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
               <Ionicons name="people-outline" size={24} color={Colors.accent.purple} />
             </View>
-            <Text style={styles.featureText}>{t.onboarding.welcome.feature2}</Text>
+            <StepText style={styles.featureText}>{t.onboarding.welcome.feature2}</StepText>
           </View>
 
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
               <Ionicons name="sync-outline" size={24} color={Colors.accent.green} />
             </View>
-            <Text style={styles.featureText}>{t.onboarding.welcome.feature3}</Text>
+            <StepText style={styles.featureText}>{t.onboarding.welcome.feature3}</StepText>
           </View>
         </View>
       </View>

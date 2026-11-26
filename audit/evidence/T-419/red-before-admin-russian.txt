@@ -1,0 +1,49 @@
+T-419 — red before: the new browser test on the old admin page (auto/main 0e2e2ee,
+server/routes/admin/dashboardPage.js and server/public/admin/dashboard.js unchanged).
+
+$ cd rehearsal-calendar-native/server && node --test __tests__/browser/adminRussian.browser.test.mjs
+
+✖ the login screen and each of its messages are in Russian, never the server's text
+  AssertionError [ERR_ASSERTION]: English on the page: login screen
+  + actual - expected
+  + [
+  +   'Admin',
+  +   'Rehearsal',
+  +   'Calendar',
+  +   'Panel',
+  +   'Log',
+  +   'in',
+  +   'Refresh',
+  +   'out',
+  +   'Period',
+  +   'Last',
+  +   'days',
+  +   'All',
+  +   'time',
+  +   'Source',
+  +   'Everyone',
+  +   'Invited',
+  +   'into',
+  +   'a',
+  +   'project',
+  +   'Own',
+  +   'No',
+  +   'Language',
+  +   'languages',
+  +   'Service',
+  +   'accounts',
+  +   ... (the whole page: every heading, column, note, button and attribute;
+  +   'Password', 'Filters', 'Statistics' from placeholder and aria-label)
+✖ the dashboard with data: Russian words, codes named, dates, decimals and units
+  AssertionError [ERR_ASSERTION]: English on the page: dashboard
+✖ loading, failure, stale data and the status messages are in Russian
+  locator.click: Timeout 5000ms exceeded.
+    - waiting for getByRole('button', { name: 'Обновить', exact: true })
+
+ℹ tests 3
+ℹ pass 0
+ℹ fail 3
+
+The first test's English scan runs before any other check, so the list above is
+what the old page shows on its login screen (hidden dashboard text included):
+"Log in" among it, as the task names.

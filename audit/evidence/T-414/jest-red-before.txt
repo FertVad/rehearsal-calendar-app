@@ -1,0 +1,48 @@
+T-414 — Jest, red before: app code as at bdadcf0, tests as in this task.
+npx jest --selectProjects frontend --testPathPatterns "AvailabilityLeave|ProfileScreen.about" --verbose
+(stack lines dropped)
+
+FAIL frontend src/features/profile/screens/__tests__/ProfileScreen.about.test.tsx
+  ✓ opens the support page in the app’s language from Help (289 ms)
+  ✓ opens the privacy policy in the app’s language (en) (88 ms)
+  ✓ opens the privacy policy in the app’s language (ru) (40 ms)
+  ✓ opens the privacy policy in the app’s language (es) (42 ms)
+  ✓ opens the privacy policy in the app’s language (de) (42 ms)
+  ✓ puts the policy between Help and Report a Bug (36 ms)
+  ✓ shows the version the app was built as, not one written into the screen (37 ms)
+  Rate Rehearsly
+    ✓ opens the App Store’s review page (38 ms)
+    ✕ when iOS refuses to open it, the refusal is logged, not left unhandled (57 ms)
+    Expected: StringContaining "review", [Error: Unable to open URL]
+    Number of calls: 0
+    Unable to open URL      <- the rejection nobody handled, reported by Jest
+FAIL frontend src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx
+  ✓ with nothing changed, it closes at once (178 ms)
+  ✓ with days changed, a way out asks: Don't Save, Save, Cancel (40 ms)
+  ✓ Cancel in the header is that way out: goBack, held and asked about (54 ms)
+  ✓ Don't Save closes it the way it was being closed; Cancel keeps it open (28 ms)
+  ✓ Save saves the days, without an alert over the closing sheet, and then closes it (53 ms)
+  ✓ a day edited while that save was out is not closed away: the question comes again (review) (28 ms)
+  ✓ a save that fails leaves the sheet open (16 ms)
+  ✓ changes that cannot be saved as they are offer no Save (14 ms)
+  iOS's rating window (T-414)
+    ✕ a save with the screen still open asks nothing (26 ms)
+        Expected number of calls: 0 / Received number of calls: 1
+    ✓ closed after a save: asked once (21 ms)
+    ✓ closed with no save: not asked (14 ms)
+    ✓ closed after a save that failed: not asked (15 ms)
+    ✕ two saves, then closed: asked once (23 ms)
+        Expected number of calls: 0 / Received number of calls: 2   (before the close)
+    ✕ a save, then the close question's Save on the way out: asked once, not twice (33 ms)
+        Expected number of calls: 1 / Received number of calls: 2
+    ✕ saved by the close question alone: asked once the screen is gone (25 ms)
+        Expected number of calls: 0 / Received number of calls: 1   (before the close)
+  Collapsing the editor (T-026)
+    ✓ ... (6 passed)
+
+Test Suites: 2 failed, 2 total
+Tests:       5 failed, 25 passed, 30 total
+
+The three green ones in "iOS's rating window" pass on the old code too:
+"closed after a save" because the old code asked at the save, before the
+close; the other two ask nothing either way.

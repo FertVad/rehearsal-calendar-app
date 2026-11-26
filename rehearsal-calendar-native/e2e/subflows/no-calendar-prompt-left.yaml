@@ -1,0 +1,21 @@
+# iOS's calendar prompt, if a flow left it up, refused before the next flow
+# (T-299). It is SpringBoard's window, asked for by tccd on behalf of
+# calaccessd, not the app's: stopping the app, clearing its state or granting
+# its permissions - the next flow's launchApp - leaves it over that flow's
+# screen. One lost "Don't Allow" in flow 09 made flows 100 and 65 red too.
+#
+# For onFlowComplete of a flow that launches with permissions unset and so lets
+# iOS ask (09, 60). Nothing when the flow answered it; the tap through
+# tap-and-see.yaml, as the simulator can lose it (T-207).
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      visible: "Don’t Allow|Don't Allow"
+    commands:
+      - runFlow:
+          file: tap-and-see.yaml
+          env:
+            TAP: "Don’t Allow|Don't Allow"
+            GONE: "Don’t Allow|Don't Allow"
+            WAIT_MS: 10000

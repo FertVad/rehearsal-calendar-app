@@ -1,0 +1,44 @@
+T-405 green after (review point 2): Safari's tabs are removed only when Safari
+is known to be stopped (e2e/safari.mjs, freshSafari), 2026-11-24.
+
+1. The same failed stop as red-before-terminate.txt: 500, nothing removed, the
+   flow fails at the subflow (17:28, artifacts 2026-11-24_172807).
+
+$ node audit/evidence/T-405/with-fake-xcrun.mjs npm --prefix rehearsal-calendar-native run e2e -- <tree>/rehearsal-calendar-native/e2e/flows/70-privacy-lists-resend.yaml
+...
+[Failed] Privacy policy lists Resend in every language (14s)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 0, tabs restored: 0 (fresh-safari.yaml)
+[fake xcrun] terminates of Safari it failed:
+17:29:50 simctl terminate 0E96462E-BD5B-4C19-9847-8E63D550B36E com.apple.mobilesafari: failed on purpose, exit 1
+(exit 1)
+
+e2e/out/server.log:
+[e2e] fresh-safari: Safari not known to be stopped, nothing removed: simctl terminate exit 1: fake xcrun (T-405): simctl terminate 0E96462E-BD5B-4C19-9847-8E63D550B36E com.apple.mobilesafari failed on purpose
+
+The flow's commands.json, the subflow's runScript:
+"message" : "Error: fresh-safari answered 500: {\"error\":\"Safari not known to be stopped, nothing removed: simctl terminate exit 1: fake xcrun (T-405): simctl terminate 0E96462E-BD5B-4C19-9847-8E63D550B36E com.apple.mobilesafari failed on purpose\"}"
+
+Nothing was removed: the next run, flow 70 without the subflow
+(red-before-check.txt), had Safari restore the 4 tabs the run before this one
+left - had the stores gone, it would have read 0.
+
+2. and 3. Safari not running, and Safari running: 200, its tabs removed. Flows
+44, 70, 98, real xcrun (18:11, artifacts 2026-11-24_181143); the four calls of
+fresh-safari.yaml in e2e/out/server.log, in the order run - 44 (before its
+first page), 44 (before its second), 70, 98. The first finds no Safari yet;
+the second and third find the Safari of 44's pages running and stop it; the
+fourth finds none, as flow 70 ends with stopApp of Safari:
+
+[e2e] Safari not running, its tabs removed: BrowserState.db, BrowserState.db-shm, BrowserState.db-wal, SafariTabs.db, SafariTabs.db-shm, SafariTabs.db-wal
+[e2e] Safari stopped, its tabs removed: BrowserState.db, BrowserState.db-shm, BrowserState.db-wal, SafariTabs.db, SafariTabs.db-shm, SafariTabs.db-wal
+[e2e] Safari stopped, its tabs removed: BrowserState.db, BrowserState.db-shm, BrowserState.db-wal, SafariTabs.db, SafariTabs.db-shm, SafariTabs.db-wal
+[e2e] Safari not running, its tabs removed: BrowserState.db, BrowserState.db-shm, BrowserState.db-wal, SafariTabs.db, SafariTabs.db-shm, SafariTabs.db-wal
+
+All three flows passed (green-after-check.txt). The unit tests
+(e2e/__tests__/safari.test.mjs) hold the same cases, and also exit 3 with
+another text, "found nothing to terminate" with another exit, and simctl out
+of its time: each removes nothing and throws.

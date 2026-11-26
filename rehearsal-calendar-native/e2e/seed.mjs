@@ -18,6 +18,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import inviteFormat from'../shared/contracts/inviteCode.json' with { type: 'json' };
+import weekendTable from '../shared/contracts/weekends.json' with { type: 'json' };
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'server');
 const bcrypt = createRequire(path.join(SERVER, 'package.json'))('bcrypt');
@@ -169,6 +170,11 @@ export const PEOPLE = {
   // New here too, and her account speaks Russian: onboarding in Russian, her
   // name in Cyrillic, the longest greeting of the four languages (60).
   nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
+  // New, in Russian, and gives the app her calendar in onboarding (32,
+  // T-412): the step's choice and the calendar connected, in Russian. Nina
+  // above refuses it. A key and an address of her own: Olga Prozorova above is
+  // another account (42, 66, 78), and a second `olga:` would replace her.
+  larina: { email: 'larina@e2e.test', firstName: 'Ольга', lastName: 'Ларина', onboarded: false, locale: 'ru' },
   // New too, one in Spanish and one in German (60, T-256): the steps as the
   // native speakers read them, the Spanish quotes and the German titles and
   // buttons. Neither finishes it.
@@ -323,7 +329,39 @@ export const PEOPLE = {
   // T-283). A company of their own, so 102's stays as it is.
   oberon: { email: 'oberon@e2e.test', firstName: 'Oberon', lastName: 'Fairy', onboarded: true },
   peaseblossom: { email: 'peaseblossom@e2e.test', firstName: 'Peaseblossom', lastName: 'Fairy', onboarded: true, locale: 'ru' },
+  // Weekends busy by default (104, T-406): his weekends red in the editor,
+  // green once he turns the profile's switch off, red again once on. In no
+  // project, so nothing another flow books lands on his days.
+  telyegin: { email: 'waffles@e2e.test', firstName: 'Waffles', lastName: 'Telyegin', onboarded: true, weekendsBusy: true },
+  // The same in Russian, Spanish and German (105, T-408): the editor's hint on
+  // a weekend day and the profile's switch, each in the native speaker's
+  // words. In no project, as he is; nothing is changed.
+  voinitskaya: { email: 'voinitskaya@e2e.test', firstName: 'Maria', lastName: 'Voinitskaya', onboarded: true, locale: 'ru', weekendsBusy: true },
+  poncia: { email: 'poncia@e2e.test', firstName: 'Poncia', lastName: 'Criada', onboarded: true, locale: 'es', weekendsBusy: true },
+  franziska: { email: 'franziska@e2e.test', firstName: 'Franziska', lastName: 'Willig', onboarded: true, locale: 'de', weekendsBusy: true },
+  // Zhadov runs «A Profitable Position» alone, three rehearsals of his in the
+  // coming days. He exports them to the phone's calendar, which will not let
+  // "Office scene" go, and deletes his account: the other two leave the
+  // calendar with it, and he is told the one that stayed (106, T-409).
+  zhadov: { email: 'zhadov@e2e.test', firstName: 'Vasily', lastName: 'Zhadov', onboarded: true },
+  // Sonya has used the app on three days before today (the launch says so)
+  // and saves MARK_DAY, busy all day, free: iOS's rating window comes. She
+  // saves it busy again, and in the same version it does not. Then the
+  // profile's "Rate Rehearsly" opens the App Store's review page (107, T-410).
+  // She is the `sonya` above (45): a second `sonya:` here only replaced her with
+  // the same values, and a key twice is what hid a new Olga over Olga
+  // Prozorova (T-412, e2e/__tests__/seed-keys.test.mjs).
 };
+
+/**
+ * Whose weekends are busy by default (T-406). Every flow written before it
+ * counts on a person's weekends being as free as any day they have not
+ * marked, so the people it seeds have the profile's switch off, as if they
+ * had answered "No" in onboarding — the server's default is on. Those still
+ * to go through onboarding keep that default (09, 32, 60), and so does anyone
+ * whose flow is about it (`weekendsBusy`).
+ */
+const weekendsBusy = (person) => person.weekendsBusy ?? !person.onboarded;
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
 const ISLANDERS = [
@@ -440,10 +478,10 @@ export async function seed({ client, apiUrl, timezone }) {
   const ids = {};
   for (const [key, person] of Object.entries(PEOPLE)) {
     const { rows } = await client.query(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled, weekends_busy)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
       [person.email, hash, person.firstName, person.lastName, timezone, person.locale ?? 'en', person.onboarded,
-        person.notifications ?? true]);
+        person.notifications ?? true, weekendsBusy(person)]);
     ids[key] = rows[0].id;
     await client.query(
       `INSERT INTO native_email_identities (user_id, email, status, verified_at, verified_by)
@@ -540,15 +578,15 @@ export async function seed({ client, apiUrl, timezone }) {
   const islanders = [];
   for (const [firstName, lastName] of ISLANDERS) {
     const { rows: [islander] } = await client.query(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
-       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE) RETURNING id`,
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled, weekends_busy)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE, FALSE) RETURNING id`,
       [`${firstName.toLowerCase()}@e2e.test`, hash, firstName, lastName, timezone]);
     islanders.push(islander.id);
   }
   for (const [mailbox, firstName, lastName] of NAMED) {
     await client.query(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
-       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE)`,
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled, weekends_busy)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE, FALSE)`,
       [`${mailbox}@e2e.test`, hash, firstName, lastName, timezone]);
   }
   const prosperoProject = async (name, description, members) => {
@@ -790,6 +828,27 @@ export async function seed({ client, apiUrl, timezone }) {
         `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
          VALUES ($1, $2, 'no', NOW(), NOW())`,
         [made.id, ids.tortsov]);
+    }
+  }
+  // Zhadov's (106, T-409), as Tortsov's: he alone in it, on each of his three
+  // rehearsals. Deleting his account deletes it. Inserted: the sign-ins are spent.
+  {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('A Profitable Position', 'Ostrovsky', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids.zhadov]);
+    for (const [title, day] of [['Office scene', 1], ['Tavern', 2], ['Finale', 3]]) {
+      const { rows: [made] } = await client.query(
+        `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3::timestamptz, $4::timestamptz, 'Main hall', $5, NOW(), NOW()) RETURNING id`,
+        [own.id, title, localInstant(day, 18), localInstant(day, 20), ids.zhadov]);
+      await client.query(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())`,
+        [made.id, ids.zhadov]);
     }
   }
 
@@ -1176,6 +1235,32 @@ export async function seed({ client, apiUrl, timezone }) {
   labels.this_month = new Date(`${days.today}T00:00:00Z`).toLocaleDateString('en-US',
     { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
+  // The weekend of the profiles' zone (T-406; every profile's is the
+  // machine's), by the table the server and the app read it from: its first
+  // day after today, and the first day after today that is not one — both in
+  // the week the editor opens on (104). And its days as the app names them
+  // inside a sentence: "Fri and Sat", "пт и сб", "vie y sáb", "Fr und Sa" —
+  // no-break spaces between them, Russian and Spanish in lower case whatever
+  // case Intl gives (09, 60, 105; T-408).
+  const zoneCountry = weekendTable.zones[timezone];
+  const weekend = (zoneCountry && weekendTable.weekends[zoneCountry]) || weekendTable.world;
+  const isoWeekday = (date) => ((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7) + 1;
+  const firstAfterToday = (wanted) => {
+    for (let offset = 1; ; offset++) if (wanted(weekend.includes(isoWeekday(localDate(offset))))) return localDate(offset);
+  };
+  days.weekend = firstAfterToday((isWeekend) => isWeekend);
+  days.weekday = firstAfterToday((isWeekend) => !isWeekend);
+  const NBSP = '\u00a0';
+  const dayNames = (locale, and, lower = false) => {
+    const names = weekend.map((day) => new Date(Date.UTC(2026, 0, 4 + day)).toLocaleDateString(locale, { weekday: 'short', timeZone: 'UTC' }))
+      .map((name) => (lower ? name.toLocaleLowerCase(locale) : name));
+    return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}${and}${NBSP}${names[names.length - 1]}`;
+  };
+  labels.weekend_days_en = dayNames('en-US', 'and');
+  labels.weekend_days_ru = dayNames('ru-RU', 'и', true);
+  labels.weekend_days_es = dayNames('es-ES', 'y', true);
+  labels.weekend_days_de = dayNames('de-DE', 'und');
+
   // Zarechnaya's own slot past midnight (25), the row PUT /availability/days
   // writes for it — written here, since the sign-ins are spent.
   await client.query(
@@ -1263,9 +1348,9 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.mackie, localInstant(0, 12), localInstant(0, 14)]);
-  // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
-  // save of that day writes it.
-  for (const key of ['yelena', 'mariya', 'astrov']) {
+  // Yelena's (64), Mariya's and Astrov's (67-69), Sonya's (107): MARK_DAY busy
+  // all day, as a save of that day writes it.
+  for (const key of ['yelena', 'mariya', 'astrov', 'sonya']) {
     await client.query(
       `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
        VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,

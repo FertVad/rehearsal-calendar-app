@@ -144,6 +144,16 @@
  *   GET /pasteboard?device=<udid>&text=<t>   `xcrun simctl pbcopy` on that
  *                                            simulator
  *
+ * It gives a Safari flow a Safari with no tabs, which Maestro's clearState
+ * cannot (e2e/subflows/fresh-safari.yaml, T-404):
+ *
+ *   GET /fresh-safari?device=<udid>          `xcrun simctl terminate` Safari and
+ *                                            remove the simulator's
+ *                                            Library/Safari/SafariTabs.db
+ *                                            (and BrowserState.db); 500 and
+ *                                            nothing removed unless Safari is
+ *                                            known to be stopped (safari.mjs)
+ *
  * It delivers a push to the app on the simulator, which receives none from
  * Expo — as the server's own would arrive (flow 75, T-229):
  *
@@ -184,6 +194,7 @@ import {
 } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
 import { ellipses, inkBox } from './ink.mjs';
+import { freshSafari } from './safari.mjs';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
 const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
@@ -599,6 +610,36 @@ http.createServer((request, response) => {
       return answer(200, { copied: true });
     });
     child.stdin.end(url.searchParams.get('text') || '');
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/fresh-safari') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    freshSafari(device).then(({ was, removed }) => {
+      console.log(`[e2e] Safari ${was}, its tabs removed: ${removed.join(', ') || 'none there'}`);
+      answer(200, { was, removed });
+    }, (error) => {
+      console.error(`[e2e] fresh-safari: ${error.message}`);
+      answer(500, { error: error.message });
+    });
+    return;
+  }
+  // The links the app handed to iOS in the last two minutes, as SpringBoard
+  // logs each ("Handling OpenURL from Rehearsly:<pid>: <url>"), the latest
+  // last (flow 107, T-410). The App Store's page goes on to the App Store,
+  // which a simulator does not have, so what Safari shows cannot say which
+  // address the app opened; this can.
+  if (request.method === 'GET' && url.pathname === '/opened-urls') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    execFile('xcrun', ['simctl', 'spawn', device, 'log', 'show', '--last', '2m', '--style', 'compact',
+      '--predicate', 'process == "SpringBoard" AND eventMessage CONTAINS "Handling OpenURL from Rehearsly"'],
+    { timeout: 60000, maxBuffer: 8 * 1024 * 1024 }, (error, stdout) => {
+      if (error) return answer(500, { error: String(error) });
+      const urls = [...String(stdout).matchAll(/Handling OpenURL from Rehearsly:\d+: (\S+)/g)].map((m) => m[1]);
+      console.log(`[e2e] links the app opened: ${urls.join(', ') || 'none'}`);
+      return answer(200, { urls });
+    });
     return;
   }
   if (request.method === 'GET' && url.pathname === '/push') {

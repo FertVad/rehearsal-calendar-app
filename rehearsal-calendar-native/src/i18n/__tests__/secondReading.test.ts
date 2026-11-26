@@ -25,7 +25,9 @@ describe('T-261: the strings the second reading changed', () => {
     expect(es.auth.requestFailed).toBe('Algo salió mal. Inténtalo de nuevo.');
     expect(de.auth.noConnection).toBe('Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.');
     expect(de.auth.requestFailed).toBe('Etwas ist schiefgelaufen. Versuche es erneut.');
-    expect(de.onboarding.skipMessage).toBe('Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen ändern.');
+    // Reworded with the weekends in it (T-408), still with its full stop.
+    // No-break spaces where the native speaker put them (T-417).
+    expect(de.onboarding.skipMessage).toBe('Du kannst jederzeit den\u00a0Wochenbeginn\u00a0ändern, die\u00a0Kalendersynchronisation einrichten und festlegen, ob\u00a0deine\u00a0Wochenenden als\u00a0belegt\u00a0gelten\u00a0– alles\u00a0unter\u00a0Profil\u00a0→\u00a0Einstellungen.');
   });
 
   it('the question before deleting a rehearsal: its date in brackets', () => {
@@ -51,12 +53,13 @@ describe('T-261: the strings the second reading changed', () => {
   });
 
   it('"What is where": by invitation, not the code twice', () => {
+    // No-break spaces and line breaks where the native speakers put them (T-417).
     expect(en.onboarding.whatWhere.projectWhere('Create Project', 'Projects', 'Join with a Code'))
-      .toBe('“+” → “Create Project”. Invited? “Projects” → “Join with a Code”');
+      .toBe('“+”\u00a0→\u00a0“Create\u00a0Project”.\nInvited? “Projects”\u00a0→\u00a0“Join\u00a0with\u00a0a\u00a0Code”');
     expect(es.onboarding.whatWhere.projectWhere('Crear proyecto', 'Proyectos', 'Unirse con un código'))
-      .toBe('«+» → «Crear proyecto». Con una invitación: «Proyectos» → «Unirse con un código»');
+      .toBe('«+»\u00a0→\u00a0«Crear\u00a0proyecto». Con\u00a0una\u00a0invitación: «Proyectos»\u00a0→\u00a0«Unirse\u00a0con\u00a0un\u00a0código»');
     expect(de.onboarding.whatWhere.projectWhere('Projekt erstellen', 'Projekte', 'Mit einem Code beitreten'))
-      .toBe('„+“ → „Projekt erstellen“. Per Einladung: „Projekte“ → „Mit einem Code beitreten“');
+      .toBe('„+“\u00a0→ „Projekt\u00a0erstellen“. Per\u00a0Einladung:\n„Projekte“\u00a0→ „Mit\u00a0einem\u00a0Code\u00a0beitreten“');
   });
 
   it('Spanish: one device, one word for a notice, no sentence opening on a number', () => {
@@ -75,9 +78,9 @@ describe('T-261: the strings the second reading changed', () => {
       .toBe('Alle Proben, die Mitgliederliste und alle anderen Projektdaten werden unwiderruflich gelöscht.');
   });
 
-  it('German: one verb for being put on a rehearsal', () => {
-    expect(de.onboarding.notifications.description)
-      .toBe('Du erfährst es, wenn dich jemand für eine Probe einteilt und wenn sich ihre Zeit ändert. Ohne Mitteilungen erfährst du es zuletzt.');
+  // Written again in T-412 from the owner's text; "einteilen" is not in it.
+  it('German: the notifications step as T-412 wrote it', () => {
+    expect(de.onboarding.notifications.description).toBe('Neue Probe, Absage oder Verschiebung\u00a0–\ndu erfährst es sofort.');
   });
 
   it('Spanish: the project in the invitation\'s title is in quotes', () => {

@@ -251,6 +251,8 @@ export async function setupIntegrationDb() {
   testDb.exec(readFileSync(join(__dirname, '../../migrations/011-push-tickets.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/012-idempotency-keys.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/016-usage-statistics.sql'), 'utf8'));
+  // The weekends_* columns of native_users (T-406), as the migration adds them.
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/017-weekend-defaults.sql'), 'utf8'));
 
   // Translate the PostgreSQL dialect our routes are written in into something
   // SQLite can parse. Only the constructs actually used in the codebase are

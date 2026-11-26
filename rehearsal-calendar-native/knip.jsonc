@@ -85,6 +85,9 @@
     // writes the demo account in production (its header; demoDates.mjs is its
     // helper). scripts/test.mjs runs the tests (`npm test`): not production code,
     // so the last `project` line leaves it out of the production check only.
+    // scripts/admin-quote-name.mjs is the same: it writes public/admin/quoteName.js
+    // by hand (`npm run build:admin-quote-name`), and its test checks the copy
+    // (T-419); no request reaches it.
     "server": {
       "entry": [
         "server.js!",
@@ -98,7 +101,8 @@
         "**/*.{js,mjs}!",
         "!public/**",
         "!migrations/**",
-        "!scripts/test.mjs!"
+        "!scripts/test.mjs!",
+        "!scripts/admin-quote-name.mjs!"
       ],
       "ignore": [
         // 477ea2f's migrator code, byte for byte (T-297): data for

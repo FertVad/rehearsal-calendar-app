@@ -1,0 +1,30 @@
+T-405 green after: flows 44, 70, 98 with fresh-safari.yaml, the runner's check
+of restored tabs in the run, 2026-11-24 18:11 (artifacts 2026-11-24_181143).
+
+$ npm --prefix rehearsal-calendar-native run e2e -- <tree>/e2e/flows/44-profile-language.yaml <tree>/e2e/flows/70-privacy-lists-resend.yaml <tree>/e2e/flows/98-invite-page-in-safari.yaml
+...
+[Passed] The profile's language, kept by the account (3m 39s)
+[Passed] Privacy policy lists Resend in every language (35s)
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (30s)
+
+3/3 Flows Passed in 4m 46s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 4, tabs restored: 0 (fresh-safari.yaml)
+(exit 0)
+
+Runs before this one, the same tree, nothing changed between them:
+- 17:50 (2026-11-24_175027) and 18:05 (2026-11-24_180527): Maestro's driver
+  lost in flow 44's sign-in, "DeviceUnreachableException: Device became
+  unreachable during deviceInfo"; 70 and 98 then failed at their first
+  command (docs/e2e.md, "A lost driver" - the machine's). The check's line:
+  "Safari launches: 0, tabs restored: 0" - no fresh flow passed, so no red
+  from it on top.
+- 17:56 (2026-11-24_175617): 44 and 70 passed; 98 failed at
+  `extendedWaitUntil: "Open in the App Store"`. Its screenshot shows the page
+  in English with Safari's 'Open this page in "Rehearsly"?' over it: the
+  question came after the flow's optional 5 s wait for "Cancel" and hid the
+  page from the screen's reader. Not this change: the helper answered 200 for
+  all four calls ("Safari not running" / "Safari stopped", server.log) and the
+  check counted 4 launches, 0 tabs restored. Flow 98's wait is not this
+  task's to change (no timeouts raised here); noted for the supervisor.

@@ -34,11 +34,13 @@ test.each(['/admin', '/admin/'])('%s serves the dashboard directly with strict C
   expect(response.headers.get('content-security-policy')).toContain("script-src-attr 'none'");
   expect(response.headers.get('content-security-policy')).not.toContain("'unsafe-inline'");
   expect(html).toContain('src="/admin/dashboard.js"');
+  expect(html).toContain('src="/admin/quoteName.js"');
   expect(html).toContain('href="/admin/dashboard.css"');
 });
 
 test.each([
   ['/admin/dashboard.js', /(?:application|text)\/javascript/],
+  ['/admin/quoteName.js', /(?:application|text)\/javascript/],
   ['/admin/dashboard.css', /text\/css/],
 ])('%s remains a static asset with its correct MIME type', async (path, mime) => {
   const response = await fetch(base + path, { redirect: 'manual' });
