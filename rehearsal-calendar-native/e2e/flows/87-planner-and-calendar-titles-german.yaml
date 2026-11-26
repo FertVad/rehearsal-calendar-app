@@ -170,7 +170,36 @@ tags:
       BOTTOM: "0.95"
 # The next day picked too: the editor's title counts "Tage", not "Daten"
 # (T-256, the owner's "Tage"), whole.
+# The editor's sheet is open now and covers the lower half of the list: a day
+# under it is on screen to Maestro, and its tap lands on the sheet. Where the
+# next day sits depends on the date of the run: on 25 November 2026 the two
+# were 30 November and 1 December, a month's title between them, and the 1st
+# was under the sheet's top (T-416); on the 24th they were in rows side by
+# side. So the day is drawn up by short, slow swipes over the list - above
+# the sheet, no glide past it - until it is below the legend and above the
+# sheet's first row (its deselect button).
 - waitForAnimationToEnd
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: day-${MORNING_DAY}
+        below:
+          id: availability-legend
+        above:
+          id: availability-deselect
+    commands:
+      - swipe:
+          start: 50%, 35%
+          end: 50%, 25%
+          duration: 1000
+      - waitForAnimationToEnd
+- assertVisible:
+    id: day-${MORNING_DAY}
+    below:
+      id: availability-legend
+    above:
+      id: availability-deselect
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
