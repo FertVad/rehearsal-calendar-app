@@ -45,7 +45,8 @@ describe('The planner\'s slot names its busy people by their number (T-258)', ()
 describe('The onboarding says "по коду" once (T-258)', () => {
   it('Russian joins a project "По приглашению"', () => {
     expect(ru.onboarding.whatWhere.projectWhere('Создать проект', 'Проекты', 'Присоединиться по коду'))
-      .toBe('«+» → «Создать проект». По приглашению: «Проекты» → «Присоединиться по коду»');
+      // No-break spaces where the native speaker put them (T-417).
+      .toBe('«+»\u00a0→\u00a0«Создать\u00a0проект». По\u00a0приглашению: «Проекты»\u00a0→\u00a0«Присоединиться по коду»');
   });
 });
 
@@ -111,7 +112,7 @@ describe('English titles, buttons and labels in Title Case, as Apple writes them
     ['the sync screen\'s Sync Now', en.calendarSync.synchronize, 'Sync Now'],
     ['the sync screen\'s Remove Exported Rehearsals', en.calendarSync.removeAll, 'Remove Exported Rehearsals'],
     ['What’s Where: Finding a Time', en.onboarding.whatWhere.planner, 'Finding a Time'],
-    ['the onboarding\'s example push', en.onboarding.notifications.exampleAdded, 'You Were Added to a Rehearsal'],
+    ['the onboarding\'s example push', en.onboarding.notifications.exampleAdded, 'You Were Added to\u00a0a\u00a0Rehearsal'],
     ['the onboarding\'s second example push', en.onboarding.notifications.exampleTimeChanged, 'Rehearsal Time Changed'],
     ['the profile\'s Change Email', en.profile.changeEmail, 'Change Email'],
     ['the change of address\'s New Email', en.profile.newEmail, 'New Email'],
@@ -185,9 +186,10 @@ describe('Words around what the user typed (T-256)', () => {
   });
 
   it('Spanish quotes are « » everywhere', () => {
+    // No-break spaces where the native speaker put them (T-417).
     expect(es.onboarding.whatWhere.projectWhere('Crear proyecto', 'Proyectos', 'Unirse con un código'))
-      .toBe('«+» → «Crear proyecto». Con una invitación: «Proyectos» → «Unirse con un código»');
-    expect(es.onboarding.whatWhere.plannerWhere('Planner')).toBe('«Planner», debajo del calendario');
+      .toBe('«+»\u00a0→\u00a0«Crear\u00a0proyecto». Con\u00a0una\u00a0invitación: «Proyectos»\u00a0→\u00a0«Unirse\u00a0con\u00a0un\u00a0código»');
+    expect(es.onboarding.whatWhere.plannerWhere('Planner')).toBe('«Planner», debajo\u00a0del\u00a0calendario');
   });
 });
 

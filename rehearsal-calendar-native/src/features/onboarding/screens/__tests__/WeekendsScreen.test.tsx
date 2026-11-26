@@ -40,7 +40,7 @@ it('asks a Russian speaker in Israel about Friday and Saturday, and says where t
   const view = openStep();
   expect(view.getByTestId('onboarding-title').props.children).toBe(`Отметить все выходные\n(пт${NBSP}и${NBSP}сб)\nкак занятые?`);
   expect(view.getByTestId('onboarding-weekends-note').props.children)
-    .toBe(`Это можно включить или выключить позже: Профиль${NBSP}→${NBSP}Выходные${NBSP}заняты`);
+    .toBe(`Это можно включить${NBSP}или${NBSP}выключить позже: Профиль${NBSP}→${NBSP}Выходные${NBSP}заняты`);
 });
 
 it('asks about Saturday and Sunday in Moscow, and in a zone of no country', () => {

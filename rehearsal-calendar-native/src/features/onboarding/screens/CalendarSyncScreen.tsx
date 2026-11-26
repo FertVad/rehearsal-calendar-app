@@ -9,6 +9,7 @@ import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
 import StepText from '../components/StepText';
 import { settingPath } from '../../../shared/utils/settingPath';
+import { typeset } from '../../../shared/utils/typeset';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
 import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
 import type { DeviceCalendar } from '../../../shared/types/calendar';
@@ -29,7 +30,7 @@ const CONNECTED_PAUSE_MS = 500;
  * tapped, it goes on without connecting again; another is connected, and on.
  */
 export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { skipOnboarding } = useOnboarding();
   const {
     hasPermission,
@@ -144,9 +145,10 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
   const handleRequestPermissions = async () => {
     const granted = await requestPermissions();
     if (!granted) {
+      // Typeset as the step's texts are: iOS wraps the alert too (T-417).
       Alert.alert(
-        t.onboarding.calendarSync.permissionRequired,
-        t.calendarSync.permissionDeniedMessage
+        typeset(t.onboarding.calendarSync.permissionRequired, language),
+        typeset(t.calendarSync.permissionDeniedMessage, language)
       );
     }
   };

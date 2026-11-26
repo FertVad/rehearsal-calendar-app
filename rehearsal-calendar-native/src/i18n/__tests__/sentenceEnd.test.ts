@@ -83,8 +83,12 @@ const SAMPLES: Record<string, unknown[][]> = {
 };
 
 // Strings that end a sentence in English and rightly do not in another language,
-// with the reason. Empty: every string the rule found was a missing full stop.
-const EXCEPTIONS: Record<string, string> = {};
+// with the reason.
+const EXCEPTIONS: Record<string, string> = {
+  // The English alert title is a sentence, so it ends as one (HIG, Alerts; T-417);
+  // es and de are headings, not sentences, and the monitor kept ru as it was.
+  'onboarding.skipTitle': 'en a sentence (HIG); es, de headings; ru kept by the monitor (T-417)',
+};
 
 function leaves(node: unknown, path: string, out: Map<string, unknown>): Map<string, unknown> {
   if (node && typeof node === 'object' && !Array.isArray(node)) {

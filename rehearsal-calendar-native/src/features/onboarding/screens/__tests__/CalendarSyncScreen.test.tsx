@@ -251,6 +251,29 @@ it('says why it needs the calendar in the app\'s language when refused', async (
   alert.mockRestore();
 });
 
+// T-417: the access alert is typeset as the step's texts are: Alert.alert took
+// the string as it was, a short word free to end a line.
+it('typesets the access alert in the app\'s language (T-417)', async () => {
+  mockLanguage.current = 'ru';
+  const calendar = require('../../../../shared/services/calendar');
+  calendar.checkCalendarPermissions.mockResolvedValueOnce(false);
+  calendar.requestCalendarPermissions.mockResolvedValueOnce(false);
+  const alert = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => undefined);
+  const ru = translations.ru;
+  const kept = { title: ru.onboarding.calendarSync.permissionRequired, message: ru.calendarSync.permissionDeniedMessage };
+  ru.onboarding.calendarSync.permissionRequired = 'Нужен доступ к календарю';
+  ru.calendarSync.permissionDeniedMessage = 'Без него не выйдет → никак.';
+  try {
+    const view = await openStep(ru.onboarding.calendarSync.grantPermission);
+    await act(async () => { fireEvent.press(view.getByText(ru.onboarding.calendarSync.grantPermission)); });
+    expect(alert).toHaveBeenCalledWith(`Нужен доступ к${NBSP}календарю`, `Без него не${NBSP}выйдет${NBSP}→ никак.`);
+  } finally {
+    ru.onboarding.calendarSync.permissionRequired = kept.title;
+    ru.calendarSync.permissionDeniedMessage = kept.message;
+    alert.mockRestore();
+  }
+});
+
 it('says it is setting the calendar up in the app\'s language', async () => {
   mockLanguage.current = 'de';
   const view = await openStep(translations.de.onboarding.calendarSync.apple);

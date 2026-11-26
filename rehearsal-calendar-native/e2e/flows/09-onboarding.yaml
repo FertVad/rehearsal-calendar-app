@@ -67,6 +67,12 @@ onFlowComplete:
 - assertNotVisible:
     id: onboarding-back
 - assertVisible: "Plan rehearsals, manage schedules,\nand sync calendars in one place\\."
+# T-417: each feature breaks, where it must, between its groups by sense —
+# not "lands in / everyone’s calendar", nor "suit all / of you". Maestro's
+# regex does not take a space for U+00A0: the no-break spaces are written.
+- assertVisible: "Everyone marks when\u00a0they\u00a0are\u00a0busy"
+- assertVisible: "Rehearsly finds the\u00a0hours that\u00a0suit\u00a0all\u00a0of\u00a0you"
+- assertVisible: "The rehearsal lands in\u00a0everyone’s\u00a0calendar"
 - takeScreenshot: 09-onboarding-welcome
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -77,7 +83,8 @@ onFlowComplete:
 # Weekends: asked outright, with where to change it later (T-406), the path
 # whole on its line — no-break spaces in it — and in the native speaker's
 # words (T-408).
-- assertVisible: "You can turn this on or off later in Profile\u00a0→\u00a0Mark\u00a0Weekends\u00a0as\u00a0Busy"
+# T-417: "in" goes with the path.
+- assertVisible: "You can turn this on or off later in\u00a0Profile\u00a0→\u00a0Mark\u00a0Weekends\u00a0as\u00a0Busy"
 - assertVisible: "When someone looks for a\u00a0rehearsal time,\nthey will see you as busy on those days\\.\nYou can still change any individual day\nin Availability\\."
 # The question in its three lines, never smaller than 26 pt (T-412): three
 # lines are about 90 to 120 high from 26 to 32 pt; squeezed to one line
@@ -117,7 +124,7 @@ onFlowComplete:
 # "Set up later"; no "Next".
 - assertVisible: "(?s)Rehearsals appear in your calendar automatically,.*not what you’re doing\\."
 - assertNotVisible: ".*We read only the busy time slots.*"
-- assertVisible: "You can do it later in Profile\u00a0→\u00a0Calendar\u00a0Sync"
+- assertVisible: "You can do it later in\u00a0Profile\u00a0→\u00a0Calendar\u00a0Sync"
 - assertVisible:
     text: "Set up later"
     below:
@@ -138,6 +145,11 @@ onFlowComplete:
       TAP: "Don’t Allow|Don't Allow"
       SEE: "OK"
       WAIT_MS: 10000
+# The alert typeset as the steps are (T-417): "to use this feature" whole, the
+# sentence with its full stop (HIG, Alerts).
+- assertVisible: "Permission Required"
+- assertVisible: "Calendar access is required to\u00a0use\u00a0this\u00a0feature\\."
+- takeScreenshot: 09-onboarding-calendar-refused-en
 - tapOn: "OK"
 - assertVisible: "Grant Access"
 - takeScreenshot: 09-onboarding-calendar
@@ -152,7 +164,7 @@ onFlowComplete:
 # They read as push titles do in English, "Rehearsal Time Changed" (T-256);
 # Maestro does not tell the case, proofreading.test.ts does.
 - assertVisible: "Notifications"
-- assertVisible: "You Were Added to a\u00a0Rehearsal"
+- assertVisible: "You Were Added to\u00a0a\u00a0Rehearsal"
 - assertVisible: "Rehearsal Time Changed"
 - assertNotVisible: "Add Rehearsal"
 - assertNotVisible: "Save Changes"
@@ -172,11 +184,12 @@ onFlowComplete:
 # What is where, in the labels the app shows there; no week-start step.
 # Joined "Invited?", not "With a code: … “Join with a Code”", the code twice
 # (T-261).
-- assertVisible: "“\\+”\u00a0→ “Create Project”\\. Invited\\? “Projects”\u00a0→ “Join with a\u00a0Code”"
+# T-417: one action a line, each path and label whole.
+- assertVisible: "“\\+”\u00a0→\u00a0“Create\u00a0Project”\\.\nInvited\\? “Projects”\u00a0→\u00a0“Join\u00a0with\u00a0a\u00a0Code”"
 - assertNotVisible: ".*With a code:.*"
-- assertVisible: ".*Create Rehearsal.*admin.*"
-- assertVisible: ".*Mark Busy.*"
-- assertVisible: ".*Smart Planner.*under the calendar.*"
+- assertVisible: "“\\+”\u00a0→\u00a0“Create\u00a0Rehearsal”,\nin\u00a0projects where\u00a0you\u00a0are\u00a0an\u00a0admin"
+- assertVisible: ".*Mark\u00a0Busy.*"
+- assertVisible: "“Smart\u00a0Planner”, under\u00a0the\u00a0calendar"
 - assertNotVisible: "Week Start Day"
 - takeScreenshot: 09-onboarding-what-where
 - runFlow:
