@@ -703,6 +703,8 @@ Two rules it exists to enforce:
 
 Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWORD` env var.
 
+The page is in Russian only, no language switch (the owner, 26.11.2026; T-419): every word is the native editor's (`audit/evidence/T-419/natives-ru.md`), API values and JSON errors stay English; project names are quoted by `public/admin/quoteName.js`, generated from `shared/quoteName.cjs` (`npm run build:admin-quote-name` in `server/` after editing it).
+
 **Features**:
 - User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
 - Use of the app (T-294, `services/admin/usage.js`): active today / 7 / 30 days, retention on days 1, 7, 30 by registration week, builds among the active, each invitation from page to join; the users table's "last day in app". Read from migration 016's tables; without them the sections say "no data: migration 016 not applied", never zeros

@@ -1,11 +1,15 @@
+// The admin page is in Russian only (T-419, the owner, 26.11.2026): its one
+// reader is the owner. Every word is the native editor's
+// (audit/evidence/T-419/natives-ru.md); &nbsp; is a no-break space.
 export function generateAdminPageHTML() {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin — Rehearsal Calendar</title>
+  <title>Админка Rehearsly</title>
   <link rel="stylesheet" href="/admin/dashboard.css">
+  <script src="/admin/quoteName.js" defer></script>
   <script src="/admin/dashboard.js" defer></script>
 </head>
 <body>
@@ -14,10 +18,10 @@ export function generateAdminPageHTML() {
 <div id="login-screen">
   <div class="login-wrap">
     <div class="login-box">
-      <h2>Admin Panel</h2>
+      <h2>Админка Rehearsly</h2>
       <div class="error hidden" id="login-error" role="alert"></div>
-      <input type="password" id="password-input" placeholder="Password" aria-label="Password" autocomplete="current-password" autofocus>
-      <button class="btn btn-primary login-button" id="login-button">Log in</button>
+      <input type="password" id="password-input" placeholder="Пароль" aria-label="Пароль" autocomplete="current-password" autofocus>
+      <button class="btn btn-primary login-button" id="login-button">Войти</button>
     </div>
   </div>
 </div>
@@ -25,42 +29,42 @@ export function generateAdminPageHTML() {
 <!-- Dashboard -->
 <div id="dashboard" class="hidden">
   <div class="header">
-    <h1>Rehearsal Calendar Admin</h1>
+    <h1>Админка Rehearsly</h1>
     <div class="header-actions">
-      <button class="btn" id="refresh-button">Refresh</button>
-      <button class="btn" id="logout-button">Log out</button>
+      <button class="btn" id="refresh-button">Обновить</button>
+      <button class="btn" id="logout-button">Выйти</button>
     </div>
   </div>
   <div class="container">
     <!-- Filters: one period and one selection for every section (T-293) -->
-    <section id="filters" class="filters" aria-label="Filters">
-      <label>Period
+    <section id="filters" class="filters" aria-label="Фильтры">
+      <label>Период
         <select id="filter-period">
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="all" selected>All time</option>
+          <option value="7">Последние 7&nbsp;дней</option>
+          <option value="30">Последние 30&nbsp;дней</option>
+          <option value="90">Последние 90&nbsp;дней</option>
+          <option value="all" selected>Всё время</option>
         </select>
       </label>
-      <label>Source
+      <label>Источник
         <select id="filter-source">
-          <option value="" selected>Everyone</option>
-          <option value="invite">Invited into a project</option>
-          <option value="own">Own project</option>
-          <option value="none">No project</option>
+          <option value="" selected>Все</option>
+          <option value="invite">По приглашению</option>
+          <option value="own">Свой проект</option>
+          <option value="none">Без проекта</option>
         </select>
       </label>
-      <label>Language
+      <label>Язык
         <select id="filter-lang">
-          <option value="" selected>All languages</option>
+          <option value="" selected>Все языки</option>
         </select>
       </label>
-      <p class="note">Service accounts (rehearsly.me, demo.rehearsly.me and ADMIN_SERVICE_EMAILS) count in no figure. "Last N days" runs back from now. The period selects people by registration date; the cards at the top are as of now.</p>
+      <p class="note">Служебные аккаунты (адреса на rehearsly.me и demo.rehearsly.me, а также из ADMIN_SERVICE_EMAILS) не входят ни в одну цифру. «Последние N&nbsp;дней» отсчитываются от текущего момента. Период отбирает людей по дате регистрации; карточки вверху&nbsp;— на текущий момент, без учёта периода.</p>
     </section>
 
     <!-- Stats Cards -->
-    <section id="stats-section" aria-label="Statistics" aria-busy="false">
-      <div id="stats-loading" class="loading hidden" role="status">Loading...</div>
+    <section id="stats-section" aria-label="Статистика" aria-busy="false">
+      <div id="stats-loading" class="loading hidden" role="status">Загрузка…</div>
       <div id="stats-error" class="section-error hidden" role="alert"></div>
       <div id="stats-stale" class="stale-note hidden" role="status"></div>
       <div id="stats-cards" class="cards hidden"></div>
@@ -68,8 +72,8 @@ export function generateAdminPageHTML() {
 
     <!-- Funnel, sources, projects, notifications (T-293) -->
     <section class="section" id="analytics-section" aria-labelledby="analytics-title" aria-busy="false">
-      <h2 class="section-title" id="analytics-title">Analytics</h2>
-      <div id="analytics-loading" class="loading hidden" role="status">Loading...</div>
+      <h2 class="section-title" id="analytics-title">Аналитика</h2>
+      <div id="analytics-loading" class="loading hidden" role="status">Загрузка…</div>
       <div id="analytics-error" class="section-error hidden" role="alert"></div>
       <div id="analytics-stale" class="stale-note hidden" role="status"></div>
       <div id="analytics-body"></div>
@@ -77,19 +81,19 @@ export function generateAdminPageHTML() {
 
     <!-- Bug Reports Table -->
     <section class="section" id="bugs-section" aria-labelledby="bugs-title" aria-busy="false">
-      <h2 class="section-title" id="bugs-title">Bug Reports</h2>
-      <div id="bugs-loading" class="loading hidden" role="status">Loading...</div>
+      <h2 class="section-title" id="bugs-title">Отчёты об ошибках</h2>
+      <div id="bugs-loading" class="loading hidden" role="status">Загрузка…</div>
       <div id="bugs-error" class="section-error hidden" role="alert"></div>
       <div id="bugs-stale" class="stale-note hidden" role="status"></div>
       <div id="bugs-mutation-status" class="mutation-status hidden" role="status"></div>
       <table>
         <thead>
           <tr>
-            <th>User</th>
-            <th>Message</th>
-            <th>Screen</th>
-            <th>Status</th>
-            <th>Date</th>
+            <th>Автор</th>
+            <th>Сообщение</th>
+            <th>Экран</th>
+            <th>Статус</th>
+            <th>Дата</th>
           </tr>
         </thead>
         <tbody id="bugs-body"></tbody>
@@ -99,31 +103,31 @@ export function generateAdminPageHTML() {
 
     <!-- Users Table -->
     <section class="section" id="users-section" aria-labelledby="users-title" aria-busy="false">
-      <h2 class="section-title" id="users-title">Recent Users</h2>
-      <label class="toggle"><input type="checkbox" id="show-service"> Show service accounts</label>
-      <p class="note">People registered in the period, newest first. Steps: onboarding done; projects and roles; availability marks (own or from a calendar) and the last date they reach; calendar sync used, either way (busy times imported from a calendar, or rehearsals exported to the phone's calendar; the export records stay after sync is turned off); a device for notifications; rehearsals marked as seen, of those they are on; rehearsals they created.</p>
-      <div id="users-loading" class="loading hidden" role="status">Loading...</div>
+      <h2 class="section-title" id="users-title">Пользователи</h2>
+      <label class="toggle"><input type="checkbox" id="show-service"> Показывать служебные аккаунты</label>
+      <p class="note">Зарегистрировавшиеся за период, сначала новые. Шаги: онбординг пройден или пропущен; проекты и роли в них; отметки занятости (свои или из календаря) и последняя дата, до которой они доходят; пользовался ли человек синхронизацией календаря в любую сторону (занятость импортирована из календаря или репетиции экспортированы в календарь телефона; записи об экспорте остаются и после выключения синхронизации); устройство для уведомлений; сколько репетиций человек отметил просмотренными из тех, в составе которых он есть; сколько репетиций он создал.</p>
+      <div id="users-loading" class="loading hidden" role="status">Загрузка…</div>
       <div id="users-error" class="section-error hidden" role="alert"></div>
       <div id="users-stale" class="stale-note hidden" role="status"></div>
       <div class="table-scroll">
       <table>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Registered</th>
-            <th>Last Login</th>
-            <th>Last day in app</th>
-            <th title="The earliest project they are still an active member of: as owner, their own project; in any other role, an invitation (an invited member later made admin stays invited). Someone who left a project loses its membership row, so a person who left every project reads &quot;no project&quot;.">Source ⓘ</th>
-            <th>Sign-in</th>
-            <th>Language / zone</th>
-            <th>Steps</th>
+            <th>Имя</th>
+            <th>Почта</th>
+            <th>Регистрация</th>
+            <th>Последний вход</th>
+            <th>Последний день в приложении</th>
+            <th title="Проект, в котором человек состоит дольше всего из тех, где он ещё участник: если он там владелец&nbsp;— «свой проект», в любой другой роли&nbsp;— «приглашение» (приглашённый, которого потом сделали администратором, остаётся приглашённым). При выходе из проекта запись об участии удаляется, поэтому у того, кто вышел из всех проектов,&nbsp;— «без проекта».">Источник ⓘ</th>
+            <th>Способы входа</th>
+            <th>Язык / часовой пояс</th>
+            <th>Шаги</th>
           </tr>
         </thead>
         <tbody id="users-body"></tbody>
       </table>
       </div>
-      <p class="note">Last Login is the last sign-in, not use: the app renews its session without one. Last day in app is use: the last date, in their own zone, the app made a request in their session (kept 13 months; recorded from migration 016 on).</p>
+      <p class="note">«Последний вход»&nbsp;— когда человек в последний раз входил в аккаунт, а не пользовался приложением: сессию приложение продлевает без входа. «Последний день в приложении»&nbsp;— это использование: последняя дата по часовому поясу человека, когда приложение обращалось к серверу в его сессии (дни хранятся 13&nbsp;месяцев и записываются с тех пор, как применена миграция&nbsp;016).</p>
       <div class="pagination" id="users-pagination"></div>
     </section>
 
