@@ -7,7 +7,8 @@
       "auto/main": false,
       "claude/server-for-app-review": false,
       "claude/site-cinema": false,
-      "claude/release-admin-stats": false
+      "claude/release-admin-stats": false,
+      "claude/release-1.0.1": false
     }
   },
   "builds": [
