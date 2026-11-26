@@ -234,6 +234,48 @@ calendars new ids, and rows imported under the old ones stay until "remove all
 imported" is pressed. It needs signing out of iCloud and back in, and costs
 extra busy hours the person can see and clear.
 
+### Deleting the account without calendar access counts only this install's exports (T-409)
+
+Before DELETE /me the app removes what it exported to this iPhone's calendar
+and says how many events stayed (`removeExportedBeforeDeletion`,
+services/calendarSync.ts). Without calendar access it can neither remove nor
+look, so it counts what this phone's own record says it exported. That record
+goes when the app is deleted, and iOS takes the calendar access with it: events
+exported by an earlier install, on a phone whose new install was never given
+the calendar, are not counted, and the alert says nothing of them. It needs a
+reinstall plus a refusal of the calendar, and costs events the person can
+delete in Calendar; the policy says other devices keep theirs the same way.
+Special case, minor: a line here.
+
+### Deleting the account forgets that iOS's rating window was asked for (T-410, T-414)
+
+What the rating request counts — the days of use and the version and time of
+the last ask (`reviewPrompt.ts`) — lives in AsyncStorage, and `deleteAccount`
+(contexts/AuthContext.tsx) clears AsyncStorage whole. A new account on the same
+phone, used on three days, can therefore be asked a second time in the same
+version. It costs at most one more of Apple's windows, which iOS itself shows
+no more than three times in 365 days, and needs an account deleted and another
+made on one phone. Keeping these keys through the clear would carry one
+person's traces past the deletion of their account, which is worse than the
+repeat. Special case, minor: a line here.
+
+### The rating window can follow Availability closed by something other than the person (T-414, T-415)
+
+On Availability the rating request is tied to the screen's unmount after a
+save went through (`visit`, features/availability/screens/AvailabilityScreen.tsx).
+But the screen is also unmounted when the stack is reset from outside while it
+is open and the person never closed it: a tapped notification takes the stack
+back to the tabs, or the session ends and sign-in is shown. Apple's window then
+comes a second later over whatever is on the screen by then, and at the end of
+a session it is asked with the `onboardingCompleted` the user had before. It
+needs three things at once: a save in this visit, the rule for asking holding
+(`reviewDue`, shared/services/reviewPrompt.ts), and an outside reset of the
+stack while the screen is open. It costs one of Apple's windows out of place,
+which "Not Now" closes and which iOS shows no more than three times a year
+anyway. A fix would ask only when the person left on their own — `beforeRemove`
+with a back or modal-dismiss action, the close question's Save included —
+which the unmount cannot tell apart. Special case, minor: a line here.
+
 ### Android App Links wait for an Android release (IC01)
 
 `assetlinks.json` carries a placeholder where the app's signing fingerprint

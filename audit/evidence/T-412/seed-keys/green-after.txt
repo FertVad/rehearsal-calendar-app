@@ -1,0 +1,6 @@
+$ cd rehearsal-calendar-native && node --test e2e/__tests__/seed-keys.test.mjs
+✔ e2e/seed.mjs has no key twice in an object literal (325.275ms)
+✔ e2e/store/seed.mjs has no key twice in an object literal (96.766917ms)
+ℹ tests 2
+ℹ pass 2
+ℹ fail 0

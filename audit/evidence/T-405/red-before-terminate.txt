@@ -1,0 +1,28 @@
+T-405 red before (review point 2): a failed stop of Safari passes for a stopped
+one. Code under test unchanged (b51510a: server-with-mailbox.mjs, freshSafari,
+`simctl('terminate', ...).catch(() => {})`), 2026-11-24 17:19 local.
+
+simctl's terminate made to fail with another error than "found nothing to
+terminate" by an xcrun first in PATH (fake-xcrun/xcrun, through
+with-fake-xcrun.mjs); every other xcrun call is the real one's.
+
+$ node audit/evidence/T-405/with-fake-xcrun.mjs npm --prefix rehearsal-calendar-native run e2e -- <tree>/rehearsal-calendar-native/e2e/flows/70-privacy-lists-resend.yaml
+[e2e] native inputs 2cb470c34aaf (app.json, locales, assets, packages)
+...
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+[Passed] Privacy policy lists Resend in every language (56s)
+
+1/1 Flow Passed in 56s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[fake xcrun] terminates of Safari it failed:
+17:21:32 simctl terminate 0E96462E-BD5B-4C19-9847-8E63D550B36E com.apple.mobilesafari: failed on purpose, exit 1
+(exit 0)
+
+e2e/out/server.log, the helper's answer to that same call:
+[e2e] Safari stopped, its tabs removed: BrowserState.db, BrowserState.db-shm, BrowserState.db-wal, SafariTabs.db, SafariTabs.db-shm, SafariTabs.db-wal
+
+The stop failed, the helper said "Safari stopped", removed the tab stores
+from under whatever Safari was doing, and answered 200; the flow went on and
+passed. Artifacts: e2e/out/artifacts/2026-11-24_171934.

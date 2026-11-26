@@ -310,7 +310,7 @@ test('createApp with Apple disabled preserves health, static pages, admin HTML a
   expect(landing.headers['content-type']).toMatch(/text\/html/);
   const admin = await request(server).get('/admin');
   expect(admin.status).toBe(200);
-  expect(admin.text).toContain('Admin Panel');
+  expect(admin.text).toContain('Админка Rehearsly');
   expect(observer.statements).toEqual([]);
   expect(observer.transactions).toEqual([]);
   Object.values(database).forEach(fn => expect(fn).not.toHaveBeenCalled());

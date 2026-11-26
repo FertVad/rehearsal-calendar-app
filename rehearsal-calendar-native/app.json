@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rehearsly",
     "slug": "rehearsal-calendar-native",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -17,7 +17,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.rehearsal.app",
       "appleTeamId": "9N28BHP37Z",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "associatedDomains": ["applinks:rehearsly.me"],
       "config": {
         "googleSignIn": {

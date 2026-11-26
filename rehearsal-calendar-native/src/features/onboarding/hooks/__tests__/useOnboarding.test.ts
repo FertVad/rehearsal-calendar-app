@@ -18,9 +18,11 @@ jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({ updateUser: mockUpdateUser }),
 }));
 
+const mockI18n: { t?: unknown; language: string } = { language: 'en' };
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({
-    t: require('../../../../i18n/translations').translations.en,
+    t: mockI18n.t ?? require('../../../../i18n/translations').translations[mockI18n.language],
+    language: mockI18n.language,
   }),
 }));
 
@@ -30,6 +32,27 @@ jest.mock('../../../../shared/utils/haptics', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockI18n.t = undefined;
+  mockI18n.language = 'en';
+});
+
+/**
+ * T-417: the "Skip" alert is typeset as a step's text is — no short word at a
+ * line's end, no line begun by "→" — in the app's language. Alert.alert took
+ * the strings as they were: "…Профиль / → Настройки." on iOS 26.
+ */
+it('typesets the "Skip" alert\'s title and message in the app\'s language (T-417)', () => {
+  const { translations } = require('../../../../i18n/translations');
+  const ru = translations.ru;
+  mockI18n.language = 'ru';
+  mockI18n.t = { ...ru, onboarding: { ...ru.onboarding, skipTitle: 'Это в профиле', skipMessage: 'Можно и так: Профиль → Настройки.' } };
+  const { result } = renderHook(() => useOnboarding());
+
+  act(() => { result.current.skipOnboarding(); });
+
+  const [title, message] = (Alert.alert as jest.Mock).mock.calls[0];
+  expect(title).toBe('Это в\u00a0профиле');
+  expect(message).toBe('Можно и\u00a0так: Профиль\u00a0→ Настройки.');
 });
 
 it('shows an error Alert when onboarding cannot be completed during skip (HP03)', async () => {

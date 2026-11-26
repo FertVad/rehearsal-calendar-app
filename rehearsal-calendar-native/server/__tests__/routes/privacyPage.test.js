@@ -80,7 +80,11 @@ const COPY = {
     keepsImported: /Turning off Auto Sync[^.]*does not remove/i,
     oldButton: 'Clear imported',
     cardPromise: /card details|payment provider/i,
-    free: /free[^.]*no purchases/i,
+    noPayments: [/No payment details — the app does not process payments, see below/,
+      /Rehearsly has no in-app purchases and does not process payments, so we do not receive or store any payment details\./],
+    // "busy and free periods" is free time, not a price.
+    price: /\bfree\b|\bat no cost\b|\bcharges nothing\b/i,
+    priceAllowed: ['busy and free periods'],
   },
   ru: {
     processors: /защищают их не хуже, чем обещает эта политика/,
@@ -93,7 +97,10 @@ const COPY = {
     keepsImported: /выключить переключатель «Автосинхронизация»[^.]*не удалится/,
     oldButton: 'Очистить импортированные',
     cardPromise: /данные (банковских )?карт|платёжн/i,
-    free: /бесплат[^.]*покупок[^.]*нет/i,
+    noPayments: [/Данные об оплате — в приложении нет покупок и платежей, см\. ниже/,
+      /В Rehearsly нет покупок и платежей, поэтому данных об оплате мы не получаем и не храним\./],
+    price: /бесплат/i,
+    priceAllowed: [],
   },
   es: {
     processors: /protección igual o equivalente/,
@@ -106,7 +113,10 @@ const COPY = {
     keepsImported: /Si desactivas la sincronización automática[^.]*no se borran/,
     oldButton: 'Borrar lo importado',
     cardPromise: /tarjeta|proveedor de pagos/i,
-    free: /gratuita[^.]*no ofrece compras/i,
+    noPayments: [/Datos de pago: en la aplicación no hay compras ni pagos, véase más abajo/,
+      /En Rehearsly no hay compras ni pagos, así que no recibimos ni guardamos datos de pago\./],
+    price: /gratuit|gratis|sin coste/i,
+    priceAllowed: [],
   },
   de: {
     processors: /mindestens so gut/,
@@ -119,7 +129,10 @@ const COPY = {
     keepsImported: /Wenn du Auto-Sync ausschaltest[^.]*nicht gelöscht/i,
     oldButton: 'Importierte löschen',
     cardPromise: /Kartendaten|Zahlungsdienstleister/i,
-    free: /kostenlos[^.]*keine In-App-Käufe/i,
+    noPayments: [/Zahlungsdaten – Rehearsly nimmt keine Zahlungen entgegen, siehe unten/,
+      /Die App enthält keine In-App-Käufe, und Rehearsly nimmt keine Zahlungen entgegen\. Deshalb erhalten und speichern wir keine Zahlungsdaten\./],
+    price: /kostenlos|gratis|umsonst/i,
+    priceAllowed: [],
   },
 };
 
@@ -139,7 +152,7 @@ const STATISTICS = {
     reads: [/finished or skipped the app’s introduction/, /including which ones you created and which you have marked as seen/,
       /whether you have used calendar sync/, /the notifications in your in-app inbox/, /the days you have used the app with its version/,
       /for each project, the counts of how often its invitation is opened and how many people join through it/],
-    signInWhy: /still in use, and for the internal statistics/, updated: 'Last updated: November 24, 2026',
+    signInWhy: /still in use, and for the internal statistics/, updated: 'Last updated: November 25, 2026',
     lede: /keeps what it needs to run the app and schedule rehearsals, plus two records for its internal statistics, described below: the days you use the app, and counts of how often invitations are opened and how many people join through them\./,
     elseKept: /Everything else on this list is kept anyway, for the purposes given in the table above/,
     wasOnly: /keeps only what it needs|Nothing extra is collected|kept to run the app anyway/ },
@@ -151,7 +164,7 @@ const STATISTICS = {
     reads: [/Статистика строится как в целом, так и по каждому аккаунту/, /прошли или пропустили знакомство с приложением/,
       /какие из них создали вы и какие отметили как просмотренные/, /пользовались ли вы синхронизацией календаря/,
       /дни, когда вы пользовались приложением, и его версию/, /по каждому проекту — счётчики открытий его приглашения и присоединений по нему/],
-    signInWhy: /ещё пользуются, и составлять внутреннюю статистику \(о ней ниже\)/, updated: 'Обновлено: 24 ноября 2026 г.',
+    signInWhy: /ещё пользуются, и составлять внутреннюю статистику \(о ней ниже\)/, updated: 'Обновлено: 25 ноября 2026 г.',
     lede: /хранит то, что нужно для работы приложения и планирования репетиций, и несколько записей для внутренней статистики: дни, когда вы пользуетесь приложением, и счётчики открытий приглашений и присоединений по ним \(о них ниже\)/,
     elseKept: /Всё остальное из этого списка хранится и так — для целей, указанных в таблице выше/,
     wasOnly: /хранит только то|Дополнительных данных для неё мы не собираем|хранится и так — для работы приложения/ },
@@ -163,7 +176,7 @@ const STATISTICS = {
     reads: [/si has completado u omitido la introducción de la aplicación/, /cuáles has creado tú y cuáles has marcado como vistos/,
       /si has usado la sincronización de calendario/, /llegan a sus destinatarios/, /los días en que has usado la aplicación y su versión/,
       /de cada proyecto, cuántas veces se ha abierto su invitación y cuántas personas se han unido con ella/],
-    signInWhy: /siguen en uso y elaborar las estadísticas internas/, updated: 'Última actualización: 24 de noviembre de 2026',
+    signInWhy: /siguen en uso y elaborar las estadísticas internas/, updated: 'Última actualización: 25 de noviembre de 2026',
     lede: /guarda lo que necesita para funcionar y para planificar ensayos, además de unos pocos registros para sus estadísticas internas: los días en que usas la aplicación, cuántas veces se abren las invitaciones y cuántas personas se unen con ellas \(se describen más abajo\)/,
     elseKept: /Todo lo demás de esta lista se guarda de todos modos, para los fines indicados en la tabla de arriba/,
     wasOnly: /y nada más|no se recopila ningún dato adicional|para que la aplicación funcione\./ },
@@ -175,7 +188,7 @@ const STATISTICS = {
     reads: [/ob du die Einführung in die App abgeschlossen oder übersprungen hast/, /welche davon du angelegt und welche du als gesehen markiert hast/,
       /ob du die Kalendersynchronisation genutzt hast/, /an welchen Tagen du die App genutzt hast und mit welcher Version/,
       /für jedes Projekt, wie oft seine Einladung geöffnet wurde und wie viele darüber beigetreten sind/],
-    signInWhy: /noch genutzt werden, und die unten beschriebene interne Statistik erstellen/, updated: 'Zuletzt aktualisiert: 24. November 2026',
+    signInWhy: /noch genutzt werden, und die unten beschriebene interne Statistik erstellen/, updated: 'Zuletzt aktualisiert: 25. November 2026',
     lede: /speichert, was für den Betrieb der App und die Probenplanung nötig ist, und dazu einige wenige Einträge für die interne Statistik: an welchen Tagen du die App nutzt, wie oft Einladungen geöffnet werden und wie viele darüber beitreten \(siehe unten\)/,
     elseKept: /Alles andere in dieser Liste wird ohnehin gespeichert, für die Zwecke in der Tabelle oben/,
     wasOnly: /und nicht mehr|keine zusätzlichen Daten erhoben|ohnehin für den Betrieb der App gespeichert/ },
@@ -218,6 +231,42 @@ const RETENTION = {
     /Los días de uso de la aplicación y los recuentos de las invitaciones se conservan como máximo 13 meses, y los recuentos de una invitación se borran también junto con su proyecto/],
   de: [/Projektmitgliedschaften, außerdem die Tage, an denen du die App genutzt hast, samt App-Version/,
     /Die Tage der App-Nutzung und die Zählungen der Einladungen speichern wir höchstens 13 Monate, und die Zählungen einer Einladung werden außerdem mit ihrem Projekt gelöscht/],
+};
+
+// T-409, worded by the native speakers in T-413: deleting the account on a phone
+// takes out of the calendar the rehearsals Rehearsly added on that phone. The
+// line is where an event was added: an iCloud or Google calendar is one calendar
+// on every device, and another device's export takes the same event
+// (findDuplicateEvent), so those added elsewhere only "may remain". What cannot be
+// removed (no access, a failure) stays, and the account goes all the same; the
+// policy names the button that clears the other devices and promises no message.
+// The button is the calendar screen's own string, as IMPORT_BUTTON below.
+const REMOVE_BUTTON = Object.fromEntries(LANGS.map(lang => [lang, calendarSync[lang].removeAll]));
+const CALENDAR_ON_DELETION = {
+  en: `When you delete your account in the app on your phone, Rehearsly also removes from your calendar the rehearsals it added on that phone. If any cannot be removed — for example, because the app no longer has access to your calendar — they stay there, and your account is deleted all the same. Rehearsals it added on your other devices may remain. To remove those as well, tap “${REMOVE_BUTTON.en}” in Profile → Calendar Sync on each of those devices before you delete your account. You can delete the rest yourself in the Calendar app.`,
+  ru: `Когда вы удаляете аккаунт, Rehearsly сначала убирает из календаря репетиции, которые добавил на телефоне, где вы это делаете. Те, что убрать не получилось (например, если у приложения нет доступа к календарю), остаются в календаре, но аккаунт всё равно удаляется. Репетиции, которые Rehearsly добавил на других ваших устройствах, могут остаться. Чтобы убрать и их, до удаления аккаунта нажмите на каждом из этих устройств кнопку «${REMOVE_BUTTON.ru}» в разделе Профиль → Синхронизация. Всё, что осталось, можно удалить вручную в приложении «Календарь».`,
+  es: `Cuando eliminas tu cuenta desde un teléfono, Rehearsly quita primero del calendario de ese teléfono los ensayos que había añadido desde él. Si alguno no se puede quitar —por ejemplo, porque la aplicación no tiene acceso al calendario—, permanece en el calendario y la cuenta se elimina igualmente. Los que Rehearsly haya añadido desde tus otros dispositivos pueden seguir en sus calendarios. Para quitarlos, antes de eliminar tu cuenta, abre Perfil → Sincronización en cada uno de esos dispositivos y toca «${REMOVE_BUTTON.es}». Los que queden, en ese teléfono o en otros dispositivos, puedes borrarlos tú en la aplicación Calendario.`,
+  de: `Löschst du dein Konto in der App, entfernt sie zuvor die Proben, die sie auf diesem Gerät in den Kalender eingetragen hat. Lassen sich nicht alle entfernen – etwa weil die App keinen Zugriff auf den Kalender hat –, bleiben die übrigen im Kalender; dein Konto wird trotzdem gelöscht. Proben, die Rehearsly auf deinen anderen Geräten eingetragen hat, bleiben möglicherweise ebenfalls im Kalender. Um sie zu entfernen, tippe vor dem Löschen deines Kontos auf jedem dieser Geräte unter Profil → Kalender-Sync auf „${REMOVE_BUTTON.de}“. Was danach noch übrig ist, kannst du in der Kalender-App selbst löschen.`,
+};
+// What T-409 said first: other devices "will stay", with no condition on this one.
+const CALENDAR_WAS = {
+  en: /on your other devices they stay/,
+  ru: /на других ваших устройствах они остаются/,
+  es: /en tus otros dispositivos se quedan/,
+  de: /auf deinen anderen Geräten bleiben sie/,
+};
+
+// T-413 (M6): the paragraphs beside it no longer read as the whole list of what
+// outlasts the deletion.
+const NEIGHBOURS = {
+  en: { says: [/Two other records outlast your account for a short time\./], was: [] },
+  ru: { says: [/Ещё в двух местах данные ненадолго переживают удаление\./,
+    /Но push-уведомления, которые уже показаны на чужих телефонах, остаются: убрать их оттуда мы не можем\./],
+  was: [/Остаются только/, /(^|\. )В двух местах/] },
+  es: { says: [/Otros dos registros duran algo más\./,
+    /En cambio, no podemos borrar una notificación push que ya llegó al teléfono de otra persona/],
+  was: [/Lo único/, /(^|\. )Dos registros/] },
+  de: { says: [/Zwei weitere Aufzeichnungen bleiben etwas länger bestehen\./], was: [/(^|\. )Zwei Aufzeichnungen/] },
 };
 
 // T-298: the native speakers' fixes, by meaning. The days row records only a day
@@ -341,6 +390,28 @@ describe.each(LANGS)('privacy policy, %s', lang => {
     for (const claim of RETENTION[lang]) expect(page).toMatch(claim);
   });
 
+  test('says the deletion removes what this phone added, that a failure keeps the account’s deletion, and what other devices added may remain', () => {
+    const keeping = part(lang, ROWS[lang].keeping);
+    expect(keeping).toContain(CALENDAR_ON_DELETION[lang]);
+    expect(keeping).not.toMatch(CALENDAR_WAS[lang]);
+  });
+
+  test('names the calendar screen’s own button for the other devices', () => {
+    expect(typeof REMOVE_BUTTON[lang]).toBe('string');
+    expect(REMOVE_BUTTON[lang].length).toBeGreaterThan(0);
+    expect(part(lang, ROWS[lang].keeping)).toContain(REMOVE_BUTTON[lang]);
+  });
+
+  test('the paragraphs beside it do not read as the whole list of what stays', () => {
+    const keeping = part(lang, ROWS[lang].keeping);
+    for (const claim of NEIGHBOURS[lang].says) expect(keeping).toMatch(claim);
+    for (const was of NEIGHBOURS[lang].was) expect(keeping).not.toMatch(was);
+  });
+
+  test('carries no mark left for the native speakers’ reading of T-409', () => {
+    expect(markup('privacy', lang)).not.toMatch(/T-409: new/);
+  });
+
   test('has a row for the calendar export records and one for the introduction, each beside its neighbour', () => {
     const rows = ROWS[lang];
     const html = markup('privacy', lang).replace(/\s+/g, ' ');
@@ -399,10 +470,13 @@ describe.each(LANGS)('privacy policy, %s', lang => {
     expect(text('privacy', lang)).toMatch(copy.keepsImported);
   });
 
-  test('promises no card payment: the app is free, with no purchases', () => {
+  // The owner (25.11, T-413): no "free" in public texts. The policy speaks of
+  // data — no purchases or payments, so no payment details — not of a price.
+  test('promises no card payment: no purchases or payments, so no payment details, and no word of price', () => {
     const page = text('privacy', lang);
     expect(page).not.toMatch(copy.cardPromise);
-    expect(page).toMatch(copy.free);
+    for (const claim of copy.noPayments) expect(page).toMatch(claim);
+    expect(copy.priceAllowed.reduce((rest, phrase) => rest.split(phrase).join(' '), page)).not.toMatch(copy.price);
   });
 });
 
@@ -486,7 +560,7 @@ const AFTER_DELETION = {
   ru: {
     keeping: /<h2>Сколько храним<\/h2>/,
     deletes: /Удаляются и уведомления с вашим именем, которые получили другие люди/,
-    pushStays: /Остаются только push-уведомления, которые уже показаны на чужих телефонах/,
+    pushStays: /Но push-уведомления, которые уже показаны на чужих телефонах, остаются/,
     exception: [/Одно остаётся у других людей/, /кроме вашего имени/, /удаление вашего аккаунта его не затрагивает/],
     delivery: /Expo Push Service[^.]*APNs[^.]*вашим именем/,
     promise: 'Удалить всё',
@@ -525,7 +599,7 @@ describe.each(LANGS)('what the policy promises about names and Apple, %s', lang 
   const copy = AFTER_DELETION[lang];
   const signIn = () => part(lang, SIGN_IN[lang].heading);
 
-  test('deleting the account deletes the notifications that carry the name; only a shown push stays', () => {
+  test('deleting the account deletes the notifications that carry the name; a shown push stays', () => {
     const body = part(lang, copy.keeping);
     expect(body).toMatch(copy.deletes);
     expect(body).toMatch(copy.pushStays);

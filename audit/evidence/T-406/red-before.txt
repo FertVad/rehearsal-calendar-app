@@ -1,0 +1,96 @@
+T-406 — red before. Base: b8722df (auto/main before the task). Node 26.13.0, PostgreSQL 15.13.
+Each time the files of the fix were put back as they were at the base
+(`git restore --source=b8722df -- <files>`), the new tests and flows kept, then
+`git restore --source=HEAD -- <files>`.
+
+== Server Jest (TZ=America/New_York) ==
+Restored: server/routes/native/availability.js, server/routes/native/members.js,
+server/services/availability/manualDays.js, server/constants/timezone.js,
+server/database/schema/manifest.mjs, server/database/migrations/artifacts.mjs,
+server/public/privacy.html.
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/weekendDefaults.test.js \
+    __tests__/utils/privacyWeekends.test.js __tests__/database/schemaHistoryIdentity.test.js --verbose
+FAIL __tests__/utils/privacyWeekends.test.js
+    ✕ says the weekends are marked busy by default, and by whom            (en)
+    ✕ keeps the switch with the time zone, which tells the weekend days    (en)
+    ✕ says where it is turned off, by the Profile's label, among the rights (en)
+    ✕ … the same three in ru, es, de
+FAIL __tests__/database/schemaHistoryIdentity.test.js
+    ✓ keeps every v1 profile exactly as recorded: bootstrap bytes and definition
+    ✓ keeps every step before 017 exactly as recorded
+    ✕ creates new databases as version 3, from its own artifacts
+    ✕ plans 017 alone for production's root after 016: fresh v1 with 007–013 and 016
+    ✕ plans 016, then 017, for production's root before 016
+    ✕ plans 017 alone for a version 2 root
+FAIL __tests__/routes/weekendDefaults.test.js
+    ✕ lays out Friday and Saturday for Israel, Saturday and Sunday for Russia, a year ahead, whole days
+    ✕ answers the switch with the days of the profile's zone
+    ✕ are never touched, and a weekend day with one gets no default
+    ✕ replaces the default: hours on a default day leave the hours, and an emptied day stays free as time goes on
+    ✓ a whole default day replaced by "busy" is the person's own busy day
+    ✓ an older app's bulk save and day delete replace it too (1.0.0)
+    ✕ off takes only the defaults away, and only from today on; on brings them back where nothing of the person's is
+    ✕ on lays out again a weekend day the person had emptied
+    ✕ takes only true or false
+    ✕ moves the defaults from today on; a Saturday the person emptied stays empty
+    ✕ a sync and "Delete imported" leave the defaults, and imported events do not stop them
+    ✕ a rehearsal on a weekend day neither stops the default nor is replaced by it
+    ✕ write each day once
+    ✕ shows Israel busy on Friday and Russia on Sunday, for people who never opened the app since
+    ✕ still says who has entered nothing themselves
+    ✕ does not count the defaults as the person's marks
+Tests:       30 failed, 4 passed, 34 total
+(The two route tests green on the base pass vacuously: with no default laid out
+there is nothing for a save to replace. The two v1 identity tests are meant to
+pass on both.)
+
+== PostgreSQL (T406_UPGRADE), same files restored ==
+$ npm run test:r0-postgres -- --t406-only
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
++   stepIds: [],
+-   stepIds: [
+    stepIds: [ '017-weekend-defaults' ],
+AssertionError [ERR_ASSERTION]: T406_UPGRADE probe failed unexpectedly
+(the base's --dry on production's database after 016 plans nothing: there is no 017)
+
+== Client Jest ==
+Restored: src/features/availability/{hooks/useAvailabilityData.ts, screens/AvailabilityScreen.tsx,
+types/availability.ts, utils/slotHelpers.ts}, src/features/onboarding/{navigation/OnboardingNavigator.tsx,
+screens/CalendarSyncScreen.tsx, NotificationsScreen.tsx, WelcomeScreen.tsx, WhatWhereScreen.tsx, index.ts},
+src/features/profile/screens/ProfileScreen.tsx, src/i18n/translations/{availability,onboarding,profile}.ts,
+src/shared/services/api.ts.
+
+$ npx jest --selectProjects frontend --testPathPatterns "useAvailabilityDataWeekend|WeekendsScreen" --verbose
+FAIL frontend src/features/onboarding/screens/__tests__/WeekendsScreen.test.tsx
+  ✕ asks a Russian speaker in Israel about Friday and Saturday, and says where to change it later
+  ✕ asks about Saturday and Sunday in Moscow, and in a zone of no country
+  ✕ "Yes" keeps the switch on, "No" turns it off, each saved before the next step
+  ✕ stays on the step when the answer could not be saved
+  ✕ names the days in each language from the date formats (T-028)
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilityDataWeekend.test.ts
+  ✕ shows the default as the day's busy, known as the default, with nothing to save or keep read-only
+  ✕ keeps a calendar event on the day shown with it
+  ✕ gives way to a mark of the person's own on the day
+  ✕ is dropped by any edit of the day: it is the person's own from then on
+Tests:       9 failed, 9 total
+
+== e2e, the same client files restored (the server of this task) ==
+$ npm run e2e -- e2e/flows/104-weekends-busy-by-default.yaml
+[Failed] Weekends busy by default, and the profile's switch (1m 51s)
+  (Assertion is false: "Weekend: busy by default\..*Profile → Weekends Busy", id: availability-weekend-default is visible)
+1/1 Flow Failed
+(The weekend day itself is red on the old app: it reads the 'weekend' row as a
+calendar event, all day — what 1.0.0 shows, README. It does not say it is the
+default, and the profile has no switch.)
+
+$ npm run e2e -- e2e/flows/09-onboarding.yaml
+[Failed] Onboarding to the end, nothing granted (1m 43s) (Element not found: Text matching regex: Get Started)
+1/1 Flow Failed
+(After "Get Started" the weekends' question never comes: the tap lands on the
+calendar step, and tap-and-see's second try finds no "Get Started".)
+
+Two earlier tries of each ended in maestro.DeviceUnreachableException
+(XCUITest: kAXErrorAPIDisabled), the simulator's, not the flow's; the runs above
+are the ones that reached the app.

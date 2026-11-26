@@ -1,0 +1,156 @@
+# Weekends busy by default (T-406, the owner's decision of 24.11.2026): each
+# person's weekends — the days off of the country of the profile's zone, not
+# of the language — are marked busy, and a switch in the profile, right under
+# "Start Week On", turns that off and on.
+#
+# Waffles Telyegin has the switch on, as everyone has (the seed turns it off
+# for the people of the flows written before it, seed.mjs) and nothing of his
+# own marked. The editor shows his next weekend day (WEEKEND_DAY) busy and the
+# next working day (WEEKDAY_DAY) free; the weekend day says it is busy by
+# default and where that is turned off, in the Profile's own words. The
+# profile names his weekend's days (WEEKEND_DAYS_EN_LABEL, from the same table
+# as the app's). Off: the weekend day is free, as any day not marked (T-292).
+# On again: busy again.
+#
+# Before T-406 the weekend day was free and the profile had no such switch.
+# T-408: the hint and the switch's label in the native speaker's words, "Mark
+# Weekends as Busy", not the calque "Weekends Busy"; the path in the hint
+# whole on its line (no-break spaces). Flow 105 has them in ru, es and de.
+appId: ${APP_ID}
+name: Weekends busy by default, and the profile's switch
+tags:
+  - availability
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TELYEGIN_EMAIL}
+
+# The editor: the weekend day busy, the working day free.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: day-${WEEKEND_DAY}
+      text: "\\d+, Busy"
+    timeout: 30000
+- assertVisible:
+    id: day-${WEEKDAY_DAY}
+    text: "\\d+, Free"
+- takeScreenshot: 104-weekend-busy
+# The day itself says it is the default, and where it is turned off.
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${WEEKEND_DAY}
+- tapOn:
+    id: day-${WEEKEND_DAY}
+- extendedWaitUntil:
+    visible:
+      id: availability-weekend-default
+      text: "Weekend day: busy by default\\. Change it like any other day, or turn off the default for all weekends in Profile\u00a0→\u00a0Mark\u00a0Weekends\u00a0as\u00a0Busy\\."
+    timeout: 10000
+- takeScreenshot: 104-weekend-default-in-editor
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+
+# The profile: the switch under "Start Week On", on, naming his weekend.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-busy
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: profile-weekends-busy
+      checked: true
+      enabled: true
+    timeout: 10000
+- assertVisible:
+    id: profile-weekends-days
+    text: "Your weekend: ${WEEKEND_DAYS_EN_LABEL}"
+- assertVisible:
+    text: "Mark Weekends as Busy"
+    below: ".*Start Week On.*"
+- takeScreenshot: 104-switch-on
+# Off, and saved: the switch takes taps again once the server has answered.
+- tapOn:
+    id: profile-weekends-busy
+- extendedWaitUntil:
+    visible:
+      id: profile-weekends-busy
+      checked: false
+      enabled: true
+    timeout: 10000
+- takeScreenshot: 104-switch-off
+
+# The weekend day is free now, as any day not marked.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: day-${WEEKEND_DAY}
+      text: "\\d+, Free"
+    timeout: 30000
+- takeScreenshot: 104-weekend-free
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+
+# On again: busy again.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-busy
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-weekends-busy
+- extendedWaitUntil:
+    visible:
+      id: profile-weekends-busy
+      checked: true
+      enabled: true
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: day-${WEEKEND_DAY}
+      text: "\\d+, Busy"
+    timeout: 30000
+- takeScreenshot: 104-weekend-busy-again

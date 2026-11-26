@@ -22,6 +22,11 @@ export interface AvailabilityTranslations {
   /** Beside a slot's end that is on the next day. */
   nextDay: string;
   importedNote: string;
+  /**
+   * In the editor, on a weekend busy by default rather than by the person
+   * (T-406); `path` is where the default is turned off, as the Profile labels it.
+   */
+  weekendDefault: (path: string) => string;
   startTime: string;
   endTime: string;
   deleteData: string;
@@ -86,6 +91,8 @@ export const ru = {
     fromPreviousDay: 'с предыдущего дня',
     nextDay: 'след. дня',
     importedNote: 'Эти часы видят остальные, когда подбирают время. Чтобы освободить их, удалите событие в календаре телефона.',
+    // T-406: new, for the native speakers' reading.
+    weekendDefault: (path: string) => `Выходной: занят по умолчанию. Его, как любой день, можно отметить иначе, а выключить это сразу для всех выходных: ${path}.`,
     startTime: 'Время начала',
     endTime: 'Время окончания',
     deleteData: 'Удалить отметки за этот день',
@@ -152,6 +159,8 @@ export const en = {
     fromPreviousDay: 'from the day before',
     nextDay: 'next day',
     importedNote: 'Everyone else sees these hours when looking for a time. To free them up, delete the event in your phone calendar.',
+    // T-406: new, for the native speakers' reading.
+    weekendDefault: (path: string) => `Weekend day: busy by default. Change it like any other day, or turn off the default for all weekends in ${path}.`,
     startTime: 'Start Time',
     endTime: 'End Time',
     deleteData: 'Delete This Day’s Entries',
@@ -210,6 +219,8 @@ export const es = {
     fromPreviousDay: 'del día anterior',
     nextDay: 'día sig.',
     importedNote: 'Los demás ven estas horas cuando buscan un horario. Para liberarlas, elimina el evento en el calendario del teléfono.',
+    // T-406: new, for the native speakers' reading.
+    weekendDefault: (path: string) => `Ocupado por defecto: cámbialo como cualquier otro día. Para desactivarlo en todos los fines de semana: ${path}.`,
     startTime: 'Hora de inicio',
     endTime: 'Hora de fin',
     deleteData: 'Eliminar las marcas de este día',
@@ -270,6 +281,8 @@ export const de = {
     // In the end's button beside its time; one line even beside "1:00 AM" (flow 87).
     nextDay: 'am Folgetag',
     importedNote: 'Diese Zeiten sehen die anderen bei der Terminsuche. Um sie freizugeben, lösche den Termin in deiner Kalender-App.',
+    // T-406: new, for the native speakers' reading.
+    weekendDefault: (path: string) => `Wochenendtag: standardmäßig belegt. Ändere ihn wie jeden anderen Tag oder schalte das für alle Wochenenden aus: ${path}.`,
     startTime: 'Startzeit',
     endTime: 'Endzeit',
     deleteData: 'Einträge für diesen Tag löschen',

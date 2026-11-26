@@ -243,8 +243,16 @@ that form. A flow that needs the 24-hour clock launches with `arguments: {
 AppleICUForce24HourTime: "<true/>" }` — the key Settings writes, read among the
 user defaults as a property list: `"YES"` is a string and is ignored (flow 53).
 
-AutoFill Passwords is off (`noPasswordOffer` in `run.mjs`): iOS offers no
-"Save Password?" sheet after a sign-in, and no flow waits for one.
+Password AutoFill is not allowed (`noPasswordOffer` in `run.mjs`): iOS offers
+no "Save Password?" sheet after a sign-in, and no flow waits for one. The
+Settings toggle alone (com.apple.WebUI `AutoFillPasswords`) was not enough: the
+keyboard still asked for the sheet at every sign-in, SafariViewService started
+to host it and took it down unseen a second or two later, and Maestro's driver
+read the screen into that starting service (next section, T-407). What stops
+the asking is ManagedConfiguration's `allowPasswordAutoFill`, the setting a
+restriction turns off: the runner writes it false into the device's own user
+settings with the device shut down, iOS reads it at boot, and the runner
+refuses to go on if the effective value is not false.
 
 ## A lost driver
 
@@ -261,10 +269,22 @@ take it out - not with waits and not with repeats. The supervisor runs every
 flow that failed after the first lost driver once more, on its own; those are
 not unstable flows. Turning the sheet off left it one cause fewer, not none.
 
+It ended a second way too, which was not a race of the keyboard. The driver's
+read of the screen ("Fetch Safari WebView hierarchy") queries
+SafariViewService whenever that service runs, and the password sheet started
+it after every sign-in even with AutoFill Passwords off in Settings. Asked
+before the starting service was ready, XCTest answered `kAXErrorAPIDisabled`
+(8.6 s, three tries) and ended the test. On a freshly booted simulator the
+service's first start is slow, so the first sign-in of a run lost the driver
+four runs in five: 09-invite-during-onboarding, then every flow after it
+(T-407, `audit/evidence/T-407/`). With `allowPasswordAutoFill` off nothing
+starts the service at a sign-in, and this one is gone.
+
 ## Safari over a running app
 
-A Safari flow stops Rehearsly first: `- stopApp: ${APP_ID}`, then `- stopApp`
-(Safari) and `openLink`. The flows run one after another on one simulator,
+A Safari flow stops Rehearsly first: `- stopApp: ${APP_ID}`, then
+`- runFlow: ../subflows/fresh-safari.yaml` (Safari stopped, its tabs gone; next
+section) and `openLink`. The flows run one after another on one simulator,
 and the flow before a Safari one leaves the app running. With the app behind
 Safari, Maestro's driver (2.11.0) still took it for the app on screen: after
 the link opened it read Rehearsly's hierarchy, not the page's - flow 98's
@@ -278,6 +298,103 @@ every time (`audit/evidence/T-277`, `wrong-app-scan.mjs` tells it from any
 run's `device-xctest.log`). Flow 44 opens the policy from the app's profile,
 so the app stays behind Safari there by design and the race stays possible
 in it.
+
+## A fresh Safari
+
+Every `openLink`, and every link the app hands to Safari, opens a tab of its
+own ("policy = New Foreground Tab" in the device log), none is closed, and
+Safari restored the same 26 tabs, of earlier runs and builds, at every launch:
+"Read 26 normal tabs from saved state" at 09:17 on 24.11 (T-296's red check)
+and again at 12:51 (after three runs of flow 70 in T-403) (T-404,
+`audit/evidence/T-404/`). A restored tab could show the page a flow waits for -
+an older build's policy at its anchor, or any page of ours for flow 98's
+".*Rehearsly.*" - before the link's own; that is why Safari starts empty. So
+every flow opens Safari through `e2e/subflows/fresh-safari.yaml` first (44
+before each of its two pages, 70, 98): its script asks the runner's helper,
+`GET /fresh-safari?device=<udid>` in `server-with-mailbox.mjs` (`freshSafari`
+in `e2e/safari.mjs`), to `simctl terminate` Safari and remove `SafariTabs.db`
+and `BrowserState.db` from the simulator's own `Library/Safari` (`simctl getenv
+<udid> HOME`); bookmarks and history stay.
+
+The files go only when Safari is known to be stopped: terminate exited 0, or
+exited 3 with "found nothing to terminate" - what simctl says when Safari is
+not running (`audit/evidence/T-405/probe-terminate.txt`). Any other answer -
+another error, simctl out of its 30 s - removes nothing and answers 500, and
+the flow fails at the subflow: a Safari still running could write its tabs
+back (T-405).
+
+The runner checks it after every run (`reportSafari` in `run.mjs`): Safari
+says "Read <n> normal tabs from saved state" once per launch, and every launch
+in the device log of every flow of the run is counted. Its line is printed
+each run, after the taps taken again:
+
+    [e2e] Safari launches: 4, tabs restored: 0 (fresh-safari.yaml)
+
+A launch that restored a tab fails the run with 1, the flow and the number
+named in the last lines of the output; so does a flow that passed after
+`fresh-safari.yaml` with no launch of Safari in its log - the line changed, or
+the log was not kept, and a check that sees nothing passes on anything.
+junit.xml has every flow green then: the reason is in the output only.
+
+Two things that do not work: Maestro's `clearState: com.apple.mobilesafari`
+reinstalls the app, and the simulator refuses to uninstall Safari
+(IXErrorDomain 22); emptying Safari's data container (`simctl get_app_container
+… data`) leaves the tabs, which are not in it.
+
+## Safari's first launch
+
+Maestro's driver reads an app through accessibility, and a process's
+accessibility is set when it starts: "AXS AccessibilityEnabled: (app ax: 1)"
+in `device-simulator.log` (each WebContent process of Safari logs its
+parent's). Some Safaris came up with it off ("app ax: 0") and kept it off:
+every read of them was "Error getting main window kAXErrorAPIDisabled", and
+with the app not in front Maestro failed the step as "App crashed or stopped
+while executing flow", the page on the screen. Flow 44 met it at its support
+page (T-416's first try, T-418's supervisor check), flow 107 the same at "Rate
+Rehearsly", each run alone.
+
+Each such Safari, from its first line, could not read its preferences:
+CoreFoundation said for every domain it opened, com.apple.Accessibility among
+them, "Disabling saving preferences for { … } because home directory is
+inaccessible". In the logs kept before T-418's change, all five "app ax: 0"
+Safaris said it and none of the seventeen "app ax: 1" ones did (T-418,
+`audit/evidence/T-418/safari-starts.mjs`). And each was the first Safari to
+start since the simulator's boot - the runner boots it for every run: in a run
+alone, five of eight first Safaris; never a later one, whoever launched it
+(Maestro or a link from the app), and never the first of a night run, which
+came 28-67 minutes after the boot. Why the boot's first Safari loses its home
+in some boots is iOS's; whether the time since the boot matters is not known.
+
+So the runner takes the boot's first Safari itself, right after the boot and
+before Maestro starts (`firstSafari` in `e2e/safari.mjs`): Safari stopped and
+its tabs removed (as `fresh-safari.yaml`), launched with `simctl launch`, its
+process's lines read in the device log until it says it started ("Read 0
+normal tabs from saved state") - one Maestro launched and a flow stopped 0.2 s
+later never logged a line, and the next Safari came up as a first - and
+stopped. Whether its own home was readable does not matter: the Safari after
+an inaccessible first was readable every time. The run's log says which it
+was:
+
+    [e2e] Safari's first launch since the boot: 25816, its home readable; stopped
+
+Every flow's Safari is then a later one, flows 44 and 107 run alone among
+them; no flow needs a step of its own for it. A Safari that never says it
+started stops the run as the machine's (75).
+
+## A link to an app the simulator does not have
+
+A link that leaves Safari for another app - apps.apple.com, which sends
+Safari on to the App Store (`itms-appss://`) - shows no page here: the load
+ends 0.2-0.6 s after it starts with no page committed, and Safari says "Safari
+cannot open the page because the address is invalid." over an empty address
+field. A flow must not wait for anything of that page, its address included:
+flow 107 waited for "apps.apple.com" and passed only when one of Maestro's
+reads fell inside that half second (T-420, `audit/evidence/T-420/order.mjs`
+tells the order from a run's logs). It waits instead for Safari opened from
+the app, the same whether the page is loading or gone
+(`e2e/subflows/safari-from-app.yaml`: Safari's address field, and "Return to
+Rehearsly"), and checks the address the app handed to iOS where SpringBoard
+logged it (`e2e/scripts/opened-url.js`, exact).
 
 ## A lost tap
 
@@ -520,6 +637,14 @@ and the sync counts a step failed only when EventKit threw — failures of the
 server's mappings are swallowed — so without it no flow could show what the
 sync says then (flow 92, T-256).
 
+iOS's rating window (T-410) the same way: a Debug build shows it on every
+request, and the app asks after a save when its own rule says so
+(`reviewPrompt.ts`), so `e2e/device/expo-store-review.js` answers
+`isAvailableAsync` false and iOS is never asked in any flow — unless the
+launch gives `rehearslyStoreReview: "due"`: then the real module, and the
+three days before today written as days the app was used, so the app's rule
+is met and still decides (flow 107).
+
 A profile's zone where it is late evening now, from 22:45 to 23:44:
 `e2e/scripts/late-evening.js` with `API_URL`, `EMAIL` and `PASSWORD` saves it
 as the zone picker does and puts that zone's today in `${output.lateDay}`. The
@@ -634,16 +759,25 @@ whether it has gone, which waited seven seconds every time.
   report focus, so there is nothing else to wait on. It taps "Sign In"
   through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
   left flow 59 on a filled-in form (T-225). iOS's "Save Password?" sheet
-  after a sign-in is off on the e2e simulator: the runner turns AutoFill
-  Passwords off at boot (`noPasswordOffer` in `e2e/run.mjs`), so no flow waits
-  for it or taps "Not Now" (T-213 did, T-246 took it out). Flow 01 sees that it
-  stays away. A flow that acts before
+  after a sign-in is off on the e2e simulator: the runner turns password
+  AutoFill off at boot (`noPasswordOffer` in `e2e/run.mjs`; T-246, T-407), so
+  no flow waits for it or taps "Not Now" (T-213 did, T-246 took it out). Flow
+  01 sees that it stays away. A flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
 - Maestro's `launchApp` grants the app every permission unless it is given
   `permissions:`, so the sign-in subflow's launch leaves calendar access
   granted. A flow that needs iOS to ask — and to be answered by the flow —
   launches with `permissions: { all: unset }` and then runs
   `sign-in-form.yaml` (flow 09-onboarding refuses the calendar's prompt).
+  Its answer goes through `tap-and-see.yaml` like any other tap. The prompt
+  belongs to SpringBoard, not to the app: tccd asks for it on behalf of
+  calaccessd. So stopping the app, clearing its state or granting its
+  permissions does not take it down, and the next flows' `launchApp` cannot
+  either. Such a flow refuses whatever prompt it left, in `onFlowComplete:`
+  with `e2e/subflows/no-calendar-prompt-left.yaml`, which Maestro runs when
+  the flow fails too. T-299: one lost "Don't Allow" in flow 09 left the
+  prompt over the sign-in screen of flows 100 and 65, three red flows for one
+  lost tap.
 - Open a link through `e2e/subflows/open-link.yaml` (`env: { LINK: ... }`): iOS
   asks 'Open in "Rehearsly"?' first, and it answers.
 - Find controls by `testID` (`id:` in Maestro), not by their English label.

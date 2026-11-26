@@ -1,0 +1,42 @@
+T-419, review 1: the layout test and the devices line, red on 12877f0's page
+(dashboard.css, dashboardPage.js, dashboard.js as at 12877f0; the new tests in
+adminRussian.browser.test.mjs, analytics exported from adminRussianFixture.mjs).
+
+$ cd rehearsal-calendar-native/server && node --test __tests__/browser/adminRussian.browser.test.mjs
+(the [admin-russian] diagnostics and stack lines left out)
+
+✔ the login screen and each of its messages are in Russian, never the server's text (6007.20375ms)
+✔ the dashboard with data: Russian words, codes named, dates, decimals and units (1383.060708ms)
+✔ loading, failure, stale data and the status messages are in Russian (7783.451875ms)
+✖ nobody registered in the period: the devices line is one "—", not "0 из 0 (—)" (1299.295417ms)
+✖ at 1440 px every table of the dashboard fits without scrolling sideways (1302.668916ms)
+✖ at 1280 px every table of the dashboard fits without scrolling sideways (1232.413333ms)
+✖ at 390 px the page itself does not scroll sideways; wide tables scroll in their wrappers (1304.264959ms)
+ℹ tests 7
+ℹ pass 3
+ℹ fail 4
+
+✖ nobody registered in the period: the devices line is one "—", not "0 из 0 (—)"
+  AssertionError [ERR_ASSERTION]: Активных сегодня: 1 (33,3 %) · за 7 дней: 1 (33,3 %) · за 30 дней: 2 (66,7 %)
+  Есть устройство для уведомлений: 0 из 0 (—)
+
+✖ at 1440 px every table of the dashboard fits without scrolling sideways
+  + [
+  +   'bugs-section Автор: not in a .table-scroll',
+  +   'users-section Имя: 1195 > 1052'
+  + ]
+  - []
+
+✖ at 1280 px every table of the dashboard fits without scrolling sideways
+  + [
+  +   'bugs-section Автор: not in a .table-scroll',
+  +   'users-section Имя: 1195 > 1052'
+  + ]
+  - []
+
+✖ at 390 px the page itself does not scroll sideways; wide tables scroll in their wrappers
+  + [
+  +   'document 488 > window 390',
+  +   'bugs-section Автор: not in a .table-scroll'
+  + ]
+  - []

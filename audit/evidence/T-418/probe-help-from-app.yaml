@@ -1,0 +1,45 @@
+# T-418 probe, not a flow of the suite: flow 44's support step, over and over.
+# Signed in, on the profile, the flow's own order: Safari stopped and its tabs
+# gone (fresh-safari.yaml), "Help" tapped - the app hands the link to Safari,
+# which iOS launches - the page waited for, the app brought back. Twelve times.
+# The page's wait is optional, so all twelve run (the first run of this probe
+# had it required and stopped at the first opening, README.md), and
+# safari-ax-scan.mjs counts the openings Safari could not be read in.
+appId: ${APP_ID}
+name: T-418 probe - Help opened from the app, Safari launched by the link
+---
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${VERSHININA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 30000
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-help
+    direction: DOWN
+    centerElement: true
+- repeat:
+    times: 12
+    commands:
+      - runFlow: ../../../rehearsal-calendar-native/e2e/subflows/fresh-safari.yaml
+      - tapOn:
+          id: profile-help
+      - extendedWaitUntil:
+          visible: ".*support@rehearsly.me.*"
+          timeout: 20000
+          optional: true
+      - launchApp:
+          stopApp: false
+      - extendedWaitUntil:
+          visible:
+            id: profile-help
+          timeout: 20000

@@ -1,0 +1,38 @@
+T-410 - Jest, red before.
+App files as at a06e6f3 (git restore --source=a06e6f3 -- App.tsx
+src/features/profile/screens/ProfileScreen.tsx
+src/features/availability/screens/AvailabilityScreen.tsx
+src/features/calendar/hooks/useAddRehearsalSubmit.ts
+src/i18n/translations/profile.ts src/shared/services/reviewPrompt.ts
+src/shared/hooks/useUsageDays.ts src/shared/hooks/useReviewAfterSave.ts),
+tests as at 5f6a338.
+
+$ npx jest --selectProjects frontend --silent src/shared/services/__tests__/reviewPrompt.test.ts src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx
+
+FAIL frontend src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx
+  ● Test suite failed to run
+    Cannot find module '../../../../shared/hooks/useReviewAfterSave' from 'src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx'
+FAIL frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts
+  ● Test suite failed to run
+    Cannot find module '../../../../shared/hooks/useReviewAfterSave' from 'src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts'
+FAIL frontend src/shared/services/__tests__/reviewPrompt.test.ts
+  ● asking for a rating after a save › asks once when everything holds
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › waits for the form to go before it asks
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › does not ask before the third day of use
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › does not ask in the onboarding
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › does not ask on the first launch
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › does not ask twice in one version, however long after
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › asks in the next version only fourteen days after the last ask
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › asks once for two saves in a row
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+  ● asking for a rating after a save › keeps only the latest three days, on the phone
+    Cannot find module '../reviewPrompt' from 'src/shared/services/__tests__/reviewPrompt.test.ts'
+Test Suites: 3 failed, 3 total
+Tests:       9 failed, 9 total

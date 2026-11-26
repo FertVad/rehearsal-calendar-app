@@ -1,0 +1,35 @@
+T-417 — green after (59175dd), 26.11.2026.
+
+Jest (frontend): Test Suites 171 passed, Tests 1948 passed.
+  New: src/i18n/__tests__/nativeBreaks.test.ts — every string of the owner's note, word for word, ⍽ and \n,
+  in ru, en, es, de; "What's Where" labels whole (not ru «Присоединиться по коду»); buttons' labels kept;
+  alerts end with their full stop, en skipTitle in sentence case.
+  useOnboarding.test.ts — the "Skip" alert typeset in the app's language.
+  CalendarSyncScreen.test.tsx — the access alert typeset in the app's language.
+  WhatWhereScreen.test.tsx — labels whole on the step, ru «Присоединиться по⍽коду» only typeset.
+  Updated to the new strings: weekendsNatives, proofreading, proofreadingEdits, secondReading,
+  sentenceEnd (exception for skipTitle: en a sentence, es/de headings, ru kept by the monitor), WeekendsScreen.
+type-check: clean. ESLint on src/i18n, src/features/onboarding: 0 errors.
+
+e2e:
+  [Passed] 60 Onboarding in Russian, the greeting on one line (5m 27s) — output.wrong empty (es, de checks)
+  [Passed] 09 Onboarding to the end, nothing granted (2m 34s)
+  [Passed] 09-invite Invite link during onboarding (53s)
+  [Passed] 10 Calendar sync settings, with and without calendar access (1m 18s)
+
+Screens, 393 pt, normal size (after/; before/ = T-412 after and T-408 green, same strings then):
+  ru welcome   «Rehearsly находит время, / когда свободны все»
+  ru what-where «+» → «Создать проект». По приглашению: / «Проекты» → «Присоединиться по коду»;
+               «+» → «Создать репетицию», / в проектах, где вы администратор
+  ru skip      Настройки доступны / в профиле; Начало недели, / синхронизацию календаря и то, /
+               отмечать ли выходные занятыми, / можно настроить в любое время: / Профиль → Настройки.
+  ru refused   Для этого нужен доступ / к календарю.
+  en welcome   Everyone marks when they are busy · Rehearsly finds the hours / that suit all of you ·
+               The rehearsal lands / in everyone’s calendar
+  en what-where “+” → “Create Project”. / Invited? “Projects” → “Join with a Code”;
+               “+” → “Create Rehearsal”, / in projects where you are an admin
+  en skip      Settings are in your profile. — You can choose the first day / of the week, decide whether /
+               your weekends are marked as busy, / and set up calendar sync at any time / in Profile → Settings.
+  es what-where «+» → «Crear ensayo», / en los proyectos que administras (was «…que / administras»)
+  de what-where „+“ → „Probe erstellen“, in Projekten, / in denen du Admin bist
+  Each as the native speaker's report gives it for 393 pt.

@@ -8,6 +8,7 @@ import { render, fireEvent, act } from '@testing-library/react-native';
 import { getCalendars } from 'expo-localization';
 import WhatWhereScreen from '../WhatWhereScreen';
 import { translations } from '../../../../i18n/translations';
+import { typeset } from '../../../../shared/utils/typeset';
 
 // The real button, without the rest of the components' index.
 jest.mock('../../../../shared/components', () => ({
@@ -43,13 +44,28 @@ it.each(['ru', 'en', 'es', 'de'] as const)('names each place by the label the ap
     return typeof node === 'string' ? [node] : (node.children ?? []).flatMap(all);
   }).join(' ');
 
+  // Typeset, as every text of the steps is (T-412), and whole where the
+  // native speaker said so (T-417): every space of the label a no-break one.
+  // Russian "Присоединиться по коду" is not whole, only typeset.
+  const label = (words: string) => typeset(words, language);
+  const whole = (words: string) => words.replace(/ /g, '\u00a0');
   const project = text('project');
-  expect(project).toContain(t.actionSheet.createProject);
-  expect(project).toContain(t.nav.projects);
-  expect(project).toContain(t.projects.haveInvite);
-  expect(text('rehearsal')).toContain(t.actionSheet.createRehearsal);
-  expect(text('availability')).toContain(t.actionSheet.markBusy);
-  expect(text('planner')).toContain(t.smartPlanner.title);
+  expect(project).toContain(whole(t.actionSheet.createProject));
+  expect(project).toContain(label(t.nav.projects));
+  expect(project).toContain(language === 'ru' ? label(t.projects.haveInvite) : whole(t.projects.haveInvite));
+  expect(text('rehearsal')).toContain(whole(t.actionSheet.createRehearsal));
+  expect(text('availability')).toContain(whole(t.actionSheet.markBusy));
+  expect(text('planner')).toContain(whole(t.smartPlanner.title));
+});
+
+it('keeps Russian "Присоединиться по коду" not whole in "Что где": a large size breaks it before "по коду"', () => {
+  mockLanguage.current = 'ru';
+  const view = open();
+  const where = view.getByTestId('what-where-project');
+  const text = [where].flatMap(function all(node: any): string[] {
+    return typeof node === 'string' ? [node] : (node.children ?? []).flatMap(all);
+  }).join(' ');
+  expect(text).toContain('«Присоединиться по\u00a0коду»');
 });
 
 it.each([

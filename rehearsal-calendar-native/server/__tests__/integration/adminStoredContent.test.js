@@ -13,6 +13,7 @@ import Database from 'better-sqlite3';
 import express from 'express';
 import request from 'supertest';
 import { securityHeaders } from '../../middleware/securityHeaders.js';
+import { quoteName } from '../../../shared/quoteName.cjs';
 
 let sqlite;
 let app;
@@ -257,7 +258,7 @@ async function checkStoredContentInBrowser({ userName, email, reportName, messag
     // server-issued bearer token without ever logging or snapshotting it.
     await page.locator('#login-screen').waitFor({ state: 'visible' });
     await page.locator('#password-input').fill(TEST_ADMIN_PASSWORD);
-    await page.getByRole('button', { name: 'Log in', exact: true }).click();
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
     await page.locator('#dashboard').waitFor({ state: 'visible' });
     await page.locator('#stats-loading').waitFor({ state: 'hidden' });
     await page.locator('#users-body td:nth-child(4)').waitFor({ state: 'attached' });
@@ -268,17 +269,17 @@ async function checkStoredContentInBrowser({ userName, email, reportName, messag
     expect(await page.locator('#users-body tr').count()).toBe(1);
     expect(await page.locator('#bugs-body tr').count()).toBe(1);
     expect(await page.locator('#users-body td').count()).toBe(9);
-    expect(await page.locator('#users-body td').nth(5).textContent()).toBe(`own project “${projectName}”`);
+    expect(await page.locator('#users-body td').nth(5).textContent()).toBe(`Свой проект ${quoteName(projectName, 'ru')}`);
     // The projects table: name and owner, literally.
     const projectRow = page.locator('#analytics-body tr', { has: page.locator('td', { hasText: projectName }) }).last();
     const projectCells = await projectRow.locator('td').allTextContents();
-    expect(projectCells.slice(0, 2)).toEqual([projectName, owner ?? '-']);
+    expect(projectCells.slice(0, 2)).toEqual([projectName, owner ?? '—']);
     expect(await page.locator('#bugs-body td').count()).toBe(5);
     expect(await page.locator('#users-body td').nth(0).textContent()).toBe(userName);
     expect(await page.locator('#users-body td').nth(1).textContent()).toBe(email);
     expect(await page.locator('#bugs-body td').nth(0).textContent()).toBe(reportName);
     expect(await page.locator('#bugs-body td').nth(1).textContent()).toBe(message);
-    expect(await page.locator('#bugs-body td').nth(2).textContent()).toBe(screen || '-');
+    expect(await page.locator('#bugs-body td').nth(2).textContent()).toBe(screen || '—');
     // CSP might hide execution while unsafe markup still enters the DOM.
     // Assert both the absence of payload-created elements and the probe state.
     expect(await page.locator('#users-body, #bugs-body, #analytics-body').locator('img, svg, script, form, b').count()).toBe(0);

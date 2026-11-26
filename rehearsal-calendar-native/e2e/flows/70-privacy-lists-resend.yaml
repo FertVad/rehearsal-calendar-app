@@ -4,80 +4,85 @@
 # codes through Resend (EU, Ireland), and the page did not say so.
 #
 # The page is the local server's own /privacy (API_URL without /api), opened in
-# English; the other languages are reached by the page's own buttons, as a
-# reader switches them. (A second link opened into the running Safari, closed
-# or not, left the page in English.) Each language is written on its own, so
-# each is read on its own: the line is matched by its words, not only the name,
-# since "Resend" in bold is an element of its own. The words are the native
-# editors' (T-269, 64d7860): "sends our emails: your codes for signing up",
-# "Versand unserer E-Mails: Codes für Registrierung" (T-284).
+# each language by its own link, ?lang=xx, at the list of providers,
+# #processors-xx — as a link from the app or a mail would point a reader to it.
+# Scrolling there from the top of the page took 13 swipes of ~4.3 s in English
+# alone, and every new paragraph of the policy added more: on 477ea2f, after
+# T-293 and T-295, the line was not reached in the 60 s (T-296). At the anchor
+# the line is whole on screen, however long the policy grows above it.
+#
+# openLink returns before Safari has the page: once it restored 26 tabs and
+# committed the page 4.4 s later, after the first look and the first swipe, so
+# the swipes ran from the anchor and carried the line above the screen, where
+# scrolling down never brings it back (T-296). So after each link the flow
+# waits for that language's own line — on screen at its anchor, on no other
+# language's page — and swipes nothing until it is there. The scroll after it
+# only checks the line is whole on screen (100 %); at the anchor it is, and no
+# swipe happens. (A second link into the running Safari once left the page in
+# English; that was the CSP sending legal.js to https, fixed in T-038.)
+#
+# Each language is written on its own, so each is read on its own: the line is
+# matched by its words, not only the name, since "Resend" in bold is an element
+# of its own. The words are the native editors' (T-269, 64d7860): "sends our
+# emails: your codes for signing up", "Versand unserer E-Mails: Codes für
+# Registrierung" (T-284).
 #
 # Rehearsly is stopped first: the flow before this one leaves it running, and
 # with it behind Safari Maestro's driver read the app's screen, not the page,
 # and once waited 60 s on it as iOS suspended it (T-277, docs/e2e.md).
+#
+# Safari starts with no tabs (fresh-safari.yaml, T-404). It restored 26 at
+# every launch, from earlier runs and flows, this flow's four links among them:
+# a restored English page at its anchor, an older build's, could answer the
+# first wait before this link's page came.
 appId: com.apple.mobilesafari
 name: Privacy policy lists Resend in every language
 tags:
   - legal
 ---
 - stopApp: ${APP_ID}
-- stopApp
+- runFlow: ../subflows/fresh-safari.yaml
 - openLink:
-    link: ${API_URL.replace('/api', '')}/privacy?lang=en
+    link: ${API_URL.replace('/api', '')}/privacy?lang=en#processors-en
 - extendedWaitUntil:
-    visible: "Privacy Policy"
+    visible: ".*sends our emails: your codes for signing up.*Ireland.*"
     timeout: 30000
 - scrollUntilVisible:
     element: ".*sends our emails: your codes for signing up.*Ireland.*"
     direction: DOWN
-    timeout: 60000
+    timeout: 30000
 - takeScreenshot: 70-privacy-en
 
-- scrollUntilVisible:
-    element: "Русский"
-    direction: UP
-    timeout: 60000
-- runFlow:
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP: "Русский"
-      SEE: "Политика конфиденциальности"
-      WAIT_MS: 10000
+- openLink:
+    link: ${API_URL.replace('/api', '')}/privacy?lang=ru#processors-ru
+- extendedWaitUntil:
+    visible: ".*отправка писем с кодами.*Ирландия.*"
+    timeout: 30000
 - scrollUntilVisible:
     element: ".*отправка писем с кодами.*Ирландия.*"
     direction: DOWN
-    timeout: 60000
+    timeout: 30000
 - takeScreenshot: 70-privacy-ru
 
-- scrollUntilVisible:
-    element: "Español"
-    direction: UP
-    timeout: 60000
-- runFlow:
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP: "Español"
-      SEE: "Política de privacidad"
-      WAIT_MS: 10000
+- openLink:
+    link: ${API_URL.replace('/api', '')}/privacy?lang=es#processors-es
+- extendedWaitUntil:
+    visible: ".*envío de los correos con códigos.*Irlanda.*"
+    timeout: 30000
 - scrollUntilVisible:
     element: ".*envío de los correos con códigos.*Irlanda.*"
     direction: DOWN
-    timeout: 60000
+    timeout: 30000
 - takeScreenshot: 70-privacy-es
 
-- scrollUntilVisible:
-    element: "Deutsch"
-    direction: UP
-    timeout: 60000
-- runFlow:
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP: "Deutsch"
-      SEE: "Datenschutzerklärung"
-      WAIT_MS: 10000
+- openLink:
+    link: ${API_URL.replace('/api', '')}/privacy?lang=de#processors-de
+- extendedWaitUntil:
+    visible: ".*Versand unserer E-Mails: Codes für Registrierung.*Irland.*"
+    timeout: 30000
 - scrollUntilVisible:
     element: ".*Versand unserer E-Mails: Codes für Registrierung.*Irland.*"
     direction: DOWN
-    timeout: 60000
+    timeout: 30000
 - takeScreenshot: 70-privacy-de
 - stopApp

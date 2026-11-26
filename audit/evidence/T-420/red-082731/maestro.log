@@ -1,0 +1,463 @@
+08:29:03.197 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:29:03.227 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:29:03.229 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:29:07.375 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:29:07.377 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Launch app "${APP_ID}" with clear state and clear keychain (launch arguments: {rehearslyStoreReview=due}) RUNNING
+08:29:07.771 [ INFO] maestro.Maestro.clearKeychain$lambda$10: Clearing keychain
+08:29:09.992 [ INFO] maestro.Maestro.clearAppState$lambda$8: Clearing app state com.rehearsal.app
+08:29:28.065 [ INFO] maestro.Maestro.launchApp$lambda$5: Launching app com.rehearsal.app
+08:29:28.066 [ INFO] maestro.Maestro.launchApp$lambda$5: Stopping com.rehearsal.app app during launch
+08:29:30.669 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Launch app "${APP_ID}" with clear state and clear keychain (launch arguments: {rehearslyStoreReview=due}) COMPLETED
+08:29:31.149 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/sign-in-form.yaml RUNNING
+08:29:31.487 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:29:31.548 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:29:31.551 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:29:31.677 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:29:31.688 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run sign-in-fill.yaml RUNNING
+08:29:31.765 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:29:31.821 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:29:31.826 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:29:31.983 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:29:31.991 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: login-submit is visible RUNNING
+08:29:40.283 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: login-submit is visible COMPLETED
+08:29:40.295 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries = 0} RUNNING
+08:29:40.718 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries = 0} COMPLETED
+08:29:40.719 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Retry 3 times RUNNING
+08:29:40.721 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: login-email RUNNING
+08:29:40.994 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, title=, value=, text=, hintText=your@email.com, resource-id=login-email, bounds=[21,242][372,284], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=21, y=242, width=351, height=42))
+08:29:41.339 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:29:41.350 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 263) using hierarchy based logic for wait
+08:29:41.367 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:29:41.368 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:29:43.442 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:29:43.443 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: login-email COMPLETED
+08:29:43.511 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Wait for animation to end within 3000 ms RUNNING
+08:29:43.610 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 3000
+08:29:43.651 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:29:43.652 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:29:43.943 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:29:43.944 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:29:46.309 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Wait for animation to end within 3000 ms COMPLETED
+08:29:46.312 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries += 1} RUNNING
+08:29:46.423 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries += 1} COMPLETED
+08:29:46.426 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${output.signInTries > 1} is true RUNNING
+08:29:46.529 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:29:46.538 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${output.signInTries > 1} is true SKIPPED
+08:29:46.542 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Input text ${EMAIL} RUNNING
+08:29:46.593 [ INFO] maestro.Maestro.inputText: Inputting text: sonya@e2e.test
+08:29:48.311 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Input text ${EMAIL} COMPLETED
+08:29:48.315 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${EMAIL}", id: login-email is visible RUNNING
+08:29:48.633 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${EMAIL}", id: login-email is visible COMPLETED
+08:29:48.634 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Retry 3 times COMPLETED
+08:29:48.634 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries = 0} RUNNING
+08:29:48.669 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries = 0} COMPLETED
+08:29:48.670 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Retry 3 times RUNNING
+08:29:48.671 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: login-password RUNNING
+08:29:48.844 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, title=, value=, text=, hintText=Password, resource-id=login-password, bounds=[21,290][372,332], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=21, y=290, width=351, height=42))
+08:29:49.286 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:29:49.293 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 311) using hierarchy based logic for wait
+08:29:49.297 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:29:49.297 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:29:50.079 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:29:50.081 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: login-password COMPLETED
+08:29:50.084 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Wait for animation to end within 3000 ms RUNNING
+08:29:50.091 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 3000
+08:29:50.092 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:29:50.092 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:29:50.284 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:29:50.286 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:29:52.482 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Wait for animation to end within 3000 ms COMPLETED
+08:29:52.487 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.signInTries += 1} RUNNING
+08:29:52.565 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.signInTries += 1} COMPLETED
+08:29:52.565 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${output.signInTries > 1} is true RUNNING
+08:29:52.614 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:29:52.614 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${output.signInTries > 1} is true SKIPPED
+08:29:52.615 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Input text ${PASSWORD} RUNNING
+08:29:52.675 [ INFO] maestro.Maestro.inputText: Inputting text: e2e-local-only
+08:29:54.355 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Input text ${PASSWORD} COMPLETED
+08:29:54.427 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${'•'.repeat(PASSWORD.length)}", id: login-password is visible RUNNING
+08:29:54.912 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${'•'.repeat(PASSWORD.length)}", id: login-password is visible COMPLETED
+08:29:54.913 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Retry 3 times COMPLETED
+08:29:54.913 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run sign-in-fill.yaml COMPLETED
+08:29:54.914 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run sign-in-submit.yaml RUNNING
+08:29:54.944 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:29:54.965 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:29:54.965 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run tap-and-see.yaml RUNNING
+08:29:54.988 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:29:54.990 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:29:54.991 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:29:55.032 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:29:55.033 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true RUNNING
+08:29:55.109 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: ${TAP_ID} RUNNING
+08:29:55.459 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Sign In, title=, value=, text=, hintText=, resource-id=login-submit, bounds=[20,385][373,435], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=20, y=385, width=353, height=50))
+08:29:55.687 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:29:55.711 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 410) using hierarchy based logic for wait
+08:29:55.722 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:29:55.722 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:29:57.936 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:29:57.940 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: ${TAP_ID} COMPLETED
+08:29:57.941 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true COMPLETED
+08:29:57.942 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true RUNNING
+08:29:58.008 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:29:58.009 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true SKIPPED
+08:29:58.009 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID === 'undefined'} is true RUNNING
+08:29:58.042 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:29:58.043 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID === 'undefined'} is true SKIPPED
+08:29:58.044 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = false} RUNNING
+08:29:58.079 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = false} COMPLETED
+08:29:58.079 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+08:29:58.114 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:29:58.116 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true SKIPPED
+08:29:58.117 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined'} is true RUNNING
+08:29:58.176 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:29:58.177 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined'} is true SKIPPED
+08:29:58.177 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined'} is true RUNNING
+08:29:58.236 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that (Optional) id: ${GONE_ID} is not visible RUNNING
+08:29:59.256 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that (Optional) id: ${GONE_ID} is not visible COMPLETED
+08:29:59.259 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when id: ${GONE_ID} is not visible RUNNING
+08:30:01.195 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = true} RUNNING
+08:30:01.453 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = true} COMPLETED
+08:30:01.455 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when id: ${GONE_ID} is not visible COMPLETED
+08:30:01.455 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined'} is true COMPLETED
+08:30:01.455 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true RUNNING
+08:30:01.594 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:01.595 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true SKIPPED
+08:30:01.597 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true RUNNING
+08:30:01.674 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:01.675 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true SKIPPED
+08:30:01.677 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${!output.tapSeen} is true RUNNING
+08:30:01.728 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:01.729 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${!output.tapSeen} is true SKIPPED
+08:30:01.729 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+08:30:01.771 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:01.771 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true SKIPPED
+08:30:01.774 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true RUNNING
+08:30:01.852 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:01.853 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true SKIPPED
+08:30:01.853 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true RUNNING
+08:30:01.897 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:01.899 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true SKIPPED
+08:30:01.900 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true RUNNING
+08:30:01.959 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:01.959 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true SKIPPED
+08:30:01.960 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true RUNNING
+08:30:02.012 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:02.013 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true SKIPPED
+08:30:02.013 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run tap-and-see.yaml COMPLETED
+08:30:02.013 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run sign-in-submit.yaml COMPLETED
+08:30:02.014 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/sign-in-form.yaml COMPLETED
+08:30:02.015 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "Calendar, tab.*", id: tab-calendar is visible RUNNING
+08:30:02.374 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "Calendar, tab.*", id: tab-calendar is visible COMPLETED
+08:30:02.376 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/availability-pick-mark-day.yaml RUNNING
+08:30:02.412 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:30:02.454 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:30:02.455 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: tab-create RUNNING
+08:30:02.848 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Quick Actions, title=, value=, text=, hintText=, resource-id=tab-create, bounds=[157,780][235,824], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=157, y=780, width=78, height=44))
+08:30:03.147 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:03.152 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 802) using hierarchy based logic for wait
+08:30:03.153 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:03.153 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:04.321 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:04.322 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: tab-create COMPLETED
+08:30:04.323 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "Mark Busy" RUNNING
+08:30:04.505 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Mark Busy, title=, value=, text=, hintText=, resource-id=, bounds=[92,374][300,422], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=92, y=374, width=208, height=48))
+08:30:04.710 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:04.713 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 398) using hierarchy based logic for wait
+08:30:04.716 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:04.716 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:06.438 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:06.441 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "Mark Busy" COMPLETED
+08:30:06.442 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that ".*, Busy", id: day-${MARK_DAY} is visible RUNNING
+08:30:07.009 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that ".*, Busy", id: day-${MARK_DAY} is visible COMPLETED
+08:30:07.013 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Scrolling DOWN until ".*, Busy", id: day-${MARK_DAY} is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering enabled RUNNING
+08:30:07.446 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 0, DeviceWidth: 393, DeviceWidth: 852
+08:30:07.447 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=302, y=148, width=47, height=47)
+08:30:07.462 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+08:30:07.475 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=.*, Busy, idRegex=day-2026-11-29, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=DOWN, scrollDuration=601, visibilityPercentage=100, timeout=30000, waitToSettleTimeoutMs=null, centerElement=true, originalSpeedValue=40, label=null, optional=false).centerElement
+08:30:07.476 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+08:30:07.477 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Scrolling DOWN until ".*, Busy", id: day-${MARK_DAY} is visible with speed 40, visibility percentage 100%, timeout 30000 ms, with centering enabled COMPLETED
+08:30:07.477 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run day-in-reach.yaml RUNNING
+08:30:07.495 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:30:07.517 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:30:07.517 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:30:07.545 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:30:07.546 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Wait for animation to end RUNNING
+08:30:07.546 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 15000
+08:30:07.546 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:07.547 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:07.732 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:07.732 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:09.734 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Wait for animation to end COMPLETED
+08:30:09.741 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Repeat while id: day-${DAY}, Below id: availability-legend is not visible (up to 4 times) RUNNING
+08:30:16.995 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:16.997 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Repeat while id: day-${DAY}, Below id: availability-legend is not visible (up to 4 times) SKIPPED
+08:30:16.997 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: day-${DAY}, Below id: availability-legend is visible RUNNING
+08:30:17.427 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: day-${DAY}, Below id: availability-legend is visible COMPLETED
+08:30:17.429 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run day-in-reach.yaml COMPLETED
+08:30:17.429 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: day-${MARK_DAY} RUNNING
+08:30:17.797 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=29, Busy, title=, value=, text=, hintText=, resource-id=day-2026-11-29, bounds=[302,148][349,195], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=302, y=148, width=47, height=47))
+08:30:18.003 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:18.008 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (325, 171) using hierarchy based logic for wait
+08:30:18.012 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:18.012 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:19.301 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:19.301 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: day-${MARK_DAY} COMPLETED
+08:30:19.302 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: mode-busy, selected is visible RUNNING
+08:30:19.654 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: mode-busy, selected is visible COMPLETED
+08:30:19.654 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/availability-pick-mark-day.yaml COMPLETED
+08:30:19.655 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: mode-free RUNNING
+08:30:20.000 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, Free, title=, value=, text=, hintText=, resource-id=mode-free, bounds=[20,600][132,666], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=20, y=600, width=112, height=66))
+08:30:20.194 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:20.198 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (76, 633) using hierarchy based logic for wait
+08:30:20.201 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:20.201 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:21.295 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:21.296 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: mode-free COMPLETED
+08:30:21.297 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: availability-save RUNNING
+08:30:21.640 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Save, title=, value=, text=, hintText=, resource-id=availability-save, bounds=[16,760][377,810], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=16, y=760, width=361, height=50))
+08:30:21.834 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:21.837 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 785) using hierarchy based logic for wait
+08:30:21.841 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:21.842 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:23.130 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:23.132 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: availability-save COMPLETED
+08:30:23.132 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "Saved", id: toast is visible RUNNING
+08:30:23.484 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "Saved", id: toast is visible COMPLETED
+08:30:23.484 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that (Optional) "Not Now" is visible RUNNING
+08:30:30.071 [ INFO] maestro.orchestra.Orchestra.executeCommands: [Command execution] CommandWarned: Assertion is false: "Not Now" is visible
+08:30:30.720 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:30:30.723 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:30.887 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that (Optional) "Not Now" is visible WARNED
+08:30:30.887 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "Not Now" is not visible RUNNING
+08:30:31.924 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "Not Now" is not visible COMPLETED
+08:30:31.931 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that ".*, Free", id: day-${MARK_DAY} is visible RUNNING
+08:30:32.353 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that ".*, Free", id: day-${MARK_DAY} is visible COMPLETED
+08:30:32.355 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: availability-legend is visible RUNNING
+08:30:32.701 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: availability-legend is visible COMPLETED
+08:30:32.705 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Take screenshot 107-saved-screen-open-no-window RUNNING
+08:30:32.725 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:30:32.726 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:32.829 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Take screenshot 107-saved-screen-open-no-window COMPLETED
+08:30:32.829 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: header-cancel RUNNING
+08:30:33.177 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Cancel, title=, value=, text=, hintText=, resource-id=header-cancel, bounds=[8,63][76,107], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=8, y=63, width=68, height=44))
+08:30:33.371 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:33.374 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (42, 85) using hierarchy based logic for wait
+08:30:33.378 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:33.379 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:34.701 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:34.702 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: header-cancel COMPLETED
+08:30:34.703 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: availability-legend is not visible RUNNING
+08:30:35.414 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: availability-legend is not visible COMPLETED
+08:30:35.415 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "Not Now" is visible RUNNING
+08:30:37.702 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "Not Now" is visible COMPLETED
+08:30:37.706 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Take screenshot 107-apple-rating-window RUNNING
+08:30:37.710 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:30:37.712 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:37.833 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Take screenshot 107-apple-rating-window COMPLETED
+08:30:37.834 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "Not Now" RUNNING
+08:30:38.026 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Not Now, title=, value=, text=, hintText=, resource-id=, bounds=[51,526][341,576], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=51, y=526, width=290, height=50))
+08:30:38.433 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:38.437 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 551) using hierarchy based logic for wait
+08:30:38.442 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:38.442 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:39.611 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:39.612 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "Not Now" COMPLETED
+08:30:39.612 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "Not Now" is not visible RUNNING
+08:30:40.552 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "Not Now" is not visible COMPLETED
+08:30:40.553 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: tab-calendar is visible RUNNING
+08:30:40.773 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: tab-calendar is visible COMPLETED
+08:30:40.774 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: availability-legend is not visible RUNNING
+08:30:41.661 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: availability-legend is not visible COMPLETED
+08:30:41.664 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: tab-create RUNNING
+08:30:41.892 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Quick Actions, title=, value=, text=, hintText=, resource-id=tab-create, bounds=[157,780][235,824], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=157, y=780, width=78, height=44))
+08:30:42.098 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:42.104 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 802) using hierarchy based logic for wait
+08:30:42.105 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:42.106 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:43.080 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:43.081 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: tab-create COMPLETED
+08:30:43.082 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on "Mark Busy" RUNNING
+08:30:43.252 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Mark Busy, title=, value=, text=, hintText=, resource-id=, bounds=[92,374][300,422], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=92, y=374, width=208, height=48))
+08:30:43.448 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:43.450 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 398) using hierarchy based logic for wait
+08:30:43.456 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:43.457 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:45.011 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:45.013 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "Mark Busy" COMPLETED
+08:30:45.013 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that ".*, Free", id: day-${MARK_DAY} is visible RUNNING
+08:30:45.451 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that ".*, Free", id: day-${MARK_DAY} is visible COMPLETED
+08:30:45.452 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/day-in-reach.yaml RUNNING
+08:30:45.478 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:30:45.498 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:30:45.498 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:30:45.522 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:30:45.523 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Wait for animation to end RUNNING
+08:30:45.526 [ INFO] maestro.Maestro.waitForAnimationToEnd$lambda$53: Waiting for animation to end with timeout 15000
+08:30:45.526 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:45.527 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:45.732 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:45.732 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:47.057 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Wait for animation to end COMPLETED
+08:30:47.062 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Repeat while id: day-${DAY}, Below id: availability-legend is not visible (up to 4 times) RUNNING
+08:30:54.287 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:30:54.289 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Repeat while id: day-${DAY}, Below id: availability-legend is not visible (up to 4 times) SKIPPED
+08:30:54.290 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: day-${DAY}, Below id: availability-legend is visible RUNNING
+08:30:54.699 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: day-${DAY}, Below id: availability-legend is visible COMPLETED
+08:30:54.699 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/day-in-reach.yaml COMPLETED
+08:30:54.700 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: day-${MARK_DAY} RUNNING
+08:30:55.056 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=29, Free, title=, value=, text=, hintText=, resource-id=day-2026-11-29, bounds=[302,148][349,195], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=302, y=148, width=47, height=47))
+08:30:55.257 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:55.264 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (325, 171) using hierarchy based logic for wait
+08:30:55.268 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:55.269 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:56.568 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:56.569 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: day-${MARK_DAY} COMPLETED
+08:30:56.569 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: mode-free, selected is visible RUNNING
+08:30:56.914 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: mode-free, selected is visible COMPLETED
+08:30:56.915 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: mode-busy RUNNING
+08:30:57.258 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, Busy, title=, value=, text=, hintText=, resource-id=mode-busy, bounds=[260,600][373,666], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=260, y=600, width=113, height=66))
+08:30:57.452 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:57.454 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (316, 633) using hierarchy based logic for wait
+08:30:57.459 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:57.459 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:30:58.557 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:30:58.558 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: mode-busy COMPLETED
+08:30:58.558 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: availability-save RUNNING
+08:30:58.904 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Save, title=, value=, text=, hintText=, resource-id=availability-save, bounds=[16,760][377,810], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=16, y=760, width=361, height=50))
+08:30:59.099 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:30:59.103 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 785) using hierarchy based logic for wait
+08:30:59.114 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:30:59.115 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:00.292 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:31:00.297 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: availability-save COMPLETED
+08:31:00.298 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "Saved", id: toast is visible RUNNING
+08:31:00.646 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "Saved", id: toast is visible COMPLETED
+08:31:00.646 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that ".*, Busy", id: day-${MARK_DAY} is visible RUNNING
+08:31:01.095 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that ".*, Busy", id: day-${MARK_DAY} is visible COMPLETED
+08:31:01.095 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: header-cancel RUNNING
+08:31:01.438 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Cancel, title=, value=, text=, hintText=, resource-id=header-cancel, bounds=[8,63][76,107], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=8, y=63, width=68, height=44))
+08:31:01.633 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:31:01.638 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (42, 85) using hierarchy based logic for wait
+08:31:01.642 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:31:01.642 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:02.764 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:31:02.766 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: header-cancel COMPLETED
+08:31:02.767 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: availability-legend is not visible RUNNING
+08:31:03.685 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: availability-legend is not visible COMPLETED
+08:31:03.687 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that (Optional) "Not Now" is visible RUNNING
+08:31:09.335 [ INFO] maestro.orchestra.Orchestra.executeCommands: [Command execution] CommandWarned: Assertion is false: "Not Now" is visible
+08:31:09.570 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:31:09.571 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:09.682 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that (Optional) "Not Now" is visible WARNED
+08:31:09.683 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "Not Now" is not visible RUNNING
+08:31:10.603 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "Not Now" is not visible COMPLETED
+08:31:10.605 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that id: tab-calendar is visible RUNNING
+08:31:10.827 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that id: tab-calendar is visible COMPLETED
+08:31:10.827 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Take screenshot 107-second-visit-no-window RUNNING
+08:31:10.830 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:31:10.832 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:10.933 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Take screenshot 107-second-visit-no-window COMPLETED
+08:31:10.933 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/tap-and-see.yaml RUNNING
+08:31:10.989 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Define variables RUNNING
+08:31:10.990 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Define variables COMPLETED
+08:31:10.990 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:31:11.016 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:31:11.016 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true RUNNING
+08:31:11.055 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: ${TAP_ID} RUNNING
+08:31:11.347 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=Profile, tab, 5 of 5, title=, value=, text=, hintText=, resource-id=tab-profile, bounds=[314,780][393,824], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=314, y=780, width=79, height=44))
+08:31:11.536 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+08:31:11.542 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (353, 802) using hierarchy based logic for wait
+08:31:11.546 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:31:11.547 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:12.335 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:31:12.335 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: ${TAP_ID} COMPLETED
+08:31:12.336 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'} is true COMPLETED
+08:31:12.336 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true RUNNING
+08:31:12.388 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:12.389 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'} is true SKIPPED
+08:31:12.389 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof TAP_ID === 'undefined'} is true RUNNING
+08:31:12.412 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:12.413 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof TAP_ID === 'undefined'} is true SKIPPED
+08:31:12.413 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = false} RUNNING
+08:31:12.438 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = false} COMPLETED
+08:31:12.438 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+08:31:12.462 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that (Optional) "${SEE}" is visible RUNNING
+08:31:12.777 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that (Optional) "${SEE}" is visible COMPLETED
+08:31:12.778 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when "${SEE}" is visible RUNNING
+08:31:12.956 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ${output.tapSeen = true} RUNNING
+08:31:12.980 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ${output.tapSeen = true} COMPLETED
+08:31:12.981 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when "${SEE}" is visible COMPLETED
+08:31:12.981 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true COMPLETED
+08:31:12.981 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined'} is true RUNNING
+08:31:13.011 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.012 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined'} is true SKIPPED
+08:31:13.012 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined'} is true RUNNING
+08:31:13.034 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.034 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined'} is true SKIPPED
+08:31:13.035 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true RUNNING
+08:31:13.060 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.060 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true'} is true SKIPPED
+08:31:13.060 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true RUNNING
+08:31:13.086 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.086 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false'} is true SKIPPED
+08:31:13.086 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${!output.tapSeen} is true RUNNING
+08:31:13.105 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.105 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${!output.tapSeen} is true SKIPPED
+08:31:13.106 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SEE !== 'undefined'} is true RUNNING
+08:31:13.138 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that "${SEE}" is visible RUNNING
+08:31:13.437 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that "${SEE}" is visible COMPLETED
+08:31:13.439 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SEE !== 'undefined'} is true COMPLETED
+08:31:13.439 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true RUNNING
+08:31:13.474 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.474 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE !== 'undefined' && !output.tapSeen} is true SKIPPED
+08:31:13.475 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true RUNNING
+08:31:13.504 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.505 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof GONE_ID !== 'undefined' && !output.tapSeen} is true SKIPPED
+08:31:13.505 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true RUNNING
+08:31:13.530 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.530 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen} is true SKIPPED
+08:31:13.530 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true RUNNING
+08:31:13.552 [ INFO] maestro.orchestra.Orchestra.executeSubflowCommands: [Command execution subflow] CommandSkipped: null
+08:31:13.553 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run flow when ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen} is true SKIPPED
+08:31:13.553 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/tap-and-see.yaml COMPLETED
+08:31:13.554 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Scrolling DOWN until id: profile-rate-app is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering enabled RUNNING
+08:31:14.290 [ WARN] maestro.orchestra.Orchestra.scrollUntilVisible: Error: maestro.MaestroException$ElementNotFound: Element not found: Id matching regex: profile-rate-app
+08:31:14.309 [ INFO] maestro.Maestro.swipeFromCenter: Swiping UP from center
+08:31:17.603 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 0, DeviceWidth: 393, DeviceWidth: 852
+08:31:17.604 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=20, y=740, width=353, height=62)
+08:31:17.604 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+08:31:17.604 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=null, idRegex=profile-rate-app, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=DOWN, scrollDuration=601, visibilityPercentage=100, timeout=20000, waitToSettleTimeoutMs=null, centerElement=true, originalSpeedValue=40, label=null, optional=false).centerElement
+08:31:17.604 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+08:31:17.613 [ INFO] maestro.Maestro.swipeFromCenter: Swiping UP from center
+08:31:19.489 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Scrolling try count: 1, DeviceWidth: 393, DeviceWidth: 852
+08:31:19.489 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Element bounds: Bounds(x=20, y=508, width=353, height=62)
+08:31:19.490 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Visibility Percent: 1.0
+08:31:19.490 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: Command centerElement: ScrollUntilVisibleCommand(selector=ElementSelector(textRegex=null, idRegex=profile-rate-app, size=null, below=null, above=null, leftOf=null, rightOf=null, containsChild=null, containsDescendants=null, traits=null, index=null, enabled=null, optional=false, selected=null, checked=null, focused=null, childOf=null, css=null), direction=DOWN, scrollDuration=601, visibilityPercentage=100, timeout=20000, waitToSettleTimeoutMs=null, centerElement=true, originalSpeedValue=40, label=null, optional=false).centerElement
+08:31:19.490 [ INFO] maestro.orchestra.Orchestra.scrollUntilVisible: visibilityPercentageNormalized: 1.0
+08:31:19.490 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Scrolling DOWN until id: profile-rate-app is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering enabled COMPLETED
+08:31:19.490 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that ".*Rate Rehearsly.*", id: profile-rate-app, Below id: profile-report-bug is visible RUNNING
+08:31:19.661 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that ".*Rate Rehearsly.*", id: profile-rate-app, Below id: profile-report-bug is visible COMPLETED
+08:31:19.662 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Take screenshot 107-profile-rate-row RUNNING
+08:31:19.664 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:31:19.667 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:19.777 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Take screenshot 107-profile-rate-row COMPLETED
+08:31:19.778 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../subflows/fresh-safari.yaml RUNNING
+08:31:19.780 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Apply configuration RUNNING
+08:31:19.780 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Apply configuration COMPLETED
+08:31:19.790 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Run ../scripts/fresh-safari.js RUNNING
+08:31:22.825 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../scripts/fresh-safari.js COMPLETED
+08:31:22.826 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Run ../subflows/fresh-safari.yaml COMPLETED
+08:31:22.827 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Tap on id: profile-rate-app RUNNING
+08:31:23.046 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tapping on element:  UiElement(treeNode=TreeNode(attributes={accessibilityText=, Rate Rehearsly, , title=, value=, text=, hintText=, resource-id=profile-rate-app, bounds=[20,508][373,570], enabled=true, focused=false, selected=false, checked=false}, children=[TreeNode(attributes={accessibilityText=, title=, value=, text=, hintText=, resource-id=, bounds=[33,521][69,557], enabled=true, focused=false, selected=false, checked=false}, children=[], clickable=null, enabled=true, focused=false, checked=false, selected=false)], clickable=null, enabled=true, focused=false, checked=false, selected=false), bounds=Bounds(x=20, y=508, width=353, height=62))
+08:31:23.231 [ INFO] maestro.Maestro.tap-HgV9Ck0: Tap aimed via stabilised hierarchy (null settle after a scroll)
+08:31:23.400 [ INFO] maestro.Maestro.refreshElementUntilStable-Hkttul8: Element is still moving (null -> Bounds(x=20, y=508, width=353, height=62)). Waiting for its position to settle.
+08:31:23.904 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Try tapping at (196, 539) using hierarchy based logic for wait
+08:31:23.905 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to byte array
+08:31:23.905 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:26.094 [ INFO] maestro.Maestro.screenshotBasedTap-ogj28Uc: Something have changed in the UI judging by view hierarchy. Proceed.
+08:31:26.097 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on id: profile-rate-app COMPLETED
+08:31:26.097 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandStart: Assert that ".*apps\.apple\.com.*" is visible RUNNING
+08:31:46.473 [ERROR] maestro.orchestra.Orchestra.executeCommands: [Command execution] CommandFailed: Assertion is false: ".*apps\.apple\.com.*" is visible
+08:31:46.612 [ INFO] maestro.Maestro.takeScreenshot: Taking screenshot
+08:31:46.615 [TRACE] maestro.utils.ScreenshotUtils.takeScreenshot: Taking screenshot to output sink
+08:31:46.789 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Assert that ".*apps\.apple\.com.*" is visible FAILED

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
+import StepText from '../components/StepText';
 import { askAndRegisterPush } from '../../../shared/services/notifications';
 import { explainPushRegistration } from '../../../shared/utils/pushAlert';
 import { hapticLight } from '../../../shared/utils/haptics';
@@ -46,15 +47,13 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
     <OnboardingStep
       title={t.onboarding.notifications.title}
       description={t.onboarding.notifications.description}
-      currentStep={2}
-      totalSteps={4}
+      currentStep={3}
+      totalSteps={5}
       onBack={() => navigation.goBack()}
-      onNext={handleAllow}
       onSkip={skipOnboarding}
-      nextButtonTitle={t.onboarding.notifications.allow}
-      nextButtonDisabled={asking}
-      showBackButton
-      secondaryAction={{ title: t.onboarding.notifications.later, onPress: goOn }}
+      // Both answers at the bottom, "Turn On" over "Not Now" (T-412).
+      answer={{ title: t.onboarding.notifications.allow, onPress: handleAllow, disabled: asking }}
+      secondAnswer={{ title: t.onboarding.notifications.later, onPress: goOn, disabled: asking }}
     >
       <View style={styles.content}>
         <View style={styles.iconWrap}>
@@ -64,11 +63,11 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
         {/* What a notification says, as a list: framed, they read as buttons. */}
         <View testID="notification-example-added" style={styles.row}>
           <Ionicons name="add-circle-outline" size={20} color={Colors.accent.green} />
-          <Text style={styles.rowText}>{t.onboarding.notifications.exampleAdded}</Text>
+          <StepText style={styles.rowText}>{t.onboarding.notifications.exampleAdded}</StepText>
         </View>
         <View testID="notification-example-time" style={styles.row}>
           <Ionicons name="time-outline" size={20} color={Colors.accent.yellow} />
-          <Text style={styles.rowText}>{t.onboarding.notifications.exampleTimeChanged}</Text>
+          <StepText style={styles.rowText}>{t.onboarding.notifications.exampleTimeChanged}</StepText>
         </View>
       </View>
     </OnboardingStep>

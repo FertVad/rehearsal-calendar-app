@@ -16,9 +16,17 @@ import { formatRange } from './clockFormat';
 //   availability's months.
 // - Case is one rule: the string begins with a capital, the rest is as Intl
 //   gives it — "Чт, 29 окт.", "Ноябрь 2026 г.". A style that capitalized
-//   every word made "Чт, 29 Окт." of it, and no style does now. A date
-//   inside a sentence keeps Intl's own first letter (`midSentence`).
+//   every word made "Чт, 29 Окт." of it, and no style does now.
+// - Inside a sentence (`midSentence`) a date is written by the language's
+//   rule: Russian and Spanish write the days and the months in lower case
+//   ("пт и сб", "vie y sáb"), English and German as Intl gives them ("Fri",
+//   "Fr."). Not Intl's first letter: iOS's Foundation (ru_RU, pattern EEE)
+//   names a day alone in its standalone form, "Пт", where Node gives "пт", so
+//   the phone said "(Пт и Сб)" and Jest could not see it (T-408).
 // =============================================================================
+
+/** The languages that write a day's and a month's names in lower case. */
+const LOWER_CASE_NAMES = new Set(['ru', 'es']);
 
 const FORMATS = {
   /** "Ноябрь 2026 г.", "November 2026", "Noviembre de 2026", "November 2026" */
@@ -62,7 +70,8 @@ export function formatDate(
   // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
   const day = typeof date === 'string' ? parseDateString(date) : date;
   const text = day.toLocaleDateString(locale, FORMATS[format]);
-  return midSentence ? text : capitalized(text, locale);
+  if (!midSentence) return capitalized(text, locale);
+  return LOWER_CASE_NAMES.has(language) ? text.toLocaleLowerCase(locale) : text;
 }
 
 /** Two 'YYYY-MM-DD': "29 окт. – 4 нояб.", "Oct 29 – Nov 4" (clockFormat.ts). */

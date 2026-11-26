@@ -1,0 +1,33 @@
+T-413, red before: the new tests against the old strings and policy (auto/main b79809f, = a06e6f3 for these files).
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/privacyPage.test.js
+    ✕ says the deletion removes what this phone added, that a failure keeps the account’s deletion, and what other devices added may remain (en, ru, es, de)
+    ✕ names the calendar screen’s own button for the other devices (en, ru, es, de)
+    ✕ the paragraphs beside it do not read as the whole list of what stays (ru, es, de; en already says "Two other records" — green, as the en editor found)
+    ✕ carries no mark left for the native speakers’ reading of T-409 (en, ru, es, de)
+    ✕ promises no card payment: no purchases or payments, so no payment details, and no word of price (en, ru, es, de)
+    ✕ what the policy promises about names and Apple, ru › deleting the account deletes the notifications that carry the name; a shown push stays
+Tests:       20 failed, 128 passed, 148 total
+
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend --verbose -- i18n/__tests__/deleteAccountCalendar
+    ✕ says it in every language, word for word
+    ✕ Russian agrees with the number, as the projects line beside it
+    ✕ English, Spanish and German: one and many
+    ✕ says when it could not find out, in every language
+    ✕ English titles the alert in Title Case, as its other alerts
+  ● The confirmation … › says it in every language, word for word
+    Expected: "Rehearsly также уберёт из календаря репетиции, которые добавил на этом iPhone. Добавленные на других устройствах могут остаться."
+    Received: "Репетиции, которые приложение добавило в календарь этого iPhone, будут из него удалены. На других устройствах они останутся."
+  ● After the deletion … › Russian agrees with the number, as the projects line beside it
+    Expected: "Из календаря этого iPhone не удалось убрать одну репетицию. Её можно найти в приложении «Календарь» по названию проекта и удалить вручную."
+    Received: "Не удалось убрать из календаря этого iPhone репетиций: 1. Её можно удалить вручную в приложении «Календарь»: название начинается с названия проекта."
+  ● After the deletion … › English, Spanish and German: one and many
+    Expected: "1 rehearsal could not be removed from your calendar on this iPhone. You can delete it yourself in the Calendar app — its title starts with the project name."
+    Received: "1 rehearsal could not be removed from this iPhone’s calendar. You can delete it yourself in the Calendar app: its title begins with the project’s name."
+  ● After the deletion … › says when it could not find out, in every language
+    Expected: "Не удалось проверить, остались ли репетиции в календаре этого iPhone. Если остались, их можно найти в приложении «Календарь» по названию проекта и удалить вручную."
+    Received: "Не удалось проверить, остались ли репетиции в календаре этого iPhone. Если остались, их можно удалить вручную в приложении «Календарь»: название каждой начинается с названия проекта."
+  ● After the deletion … › English titles the alert in Title Case, as its other alerts
+    Expected: "Account Deleted"
+    Received: "Account deleted"
+Tests:       5 failed, 5 total

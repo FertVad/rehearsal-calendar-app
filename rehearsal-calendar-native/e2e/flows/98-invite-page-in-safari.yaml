@@ -25,13 +25,18 @@
 # ".*Rehearsly.*" was found there - and once waited 60 s on it as iOS
 # suspended it (T-277, docs/e2e.md). Safari's question still comes: it is
 # asked because the app is installed, not because it runs.
+#
+# Safari starts with no tabs (fresh-safari.yaml, T-404): ".*Rehearsly.*" is in
+# the title of any page of ours, and a tab restored from flow 70 or an earlier
+# run - "Privacy Policy — Rehearsly" - would answer the first wait before this
+# link's page came.
 appId: com.apple.mobilesafari
 name: Invite page in Safari reads Rehearsly and its App Store steps in every language
 tags:
   - invite
 ---
 - stopApp: ${APP_ID}
-- stopApp
+- runFlow: ../subflows/fresh-safari.yaml
 - openLink:
     link: ${API_URL.replace('/api', '')}/invite/${TWELFTH_INVITE}?lang=en
 # The brand, or Safari's question 'Open this page in "Rehearsly"?', which hides

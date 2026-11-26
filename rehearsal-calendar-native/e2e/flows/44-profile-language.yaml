@@ -131,6 +131,9 @@ tags:
     direction: DOWN
     centerElement: true
 - takeScreenshot: 44-profile-about
+# Safari with no tabs (T-404): a restored support page of an earlier run would
+# answer the wait below before this tap's page came.
+- runFlow: ../subflows/fresh-safari.yaml
 - tapOn:
     id: profile-help
 - extendedWaitUntil:
@@ -152,6 +155,8 @@ tags:
 # opens the server's /privacy with ?lang=ru, and the page, its script run
 # since T-038, shows its Russian and hides its English. Safari is closed
 # first: a link opened into the running one kept the page it had (flow 70).
+# And its tabs go with it (T-404): the support page above, restored, has
+# "Политика конфиденциальности" at its foot, and would answer the wait.
 - scrollUntilVisible:
     element:
       id: profile-privacy
@@ -167,7 +172,7 @@ tags:
     below:
       id: profile-privacy
 - takeScreenshot: 44-profile-privacy-row
-- stopApp: com.apple.mobilesafari
+- runFlow: ../subflows/fresh-safari.yaml
 - tapOn:
     id: profile-privacy
 - extendedWaitUntil:
@@ -184,7 +189,26 @@ tags:
       id: profile-privacy
     timeout: 20000
 
-# Back to English.
+# Back to English. The profile is still scrolled down to the privacy row. Its
+# language row used to stay clipped under the title, which stays put (T-029):
+# on screen to Maestro, which found "Язык, Русский" there, though a tap on it
+# lands on the title. Since "Выходные заняты" (T-406) and "Оценить Rehearsly"
+# (T-410) made the profile two rows longer, the row is above the screen's
+# top, off the hierarchy, and the check of it failed (T-416). So the profile
+# is taken back to the top first - with short swipes until the row is below
+# the title - and then the row is checked and tapped.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: profile-language
+        below: "Профиль"
+    commands:
+      - swipe:
+          start: "50%, 40%"
+          end: "50%, 85%"
+          duration: 400
+      - waitForAnimationToEnd
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -194,14 +218,7 @@ tags:
 - assertVisible:
     id: profile-language
     text: ".*Русский.*"
-# The profile is still scrolled down to Help, its language row clipped under
-# the title, which stays put (T-029): on screen to Maestro, and a tap on it
-# lands on the title. Taken back to the top first.
-- swipe:
-    start: "50%, 40%"
-    end: "50%, 85%"
-    duration: 400
-- waitForAnimationToEnd
+    below: "Профиль"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

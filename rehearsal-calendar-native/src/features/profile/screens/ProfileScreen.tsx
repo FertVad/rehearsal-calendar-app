@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert, Linking,
   TextInput, KeyboardAvoidingView, Platform,
@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -28,7 +29,11 @@ import {
   unregisterPushToken,
 } from '../../../shared/services/notifications';
 import { explainPushRegistration } from '../../../shared/utils/pushAlert';
-import { privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
+import { availabilityAPI, privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
+import { APP_STORE_REVIEW_URL } from '../../../shared/services/reviewPrompt';
+import { logger } from '../../../shared/utils/logger';
+import { weekendDaysOf, weekendDayNames } from '../../../shared/utils/weekends';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -188,6 +193,43 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
   };
 
+  // Weekends busy by default (T-406): the account's switch, read from the
+  // server each time the screen comes into view; its days are the country's
+  // of the profile's zone. Only the latest question's answer lands (CLAUDE.md
+  // 11): a read that comes back after a switch was turned does not undo it.
+  const timezone = useTimezone();
+  const weekendDays = weekendDayNames(weekendDaysOf(timezone), language, t.profile.weekendDaysJoin);
+  const [weekendsBusy, setWeekendsBusy] = useState<boolean | null>(null);
+  // While a change is on its way the switch takes no other: one answer at a time.
+  const [weekendsSaving, setWeekendsSaving] = useState(false);
+  const weekendsRequest = useRef(0);
+  useFocusEffect(useCallback(() => {
+    const ticket = ++weekendsRequest.current;
+    availabilityAPI.getWeekends()
+      .then(({ data }) => { if (ticket === weekendsRequest.current) setWeekendsBusy(data.enabled); })
+      .catch(() => {
+        // Unknown, not off: the switch stays as it was, or unusable until known.
+      });
+  }, []));
+
+  const handleWeekendsToggle = async (value: boolean) => {
+    hapticLight();
+    const before = weekendsBusy;
+    const ticket = ++weekendsRequest.current;
+    setWeekendsBusy(value);
+    setWeekendsSaving(true);
+    try {
+      const { data } = await availabilityAPI.setWeekends(value);
+      if (ticket === weekendsRequest.current) setWeekendsBusy(data.enabled);
+      hapticSuccess();
+    } catch (err: any) {
+      if (ticket === weekendsRequest.current) setWeekendsBusy(before);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.weekendsBusyError));
+    } finally {
+      setWeekendsSaving(false);
+    }
+  };
+
   const getCurrentWeekStartLabel = () => {
     const weekStart = user?.weekStartDay || 'monday';
     return weekStart === 'monday' ? t.profile.weekStartMonday : t.profile.weekStartSunday;
@@ -197,12 +239,17 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     try {
       hapticMedium();
       setDeletingAccount(true);
-      const { deletedProjects } = await deleteAccount();
+      const { deletedProjects, calendarEventsLeft } = await deleteAccount();
       hapticSuccess();
-      Alert.alert(
-        t.profile.deleteAccountSuccess,
-        deletedProjects > 0 ? t.profile.deleteAccountProjectsWarning(deletedProjects) : undefined
-      );
+      // What the deletion left in this phone's calendar is said, and how to
+      // delete it; when everything went, nothing more (T-409).
+      const notes = [
+        deletedProjects > 0 ? t.profile.deleteAccountProjectsWarning(deletedProjects) : null,
+        calendarEventsLeft === null
+          ? t.profile.deleteAccountCalendarUnknown
+          : calendarEventsLeft > 0 ? t.profile.deleteAccountCalendarLeft(calendarEventsLeft) : null,
+      ].filter(Boolean);
+      Alert.alert(t.profile.deleteAccountSuccess, notes.length > 0 ? notes.join('\n\n') : undefined);
     } catch (err: any) {
       Alert.alert(t.profile.deleteAccountError, requestErrorMessage(t, err, t.auth.requestFailed));
     } finally {
@@ -376,6 +423,27 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </TouchableOpacity>
 
+          {/* Weekends busy by default, right under the week's first day (T-406). */}
+          <View style={styles.settingItem}>
+            <View style={[styles.settingLeft, { flex: 1 }]}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+                <Ionicons name="bed-outline" size={20} color={Colors.accent.purple} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.settingLabel}>{t.profile.weekendsBusy}</Text>
+                <Text testID="profile-weekends-days" style={styles.settingValue}>{t.profile.weekendsBusyDays(weekendDays)}</Text>
+              </View>
+            </View>
+            <Switch
+              testID="profile-weekends-busy"
+              value={weekendsBusy ?? true}
+              disabled={weekendsBusy === null || weekendsSaving}
+              onValueChange={handleWeekendsToggle}
+              trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
+              thumbColor={Colors.text.inverse}
+            />
+          </View>
+
           {/* Calendar Sync */}
           <TouchableOpacity testID="profile-calendar-sync" style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>
             <View style={styles.settingLeft}>
@@ -455,6 +523,29 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 <Ionicons name="bug-outline" size={20} color={Colors.accent.purple} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.reportBug}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+          </TouchableOpacity>
+
+          {/* The App Store's review page, whenever asked (T-410): not iOS's
+              rating window, which comes after a save only now and then
+              (reviewPrompt.ts) and is never ours to show. Should iOS refuse
+              to open it, the refusal is logged, not left unhandled (T-414). */}
+          <TouchableOpacity
+            testID="profile-rate-app"
+            style={styles.settingItem}
+            onPress={() => {
+              hapticLight();
+              Linking.openURL(APP_STORE_REVIEW_URL).catch((error) => {
+                logger.warn('[review] could not open the App Store review page', error);
+              });
+            }}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+                <Ionicons name="star-outline" size={20} color={Colors.accent.purple} />
+              </View>
+              <Text style={styles.settingLabel}>{t.profile.rateApp}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
@@ -658,6 +749,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 />
                 <Text style={[styles.timezoneLabel, { textAlign: 'center', marginBottom: 12 }]}>
                   {t.profile.deleteAccountWarning}
+                </Text>
+                <Text
+                  testID="delete-account-calendar"
+                  style={[styles.settingValue, { textAlign: 'center', color: Colors.text.secondary, marginBottom: 12 }]}
+                >
+                  {t.profile.deleteAccountCalendar}
                 </Text>
                 <Text style={[styles.settingValue, { textAlign: 'center', color: Colors.text.secondary }]}>
                   {t.profile.deleteAccountFinalWarning}

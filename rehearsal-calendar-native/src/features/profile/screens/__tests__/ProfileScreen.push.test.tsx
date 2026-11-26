@@ -27,6 +27,8 @@ const t = translations.en;
 const mockAuth: any = {};
 const mockRegisterPushToken = jest.fn();
 jest.mock('../../../../shared/services/api', () => ({
+  // The weekends switch (T-406) reads its state on focus.
+  availabilityAPI: { getWeekends: () => Promise.resolve({ data: { enabled: true, days: [6, 7] } }), setWeekends: jest.fn() },
   authAPI: {
     registerPushToken: (...args: any[]) => mockRegisterPushToken(...args),
     unregisterPushToken: jest.fn(() => Promise.resolve()),

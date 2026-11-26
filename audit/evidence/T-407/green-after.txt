@@ -1,0 +1,72 @@
+T-407 - green after: password AutoFill not allowed on the e2e simulator (noPasswordOffer, e2e/run.mjs)
+======================================================================================================
+
+The change: after boot the runner reads restrictedBool.allowPasswordAutoFill from
+the simulator's EffectiveUserSettings.plist; unless it is false, it shuts the
+device down, writes allowPasswordAutoFill = false into its UserSettings.plist
+(plutil) and boots it again. After that it asserts the effective value is false
+(the run stops, not as the machine's failure, if iOS ever stops reading it).
+The Settings toggle (com.apple.WebUI AutoFillPasswords) is still written.
+
+First run after the fix, from the base's state (UserSettings.plist = {}):
+$ npm run e2e -- e2e/flows/09-invite-during-onboarding.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] turning password AutoFill off and rebooting
+[e2e] installing the Debug app and running the flows
+[Passed] Invite link during onboarding (1m 27s)
+1/1 Flow Passed in 1m 27s
+[e2e] taps taken again (tap-and-see.yaml): 0
+UserSettings.plist: { "restrictedBool" => { "allowPasswordAutoFill" => { "value" => false } } }
+effective allowPasswordAutoFill: false
+e2e/out/artifacts/2026-11-25_051712: Invite link during onboarding | sheet at - | signalAutofillUIBringup 0 | APIDisabled 0
+
+The task's flows, each batch its own run (a fresh boot, its first flow the run's first sign-in):
+$ npm run e2e -- e2e/flows/09-invite-during-onboarding.yaml e2e/flows/09-onboarding.yaml e2e/flows/10-availability-days.yaml
+  (my command's 10-minute limit ended it in flow 10; 09-invite and 09-onboarding ran to their last step)
+  e2e/out/artifacts/2026-11-25_052345/2026-11-25_052433:
+    Invite link during onboarding          | sheet at - | bringup 0 | APIDisabled 0   (last step: Assert ".*Twelfth Night.*" is visible COMPLETED)
+    Onboarding to the end, nothing granted | sheet at - | bringup 0 | APIDisabled 0
+    Availability saves the day it changed  | sheet at - | bringup 0 | APIDisabled 0   (cut)
+$ npm run e2e -- e2e/flows/10-availability-days.yaml e2e/flows/100-first-launch-phone-language.yaml
+  [Passed] Availability saves the day it changed (3m 23s)
+  [Passed] First launch in the phone's language (48s)
+  2/2 Flows Passed in 4m 11s; taps taken again: 0
+$ npm run e2e -- e2e/flows/104-weekends-busy-by-default.yaml e2e/flows/12-change-email.yaml
+  [Passed] Weekends busy by default, and the profile's switch (1m 59s)
+  [Passed] Address change by emailed codes (2m 5s)
+  2/2 Flows Passed in 4m 4s; taps taken again: 0
+$ npm run e2e -- e2e/flows/60-onboarding-russian.yaml e2e/flows/09-onboarding.yaml
+  [Passed] Onboarding in Russian, the greeting on one line (3m 58s)
+  [Passed] Onboarding to the end, nothing granted (1m 53s)
+  2/2 Flows Passed in 5m 52s; taps taken again: 0
+$ npm run e2e -- e2e/flows/96-english-seconds-and-busy-read-right.yaml
+  [Passed] English seconds and busy people read right (2m 24s)
+$ npm run e2e -- e2e/flows/94-spanish-buttons-fit.yaml
+  [Passed] Spanish buttons read right and fit (5m 40s)
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml e2e/flows/32-onboarding-calendar-as-saved.yaml
+  [Passed] The profile's timezone, not the device's (3m 47s)
+  [Passed] Onboarding shows the calendar that was saved (1m 6s)
+  2/2 Flows Passed in 4m 54s; taps taken again: 0
+
+Once more on the commit itself (cc58acc; the device already set, so no reboot for it):
+$ npm run e2e -- e2e/flows/09-invite-during-onboarding.yaml
+  [Passed] Invite link during onboarding (2m 31s); taps taken again: 0
+  e2e/out/artifacts/2026-11-25_065137: sheet at - | bringup 0 | APIDisabled 0
+
+11 of 11 passed. In every flow's device log of these runs: no
+SFPasswordSavingRemoteViewController request, no signalAutofillUIBringup, no
+kAXErrorAPIDisabled (runs 2026-11-25_051712, _052345, _053346, _054127,
+_054918, _055926, _060901, _061844, _062444, _063440, _065137). On the base the same
+flows asked for the sheet 17 times in one green run (red-before.txt).
+
+The bug flow 09-invite guards (HN01, fix 9: an invite link that comes during
+onboarding waits for it to end, then opens the invitation) has not come back:
+its run went through onboarding-skip, "Settings Are in Your Profile" / OK, the
+join screen with "Twelfth Night", and the project in Projects.
+
+Unit tests of the runner (node --test e2e/__tests__/): 114 of 116 pass; the two
+that fail are in lock.test.mjs ("what a dead run left running is stopped before
+the lock is taken", "a pid that now belongs to another process is left alone"),
+which neither import run.mjs nor touch what changed: in this session's sandbox
+the test cannot kill the process group it starts ("... is still running, so the
+lock is not taken"). They fail the same run alone.

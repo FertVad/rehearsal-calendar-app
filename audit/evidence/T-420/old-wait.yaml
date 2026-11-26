@@ -1,0 +1,8 @@
+# T-420: flow 107's wait after the tap on "Rate Rehearsly" before the change
+# (75e9103, e2e/flows/107-rate-the-app.yaml), as a subflow - put in place of
+# e2e/subflows/safari-from-app.yaml for the probe's red run.
+appId: com.apple.mobilesafari
+---
+- extendedWaitUntil:
+    visible: ".*apps\\.apple\\.com.*"
+    timeout: 20000

@@ -1,0 +1,56 @@
+T-420 - red before. The probe (probe-leap-then-wait.yaml): flow 107's way to
+"Rate Rehearsly", a fresh Safari, the tap; then it waits for Safari's
+"Safari cannot open the page because the address is invalid." - apps.apple.com
+has sent Safari on to itms-appss:// - and only then runs the wait under test,
+e2e/subflows/safari-from-app.yaml. For this run the subflow held flow 107's
+old wait, verbatim (old-wait.yaml: ".*apps\.apple\.com.*", 20 s). 2026-11-26.
+
+$ npm run e2e -- ../audit/evidence/T-420/probe-leap-then-wait.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] Safari's first launch since the boot: 84746, its home readable; stopped
+[e2e] installing the Debug app and running the flows
+[Failed] T-420 probe - Rate Rehearsly, the wait after Safari has left the page (1m 58s) (Assertion is false: ".*apps\.apple\.com.*" is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+$ node order.mjs <2026-11-26_104908/T-420 probe ...>
+  10:52:06.523  SpringBoard: Rehearsly handed iOS https://apps.apple.com/app/id6830809401?action=write-review
+  10:52:11.286  Safari starts loading it (+4.76 s)
+  10:52:11.494  apps.apple.com hands Safari to itms-appss:// (+0.21 s into the load)
+  10:52:11.697  the load ends: didFailProvisionalLoad (code 102), no page committed
+  reads of Rehearsly's tree after the link: 4, the last done 10:52:11.707
+  reads of Safari: 122 - before the leap 0, across it 0, after it 122
+  10:52:08.464  maestro: Assert that "Safari cannot open the page because the address is invalid." is visible RUNNING
+  10:52:12.091  maestro: Assert that "Safari cannot open the page because the address is invalid." is visible COMPLETED
+  10:52:12.115  maestro: Assert that ".*apps\.apple\.com.*" is visible RUNNING
+  10:52:29.002  maestro: Assert that ".*apps\.apple\.com.*" is visible FAILED
+
+The old wait began after the leap and could not pass: the site's name is not
+on the screen once Safari has gone on to itms-appss:// (probe-red-104908/,
+the screen at the failure: the alert over "Search or enter website"). The
+order the night's run 082731 lost by chance, made every time.
+
+The same order in the monitor's red run, 2026-11-26_082731
+(red-082731/, from AUTODEV/notes/T-420-red; node order.mjs red-082731):
+  08:31:24.407  SpringBoard: Rehearsly handed iOS https://apps.apple.com/app/id6830809401?action=write-review
+  08:31:29.420  Safari starts loading it (+5.01 s)
+  08:31:29.637  apps.apple.com hands Safari to itms-appss:// (+0.22 s into the load)
+  08:31:30.059  the load ends: didFailProvisionalLoad (code 102), no page committed
+  reads of Rehearsly's tree after the link: 5, the last done 08:31:29.669
+  reads of Safari: 116 - before the leap 0, across it 0, after it 116
+  first read of Safari: 08:31:30.113-08:31:30.268
+  order: read only after the leap
+  08:31:26.097  maestro: Assert that ".*apps\.apple\.com.*" is visible RUNNING
+  08:31:46.789  maestro: Assert that ".*apps\.apple\.com.*" is visible FAILED
+
+and in 2026-11-26_084243, the run that passed:
+  08:46:40.517  SpringBoard: Rehearsly handed iOS https://apps.apple.com/app/id6830809401?action=write-review
+  08:46:45.255  Safari starts loading it (+4.74 s)
+  08:46:45.469  apps.apple.com hands Safari to itms-appss:// (+0.21 s into the load)
+  08:46:45.668  the load ends: didFailProvisionalLoad (code 102), no page committed
+  reads of Safari: 5 - before the leap 1, across it 0, after it 4
+    before: 08:46:45.344-08:46:45.607
+  order: read before the leap
+  08:46:42.493  maestro: Assert that ".*apps\.apple\.com.*" is visible RUNNING
+  08:46:45.752  maestro: Assert that ".*apps\.apple\.com.*" is visible COMPLETED

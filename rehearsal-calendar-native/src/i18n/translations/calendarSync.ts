@@ -82,7 +82,7 @@ export const ru = {
     explanation: 'Репетиции попадают в календарь телефона, а из него сюда — только часы, когда вы заняты, без названий событий.',
     // Permissions
     permissionDenied: 'Нет доступа',
-    permissionDeniedMessage: 'Для этого нужен доступ к календарю',
+    permissionDeniedMessage: 'Для этого нужен доступ к\u00a0календарю.',
     permissionRequired: 'Требуется доступ к календарю',
     grantPermission: 'Разрешить доступ',
     checkingPermissions: 'Проверка разрешений…',
@@ -134,7 +134,7 @@ export const en = {
     explanation: 'Rehearsals go into your phone’s calendar, and only the hours you are busy come back from it — never the details of your events.',
     // Permissions
     permissionDenied: 'Access Denied',
-    permissionDeniedMessage: 'Calendar access is required to use this feature',
+    permissionDeniedMessage: 'Calendar access is required to\u00a0use\u00a0this\u00a0feature.',
     permissionRequired: 'Calendar Access Required',
     grantPermission: 'Grant Access',
     checkingPermissions: 'Checking permissions…',
@@ -186,7 +186,7 @@ export const es = {
     explanation: 'Los ensayos pasan al calendario del teléfono; de él solo llegan las horas que tienes ocupadas, nunca el nombre de los eventos.',
     // Permissions
     permissionDenied: 'Acceso denegado',
-    permissionDeniedMessage: 'Se requiere acceso al calendario para usar esta función',
+    permissionDeniedMessage: 'Se requiere acceso\u00a0al\u00a0calendario para\u00a0usar\u00a0esta\u00a0función.',
     permissionRequired: 'Se necesita acceso al calendario',
     grantPermission: 'Conceder acceso',
     checkingPermissions: 'Comprobando permisos…',
@@ -240,10 +240,10 @@ export const de = {
     explanation: 'Proben landen in deiner Kalender-App. Von dort übernimmt Rehearsly nur, wann du beschäftigt bist – nie, wie deine Termine heißen.',
     // Permissions
     permissionDenied: 'Zugriff verweigert',
-    permissionDeniedMessage: 'Für diese Funktion ist Kalenderzugriff erforderlich',
+    permissionDeniedMessage: 'Für diese Funktion ist Kalenderzugriff\u00a0erforderlich.',
     permissionRequired: 'Kalenderzugriff erforderlich',
     grantPermission: 'Zugriff gewähren',
-    checkingPermissions: 'Berechtigungen werden geprüft …',
+    checkingPermissions: 'Berechtigungen werden geprüft\u00a0…',
     // Export Settings
     selectCalendar: 'Kalender auswählen',
     // Actions

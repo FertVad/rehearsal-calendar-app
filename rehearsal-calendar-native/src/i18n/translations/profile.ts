@@ -1,3 +1,6 @@
+/** Between the days of a weekend (T-408), and a number and its noun (T-413): they stay on one line. */
+const NBSP = '\u00a0';
+
 export interface ProfileTranslations {
   title: string;
   settings: string;
@@ -12,6 +15,16 @@ export interface ProfileTranslations {
   weekStart: string;
   weekStartMonday: string;
   weekStartSunday: string;
+  /**
+   * The switch under "Start Week On" (T-406): weekends marked busy by
+   * default, the days of the country of the profile's zone. The onboarding
+   * and the availability editor name it by this label.
+   */
+  weekendsBusy: string;
+  /** Under the switch: the days, "пт и сб" (weekendDayNames). */
+  weekendsBusyDays: (days: string) => string;
+  /** Joins the days' names: "пт и сб", "Fri and Sat", with no-break spaces (T-408). */
+  weekendDaysJoin: (...names: string[]) => string;
   about: string;
   version: string;
   help: string;
@@ -21,12 +34,23 @@ export interface ProfileTranslations {
   reportBugSend: string;
   reportBugSent: string;
   reportBugFailed: string;
+  /** The About row that opens the App Store's review page (T-410). */
+  rateApp: string;
   logout: string;
   deleteAccount: string;
   deleteAccountConfirm: string;
   deleteAccountWarning: string;
   deleteAccountProjectsWarning: (count: number) => string;
   deleteAccountFinalWarning: string;
+  /**
+   * The confirmation: what this phone added is removed; what other devices added
+   * may remain (T-409, T-413: a shared calendar is one calendar everywhere).
+   */
+  deleteAccountCalendar: string;
+  /** After the deletion: the app's events this phone's calendar still has, and how to delete them. */
+  deleteAccountCalendarLeft: (count: number) => string;
+  /** After the deletion: whether any are still there could not be found out. */
+  deleteAccountCalendarUnknown: string;
   deleteAccountSuccess: string;
   deleteAccountError: string;
   cancel: string;
@@ -54,6 +78,7 @@ export interface ProfileTranslations {
   languageError: string;
   timezoneError: string;
   weekStartError: string;
+  weekendsBusyError: string;
   // Changing the sign-in address with codes to both addresses (R3: HP01)
   changeEmail: string;
   changeEmailTitle: string;
@@ -87,6 +112,11 @@ export const ru = {
     weekStart: 'Начало недели',
     weekStartMonday: 'Понедельник',
     weekStartSunday: 'Воскресенье',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Выходные заняты',
+    weekendsBusyDays: (days: string) => `Ваши выходные: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}и${NBSP}${names[names.length - 1]}`),
     about: 'О приложении',
     version: 'Версия',
     help: 'Помощь',
@@ -96,6 +126,7 @@ export const ru = {
     reportBugSend: 'Отправить',
     reportBugSent: 'Спасибо! Отчёт отправлен',
     reportBugFailed: 'Не удалось отправить отчёт',
+    rateApp: 'Оценить Rehearsly',
     logout: 'Выйти из аккаунта',
     deleteAccount: 'Удалить аккаунт',
     deleteAccountConfirm: 'Удалить аккаунт?',
@@ -110,6 +141,21 @@ export const ru = {
           ? `Также удалены ${count} проекта, где вы были единственным администратором.`
           : `Также удалено ${count} проектов, где вы были единственным администратором.`,
     deleteAccountFinalWarning: 'Вы уверены, что хотите удалить свой аккаунт?',
+    deleteAccountCalendar: 'Rehearsly также уберёт из календаря репетиции, которые добавил на этом iPhone. Добавленные на других устройствах могут остаться.',
+    deleteAccountCalendarLeft: (count: number) => {
+      if (count === 1) {
+        return 'Из календаря этого iPhone не удалось убрать одну репетицию. Её можно найти в приложении «Календарь» по названию проекта и удалить вручную.';
+      }
+      // 21 репетицию; 2–4, 22–24 репетиции; 5–20, 25 репетиций. Only 1 itself
+      // is «Её»: after «21 репетицию» there are 21 events, so «Их».
+      const noun = count % 10 === 1 && count % 100 !== 11
+        ? 'репетицию'
+        : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)
+          ? 'репетиции'
+          : 'репетиций';
+      return `Из календаря этого iPhone не удалось убрать ${count}${NBSP}${noun}. Их можно найти в приложении «Календарь» по названию проекта и удалить вручную.`;
+    },
+    deleteAccountCalendarUnknown: 'Не удалось проверить, остались ли репетиции в календаре этого iPhone. Если остались, их можно найти в приложении «Календарь» по названию проекта и удалить вручную.',
     deleteAccountSuccess: 'Аккаунт удалён',
     deleteAccountError: 'Не удалось удалить аккаунт',
     cancel: 'Отменить',
@@ -137,6 +183,8 @@ export const ru = {
     languageError: 'Не удалось изменить язык',
     timezoneError: 'Не удалось изменить часовой пояс',
     weekStartError: 'Не удалось изменить начало недели',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'Не удалось сохранить настройку выходных',
     changeEmail: 'Сменить адрес',
     changeEmailTitle: 'Смена адреса',
     changeEmailSubtitle: (email: string) => `Мы пришлём по коду на ${email} и на новый адрес. Адрес сменится, когда вы введёте оба.`,
@@ -170,6 +218,11 @@ export const en = {
     weekStart: 'Start Week On',
     weekStartMonday: 'Monday',
     weekStartSunday: 'Sunday',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Mark Weekends as Busy',
+    weekendsBusyDays: (days: string) => `Your weekend: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}and${NBSP}${names[names.length - 1]}`),
     about: 'About',
     version: 'Version',
     help: 'Help',
@@ -179,6 +232,7 @@ export const en = {
     reportBugSend: 'Send',
     reportBugSent: 'Thanks! Report sent',
     reportBugFailed: 'Could not send the report',
+    rateApp: 'Rate Rehearsly',
     // "Sign Out", as the app says "Sign In".
     logout: 'Sign Out',
     deleteAccount: 'Delete Account',
@@ -189,7 +243,13 @@ export const en = {
         ? '1 project where you were the only admin was deleted too.'
         : `${count} projects where you were the only admin were deleted too.`,
     deleteAccountFinalWarning: 'Are you sure you want to delete your account?',
-    deleteAccountSuccess: 'Account deleted',
+    deleteAccountCalendar: 'Rehearsly will also remove from your calendar any rehearsals it added on this iPhone. Those it added on your other devices may remain.',
+    deleteAccountCalendarLeft: (count: number) => (count === 1
+      ? '1 rehearsal could not be removed from your calendar on this iPhone. You can delete it yourself in the Calendar app — its title starts with the project name.'
+      : `${count} rehearsals could not be removed from your calendar on this iPhone. You can delete them yourself in the Calendar app — their titles start with the project name.`),
+    deleteAccountCalendarUnknown: 'Rehearsly could not check whether any rehearsals it added on this iPhone are still in your calendar. If so, you can delete them yourself in the Calendar app — their titles start with the project name.',
+    // Title Case, as the other alerts' titles: "Email Changed" (T-413).
+    deleteAccountSuccess: 'Account Deleted',
     deleteAccountError: 'Could not delete your account',
     cancel: 'Cancel',
     confirmDelete: 'Yes, Delete',
@@ -216,6 +276,8 @@ export const en = {
     languageError: 'Could not change the language',
     timezoneError: 'Could not update the time zone',
     weekStartError: 'Could not change the first day of the week',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'Could not save your weekend setting',
     changeEmail: 'Change Email',
     changeEmailTitle: 'Change Email',
     changeEmailSubtitle: (email: string) => `We will send a code to ${email} and one to the new address. The address changes once you enter both.`,
@@ -249,6 +311,11 @@ export const es = {
     weekStart: 'Inicio de la semana',
     weekStartMonday: 'Lunes',
     weekStartSunday: 'Domingo',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Fines de semana ocupados',
+    weekendsBusyDays: (days: string) => `Tu fin de semana: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}y${NBSP}${names[names.length - 1]}`),
     about: 'Acerca de',
     version: 'Versión',
     help: 'Ayuda',
@@ -258,6 +325,7 @@ export const es = {
     reportBugSend: 'Enviar',
     reportBugSent: '¡Gracias! Informe enviado',
     reportBugFailed: 'No se pudo enviar el informe',
+    rateApp: 'Calificar Rehearsly',
     logout: 'Cerrar sesión',
     deleteAccount: 'Eliminar cuenta',
     deleteAccountConfirm: '¿Eliminar cuenta?',
@@ -267,6 +335,11 @@ export const es = {
         ? 'También se ha eliminado 1 proyecto que solo administrabas tú.'
         : `También se han eliminado ${count} proyectos que solo administrabas tú.`,
     deleteAccountFinalWarning: '¿Seguro que quieres eliminar tu cuenta?',
+    deleteAccountCalendar: 'Rehearsly quitará del calendario los ensayos que haya añadido desde este iPhone; los añadidos desde otros dispositivos pueden seguir ahí.',
+    deleteAccountCalendarLeft: (count: number) => (count === 1
+      ? 'No se pudo quitar 1 ensayo del calendario de este iPhone. Puedes borrarlo tú en la app Calendario: su título empieza por el nombre del proyecto.'
+      : `No se pudieron quitar ${count} ensayos del calendario de este iPhone. Puedes borrarlos tú en la app Calendario: el título de cada uno empieza por el nombre de su proyecto.`),
+    deleteAccountCalendarUnknown: 'No se pudo comprobar si quedan ensayos de la app en el calendario de este iPhone. Si quedan, puedes borrarlos tú en la app Calendario: el título de cada uno empieza por el nombre de su proyecto.',
     deleteAccountSuccess: 'Cuenta eliminada',
     deleteAccountError: 'No se pudo eliminar la cuenta',
     cancel: 'Cancelar',
@@ -294,6 +367,8 @@ export const es = {
     languageError: 'No se pudo cambiar el idioma',
     timezoneError: 'No se pudo actualizar la zona horaria',
     weekStartError: 'No se pudo actualizar el inicio de la semana',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'No se pudo guardar el ajuste de los fines de semana',
     changeEmail: 'Cambiar dirección',
     changeEmailTitle: 'Cambiar dirección',
     changeEmailSubtitle: (email: string) => `Enviaremos un código a ${email} y otro a la dirección nueva. La dirección cambiará cuando escribas los dos.`,
@@ -327,6 +402,11 @@ export const de = {
     weekStart: 'Wochenbeginn',
     weekStartMonday: 'Montag',
     weekStartSunday: 'Sonntag',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusy: 'Wochenenden belegt',
+    weekendsBusyDays: (days: string) => `Dein Wochenende: ${days}`,
+    weekendDaysJoin: (...names: string[]) =>
+      (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(`,${NBSP}`)}${NBSP}und${NBSP}${names[names.length - 1]}`),
     about: 'Über die App',
     version: 'Version',
     help: 'Hilfe',
@@ -336,6 +416,7 @@ export const de = {
     reportBugSend: 'Senden',
     reportBugSent: 'Danke! Bericht gesendet',
     reportBugFailed: 'Der Bericht konnte nicht gesendet werden',
+    rateApp: 'Rehearsly bewerten',
     logout: 'Abmelden',
     deleteAccount: 'Konto löschen',
     deleteAccountConfirm: 'Konto löschen?',
@@ -345,6 +426,11 @@ export const de = {
         ? '1 Projekt, das nur du verwaltet hast, wurde ebenfalls gelöscht.'
         : `${count} Projekte, die nur du verwaltet hast, wurden ebenfalls gelöscht.`,
     deleteAccountFinalWarning: 'Möchtest du dein Konto wirklich löschen?',
+    deleteAccountCalendar: 'Proben, die Rehearsly auf diesem iPhone in den Kalender eingetragen hat, werden daraus entfernt. Was die App auf deinen anderen Geräten eingetragen hat, bleibt möglicherweise im Kalender.',
+    deleteAccountCalendarLeft: (count: number) => (count === 1
+      ? '1 Probe konnte nicht aus dem Kalender dieses iPhones entfernt werden. Du kannst sie in der Kalender-App selbst löschen – der Titel beginnt mit dem Projektnamen.'
+      : `${count} Proben konnten nicht aus dem Kalender dieses iPhones entfernt werden. Du kannst sie in der Kalender-App selbst löschen – der Titel beginnt jeweils mit dem Projektnamen.`),
+    deleteAccountCalendarUnknown: 'Es ließ sich nicht prüfen, ob im Kalender dieses iPhones noch von Rehearsly eingetragene Proben stehen. Falls ja, kannst du sie in der Kalender-App selbst löschen – der Titel beginnt jeweils mit dem Projektnamen.',
     deleteAccountSuccess: 'Konto gelöscht',
     deleteAccountError: 'Konto konnte nicht gelöscht werden',
     cancel: 'Abbrechen',
@@ -372,6 +458,8 @@ export const de = {
     languageError: 'Sprache konnte nicht geändert werden',
     timezoneError: 'Zeitzone konnte nicht aktualisiert werden',
     weekStartError: 'Wochenbeginn konnte nicht aktualisiert werden',
+    // T-406: new, for the native speakers' reading.
+    weekendsBusyError: 'Die Einstellung für die Wochenenden konnte nicht gespeichert werden',
     changeEmail: 'Adresse ändern',
     changeEmailTitle: 'Adresse ändern',
     changeEmailSubtitle: (email: string) => `Wir schicken einen Code an ${email} und einen an die neue Adresse. Die Adresse ändert sich, sobald du beide eingibst.`,

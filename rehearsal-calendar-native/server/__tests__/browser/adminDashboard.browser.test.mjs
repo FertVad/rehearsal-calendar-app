@@ -7,6 +7,9 @@ import { chromium } from 'playwright';
 import { generateAdminPageHTML } from '../../routes/admin/dashboardPage.js';
 import { securityHeaders } from '../../middleware/securityHeaders.js';
 import { closeOwnedBrowserFixture, trackOwnedHttpServer } from './ownedFixture.mjs';
+import { quoteName } from '../../../shared/quoteName.cjs';
+
+const NB = '\u00a0';
 
 // This fixture never imports server.js, .env or the database. It serves the real
 // admin document/assets with synthetic API responses in an isolated browser.
@@ -171,8 +174,8 @@ test('untrusted admin API values remain literal text, even without CSP', { timeo
   assert.equal(await page.evaluate(() => window.__xss), undefined);
   assert.equal(await page.locator('#users-body td').nth(0).textContent(), `${html} ${svg}`);
   assert.equal(await page.locator('#users-body td').nth(1).textContent(), link);
-  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '2026-11-24');
-  assert.equal(await page.locator('#users-body td').nth(5).textContent(), `invited into “${html}” (owner ${svg})`);
+  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '24.11.2026');
+  assert.equal(await page.locator('#users-body td').nth(5).textContent(), `Приглашение в ${quoteName(html, 'ru')} (владелец ${svg})`);
   assert.equal(await page.locator('#users-body td').nth(7).textContent(), `en / ${svg}`);
   // The analytics carry project, owner, language, zone and type names as text.
   await page.locator('#analytics-body .analytics-block').first().waitFor();
@@ -183,10 +186,10 @@ test('untrusted admin API values remain literal text, even without CSP', { timeo
   assert.equal(await page.locator('#bugs-body td').nth(0).textContent(), report.name);
   assert.equal(await page.locator('#bugs-body td').nth(1).textContent(), report.message);
   assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), report.screen);
-  assert.deepEqual(await page.locator('.card-value').allTextContents(), [html, `${html}%`, html, link]);
+  assert.deepEqual(await page.locator('.card-value').allTextContents(), [html, `${html}${NB}%`, html, link]);
   assert.equal(await page.locator('[onclick], [onerror], [onload], script:not([src])').count(), 0);
   const patched = page.waitForResponse(r => r.request().method() === 'PATCH');
-  await page.locator('#bugs-body').getByRole('button', { name: 'fixed', exact: true }).click();
+  await page.locator('#bugs-body').getByRole('button', { name: 'Исправлена', exact: true }).click();
   assert.equal((await patched).status(), 200);
   await page.locator('.status-btn-fixed.active').waitFor();
   assert.equal(state.statuses.get(report.id), 'fixed', 'ID stays data in a closure and an encoded path segment');
@@ -239,13 +242,13 @@ test('the sign-in figure is named for sign-ins, not churn or inactivity', { time
   const { page, errors } = await fixture(t);
   await waitForDashboard(page);
   const figure = page.locator('#stats-cards .card').nth(1);
-  assert.equal(await figure.locator('.card-label').textContent(), 'No sign-in for 30 days');
-  assert.equal(await figure.locator('.card-value').textContent(), '10%');
+  assert.equal(await figure.locator('.card-label').textContent(), `Не входили 30${NB}дней`);
+  assert.equal(await figure.locator('.card-value').textContent(), `10${NB}%`);
   const note = await figure.locator('.card-sub').textContent();
-  assert.match(note, /^Users: 6 /);
-  assert.match(note, /not a measure of use/);
+  assert.match(note, /^Пользователей: 6 /);
+  assert.match(note, /не показатель использования/);
   const cards = (await page.locator('#stats-cards').textContent()).toLowerCase();
-  assert.doesNotMatch(cards, /churn|inactive/);
+  assert.doesNotMatch(cards, /churn|inactive|отток|неактивн/);
   assert.deepEqual(errors, []);
 });
 
@@ -254,22 +257,22 @@ test('the sign-in figure is named for sign-ins, not churn or inactivity', { time
 test('use of the app shows its figures, or "no data" without migration 016', { timeout: 30000 }, async t => {
   const { page, state, errors } = await fixture(t);
   await waitForDashboard(page);
-  const block = page.locator('#analytics-body .analytics-block', { has: page.getByRole('heading', { name: 'Use of the app' }) });
+  const block = page.locator('#analytics-body .analytics-block', { has: page.getByRole('heading', { name: 'Использование приложения' }) });
   await block.waitFor();
-  assert.match(await block.locator('.metric').textContent(), /^Active today: 1 \(25%\) · last 7 days: 2 \(50%\) · last 30 days: 3 \(75%\)$/);
+  assert.match(await block.locator('.metric').textContent(), /^Активных сегодня: 1 \(25\u00a0%\) · за 7\u00a0дней: 2 \(50\u00a0%\) · за 30\u00a0дней: 3 \(75\u00a0%\)$/);
   const cells = await block.locator('td').allTextContents();
-  for (const value of ['2026-11-16', '1 of 2 (50%)', '42', 'unknown', 'Hamlet', 'Olga O.', '6', '3']) {
+  for (const value of ['16.11.2026', `1 из 2 (50${NB}%)`, '42', 'Не указана', 'Hamlet', 'Olga O.', '6', '3']) {
     assert.ok(cells.includes(value), `use of the app shows ${value}`);
   }
-  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '2026-11-24');
+  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '24.11.2026');
 
   state.recorded = false;
   const reloaded = page.waitForResponse(r => new URL(r.url()).pathname === '/admin/api/analytics');
-  await page.getByRole('button', { name: 'Refresh' }).click();
+  await page.getByRole('button', { name: 'Обновить' }).click();
   await reloaded;
-  await page.waitForFunction(() => document.querySelector('#analytics-body')?.textContent.includes('No data: migration 016 is not applied.'));
+  await page.waitForFunction(() => document.querySelector('#analytics-body')?.textContent.includes('Нет данных: миграция\u00a0016 не применена.'));
   assert.equal(await block.locator('td').count(), 0, 'no table of zeros');
-  await page.waitForFunction(() => document.querySelectorAll('#users-body tr')[0]?.children[4]?.textContent === 'no data: migration 016 not applied');
+  await page.waitForFunction(() => document.querySelectorAll('#users-body tr')[0]?.children[4]?.textContent === 'Нет данных: миграция\u00a0016 не применена');
   assert.deepEqual(errors, []);
 });
 
@@ -307,44 +310,50 @@ test('the filters reach every statistics request, and the service switch only th
 test('login, pagination, status, refresh, empty states and logout work under production CSP', { timeout: 30000 }, async t => {
   const { page, state, errors } = await fixture(t, { signedIn: false });
   await page.locator('#login-screen').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  // An empty field is asked for before any request; a wrong password's
+  // answer carries markup, and the page shows its own words, never the server's (T-419).
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await page.locator('#login-error').waitFor({ state: 'visible' });
-  assert.equal(await page.locator('#login-error').textContent(), html);
+  assert.equal(await page.locator('#login-error').textContent(), 'Введите пароль.');
+  assert.equal(state.requests.length, 0);
+  await page.locator('#password-input').fill('wrong-password');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('#login-error').textContent === 'Неверный пароль.');
   assert.equal(await page.locator('[data-xss-probe]').count(), 0);
   await page.locator('#password-input').fill('synthetic-password');
   await page.locator('#password-input').press('Enter');
   await waitForDashboard(page);
-  assert.deepEqual(await page.locator('.card-value').allTextContents(), ['61', '10%', '2', '4']);
+  assert.deepEqual(await page.locator('.card-value').allTextContents(), ['61', `10${NB}%`, '2', '4']);
   if (process.env.ADMIN_BROWSER_SCREENSHOT) {
     await page.screenshot({ path: process.env.ADMIN_BROWSER_SCREENSHOT });
   }
-  assert.equal(await page.locator('#users-body td').nth(3).textContent(), '-');
-  assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), '-');
+  assert.equal(await page.locator('#users-body td').nth(3).textContent(), '—');
+  assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), '—');
 
   for (const [id, firstCell] of [['users', 'User'], ['bugs', 'User']]) {
     const pagination = page.locator('#' + id + '-pagination');
     const first = page.locator('#' + id + '-body tr').first().locator('td').first();
-    assert.equal(await pagination.locator('.page-label').textContent(), 'Page 1 of 3');
-    assert.equal(await pagination.getByRole('button', { name: 'Prev' }).count(), 0);
+    assert.equal(await pagination.locator('.page-label').textContent(), 'Страница 1 из 3');
+    assert.equal(await pagination.getByRole('button', { name: 'Предыдущая' }).count(), 0);
     for (const [pageNumber, firstId] of [[2, 31], [3, 61]]) {
-      await pagination.getByRole('button', { name: 'Next' }).click();
+      await pagination.getByRole('button', { name: 'Следующая' }).click();
       await page.waitForFunction(({ id, firstId }) =>
         document.querySelector('#' + id + '-body td').textContent === 'User ' + firstId, { id, firstId });
       assert.equal(await first.textContent(), `${firstCell} ${firstId}`);
-      assert.equal(await pagination.locator('.page-label').textContent(), `Page ${pageNumber} of 3`);
+      assert.equal(await pagination.locator('.page-label').textContent(), `Страница ${pageNumber} из 3`);
     }
-    assert.equal(await pagination.getByRole('button', { name: 'Next' }).count(), 0);
-    await pagination.getByRole('button', { name: 'Prev' }).click();
+    assert.equal(await pagination.getByRole('button', { name: 'Следующая' }).count(), 0);
+    await pagination.getByRole('button', { name: 'Предыдущая' }).click();
     await page.waitForFunction(id => document.querySelector('#' + id + '-body td').textContent === 'User 31', id);
   }
 
   // The callback must keep the selected row's ID and retain the current page.
-  for (const [label, status] of [['in progress', 'in_progress'], ['fixed', 'fixed'], ['new', 'new']]) {
+  for (const [label, status] of [['В работе', 'in_progress'], ['Исправлена', 'fixed'], ['Новая', 'new']]) {
     const row = page.locator('#bugs-body tr').first();
     await row.getByRole('button', { name: label, exact: true }).click();
     await row.locator('.status-btn-' + status + '.active').waitFor();
     assert.equal(state.statuses.get('31'), status);
-    assert.equal(await page.locator('#bugs-pagination .page-label').textContent(), 'Page 2 of 3');
+    assert.equal(await page.locator('#bugs-pagination .page-label').textContent(), 'Страница 2 из 3');
   }
   const patches = state.requests.filter(r => r.method === 'PATCH');
   assert.deepEqual(patches.map(r => [r.path, r.body.status]), [
@@ -354,17 +363,17 @@ test('login, pagination, status, refresh, empty states and logout work under pro
   ]);
   assert.ok(state.requests.every(r => r.authorized));
 
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('#users-body td').textContent === 'User 1'
     && document.querySelector('#bugs-body td').textContent === 'User 1');
   await page.reload();
   await waitForDashboard(page);
   state.empty = true;
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await page.getByText('No users', { exact: true }).waitFor();
-  await page.getByText('No bug reports', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
+  await page.getByText('Пользователей нет', { exact: true }).waitFor();
+  await page.getByText('Отчётов об ошибках нет', { exact: true }).waitFor();
   assert.deepEqual(await page.locator('#users-pagination, #bugs-pagination').allTextContents(), ['', '']);
-  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click();
   await page.locator('#login-screen').waitFor({ state: 'visible' });
   assert.equal(await page.evaluate(() => localStorage.getItem('admin_token')), null);
   await page.reload();
@@ -372,10 +381,10 @@ test('login, pagination, status, refresh, empty states and logout work under pro
   assert.equal(await page.locator('#dashboard').isVisible(), false);
   state.empty = false;
   await page.locator('#password-input').fill('synthetic-password');
-  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await waitForDashboard(page);
   const beforePatch = state.requests.filter(r => r.method === 'PATCH').length;
-  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'fixed', exact: true }).press('Enter');
+  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'Исправлена', exact: true }).press('Enter');
   await page.locator('#bugs-body tr').first().locator('.status-btn-fixed.active').waitFor();
   assert.equal(state.requests.filter(r => r.method === 'PATCH').length, beforePatch + 1);
   assert.equal(state.statuses.get('1'), 'fixed');
@@ -387,7 +396,7 @@ test('401 returns to login and removes the stored credential', { timeout: 30000 
   const { page, state, errors } = await fixture(t);
   await waitForDashboard(page);
   state.unauthorized = true;
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await page.locator('#login-screen').waitFor({ state: 'visible' });
   assert.equal(await page.evaluate(() => localStorage.getItem('admin_token')), null);
   assert.equal(await page.locator('#dashboard').isVisible(), false);

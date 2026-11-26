@@ -34,7 +34,10 @@ body {
   font-weight: 600;
 }
 .btn-primary:hover { opacity: 0.9; }
-.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+/* The users' table is nine columns of Russian words that do not break (dates
+   дд.мм.гггг, addresses, zones, «РЕГИСТРАЦИЯ»): its least width is about 1120 px,
+   so a laptop of 1280 px and more shows it whole (T-419). */
+.container { max-width: 1320px; margin: 0 auto; padding: 24px; }
 
 /* Login */
 .login-wrap {
@@ -131,7 +134,7 @@ table {
 }
 th {
   text-align: left;
-  padding: 10px 14px;
+  padding: 10px 12px;
   background: #21262d;
   color: #8b949e;
   font-weight: 500;
@@ -140,7 +143,7 @@ th {
   letter-spacing: 0.3px;
 }
 td {
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-top: 1px solid rgba(139,148,158,0.1);
 }
 tr:hover td { background: rgba(139,148,158,0.04); }
@@ -200,7 +203,7 @@ tr:hover td { background: rgba(139,148,158,0.04); }
 .block-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #e6edf3; }
 .table-scroll { overflow-x: auto; }
 .mini-table { margin-top: 10px; }
-.steps-cell { color: #8b949e; font-size: 12px; min-width: 260px; }
+.steps-cell { color: #8b949e; font-size: 12px; min-width: 220px; }
 .service-row td { color: #8b949e; font-style: italic; }
 
 .login-button { width: 100%; padding: 10px; }

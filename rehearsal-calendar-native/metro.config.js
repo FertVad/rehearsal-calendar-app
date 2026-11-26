@@ -36,12 +36,15 @@ if (process.env.REHEARSLY_E2E === '1') {
   // a phone (e2e/device/pushDevice.js; cause fix 20, review 3). Imports from
   // e2e/device itself get the real modules. expo-calendar likewise, the real
   // one unless a flow launches the app with a calendar that refuses an event
-  // (e2e/device/expo-calendar.js; flow 92, T-256).
+  // (e2e/device/expo-calendar.js; flow 92, T-256). And expo-store-review:
+  // iOS's rating window, which a Debug build shows on every request, never
+  // asked for unless a flow launches the app for it (flow 107, T-410).
   const device = path.join(__dirname, 'e2e', 'device');
   const standIns = {
     'expo-calendar': path.join(device, 'expo-calendar.js'),
     'expo-device': path.join(device, 'expo-device.js'),
     'expo-notifications': path.join(device, 'expo-notifications.js'),
+    'expo-store-review': path.join(device, 'expo-store-review.js'),
   };
   // And the app itself, as index.ts takes it: the real App, which tells the
   // App Store preview's recorder where its touches land only when a launch

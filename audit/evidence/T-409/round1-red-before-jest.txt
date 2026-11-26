@@ -1,0 +1,26 @@
+T-409, review round 1, remark 1 — red before.
+New test in AuthContext.deleteAccountCalendar.test.tsx run against
+src/contexts/AuthContext.tsx and src/shared/services/calendarSync.ts at f92edd2
+(git restore --source=HEAD), 2026-11-25:
+
+$ npx jest --selectProjects frontend --runTestsByPath src/contexts/__tests__/AuthContext.deleteAccountCalendar.test.tsx --silent
+FAIL frontend src/contexts/__tests__/AuthContext.deleteAccountCalendar.test.tsx
+  ● puts Auto Sync back as it was when DELETE /me fails after the removal
+    expect(received).toMatchObject(expected)
+    - Expected  - 6
+    + Received  + 4
+      Object {
+        "exportCalendarId": "cal-1",
+    -   "exportEnabled": true,
+    -   "importCalendarIds": Array [
+    -     "cal-1",
+    -   ],
+    -   "importEnabled": true,
+    -   "importInterval": "always",
+    +   "exportEnabled": false,
+    +   "importCalendarIds": Array [],
+    +   "importEnabled": false,
+    +   "importInterval": "manual",
+      }
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total

@@ -6,11 +6,12 @@ import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { createLocalTimestampConverter, timestampToISO } from '../../utils/timezone.js';
 import { consumeMemberAvailabilityBudget } from '../../services/memberAvailabilityRateLimit.js';
 import { limits, positiveId, parseMemberAvailabilityQuery, expandMemberAvailabilityDates, availabilityBudgetError } from '../../services/memberAvailabilityQuery.js';
-import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
+import { DEFAULT_TIMEZONE, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
 import { notifyRoleChanged, notifyMemberRemoved, notifyMemberLeft, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
 import { fullName } from '../../utils/names.js';
 import { takeOffProjectRehearsals } from '../../services/rehearsals/roster.js';
 import { lockProject } from '../../services/rehearsals/projectLock.js';
+import { ensureWeekendDefaults } from '../../services/availability/weekendDefaults.js';
 
 const router = Router();
 
@@ -64,6 +65,12 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
     }
     if (targetUserIds.length === 0) return res.json({ availability: [] });
 
+    // Each member's weekends busy by default, a year ahead, before they are
+    // read (T-406): a member who has not opened the app since is busy on their
+    // weekends here too. Only the bounded, authorized roster above; it never
+    // fails the read (services/availability/weekendDefaults.js).
+    await ensureWeekendDefaults(targetUserIds);
+
     // All authorization and cardinality budgets precede date expansion.
     const dates = expandMemberAvailabilityDates(window);
     const dateDays = dates.map(date => ({ date, day: Date.parse(`${date}T00:00:00Z`) }));
@@ -86,11 +93,14 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
     // Batch fetch all users info (no need for individual timezones anymore).
     // No email: the planner is the only reader and never used it, so sending it
     // handed every member of a project every other member's address for nothing.
+    // hasData is whether they ever recorded anything themselves: the weekends
+    // the server marks busy for everyone (T-406) are not that, and the planner
+    // still says who has entered nothing — free on every weekday.
     const usersQuery = `SELECT u.id,
       substr(u.first_name, 1, 4097) AS first_name, substr(u.last_name, 1, 4097) AS last_name,
-      EXISTS (SELECT 1 FROM native_user_availability a WHERE a.user_id = u.id) AS has_data
+      EXISTS (SELECT 1 FROM native_user_availability a WHERE a.user_id = u.id AND a.source <> $${targetUserIds.length + 1}) AS has_data
       FROM native_users u WHERE u.id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
-    const users = await db.all(usersQuery, targetUserIds);
+    const users = await db.all(usersQuery, [...targetUserIds, AVAILABILITY_SOURCES.WEEKEND]);
     if (users.some(u => u.first_name?.length > 4096 || u.last_name?.length > 4096)) throw availabilityBudgetError();
     const usersMap = new Map(users.map(u => [Number(u.id), u]));
     const toLocal = createLocalTimestampConverter(requesterTimezone);
