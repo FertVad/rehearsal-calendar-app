@@ -1,0 +1,12 @@
+$ npm run e2e -- e2e/flows/42-details-count-projects-late.yaml e2e/flows/66-screen-headers.yaml e2e/flows/78-admin-sees-rehearsal-not-on.yaml e2e/flows/32-onboarding-calendar-as-saved.yaml
+[e2e] seeding
+[e2e] installing the Debug app and running the flows
+
+[Passed] Details count when the projects come late (1m 16s)
+[Passed] Screen headers, one style (1m 5s)
+[Passed] An admin sees a rehearsal they are not on, marked so (40s)
+[Passed] Onboarding shows the calendar that was saved (2m 2s)
+
+4/4 Flows Passed in 5m 4s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

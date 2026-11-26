@@ -7,7 +7,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES'].includes(scenario));
+assert.ok(['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES', 'T293_ADMIN', 'T294_USAGE', 'T294_UPGRADE', 'T406_UPGRADE'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -44,7 +44,7 @@ await control.query('SET search_path TO r0_fixture');
 
 // Schema/migration suites start with the empty owned application schema; they
 // never mistake the diagnostic subset below for canonical provisioning.
-if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES'].includes(scenario)) {
+if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS', 'T278_NOTICES', 'T293_ADMIN', 'T294_USAGE', 'T294_UPGRADE', 'T406_UPGRADE'].includes(scenario)) {
   target.searchParams.set('options', '-c search_path=r0_fixture');
   process.env.DATABASE_URL = target.href;
   try {
@@ -66,6 +66,14 @@ if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PU
                 ? await (await import('./r7Import.mjs')).probeR7Import({ connectionString: target.href, control, allowedPorts })
                 : scenario === 'T278_NOTICES'
                   ? await (await import('./t278Notices.mjs')).probeT278Notices({ connectionString: target.href, control, allowedPorts })
+                : scenario === 'T293_ADMIN'
+                  ? await (await import('./t293Admin.mjs')).probeT293Admin({ connectionString: target.href, control, allowedPorts })
+                : scenario === 'T294_USAGE'
+                  ? await (await import('./t294Usage.mjs')).probeT294Usage({ connectionString: target.href, control, allowedPorts })
+                : scenario === 'T294_UPGRADE'
+                  ? await (await import('./t294Upgrade.mjs')).probeT294Upgrade({ connectionString: target.href, control, allowedPorts })
+                : scenario === 'T406_UPGRADE'
+                  ? await (await import('./t406Upgrade.mjs')).probeT406Upgrade({ connectionString: target.href, control, allowedPorts })
                 : await (await import('./r8Reminders.mjs')).probeR8Reminders({ connectionString: target.href, control, allowedPorts });
     assert.equal(deniedConnections, 0, 'A schema/migration contract attempted an external connection');
     console.log(JSON.stringify({ scenario, ...result, externalConnections: deniedConnections }));
@@ -84,9 +92,12 @@ await control.query(operationBudgetMigration);
 // has group 010's actual tables as well; the runtime does not work without them.
 await control.query(await readFile(new URL('../../migrations/010-email-verification.sql', import.meta.url), 'utf8'));
 if (scenario === 'A02') {
-  // The diagnostic subset needs this real column to authorize the admin users
-  // listing after bcrypt login.
-  await control.query('ALTER TABLE native_users ADD COLUMN last_login_at TIMESTAMPTZ');
+  // The diagnostic subset needs the real columns and tables the admin users
+  // listing reads (T-293: source, sign-in, steps) to authorize it after bcrypt
+  // login. Shapes as in database/init-native-schema.sql.
+  await control.query(`ALTER TABLE native_users ADD COLUMN last_login_at TIMESTAMPTZ,
+    ADD COLUMN password_hash VARCHAR, ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE`);
+  await (await import('./adminListingFixture.mjs')).addAdminListingSchema(control);
 }
 if (scenario === 'B03') {
   // Apply only B03's actual additive migration, twice, against this owned

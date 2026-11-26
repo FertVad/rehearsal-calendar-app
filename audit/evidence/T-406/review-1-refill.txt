@@ -1,0 +1,42 @@
+T-406, review round 1: the switch turned on after a change of zone left the old country's weekend days.
+
+Test (through the routes): server/__tests__/routes/weekendDefaults.test.js,
+"a change of zone to another country › the switch turned on right after it, with no read between,
+leaves no day of the old country's weekend": GET /availability in Asia/Jerusalem, PUT /api/auth/me
+Europe/Moscow, PUT /availability/weekends {enabled: true}, GET /availability; the weekdays of the
+defaults after today must be [6, 7].
+
+RED before, on c8b1b5c's weekendDefaults.js (the new test only):
+
+  a change of zone to another country
+    ✓ moves the defaults from today on; a Saturday the person emptied stays empty (51 ms)
+    ✕ the switch turned on right after it, with no read between, leaves no day of the old country's weekend (55 ms)
+
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 0
+    + Received  + 1
+      Set {
+    +   5,
+        6,
+        7,
+      }
+    > 283 |     expect(new Set(after.map(isoWeekday))).toEqual(new Set([6, 7]));
+
+  Tests:       1 failed, 16 passed, 17 total
+
+The cause: layOut with refill set `laid` to null, so the move branch (user.days !== key) never ran;
+new days were added, weekends_days was overwritten, and the old weekday rows stayed.
+
+The fix: layOut with refill first deletes the defaults from today on
+(deleteWeekendDefaults(tx, userId, { from: today })), then lays out the zone's weekend — "on" always
+means the weekends of the current zone. Same transaction, same row lock; the person's own marks and
+past days are not touched (deletion is by source 'weekend' and date >= today).
+
+GREEN after:
+
+  weekendDefaults.test.js, weekendTable.test.js, privacyWeekends.test.js
+  Test Suites: 3 passed, 3 total
+  Tests:       38 passed, 38 total
+
+  Full server Jest: Tests: 8 failed, 1489 passed, 1497 total — the 8 are runtimeStartup.test.js,
+  failing as on the base (green.txt: "backend 1488 and runtimeStartup as on the base"); 1489 = 1488 + the new test.

@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { inspectSchema } from '../../database/schema/inspect.mjs';
-import { manifest } from '../../database/schema/manifest.mjs';
+import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
 
 // Rehearsal reminders on PostgreSQL (R8, cause fix 5: GR01, GR02, GR03, GR05,

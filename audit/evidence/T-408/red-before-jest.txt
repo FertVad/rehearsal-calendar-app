@@ -1,0 +1,100 @@
+T-408 — red before. The tests of T-408 run on the code of the task's base,
+3043d55/00519dd (translations, dateFormat.ts, OnboardingStep.tsx,
+WeekendsScreen.tsx, privacy.html as on the base; only the new helper
+src/shared/utils/settingPath.ts present, so the new suite runs and fails on
+its content, not on a missing module).
+
+$ npx jest --selectProjects frontend --silent src/i18n/__tests__/weekendsNatives.test.ts src/shared/utils/__tests__/dateFormat.test.ts src/features/onboarding/components src/features/onboarding/screens/__tests__/WeekendsScreen.test.tsx src/i18n/__tests__/proofreadingEdits.test.ts src/i18n/__tests__/secondReading.test.ts src/i18n/__tests__/sentenceEnd.test.ts
+
+  ● asks a Russian speaker in Israel about Friday and Saturday, and says where to change it later
+  ● asks about Saturday and Sunday in Moscow, and in a zone of no country
+  ● inside a sentence, whatever case Intl gives (T-408) › Russian and Spanish write the day in lower case, English and German as Intl does
+  ● keeps a title on one line unless the step lets it wrap, made smaller only past its lines
+  ● lets the question wrap to three lines
+  ● names the days in each language from the date formats (T-028)
+  ● T-256: every edit of the native speakers is in, and the old wording is gone › de
+  ● T-256: every edit of the native speakers is in, and the old wording is gone › en
+  ● T-256: every edit of the native speakers is in, and the old wording is gone › ru
+  ● T-261: the strings the second reading changed › a full stop after the last sentence
+  ● the weekends in de, as the native speaker wrote them (T-408) › П1: the error says the setting was not saved, not that the days were not moved
+  ● the weekends in de, as the native speaker wrote them (T-408) › П2: the editor's hint — the day changes as any day, the default goes off for all weekends
+  ● the weekends in de, as the native speaker wrote them (T-408) › П3: "Skip" names the weekends among what is set later in the Profile
+  ● the weekends in de, as the native speaker wrote them (T-408) › the days in the question do not break inside: no-break spaces in the join
+  ● the weekends in de, as the native speaker wrote them (T-408) › the onboarding step
+  ● the weekends in en, as the native speaker wrote them (T-408) › П1: the error says the setting was not saved, not that the days were not moved
+  ● the weekends in en, as the native speaker wrote them (T-408) › П2: the editor's hint — the day changes as any day, the default goes off for all weekends
+  ● the weekends in en, as the native speaker wrote them (T-408) › П3: "Skip" names the weekends among what is set later in the Profile
+  ● the weekends in en, as the native speaker wrote them (T-408) › the days in the question do not break inside: no-break spaces in the join
+  ● the weekends in en, as the native speaker wrote them (T-408) › the onboarding step
+  ● the weekends in en, as the native speaker wrote them (T-408) › the switch's label, the path to it with no break inside
+  ● the weekends in es, as the native speaker wrote them (T-408) › П1: the error says the setting was not saved, not that the days were not moved
+  ● the weekends in es, as the native speaker wrote them (T-408) › П2: the editor's hint — the day changes as any day, the default goes off for all weekends
+  ● the weekends in es, as the native speaker wrote them (T-408) › П3: "Skip" names the weekends among what is set later in the Profile
+  ● the weekends in es, as the native speaker wrote them (T-408) › the days in the question do not break inside: no-break spaces in the join
+  ● the weekends in es, as the native speaker wrote them (T-408) › the onboarding step
+  ● the weekends in ru, as the native speaker wrote them (T-408) › П1: the error says the setting was not saved, not that the days were not moved
+  ● the weekends in ru, as the native speaker wrote them (T-408) › П2: the editor's hint — the day changes as any day, the default goes off for all weekends
+  ● the weekends in ru, as the native speaker wrote them (T-408) › П3: "Skip" names the weekends among what is set later in the Profile
+  ● the weekends in ru, as the native speaker wrote them (T-408) › the days in the question do not break inside: no-break spaces in the join
+  ● the weekends in ru, as the native speaker wrote them (T-408) › the onboarding step
+  ● writes the days inside the question in lower case whatever case iOS gives them
+FAIL frontend src/features/onboarding/components/__tests__/OnboardingStep.test.tsx
+FAIL frontend src/features/onboarding/screens/__tests__/WeekendsScreen.test.tsx
+FAIL frontend src/i18n/__tests__/proofreadingEdits.test.ts
+FAIL frontend src/i18n/__tests__/secondReading.test.ts
+FAIL frontend src/i18n/__tests__/weekendsNatives.test.ts
+FAIL frontend src/shared/utils/__tests__/dateFormat.test.ts
+PASS frontend src/i18n/__tests__/sentenceEnd.test.ts
+Test Suites: 6 failed, 1 passed, 7 total
+Tests:       32 failed, 70 passed, 102 total
+
+(Passing on the base, as they should: ru/es/de "the switch's label" — those
+labels did not change; "no weekends text has a line break"; the iOS-form
+"on its own the day keeps its capital"; sentenceEnd — its only change is a
+sample's path, and on the base the English hint ended with no full stop, so
+the rule did not ask the others; after, every hint ends with one.)
+
+$ cd server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/utils/privacyWeekends.test.js __tests__/utils/privacyProcessors.test.js --silent
+
+  ● the policy in de (T-406, T-408) › М1: only the weekly weekend of the zone's country is marked, not holidays
+  ● the policy in de (T-406, T-408) › М2: for the next 12 months, not "a year before"
+  ● the policy in de (T-406, T-408) › М3: Rehearsly marks them, not the app
+  ● the policy in de (T-406, T-408) › М4: off removes the defaults from today on at once; earlier days and own marks stay
+  ● the policy in de (T-406, T-408) › М5: the switch is set for everyone, not detected
+  ● the policy in de (T-406, T-408) › М6: the time zone row says what the switch is for
+  ● the policy in de (T-406, T-408) › the availability row, cell by cell
+  ● the policy in de (T-406, T-408) › the right to stop it, by the Profile's label
+  ● the policy in de (T-406, T-408) › the time zone row, cell by cell
+  ● the policy in en (T-406, T-408) › М1: only the weekly weekend of the zone's country is marked, not holidays
+  ● the policy in en (T-406, T-408) › М2: for the next 12 months, not "a year before"
+  ● the policy in en (T-406, T-408) › М3: Rehearsly marks them, not the app
+  ● the policy in en (T-406, T-408) › М4: off removes the defaults from today on at once; earlier days and own marks stay
+  ● the policy in en (T-406, T-408) › М6: the time zone row says what the switch is for
+  ● the policy in en (T-406, T-408) › the availability row, cell by cell
+  ● the policy in en (T-406, T-408) › the right to stop it, by the Profile's label
+  ● the policy in en (T-406, T-408) › the time zone row, cell by cell
+  ● the policy in es (T-406, T-408) › М1: only the weekly weekend of the zone's country is marked, not holidays
+  ● the policy in es (T-406, T-408) › М2: for the next 12 months, not "a year before"
+  ● the policy in es (T-406, T-408) › М3: Rehearsly marks them, not the app
+  ● the policy in es (T-406, T-408) › М4: off removes the defaults from today on at once; earlier days and own marks stay
+  ● the policy in es (T-406, T-408) › М5: the switch is set for everyone, not detected
+  ● the policy in es (T-406, T-408) › М6: the time zone row says what the switch is for
+  ● the policy in es (T-406, T-408) › the availability row, cell by cell
+  ● the policy in es (T-406, T-408) › the right to stop it, by the Profile's label
+  ● the policy in es (T-406, T-408) › the time zone row, cell by cell
+  ● the policy in ru (T-406, T-408) › М1: only the weekly weekend of the zone's country is marked, not holidays
+  ● the policy in ru (T-406, T-408) › М2: for the next 12 months, not "a year before"
+  ● the policy in ru (T-406, T-408) › М3: Rehearsly marks them, not the app
+  ● the policy in ru (T-406, T-408) › М4: off removes the defaults from today on at once; earlier days and own marks stay
+  ● the policy in ru (T-406, T-408) › М5: the switch is set for everyone, not detected
+  ● the policy in ru (T-406, T-408) › М6: the time zone row says what the switch is for
+  ● the policy in ru (T-406, T-408) › the availability row, cell by cell
+  ● the policy in ru (T-406, T-408) › the right to stop it, by the Profile's label
+  ● the policy in ru (T-406, T-408) › the time zone row, cell by cell
+FAIL __tests__/utils/privacyWeekends.test.js
+PASS __tests__/utils/privacyProcessors.test.js
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       35 failed, 17 passed, 52 total
+
+(en М5 passes on the base: the English "Set automatically, changeable in the
+app" never said "detected"; T-408 leaves that cell as it is.)

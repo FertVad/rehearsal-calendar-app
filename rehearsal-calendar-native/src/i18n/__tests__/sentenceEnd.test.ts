@@ -37,6 +37,9 @@ const SAMPLES: Record<string, unknown[][]> = {
   'rehearsals.busyAt': [['Maya Lopez', '6:00 PM–9:00 PM']],
   'rehearsals.andMore': COUNTS,
   'projects.shareInviteMessage': NAME,
+  'profile.weekendsBusyDays': [['Fri and Sat']],
+  'profile.weekendDaysJoin': [['Fri', 'Sat'], ['Sun'], ['Thu', 'Fri', 'Sat']],
+  'availability.weekendDefault': [['Profile → Mark Weekends as Busy']],
   'projects.shareInviteTitle': NAME,
   'projects.removeMemberMessage': [['Maya Lopez']],
   'projects.makeAdminMessage': [['Maya Lopez']],
@@ -44,6 +47,7 @@ const SAMPLES: Record<string, unknown[][]> = {
   'projects.deleteProjectMessage': NAME,
   'projects.leaveProjectMessage': NAME,
   'profile.deleteAccountProjectsWarning': COUNTS,
+  'profile.deleteAccountCalendarLeft': COUNTS,
   'profile.changeEmailSubtitle': EMAIL,
   'profile.currentAddressCode': EMAIL,
   'profile.newAddressCode': EMAIL,
@@ -70,6 +74,8 @@ const SAMPLES: Record<string, unknown[][]> = {
   'notifications.daysAgo': COUNTS,
   'onboarding.welcome.greeting': [['Maya'], [null]],
   'onboarding.calendarSync.laterWhere': [['Profile → Settings']],
+  'onboarding.weekends.question': [['Fri and Sat']],
+  'onboarding.weekends.note': [['Profile → Mark Weekends as Busy']],
   'onboarding.whatWhere.projectWhere': [['Create Project', 'Projects', 'Join with a Code']],
   'onboarding.whatWhere.rehearsalWhere': [['Create Rehearsal']],
   'onboarding.whatWhere.availabilityWhere': [['Mark Availability']],
@@ -77,8 +83,12 @@ const SAMPLES: Record<string, unknown[][]> = {
 };
 
 // Strings that end a sentence in English and rightly do not in another language,
-// with the reason. Empty: every string the rule found was a missing full stop.
-const EXCEPTIONS: Record<string, string> = {};
+// with the reason.
+const EXCEPTIONS: Record<string, string> = {
+  // The English alert title is a sentence, so it ends as one (HIG, Alerts; T-417);
+  // es and de are headings, not sentences, and the monitor kept ru as it was.
+  'onboarding.skipTitle': 'en a sentence (HIG); es, de headings; ru kept by the monitor (T-417)',
+};
 
 function leaves(node: unknown, path: string, out: Map<string, unknown>): Map<string, unknown> {
   if (node && typeof node === 'object' && !Array.isArray(node)) {

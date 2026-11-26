@@ -20,6 +20,8 @@ import { limitOperationIp } from './middleware/operationIpRateLimit.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
 import { appVersion, requireAppBuild } from './middleware/appBuild.js';
+import { isInviteCode } from './utils/inviteCodes.js';
+import { countPageAfterResponse, isPersonOpeningPage } from './services/usage/inviteCounts.js';
 
 const IMPORT_SYNC_PATH = /^\/api(\/native)?\/availability\/imported\/sync$/;
 
@@ -196,6 +198,12 @@ export function createApp({ databaseRuntime } = {}) {
 
   // Render the browser fallback without querying invitation/account data.
   app.get('/invite/:code', (req, res) => {
+    // Counted after the page is out (T-294): nothing is read before it is
+    // drawn, and it goes out with the database down. HEAD, a code of the wrong
+    // shape and link previews are not counted.
+    if (databaseRuntime && isInviteCode(req.params.code) && isPersonOpeningPage(req)) {
+      countPageAfterResponse(res, { code: req.params.code, ensureDatabase: () => databaseRuntime.ensureInitialized(), conn: db });
+    }
     // The Smart App Banner hands the app this page's own address (T-267).
     res.type('html').send(generateInvitePageHTML(req.params.code, req.query.expoHost, {
       protocol: req.protocol, host: req.get('host'),

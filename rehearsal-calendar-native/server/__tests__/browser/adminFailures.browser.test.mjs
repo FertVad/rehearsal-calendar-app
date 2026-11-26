@@ -13,7 +13,7 @@ const PASSWORD = 'h04-fixture-password';
 const TOKEN = 'h04-synthetic-admin-token';
 const date = '2026-09-01T12:00:00Z';
 const attack = '<img data-h04-probe src="/probe" onerror="window.__h04Xss=1">';
-const endpoints = { login: 'login', stats: 'stats', users: 'users', bugs: 'bug-reports' };
+const endpoints = { login: 'login', stats: 'stats', analytics: 'analytics', users: 'users', bugs: 'bug-reports' };
 let browser;
 
 before(async () => {
@@ -88,8 +88,21 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
     return { total: 61, users: Array.from({ length: 61 }, (_, i) => ({
       id: i + 1, firstName: state.label + ' User', lastName: String(i + 1),
       email: `user${i + 1}@example.test`, createdAt: date, lastLoginAt: null,
-    })).slice(offset, offset + 30) };
+      service: false, source: { kind: 'none', project: null, owner: null }, signIn: ['email'],
+      locale: 'en', timezone: 'UTC', steps: { onboarding: false, projects: 0, roles: { owner: 0, admin: 0, member: 0 },
+        marks: 0, marksUntil: null, calendar: false, device: false, seen: 0, onRoster: 0, rehearsals: 0 },
+      lastAppDay: null,
+    })).slice(offset, offset + 30), appDaysRecorded: true };
   }));
+  const empty = { registered: 0, onboarding: 0, project: 0, marks: 0, engaged: 0 };
+  const noWait = { toProjectHours: null, toProjectOf: 0, toMarksHours: null, toMarksOf: 0 };
+  app.get('/admin/api/analytics', reply('analytics', () => ({
+    period: 'all', from: null, to: date, people: 0, languages: [],
+    funnel: { weeks: [], total: { invite: empty, other: empty }, medians: { invite: noWait, other: noWait } },
+    sources: { byDay: [], byWeek: [], projects: [], languages: [], timezones: [] },
+    projects: [], notifications: { devices: { people: 0, of: 0, rate: null }, inbox: [], emailCodes: [] },
+    usage: { recorded: false },
+  })));
   app.get('/admin/api/bug-reports', reply('bugs', req => {
     const offset = Number(req.query.offset);
     return { total: 61, reports: Array.from({ length: 61 }, (_, i) => ({
@@ -161,7 +174,7 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
 
 async function login(page) {
   await page.locator('#password-input').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await page.locator('#dashboard').waitFor({ state: 'visible' });
 }
 
@@ -182,13 +195,13 @@ async function sectionError(page, section) {
   await error.waitFor({ state: 'visible' });
   assert.equal(await page.locator(`#${section}-loading`).isVisible(), false);
   assert.equal(await page.locator(`#${section}-section .loading:visible`).count(), 0);
-  assert.equal(await error.getByRole('button', { name: 'Retry', exact: true }).isVisible(), true);
+  assert.equal(await error.getByRole('button', { name: 'Повторить', exact: true }).isVisible(), true);
   return error;
 }
 
 async function retrySection(page, section) {
   const response = nextResponse(page, section);
-  await page.locator(`#${section}-error`).getByRole('button', { name: 'Retry', exact: true }).click();
+  await page.locator(`#${section}-error`).getByRole('button', { name: 'Повторить', exact: true }).click();
   assert.equal((await response).status(), 200);
   await page.locator(`#${section}-error`).waitFor({ state: 'hidden' });
   await page.locator(`#${section}-loading`).waitFor({ state: 'hidden' });
@@ -217,12 +230,13 @@ async function assertSessionCleared(page) {
 
 test('initial GET 500 stops loading and offers a visible section error and retry', async t => {
   const { page, state } = await fixture(t, { plans: { stats: [{ status: 500, body: { error: 'Temporary failure' } }] } });
-  const failed = page.waitForResponse(response => response.url().endsWith('/admin/api/stats') && response.status() === 500);
+  const failed = page.waitForResponse(response => new URL(response.url()).pathname === '/admin/api/stats'
+    && response.status() === 500);
   await login(page);
   await failed;
   await page.locator('#stats-error').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#stats-loading').isVisible(), false);
-  assert.equal(await page.locator('#stats-error').getByRole('button', { name: 'Retry', exact: true }).isVisible(), true);
+  assert.equal(await page.locator('#stats-error').getByRole('button', { name: 'Повторить', exact: true }).isVisible(), true);
   assert.equal(state.count('stats'), 1, 'GET errors must not spin in an automatic retry loop');
 });
 
@@ -233,25 +247,26 @@ test('failed PATCH reports an unconfirmed change and does not silently reload re
   state.enqueue('patch', { status: 500, body: { error: 'Temporary failure' } });
   const reads = state.count('bugs');
   const failed = page.waitForResponse(response => response.request().method() === 'PATCH' && response.status() === 500);
-  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'fixed', exact: true }).click();
+  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'Исправлена', exact: true }).click();
   await failed;
   await page.locator('#bugs-mutation-status[role="alert"]').waitFor({ state: 'visible' });
-  assert.match(await page.locator('#bugs-mutation-status').textContent(), /confirm|unknown|uncertain/i);
+  assert.match(await page.locator('#bugs-mutation-status').textContent(), /не удалось подтвердить/);
   assert.equal(await page.locator('#bugs-body tr').first().locator('.status-btn-new.active').count(), 1);
   assert.equal(state.count('bugs'), reads, 'A failed PATCH must not trigger an automatic GET');
   assert.equal(state.count('patch'), 1);
 });
 
 test('each section recovers from an initial failure through its own Retry button', async t => {
-  for (const section of ['stats', 'users', 'bugs']) {
+  const all = ['stats', 'analytics', 'users', 'bugs'];
+  for (const section of all) {
     const { page, state } = await fixture(t, { plans: { [section]: [{ status: 500, body: { error: attack } }] } });
     await login(page);
     await sectionError(page, section);
-    for (const other of ['stats', 'users', 'bugs'].filter(value => value !== section)) {
+    for (const other of all.filter(value => value !== section)) {
       await page.locator(`#${other}-loading`).waitFor({ state: 'hidden' });
       assert.equal(await page.locator(`#${other}-error`).isVisible(), false);
     }
-    const before = Object.fromEntries(['stats', 'users', 'bugs'].map(key => [key, state.count(key)]));
+    const before = Object.fromEntries(all.map(key => [key, state.count(key)]));
     await retrySection(page, section);
     await loaded(page);
     assert.equal(state.count(section), before[section] + 1);
@@ -273,7 +288,7 @@ test('network, non-JSON, invalid JSON and malformed successful GET responses sho
     assert.equal(state.count('stats'), 1);
     assert.equal(await page.locator('#stats-cards .card-value').count(), 0);
     await retrySection(page, 'stats');
-    assert.deepEqual(await page.locator('#stats-cards .card-value').allTextContents(), ['61', '10%', '2', '4']);
+    assert.deepEqual(await page.locator('#stats-cards .card-value').allTextContents(), ['61', '10\u00a0%', '2', '4']);
   }
 });
 
@@ -281,17 +296,17 @@ test('failed refresh preserves each confirmed section, labels it stale and retri
   const { page, state } = await fixture(t);
   await login(page);
   await loaded(page);
-  for (const section of ['stats', 'users', 'bugs']) {
+  for (const section of ['stats', 'analytics', 'users', 'bugs']) {
     const previous = await snapshot(page, section);
     state.enqueue(section, { status: 500, body: { error: attack } });
-    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await page.getByRole('button', { name: 'Обновить', exact: true }).click();
     await sectionError(page, section);
     assert.deepEqual(await snapshot(page, section), previous);
-    assert.match(await page.locator(`#${section}-section`).textContent(), /previously|out of date|stale/i);
+    assert.match(await page.locator(`#${section}-section`).textContent(), /прежние данные/);
     if (section === 'stats' && process.env.ADMIN_FAILURES_SCREENSHOT) {
       await page.screenshot({ path: process.env.ADMIN_FAILURES_SCREENSHOT });
     }
-    const counts = Object.fromEntries(['stats', 'users', 'bugs'].map(key => [key, state.count(key)]));
+    const counts = Object.fromEntries(['stats', 'analytics', 'users', 'bugs'].map(key => [key, state.count(key)]));
     await retrySection(page, section);
     assert.equal(state.count(section), counts[section] + 1);
     for (const other of Object.keys(counts).filter(value => value !== section)) assert.equal(state.count(other), counts[other]);
@@ -305,12 +320,12 @@ test('failed users and reports pagination retain the confirmed page and Retry ta
   for (const section of ['users', 'bugs']) {
     const previous = await snapshot(page, section);
     state.enqueue(section, { status: 500, body: { error: 'Temporary failure' } });
-    await page.locator(`#${section}-pagination`).getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator(`#${section}-pagination`).getByRole('button', { name: 'Следующая', exact: true }).click();
     await sectionError(page, section);
     assert.deepEqual(await snapshot(page, section), previous);
-    assert.equal(await page.locator(`#${section}-pagination .page-label`).textContent(), 'Page 1 of 3');
+    assert.equal(await page.locator(`#${section}-pagination .page-label`).textContent(), 'Страница 1 из 3');
     await retrySection(page, section);
-    assert.equal(await page.locator(`#${section}-pagination .page-label`).textContent(), 'Page 2 of 3');
+    assert.equal(await page.locator(`#${section}-pagination .page-label`).textContent(), 'Страница 2 из 3');
     assert.match(await page.locator(`#${section}-body tr`).first().textContent(), /(?:User|Reporter) 31/);
     const paths = state.requests.filter(request => request.key === section).slice(-2).map(request => request.path);
     assert.ok(paths.every(path => new URL(path, 'http://fixture.test').searchParams.get('offset') === '30'));
@@ -324,16 +339,16 @@ test('late pagination responses cannot overwrite a newer Refresh even when cance
     await loaded(page);
     const old = deferred();
     state.enqueue(section, old);
-    await page.locator(`#${section}-pagination`).getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator(`#${section}-pagination`).getByRole('button', { name: 'Следующая', exact: true }).click();
     await old.arrival;
     state.label = 'New Session';
-    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await page.getByRole('button', { name: 'Обновить', exact: true }).click();
     await page.locator(`#${section}-body tr`).first().getByText(new RegExp('New Session (?:User|Reporter) 1$')).waitFor();
     const late = nextResponse(page, section);
     old.release();
     await settleResponse(await late);
     assert.match(await page.locator(`#${section}-body tr`).first().textContent(), /New Session (?:User|Reporter) 1/);
-    assert.equal(await page.locator(`#${section}-pagination .page-label`).textContent(), 'Page 1 of 3');
+    assert.equal(await page.locator(`#${section}-pagination .page-label`).textContent(), 'Страница 1 из 3');
     assert.equal(await page.locator(`#${section}-error`).isVisible(), false);
   }
 });
@@ -353,9 +368,9 @@ test('PATCH transport, HTTP, JSON and acknowledgement failures retain the confir
     state.enqueue('patch', outcome);
     const reads = state.count('bugs');
     const row = page.locator('#bugs-body tr').first();
-    await row.getByRole('button', { name: 'fixed', exact: true }).click();
+    await row.getByRole('button', { name: 'Исправлена', exact: true }).click();
     await page.locator('#bugs-mutation-status[role="alert"]').waitFor({ state: 'visible' });
-    assert.match(await page.locator('#bugs-mutation-status').textContent(), /confirm|unknown|uncertain/i);
+    assert.match(await page.locator('#bugs-mutation-status').textContent(), /не удалось подтвердить/);
     assert.equal(await row.locator('.status-btn-new.active').count(), 1);
     assert.equal(await row.locator('.status-btn-fixed.active').count(), 0);
     assert.equal(state.count('patch'), 1);
@@ -370,12 +385,12 @@ test('a pending PATCH disables its row and commits the status only after a succe
   const pending = deferred({ commit: true, body: { success: true } });
   state.enqueue('patch', pending);
   const row = page.locator('#bugs-body tr').first();
-  await row.getByRole('button', { name: 'fixed', exact: true }).click();
+  await row.getByRole('button', { name: 'Исправлена', exact: true }).click();
   await pending.arrival;
   for (const button of await row.locator('.status-btn').all()) assert.equal(await button.isDisabled(), true);
   assert.equal(await row.locator('.status-btn-new.active').count(), 1);
   assert.equal(await row.locator('.status-btn-fixed.active').count(), 0);
-  await row.getByRole('button', { name: 'in progress', exact: true }).press('Enter');
+  await row.getByRole('button', { name: 'В работе', exact: true }).press('Enter');
   assert.equal(state.count('patch'), 1, 'Keyboard input cannot submit a second pending mutation');
   pending.release();
   await row.locator('.status-btn-fixed.active').waitFor();
@@ -391,14 +406,14 @@ test('a committed PATCH with a lost response stays unconfirmed until an explicit
   state.enqueue('patch', { commit: true, abort: true });
   const reads = state.count('bugs');
   const row = page.locator('#bugs-body tr').first();
-  await row.getByRole('button', { name: 'fixed', exact: true }).click();
+  await row.getByRole('button', { name: 'Исправлена', exact: true }).click();
   await page.locator('#bugs-mutation-status[role="alert"]').waitFor({ state: 'visible' });
   assert.equal(state.statuses.get('1'), 'fixed', 'The HTTP fixture models an already committed write');
   assert.equal(await row.locator('.status-btn-new.active').count(), 1);
   assert.equal(state.count('bugs'), reads);
-  assert.match(await page.locator('#bugs-mutation-status').textContent(), /confirm|unknown|uncertain/i);
+  assert.match(await page.locator('#bugs-mutation-status').textContent(), /не удалось подтвердить/);
   if (process.env.ADMIN_MUTATION_SCREENSHOT) await page.screenshot({ path: process.env.ADMIN_MUTATION_SCREENSHOT });
-  await page.locator('#bugs-mutation-status').getByRole('button', { name: 'Reload reports', exact: true }).click();
+  await page.locator('#bugs-mutation-status').getByRole('button', { name: 'Обновить отчёты', exact: true }).click();
   await row.locator('.status-btn-fixed.active').waitFor();
   assert.equal(state.count('bugs'), reads + 1);
   assert.equal(state.count('patch'), 1, 'Reconciliation is a read, never an automatic write retry');
@@ -410,13 +425,13 @@ test('an acknowledged PATCH followed by a failed GET reports saved status and a 
   await loaded(page);
   state.enqueue('bugs', { status: 500, body: { error: 'Temporary list failure' } });
   const row = page.locator('#bugs-body tr').first();
-  await row.getByRole('button', { name: 'fixed', exact: true }).click();
+  await row.getByRole('button', { name: 'Исправлена', exact: true }).click();
   await sectionError(page, 'bugs');
   assert.equal(state.statuses.get('1'), 'fixed');
   assert.equal(await row.locator('.status-btn-new.active').count(), 1, 'The retained list still shows its last confirmed read');
-  assert.match(await page.locator('#bugs-mutation-status').textContent(), /saved/i);
-  assert.match(await page.locator('#bugs-mutation-status').textContent(), /refresh|out of date|stale/i);
-  await page.locator('#bugs-mutation-status').getByRole('button', { name: 'Reload reports', exact: true }).click();
+  assert.match(await page.locator('#bugs-mutation-status').textContent(), /статус сохранён/);
+  assert.match(await page.locator('#bugs-mutation-status').textContent(), /обновить не удалось|устарели/);
+  await page.locator('#bugs-mutation-status').getByRole('button', { name: 'Обновить отчёты', exact: true }).click();
   await row.locator('.status-btn-fixed.active').waitFor();
   assert.equal(state.count('patch'), 1);
 });
@@ -427,8 +442,8 @@ test('current-session GET and PATCH 401 responses sign out and remove the old da
     await login(page);
     await loaded(page);
     state.enqueue(key, { status: 401, body: { error: 'Unauthorized' } });
-    if (key === 'stats') await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-    else await page.locator('#bugs-body tr').first().getByRole('button', { name: 'fixed', exact: true }).click();
+    if (key === 'stats') await page.getByRole('button', { name: 'Обновить', exact: true }).click();
+    else await page.locator('#bugs-body tr').first().getByRole('button', { name: 'Исправлена', exact: true }).click();
     await assertSessionCleared(page);
   }
 });
@@ -439,9 +454,9 @@ test('late prior-session GET success cannot repopulate data after logout and a n
   await loaded(page);
   const old = deferred();
   state.enqueue('users', old);
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await old.arrival;
-  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click();
   await assertSessionCleared(page);
   state.label = 'New Session';
   await login(page);
@@ -461,9 +476,9 @@ test('late prior-session 401 cannot clear a new login even when it reuses the id
   await loaded(page);
   const old = deferred({ status: 401, body: { error: 'Expired old request' } });
   state.enqueue('stats', old);
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await old.arrival;
-  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click();
   await assertSessionCleared(page);
   state.label = 'New Session';
   await login(page);
@@ -473,7 +488,7 @@ test('late prior-session 401 cannot clear a new login even when it reuses the id
   await settleResponse(await late);
   assert.equal(await page.evaluate(() => localStorage.getItem('admin_token')), TOKEN);
   assert.equal(await page.locator('#dashboard').isVisible(), true);
-  assert.deepEqual(await page.locator('#stats-cards .card-value').allTextContents(), ['99', '10%', '2', '4']);
+  assert.deepEqual(await page.locator('#stats-cards .card-value').allTextContents(), ['99', '10\u00a0%', '2', '4']);
 });
 
 test('a late prior-session PATCH acknowledgement cannot start a refresh in the new session', async t => {
@@ -482,9 +497,9 @@ test('a late prior-session PATCH acknowledgement cannot start a refresh in the n
   await loaded(page);
   const old = deferred({ commit: true, body: { success: true } });
   state.enqueue('patch', old);
-  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'fixed', exact: true }).click();
+  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'Исправлена', exact: true }).click();
   await old.arrival;
-  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click();
   await assertSessionCleared(page);
   state.label = 'New Session';
   state.statuses.clear();
@@ -506,14 +521,14 @@ test('reading another reports page cannot resolve an unconfirmed write to a row 
   await login(page);
   await loaded(page);
   state.enqueue('patch', { commit: true, abort: true });
-  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'fixed', exact: true }).click();
+  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'Исправлена', exact: true }).click();
   await page.locator('#bugs-mutation-status[role="alert"]').waitFor({ state: 'visible' });
-  await page.locator('#bugs-pagination').getByRole('button', { name: 'Next', exact: true }).click();
+  await page.locator('#bugs-pagination').getByRole('button', { name: 'Следующая', exact: true }).click();
   await page.locator('#bugs-body').getByText('Original Reporter 31', { exact: true }).waitFor();
-  assert.equal(await page.locator('#bugs-pagination .page-label').textContent(), 'Page 2 of 3');
-  assert.match(await page.locator('#bugs-mutation-status').textContent(), /Report 1:.*(?:confirm|unknown|uncertain)/i);
-  assert.equal(await page.locator('#bugs-mutation-status').getByRole('button', { name: 'Reload reports', exact: true }).isVisible(), true);
-  await page.locator('#bugs-pagination').getByRole('button', { name: 'Prev', exact: true }).click();
+  assert.equal(await page.locator('#bugs-pagination .page-label').textContent(), 'Страница 2 из 3');
+  assert.match(await page.locator('#bugs-mutation-status').textContent(), /Отчёт №\u00a01: не удалось подтвердить/);
+  assert.equal(await page.locator('#bugs-mutation-status').getByRole('button', { name: 'Обновить отчёты', exact: true }).isVisible(), true);
+  await page.locator('#bugs-pagination').getByRole('button', { name: 'Предыдущая', exact: true }).click();
   await page.locator('#bugs-body').getByText('Original Reporter 1', { exact: true }).waitFor();
   await page.locator('#bugs-body tr').first().locator('.status-btn-fixed.active').waitFor();
   assert.equal(await page.locator('#bugs-mutation-status').isVisible(), false, 'Only the matching returned row reconciles the unknown result');
@@ -524,22 +539,22 @@ test('completed success feedback does not accumulate across subsequent writes or
   const { page, state } = await fixture(t);
   await login(page);
   await loaded(page);
-  await page.locator('#bugs-body tr').nth(0).getByRole('button', { name: 'fixed', exact: true }).click();
+  await page.locator('#bugs-body tr').nth(0).getByRole('button', { name: 'Исправлена', exact: true }).click();
   await page.locator('#bugs-body tr').nth(0).locator('.status-btn-fixed.active').waitFor();
-  assert.match(await page.locator('#bugs-mutation-status').textContent(), /Report 1: Status saved\./);
+  assert.match(await page.locator('#bugs-mutation-status').textContent(), /Отчёт №\u00a01: статус сохранён\./);
 
   const second = deferred({ commit: true, body: { success: true } });
   state.enqueue('patch', second);
-  await page.locator('#bugs-body tr').nth(1).getByRole('button', { name: 'fixed', exact: true }).click();
+  await page.locator('#bugs-body tr').nth(1).getByRole('button', { name: 'Исправлена', exact: true }).click();
   await second.arrival;
-  assert.doesNotMatch(await page.locator('#bugs-mutation-status').textContent(), /Report 1:/);
-  assert.match(await page.locator('#bugs-mutation-status').textContent(), /Report 2: Saving/);
+  assert.doesNotMatch(await page.locator('#bugs-mutation-status').textContent(), /Отчёт №\u00a01:/);
+  assert.match(await page.locator('#bugs-mutation-status').textContent(), /Отчёт №\u00a02: сохраняем/);
   assert.equal(await page.locator('#bugs-mutation-status p').count(), 1);
   second.release();
   await page.locator('#bugs-body tr').nth(1).locator('.status-btn-fixed.active').waitFor();
   assert.equal(await page.locator('#bugs-mutation-status p').count(), 1);
   const refreshed = nextResponse(page, 'bugs');
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await settleResponse(await refreshed);
   assert.equal(await page.locator('#bugs-mutation-status').isVisible(), false);
   assert.equal(await page.locator('#bugs-body .status-btn-fixed.active').count(), 2);
@@ -561,9 +576,9 @@ test('real cross-tab logout and login clear old data while preserving the new sh
   const oldStats = deferred({ status: 401, body: { error: 'Old request expired' } });
   state.enqueue('users', oldUsers);
   state.enqueue('stats', oldStats);
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await Promise.all([oldUsers.arrival, oldStats.arrival]);
-  await otherPage.getByRole('button', { name: 'Log out', exact: true }).click();
+  await otherPage.getByRole('button', { name: 'Выйти', exact: true }).click();
   await assertSessionCleared(otherPage);
   await assertSessionCleared(page);
 
@@ -585,7 +600,7 @@ test('real cross-tab logout and login clear old data while preserving the new sh
     assert.equal(await currentPage.locator('#dashboard').isVisible(), true);
     assert.equal(await currentPage.locator('#users-body').getByText('Original User 1', { exact: true }).count(), 0);
     assert.equal(await currentPage.locator('#users-body').getByText('New Session User 1', { exact: true }).count(), 1);
-    assert.deepEqual(await currentPage.locator('#stats-cards .card-value').allTextContents(), ['99', '10%', '2', '4']);
+    assert.deepEqual(await currentPage.locator('#stats-cards .card-value').allTextContents(), ['99', '10\u00a0%', '2', '4']);
   }
   assert.equal(state.count('login'), 2, 'The second tab reuses the first login, then performs the new login through UI');
   assert.deepEqual(await otherPage.evaluate(() => window.h04CspViolations), []);

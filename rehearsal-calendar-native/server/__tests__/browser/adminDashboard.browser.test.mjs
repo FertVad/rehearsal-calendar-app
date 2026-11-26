@@ -7,6 +7,9 @@ import { chromium } from 'playwright';
 import { generateAdminPageHTML } from '../../routes/admin/dashboardPage.js';
 import { securityHeaders } from '../../middleware/securityHeaders.js';
 import { closeOwnedBrowserFixture, trackOwnedHttpServer } from './ownedFixture.mjs';
+import { quoteName } from '../../../shared/quoteName.cjs';
+
+const NB = '\u00a0';
 
 // This fixture never imports server.js, .env or the database. It serves the real
 // admin document/assets with synthetic API responses in an isolated browser.
@@ -14,8 +17,39 @@ const html = '<img data-xss-probe src="/xss-probe" onerror="window.__xss = 1">';
 const svg = '<svg data-xss-probe onload="window.__xss = 2"></svg>\'"&<>';
 const link = '<a data-xss-probe href="javascript:window.__xss=3">mail@example.test</a>';
 const escaped = '&lt;img src=x onerror=alert(1)&gt;';
+const steps = { onboarding: true, projects: 1, roles: { owner: 0, admin: 0, member: 1 }, marks: 2,
+  marksUntil: '2026-12-09', calendar: false, device: true, seen: 1, onRoster: 2, rehearsals: 0 };
 const user = { id: 1, firstName: html, lastName: svg, email: link,
-  createdAt: '2026-09-01T12:00:00Z', lastLoginAt: null };
+  createdAt: '2026-09-01T12:00:00Z', lastLoginAt: null, service: false,
+  source: { kind: 'invite', project: html, owner: svg }, signIn: ['apple'], locale: 'en', timezone: svg, steps,
+  lastAppDay: '2026-11-24' };
+const none = { opened: 0, of: 0, rate: null };
+// Use of the app (T-294): with migration 016, or without it — "no data", not zeros.
+const usageBody = (payload, recorded) => (recorded ? { recorded: true, since: '2026-11-02',
+  active: { day: 1, week: 2, month: 3, of: 4 },
+  retention: [{ week: '2026-11-16', registered: 2, day1: { opened: 1, of: 2, rate: 50 }, day7: none, day30: none }],
+  builds: [{ build: 42, people: 1 }, { build: null, people: 2 }],
+  invitations: [{ project: payload ? html : 'Hamlet', owner: payload ? svg : 'Olga O.', pageOpens: 6, appOpens: 3, joins: 2 }] }
+  : { recorded: false });
+const counts = { registered: 1, onboarding: 1, project: 1, marks: 1, engaged: 0 };
+const medians = { toProjectHours: 2, toProjectOf: 1, toMarksHours: null, toMarksOf: 0 };
+// Project, owner, language, zone and inbox type are stored text too (T-293).
+const analyticsBody = (payload, recorded = true) => ({
+  usage: usageBody(payload, recorded),
+  period: 'all', from: null, to: '2026-11-25T12:00:00Z', people: 1,
+  languages: payload ? [html] : ['en', 'ru'],
+  funnel: { weeks: [{ week: '2026-11-16', invite: counts, other: { ...counts, registered: 0 } }],
+    total: { invite: counts, other: { ...counts, registered: 0 } }, medians: { invite: medians, other: medians } },
+  sources: { byDay: [{ date: '2026-11-17', invite: 1, own: 0, none: 0 }], byWeek: [{ date: '2026-11-16', invite: 1, own: 0, none: 0 }],
+    projects: [{ project: payload ? html : 'Hamlet', owner: payload ? svg : 'Olga O.', joined: 1, newcomers: 1 }],
+    languages: [{ value: payload ? html : 'en', people: 1 }], timezones: [{ value: payload ? svg : 'UTC', people: 1 }] },
+  projects: [{ id: 1, name: payload ? html : 'Hamlet', owner: payload ? link : 'Olga O.', createdAt: '2026-11-01T00:00:00Z',
+    members: 3, rehearsals: 3, rehearsalsLastFourWeeks: 2, nextRehearsalAt: null,
+    seenBeforeStart: { seen: 2, of: 4, rate: 50 }, coverage: { people: 2, of: 3, rate: 66.7 } }],
+  notifications: { devices: { people: 1, of: 5, rate: 20 },
+    inbox: [{ type: payload ? html : 'member_joined', created: 2, read: 1, readRate: 50, medianMinutesToRead: 30 }],
+    emailCodes: [{ purpose: 'verify', created: 2, sent: 2, failed: 0, used: 1, replaced: 1, locked: 0 }] },
+});
 const report = { id: '1);window.__xss=4;//', name: html, message: html + '\n' + escaped,
   screen: svg, status: 'new" onclick="window.__xss=5', createdAt: user.createdAt };
 let browser;
@@ -31,7 +65,7 @@ after(async () => { await browser?.close(); }, { timeout: 10000 });
 async function fixture(t, { csp = true, payload = false, signedIn = true } = {}) {
   const diagnostic = stage => console.log(`[admin-browser] ${t.name}: ${stage}`);
   diagnostic('fixture: starting');
-  const state = { empty: false, unauthorized: false, requests: [], statuses: new Map() };
+  const state = { empty: false, unauthorized: false, requests: [], statuses: new Map(), recorded: true };
   const stats = payload ? {
     users: { total: html, newThisWeek: svg, newThisMonth: link },
     signIns: { rate: html, notInLast30Days: svg },
@@ -70,10 +104,12 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
     next();
   });
   app.get('/admin/api/stats', (_req, res) => res.json(stats));
+  app.get('/admin/api/analytics', (_req, res) => res.json(analyticsBody(payload, state.recorded)));
   app.get('/admin/api/users', (req, res) => {
     const all = state.empty ? [] : users;
     const offset = Number(req.query.offset);
-    res.json({ users: all.slice(offset, offset + 30), total: all.length });
+    res.json({ users: all.slice(offset, offset + 30).map(row => (state.recorded ? row : { ...row, lastAppDay: null })),
+      total: all.length, appDaysRecorded: state.recorded });
   });
   app.get('/admin/api/bug-reports', (req, res) => {
     const all = state.empty ? [] : reports;
@@ -138,13 +174,22 @@ test('untrusted admin API values remain literal text, even without CSP', { timeo
   assert.equal(await page.evaluate(() => window.__xss), undefined);
   assert.equal(await page.locator('#users-body td').nth(0).textContent(), `${html} ${svg}`);
   assert.equal(await page.locator('#users-body td').nth(1).textContent(), link);
+  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '24.11.2026');
+  assert.equal(await page.locator('#users-body td').nth(5).textContent(), `Приглашение в ${quoteName(html, 'ru')} (владелец ${svg})`);
+  assert.equal(await page.locator('#users-body td').nth(7).textContent(), `en / ${svg}`);
+  // The analytics carry project, owner, language, zone and type names as text.
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const cells = await page.locator('#analytics-body td').allTextContents();
+  for (const value of [html, svg, link]) assert.ok(cells.includes(value), `analytics shows ${value} literally`);
+  assert.ok(await page.locator('#filter-lang option').evaluateAll((options, value) =>
+    options.some(option => option.textContent === value), html));
   assert.equal(await page.locator('#bugs-body td').nth(0).textContent(), report.name);
   assert.equal(await page.locator('#bugs-body td').nth(1).textContent(), report.message);
   assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), report.screen);
-  assert.deepEqual(await page.locator('.card-value').allTextContents(), [html, `${html}%`, html, link]);
+  assert.deepEqual(await page.locator('.card-value').allTextContents(), [html, `${html}${NB}%`, html, link]);
   assert.equal(await page.locator('[onclick], [onerror], [onload], script:not([src])').count(), 0);
   const patched = page.waitForResponse(r => r.request().method() === 'PATCH');
-  await page.locator('#bugs-body').getByRole('button', { name: 'fixed', exact: true }).click();
+  await page.locator('#bugs-body').getByRole('button', { name: 'Исправлена', exact: true }).click();
   assert.equal((await patched).status(), 200);
   await page.locator('.status-btn-fixed.active').waitFor();
   assert.equal(state.statuses.get(report.id), 'fixed', 'ID stays data in a closure and an encoded path segment');
@@ -197,57 +242,118 @@ test('the sign-in figure is named for sign-ins, not churn or inactivity', { time
   const { page, errors } = await fixture(t);
   await waitForDashboard(page);
   const figure = page.locator('#stats-cards .card').nth(1);
-  assert.equal(await figure.locator('.card-label').textContent(), 'No sign-in for 30 days');
-  assert.equal(await figure.locator('.card-value').textContent(), '10%');
+  assert.equal(await figure.locator('.card-label').textContent(), `Не входили 30${NB}дней`);
+  assert.equal(await figure.locator('.card-value').textContent(), `10${NB}%`);
   const note = await figure.locator('.card-sub').textContent();
-  assert.match(note, /^Users: 6 /);
-  assert.match(note, /not a measure of use/);
+  assert.match(note, /^Пользователей: 6 /);
+  assert.match(note, /не показатель использования/);
   const cards = (await page.locator('#stats-cards').textContent()).toLowerCase();
-  assert.doesNotMatch(cards, /churn|inactive/);
+  assert.doesNotMatch(cards, /churn|inactive|отток|неактивн/);
+  assert.deepEqual(errors, []);
+});
+
+// Use of the app (T-294): the figures with migration 016, and without it a
+// sentence saying there is no data — never zeros, which would read as nobody.
+test('use of the app shows its figures, or "no data" without migration 016', { timeout: 30000 }, async t => {
+  const { page, state, errors } = await fixture(t);
+  await waitForDashboard(page);
+  const block = page.locator('#analytics-body .analytics-block', { has: page.getByRole('heading', { name: 'Использование приложения' }) });
+  await block.waitFor();
+  assert.match(await block.locator('.metric').textContent(), /^Активных сегодня: 1 \(25\u00a0%\) · за 7\u00a0дней: 2 \(50\u00a0%\) · за 30\u00a0дней: 3 \(75\u00a0%\)$/);
+  const cells = await block.locator('td').allTextContents();
+  for (const value of ['16.11.2026', `1 из 2 (50${NB}%)`, '42', 'Не указана', 'Hamlet', 'Olga O.', '6', '3']) {
+    assert.ok(cells.includes(value), `use of the app shows ${value}`);
+  }
+  assert.equal(await page.locator('#users-body td').nth(4).textContent(), '24.11.2026');
+
+  state.recorded = false;
+  const reloaded = page.waitForResponse(r => new URL(r.url()).pathname === '/admin/api/analytics');
+  await page.getByRole('button', { name: 'Обновить' }).click();
+  await reloaded;
+  await page.waitForFunction(() => document.querySelector('#analytics-body')?.textContent.includes('Нет данных: миграция\u00a0016 не применена.'));
+  assert.equal(await block.locator('td').count(), 0, 'no table of zeros');
+  await page.waitForFunction(() => document.querySelectorAll('#users-body tr')[0]?.children[4]?.textContent === 'Нет данных: миграция\u00a0016 не применена');
+  assert.deepEqual(errors, []);
+});
+
+// One period and one selection for every section; service accounts only when asked (T-293).
+test('the filters reach every statistics request, and the service switch only the users table', { timeout: 30000 }, async t => {
+  const { page, state, errors } = await fixture(t);
+  await waitForDashboard(page);
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const query = (name) => new URL(state.requests.filter(r => r.path.startsWith('/admin/api/' + name)).at(-1).path,
+    'http://fixture.test').searchParams;
+  for (const name of ['stats', 'analytics', 'users']) assert.equal(query(name).get('period'), 'all');
+  const answered = (name, test) => page.waitForResponse(r => {
+    const url = new URL(r.url());
+    return url.pathname === '/admin/api/' + name && test(url.searchParams);
+  });
+  await page.locator('#filter-period').selectOption('30');
+  await page.locator('#filter-lang').selectOption('ru');
+  const all = ['stats', 'analytics', 'users'].map(name =>
+    answered(name, params => params.get('source') === 'invite'));
+  await page.locator('#filter-source').selectOption('invite');
+  await Promise.all(all);
+  for (const name of ['stats', 'analytics', 'users']) {
+    const params = query(name);
+    assert.deepEqual([params.get('period'), params.get('source'), params.get('lang')], ['30', 'invite', 'ru'], name);
+  }
+  assert.equal(query('users').get('service'), null);
+  const shown = answered('users', params => params.get('service') === '1');
+  await page.locator('#show-service').check();
+  await shown;
+  assert.equal(query('users').get('service'), '1');
+  assert.equal(await page.locator('#filter-lang').inputValue(), 'ru', 'the chosen language survives a reload of the list');
   assert.deepEqual(errors, []);
 });
 
 test('login, pagination, status, refresh, empty states and logout work under production CSP', { timeout: 30000 }, async t => {
   const { page, state, errors } = await fixture(t, { signedIn: false });
   await page.locator('#login-screen').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  // An empty field is asked for before any request; a wrong password's
+  // answer carries markup, and the page shows its own words, never the server's (T-419).
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await page.locator('#login-error').waitFor({ state: 'visible' });
-  assert.equal(await page.locator('#login-error').textContent(), html);
+  assert.equal(await page.locator('#login-error').textContent(), 'Введите пароль.');
+  assert.equal(state.requests.length, 0);
+  await page.locator('#password-input').fill('wrong-password');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('#login-error').textContent === 'Неверный пароль.');
   assert.equal(await page.locator('[data-xss-probe]').count(), 0);
   await page.locator('#password-input').fill('synthetic-password');
   await page.locator('#password-input').press('Enter');
   await waitForDashboard(page);
-  assert.deepEqual(await page.locator('.card-value').allTextContents(), ['61', '10%', '2', '4']);
+  assert.deepEqual(await page.locator('.card-value').allTextContents(), ['61', `10${NB}%`, '2', '4']);
   if (process.env.ADMIN_BROWSER_SCREENSHOT) {
     await page.screenshot({ path: process.env.ADMIN_BROWSER_SCREENSHOT });
   }
-  assert.equal(await page.locator('#users-body td').nth(3).textContent(), '-');
-  assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), '-');
+  assert.equal(await page.locator('#users-body td').nth(3).textContent(), '—');
+  assert.equal(await page.locator('#bugs-body td').nth(2).textContent(), '—');
 
   for (const [id, firstCell] of [['users', 'User'], ['bugs', 'User']]) {
     const pagination = page.locator('#' + id + '-pagination');
     const first = page.locator('#' + id + '-body tr').first().locator('td').first();
-    assert.equal(await pagination.locator('.page-label').textContent(), 'Page 1 of 3');
-    assert.equal(await pagination.getByRole('button', { name: 'Prev' }).count(), 0);
+    assert.equal(await pagination.locator('.page-label').textContent(), 'Страница 1 из 3');
+    assert.equal(await pagination.getByRole('button', { name: 'Предыдущая' }).count(), 0);
     for (const [pageNumber, firstId] of [[2, 31], [3, 61]]) {
-      await pagination.getByRole('button', { name: 'Next' }).click();
+      await pagination.getByRole('button', { name: 'Следующая' }).click();
       await page.waitForFunction(({ id, firstId }) =>
         document.querySelector('#' + id + '-body td').textContent === 'User ' + firstId, { id, firstId });
       assert.equal(await first.textContent(), `${firstCell} ${firstId}`);
-      assert.equal(await pagination.locator('.page-label').textContent(), `Page ${pageNumber} of 3`);
+      assert.equal(await pagination.locator('.page-label').textContent(), `Страница ${pageNumber} из 3`);
     }
-    assert.equal(await pagination.getByRole('button', { name: 'Next' }).count(), 0);
-    await pagination.getByRole('button', { name: 'Prev' }).click();
+    assert.equal(await pagination.getByRole('button', { name: 'Следующая' }).count(), 0);
+    await pagination.getByRole('button', { name: 'Предыдущая' }).click();
     await page.waitForFunction(id => document.querySelector('#' + id + '-body td').textContent === 'User 31', id);
   }
 
   // The callback must keep the selected row's ID and retain the current page.
-  for (const [label, status] of [['in progress', 'in_progress'], ['fixed', 'fixed'], ['new', 'new']]) {
+  for (const [label, status] of [['В работе', 'in_progress'], ['Исправлена', 'fixed'], ['Новая', 'new']]) {
     const row = page.locator('#bugs-body tr').first();
     await row.getByRole('button', { name: label, exact: true }).click();
     await row.locator('.status-btn-' + status + '.active').waitFor();
     assert.equal(state.statuses.get('31'), status);
-    assert.equal(await page.locator('#bugs-pagination .page-label').textContent(), 'Page 2 of 3');
+    assert.equal(await page.locator('#bugs-pagination .page-label').textContent(), 'Страница 2 из 3');
   }
   const patches = state.requests.filter(r => r.method === 'PATCH');
   assert.deepEqual(patches.map(r => [r.path, r.body.status]), [
@@ -257,17 +363,17 @@ test('login, pagination, status, refresh, empty states and logout work under pro
   ]);
   assert.ok(state.requests.every(r => r.authorized));
 
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('#users-body td').textContent === 'User 1'
     && document.querySelector('#bugs-body td').textContent === 'User 1');
   await page.reload();
   await waitForDashboard(page);
   state.empty = true;
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await page.getByText('No users', { exact: true }).waitFor();
-  await page.getByText('No bug reports', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
+  await page.getByText('Пользователей нет', { exact: true }).waitFor();
+  await page.getByText('Отчётов об ошибках нет', { exact: true }).waitFor();
   assert.deepEqual(await page.locator('#users-pagination, #bugs-pagination').allTextContents(), ['', '']);
-  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click();
   await page.locator('#login-screen').waitFor({ state: 'visible' });
   assert.equal(await page.evaluate(() => localStorage.getItem('admin_token')), null);
   await page.reload();
@@ -275,10 +381,10 @@ test('login, pagination, status, refresh, empty states and logout work under pro
   assert.equal(await page.locator('#dashboard').isVisible(), false);
   state.empty = false;
   await page.locator('#password-input').fill('synthetic-password');
-  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await waitForDashboard(page);
   const beforePatch = state.requests.filter(r => r.method === 'PATCH').length;
-  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'fixed', exact: true }).press('Enter');
+  await page.locator('#bugs-body tr').first().getByRole('button', { name: 'Исправлена', exact: true }).press('Enter');
   await page.locator('#bugs-body tr').first().locator('.status-btn-fixed.active').waitFor();
   assert.equal(state.requests.filter(r => r.method === 'PATCH').length, beforePatch + 1);
   assert.equal(state.statuses.get('1'), 'fixed');
@@ -290,7 +396,7 @@ test('401 returns to login and removes the stored credential', { timeout: 30000 
   const { page, state, errors } = await fixture(t);
   await waitForDashboard(page);
   state.unauthorized = true;
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
   await page.locator('#login-screen').waitFor({ state: 'visible' });
   assert.equal(await page.evaluate(() => localStorage.getItem('admin_token')), null);
   assert.equal(await page.locator('#dashboard').isVisible(), false);

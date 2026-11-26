@@ -10,6 +10,7 @@ import { normalizeEmail } from '../features/auth/utils/accountRules';
 import { changeOwner, restoreOwner, onSessionExpired } from '../shared/services/session';
 import { deviceTimezone, setProfileTimezone } from '../shared/utils/time';
 import { isAppleAuthAvailable, confirmAppleForDeletion } from '../shared/services/appleAuth';
+import { removeExportedBeforeDeletion } from '../shared/services/calendarSync';
 
 /**
  * The code of a fresh Apple confirmation, when the account being deleted signs
@@ -77,11 +78,17 @@ interface AuthContextType {
     => Promise<{ newAddress: DeliveryOutcome; currentAddress: DeliveryOutcome }>;
   /** Moves the account to the new address and writes the session the server replaced. */
   confirmEmailChange: (code: string, currentCode: string) => Promise<void>;
-  loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
-  loginWithApple: (idToken: string, user?: any) => Promise<{ linked: boolean }>;
+  /** `locale`: the language the app shows, for an account this sign-in creates (T-291). */
+  loginWithGoogle: (idToken: string, locale: string) => Promise<{ linked: boolean }>;
+  loginWithApple: (idToken: string, user: any, locale: string) => Promise<{ linked: boolean }>;
   logout: () => Promise<void>;
   updateUser: (data: ProfileUpdate) => Promise<void>;
-  deleteAccount: () => Promise<{ deletedProjects: number }>;
+  /**
+   * `calendarEventsLeft`: the app's events still in this phone's calendar after
+   * the deletion took them back — 0 when none are, null when that could not be
+   * found out (T-409).
+   */
+  deleteAccount: () => Promise<{ deletedProjects: number; calendarEventsLeft: number | null }>;
   // No failure is kept here: each call throws its own, whole, and the screen
   // that made the attempt says it (T-224). One error for every screen was
   // shown by whichever form was open.
@@ -455,10 +462,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [beginAttempt, endAttempt, startSession]);
 
-  const loginWithGoogle = useCallback(async (idToken: string) => {
+  const loginWithGoogle = useCallback(async (idToken: string, locale: string) => {
     const attempt = beginAttempt();
     try {
-      const response = await authAPI.loginWithGoogle(idToken);
+      const response = await authAPI.loginWithGoogle(idToken, locale);
       if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
       const started = await startSession(response.data, attempt);
 
@@ -474,10 +481,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [beginAttempt, endAttempt, startSession]);
 
-  const loginWithApple = useCallback(async (idToken: string, user?: any) => {
+  const loginWithApple = useCallback(async (idToken: string, user: any, locale: string) => {
     const attempt = beginAttempt();
     try {
-      const response = await authAPI.loginWithApple(idToken, user);
+      const response = await authAPI.loginWithApple(idToken, user, locale);
       if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
       const started = await startSession(response.data, attempt);
 
@@ -578,11 +585,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Before loading goes up: while it is true the navigator swaps the screens
     // for a spinner, and Apple's sheet would open over nothing.
     const appleAuthorizationCode = await appleCodeForDeletion();
+    // Then this phone's calendar (T-409), while the account still has the
+    // mappings that say which events are the app's: DELETE /me takes them
+    // with it. Not under `loading` either — it can take seconds, and the
+    // screen that asked shows its own wait (CLAUDE.md, pitfall 9). It never
+    // throws: the account is deleted whatever the calendar does.
+    const calendar = await removeExportedBeforeDeletion();
+    const calendarEventsLeft = calendar.eventsLeft;
     try {
       setLoading(true);
 
-      // Call delete account API
-      const response = await authAPI.deleteMe(appleAuthorizationCode ?? undefined);
+      // Call delete account API. When it fails the account lives on: Auto
+      // Sync goes back as it was, and its next run puts the events back.
+      const response = await authAPI.deleteMe(appleAuthorizationCode ?? undefined)
+        .catch(async (err) => {
+          await calendar.restoreSync();
+          throw err;
+        });
       const { deletedProjects } = response.data;
       // The session is over, as at a sign-out: nothing answered later writes it back.
       forgetPendingSignIn();
@@ -599,7 +618,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(null);
 
-      return { deletedProjects: deletedProjects || 0 };
+      return { deletedProjects: deletedProjects || 0, calendarEventsLeft };
     } catch (err: any) {
       // Whole, with its status: the screen says no connection or the server's
       // own words in the person's language (T-228).

@@ -1,0 +1,8 @@
+T-413, red before: flow 106 with its new lines, the app with the old strings (profile.ts as on auto/main b79809f).
+
+$ npm run e2e -- e2e/flows/106-delete-account-clears-calendar.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+[Failed] Deleting the account takes the exported rehearsals out of the calendar (2m 27s) (Assertion is false: "Rehearsly will also remove from your calendar any rehearsals it added on this iPhone\. Those it added on your other devices may remain\.", id: delete-account-calendar is visible)
+
+1/1 Flow Failed

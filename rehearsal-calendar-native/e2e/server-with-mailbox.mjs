@@ -113,6 +113,12 @@
  *                                                  or of being removed, and
  *                                                  nothing more (flow 86)
  *
+ * <who> is a full name, as the server says it (utils/names.js), of exactly one
+ * account: a notice that names someone is written as { id, name } and only
+ * while that account exists (T-278), so the stand names a real one, as the
+ * join, a role given and a "seen" do. A name no account has, or more than one
+ * has, is answered 404 or 409, and nothing is written.
+ *
  * It measures an icon on a screenshot a flow took, which Maestro cannot: a
  * button that is only an icon is one element, the size of its target (ink.mjs):
  *
@@ -137,6 +143,16 @@
  *
  *   GET /pasteboard?device=<udid>&text=<t>   `xcrun simctl pbcopy` on that
  *                                            simulator
+ *
+ * It gives a Safari flow a Safari with no tabs, which Maestro's clearState
+ * cannot (e2e/subflows/fresh-safari.yaml, T-404):
+ *
+ *   GET /fresh-safari?device=<udid>          `xcrun simctl terminate` Safari and
+ *                                            remove the simulator's
+ *                                            Library/Safari/SafariTabs.db
+ *                                            (and BrowserState.db); 500 and
+ *                                            nothing removed unless Safari is
+ *                                            known to be stopped (safari.mjs)
  *
  * It delivers a push to the app on the simulator, which receives none from
  * Expo — as the server's own would arrive (flow 75, T-229):
@@ -169,6 +185,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
+import { fullName } from '../server/utils/names.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
 import {
@@ -177,6 +194,7 @@ import {
 } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
 import { ellipses, inkBox } from './ink.mjs';
+import { freshSafari } from './safari.mjs';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
 const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
@@ -437,6 +455,19 @@ http.createServer((request, response) => {
   console.log('[e2e] server listening');
 });
 
+/**
+ * The one account whose full name, as the server says it, is `name`, as the
+ * { id, name } a notice that names someone takes (T-278); or `{ status, error }`
+ * when no account or more than one has it.
+ */
+async function namedAccount(name) {
+  const accounts = (await db.all('SELECT id, first_name, last_name FROM native_users'))
+    .filter((account) => fullName(account) === name);
+  if (accounts.length === 0) return { status: 404, error: `no account named ${JSON.stringify(name)}` };
+  if (accounts.length > 1) return { status: 409, error: `${accounts.length} accounts named ${JSON.stringify(name)}` };
+  return { person: { id: accounts[0].id, name } };
+}
+
 http.createServer((request, response) => {
   const url = new URL(request.url, 'http://mailbox');
   const answer = (status, body) => {
@@ -469,18 +500,22 @@ http.createServer((request, response) => {
   if (request.method === 'GET' && url.pathname === '/notify' && ['member_joined', 'admin_appointed', 'role_changed', 'member_removed'].includes(told)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const projectName = url.searchParams.get('project') || '';
-    const member = url.searchParams.get('member') || 'Somebody';
+    const member = url.searchParams.get('member') || '';
     (async () => {
       const user = await db.get('SELECT id FROM native_users WHERE email = $1', [to]);
       if (!user) return answer(404, { error: `no account ${to}` });
       const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
       if (!project) return answer(404, { error: `no project ${projectName}` });
+      // Whom a join or a role given names: a real account, as the server
+      // names the one who joined or was made an admin (T-278).
+      const named = told === 'member_joined' || told === 'admin_appointed' ? await namedAccount(member) : null;
+      if (named?.error) return answer(named.status, { error: named.error });
       // As the join, a role given (to them, or to another, told to those who
       // run the project) and a removal tell them (inviteRedemption.js,
       // routes/native/members.js), the server's own words and data. Only the
       // notice: the role and the membership stay as they are.
-      if (told === 'member_joined') await notifyMemberJoined(project.name, member, [user.id], project.id);
-      else if (told === 'admin_appointed') await notifyAdminAppointed(project.name, member, [user.id], project.id);
+      if (told === 'member_joined') await notifyMemberJoined(project.name, named.person, [user.id], project.id);
+      else if (told === 'admin_appointed') await notifyAdminAppointed(project.name, named.person, [user.id], project.id);
       else if (told === 'role_changed') await notifyRoleChanged(project.name, user.id, url.searchParams.get('role') || 'admin');
       else await notifyMemberRemoved(project.name, user.id);
       console.log(`[e2e] told ${to} of ${told} in ${project.name}`);
@@ -512,7 +547,10 @@ http.createServer((request, response) => {
         // Only the notice: the rehearsal stays.
         await notifyRehearsalDeleted(rehearsal, project.name, [{ user_id: user.id }]);
       } else {
-        await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
+        // Who has seen it: a real account, as the server names them (T-278).
+        const named = await namedAccount(url.searchParams.get('member') || '');
+        if (named.error) return answer(named.status, { error: named.error });
+        await notifyMemberResponse(rehearsal, project.name, named.person, [user.id]);
       }
       console.log(`[e2e] told ${to} of ${about} on ${title}`);
       return answer(200, { recorded: 1 });
@@ -572,6 +610,36 @@ http.createServer((request, response) => {
       return answer(200, { copied: true });
     });
     child.stdin.end(url.searchParams.get('text') || '');
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/fresh-safari') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    freshSafari(device).then(({ was, removed }) => {
+      console.log(`[e2e] Safari ${was}, its tabs removed: ${removed.join(', ') || 'none there'}`);
+      answer(200, { was, removed });
+    }, (error) => {
+      console.error(`[e2e] fresh-safari: ${error.message}`);
+      answer(500, { error: error.message });
+    });
+    return;
+  }
+  // The links the app handed to iOS in the last two minutes, as SpringBoard
+  // logs each ("Handling OpenURL from Rehearsly:<pid>: <url>"), the latest
+  // last (flow 107, T-410). The App Store's page goes on to the App Store,
+  // which a simulator does not have, so what Safari shows cannot say which
+  // address the app opened; this can.
+  if (request.method === 'GET' && url.pathname === '/opened-urls') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    execFile('xcrun', ['simctl', 'spawn', device, 'log', 'show', '--last', '2m', '--style', 'compact',
+      '--predicate', 'process == "SpringBoard" AND eventMessage CONTAINS "Handling OpenURL from Rehearsly"'],
+    { timeout: 60000, maxBuffer: 8 * 1024 * 1024 }, (error, stdout) => {
+      if (error) return answer(500, { error: String(error) });
+      const urls = [...String(stdout).matchAll(/Handling OpenURL from Rehearsly:\d+: (\S+)/g)].map((m) => m[1]);
+      console.log(`[e2e] links the app opened: ${urls.join(', ') || 'none'}`);
+      return answer(200, { urls });
+    });
     return;
   }
   if (request.method === 'GET' && url.pathname === '/push') {

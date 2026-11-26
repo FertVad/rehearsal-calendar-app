@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { inspectSchema } from '../../database/schema/inspect.mjs';
-import { manifest } from '../../database/schema/manifest.mjs';
+import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
 
 // Lifecycle operations on PostgreSQL (R4, cause fix 10: B01, B02, D03): each

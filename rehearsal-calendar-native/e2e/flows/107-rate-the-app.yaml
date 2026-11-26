@@ -1,0 +1,170 @@
+# Asking for a rating (T-410). Only iOS's own window (App Review 5.6.1), and
+# only after a save, once "Mark Busy" is closed (T-414); the app used on three
+# days on this phone, past the onboarding, not the first launch, not asked in
+# this version, fourteen days since the last ask (reviewPrompt.ts, Jest
+# reviewPrompt.test.ts takes each condition alone).
+#
+# A Debug build shows the window on every request, so in an e2e bundle iOS is
+# never asked unless the launch says `rehearslyStoreReview: "due"`; then the
+# app gets the real module and a phone used on the three days before today
+# (e2e/device/expo-store-review.js). Sonya saves MARK_DAY, busy all day, free:
+# no window while the screen is open; she closes it, and the window comes over
+# the calendar. She opens it again, saves the day busy and closes it: in the
+# same version no window.
+#
+# Then the profile's "Rate Rehearsly", in About under "Report a Bug", opens the
+# App Store's review page in Safari, every time and with no conditions.
+appId: ${APP_ID}
+name: iOS's rating window after a save, once a version; Rate Rehearsly in the profile
+tags:
+  - availability
+  - profile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      rehearslyStoreReview: "due"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${SONYA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Calendar, tab.*"
+    timeout: 30000
+
+# The first visit. The save leaves "Mark Busy" open for the next day (T-021),
+# and iOS's window does not break into it (T-414): it used to come a second
+# after the save; given six here, it would have been in time.
+- runFlow: ../subflows/availability-pick-mark-day.yaml
+- tapOn:
+    id: mode-free
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible:
+      id: toast
+      text: "Saved"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 6000
+    optional: true
+- assertNotVisible: "Not Now"
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Free"
+- assertVisible:
+    id: availability-legend
+- takeScreenshot: 107-saved-screen-open-no-window
+
+# Closed by Cancel: now the window, over the calendar the screen came from.
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 15000
+- takeScreenshot: 107-apple-rating-window
+- tapOn: "Not Now"
+- extendedWaitUntil:
+    notVisible: "Not Now"
+    timeout: 10000
+# While Apple's window is up iOS hides the app from the tree Maestro reads, so
+# what was under it is read once it has gone: the calendar, not "Mark Busy".
+- assertVisible:
+    id: tab-calendar
+- assertNotVisible:
+    id: availability-legend
+
+# The second visit, in the same version: a save and a close, no window.
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: day-${MARK_DAY}
+      text: ".*, Free"
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-free
+      selected: true
+    timeout: 10000
+- tapOn:
+    id: mode-busy
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible:
+      id: toast
+      text: "Saved"
+    timeout: 15000
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Busy"
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 6000
+    optional: true
+- assertNotVisible: "Not Now"
+- assertVisible:
+    id: tab-calendar
+- takeScreenshot: 107-second-visit-no-window
+
+# "Rate Rehearsly", under "Report a Bug": the App Store's review page.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-rate-app
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: profile-rate-app
+    text: ".*Rate Rehearsly.*"
+    below:
+      id: profile-report-bug
+- takeScreenshot: 107-profile-rate-row
+- runFlow: ../subflows/fresh-safari.yaml
+- tapOn:
+    id: profile-rate-app
+# Safari comes up; apps.apple.com sends it on to the App Store (itms-appss://)
+# before any page shows, and a simulator has no App Store: "Safari cannot open
+# the page". On a phone the App Store opens on the review. So the flow waits
+# for Safari opened from Rehearsly, whether the page is loading or already
+# gone (safari-from-app.yaml; the site's name, waited for before, was on the
+# screen for half a second at most - T-420), and the address the app handed
+# to iOS is read where SpringBoard logged it. (Waiting for the row to go,
+# with the app behind Safari, Maestro takes for the app stopped.)
+- runFlow: ../subflows/safari-from-app.yaml
+- assertNotVisible:
+    id: profile-rate-app
+- takeScreenshot: 107-safari-from-rate-row
+- runScript:
+    file: ../scripts/opened-url.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SIMULATOR: ${SIMULATOR}
+      URL: "https://apps.apple.com/app/id6830809401?action=write-review"

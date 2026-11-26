@@ -1,0 +1,33 @@
+T-275, red before: e2e/__tests__/metro-watch.test.mjs, with the case of the
+preview's recordings added, on metro.config.js as it was (e2e/out blocked,
+e2e/store/out not), 2026-11-19.
+
+Seen first in the video: the first en-US recording put the Debug app's blue
+"Refreshing..." banner over the status bar at the start of shots 1, 2, 3 and 5
+— each .mov record.mjs wrote into e2e/store/out/clips was a change to Metro,
+an HMR update, the banner (as Maestro's screenshots in e2e/out were, T-207).
+
+$ node --test e2e/__tests__/metro-watch.test.mjs        (in rehearsal-calendar-native)
+
+✖ a screenshot Maestro writes into e2e/out, or a recording into e2e/store/out, is not a change to Metro; the app's files are (3613.850708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4988.3945
+
+✖ failing tests:
+
+test at e2e/__tests__/metro-watch.test.mjs:78:1
+✖ a screenshot Maestro writes into e2e/out, or a recording into e2e/store/out, is not a change to Metro; the app's files are (3613.850708ms)
+  AssertionError [ERR_ASSERTION]: files written into e2e/store/out reached Metro as changes
+  + actual - expected
+
+  + [
+  +   '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/store/out/clips/metro-watch-24845/01.mov',
+  +   '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/store/out/clips/metro-watch-24845/01.json'
+  + ]
+  - []

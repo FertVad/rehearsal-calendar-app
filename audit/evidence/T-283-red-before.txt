@@ -1,0 +1,52 @@
+T-283 — the native speakers' wording for T-281's refusals: red before, green after.
+
+== Jest, on the old errors.ts (tests already carrying the natives' wording) ==
+$ npx jest --selectProjects frontend --testPathPatterns 'proofreadingEdits|useInviteLink' --silent
+FAIL frontend src/i18n/__tests__/proofreadingEdits.test.ts
+  ● T-256: every edit of the native speakers is in, and the old wording is gone › ru
+    + "errors.memberNotFound says \"Этого человека уже нет в проекте.\", not \"Этого участника уже нет в проекте.\"",
+    + "\"Этого человека уже нет в проекте.\" is still said in ru: errors.memberNotFound",
+    + "errors.adminOnly says \"Это может сделать только админ проекта.\", not \"Это может сделать только администратор проекта.\"",
+    + "\"Это может сделать только админ проекта.\" is still said in ru: errors.adminOnly",
+  ● … › en
+    + "errors.notProjectMember says \"You’re no longer a member of this project, or it has been deleted.\", not \"You are no longer a member of this project, or it has been deleted.\"",
+    + "\"You’re no longer a member of this project, or it has been deleted.\" is still said in en: errors.notProjectMember",
+    + "errors.alreadyMember says \"You’re already a member of this project.\", not \"You are already a member of this project.\"",
+    + "\"You’re already a member of this project.\" is still said in en: errors.alreadyMember",
+    + "errors.availabilityTooLarge says \"Too much to load for this range. Choose fewer days or members.\", not \"Too much to load at once. Choose fewer days or participants.\"",
+    + "\"Too much to load for this range. Choose fewer days or members.\" is still said in en: errors.availabilityTooLarge",
+  ● … › es
+    + "errors.adminOnly says \"Solo un admin del proyecto puede hacerlo.\", not \"Solo quienes administran el proyecto pueden hacerlo.\"",
+    + "\"Solo un admin del proyecto puede hacerlo.\" is still said in es: errors.adminOnly",
+    + "errors.ownerOnly says \"Solo el admin principal del proyecto puede hacerlo.\", not \"Solo quien es admin principal del proyecto puede hacerlo.\"",
+    + "\"Solo el admin principal del proyecto puede hacerlo.\" is still said in es: errors.ownerOnly",
+    + "errors.availabilityTooLarge says \"Hay demasiados datos para este período. Elige menos días o menos miembros.\", not \"No se puede cargar tanto de una vez. Elige menos días o menos participantes.\"",
+    + "\"Hay demasiados datos para este período. Elige menos días o menos miembros.\" is still said in es: errors.availabilityTooLarge",
+  ● … › de
+    + "errors.availabilityTooLarge says \"Zu viele Daten für diesen Zeitraum. Wähle weniger Tage oder Mitglieder.\", not \"Zu viele Daten für diesen Zeitraum. Wähle weniger Tage oder Teilnehmer.\"",
+    + "\"Zu viele Daten für diesen Zeitraum. Wähle weniger Tage oder Mitglieder.\" is still said in de: errors.availabilityTooLarge",
+FAIL frontend src/features/projects/hooks/__tests__/useInviteLink.test.ts
+    Expected: "Ошибка", "Это может сделать только администратор проекта."
+    Received: "Ошибка", "Это может сделать только админ проекта."
+Tests:       5 failed, 9 passed, 14 total
+
+== Jest, after ==
+$ npx jest --selectProjects frontend --testPathPatterns 'proofreadingEdits|useInviteLink|requestError|useSmartPlannerLimits|useAddRehearsalSubmit|i18n' --silent
+PASS (15 suites) — Tests: 180 passed, 180 total
+
+== e2e flow 103, on the old errors.ts (git restore --source=HEAD -- src/i18n/translations/errors.ts) ==
+$ npm run e2e -- e2e/flows/103-admin-only-in-russian.yaml
+[Failed] An admin-only refusal in Russian (1m 52s) (Assertion is false: "Это может сделать только администратор проекта\." is visible)
+1/1 Flow Failed
+(the alert "Ошибка" came — the wait before it passed; only the wording is old)
+
+== e2e flows 103, 102 and 61, after ==
+$ npm run e2e -- e2e/flows/103-admin-only-in-russian.yaml e2e/flows/102-refusal-in-russian.yaml e2e/flows/61-profile-layout.yaml
+[Passed] An admin-only refusal in Russian (1m 30s)
+[Passed] A server refusal in Russian (44s)
+[Passed] The profile's last button, its sheets' bottom and the zone search (1m 18s)
+3/3 Flows Passed in 3m 33s
+
+Flow 102 reads ru notProjectMember, which the natives kept: green on the new texts.
+Flow 61 is Puck's (puck@e2e.test); 103's people are new seed keys (oberon,
+peaseblossom), so 61 runs as before.

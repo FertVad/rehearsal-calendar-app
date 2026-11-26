@@ -42,6 +42,11 @@ jest.mock('../../../../contexts/AuthContext', () => ({
     loading: false,
   }),
 }));
+// iOS's rating window after a save (T-410).
+const mockReviewAfterSave = jest.fn();
+jest.mock('../../../../shared/hooks/useReviewAfterSave', () => ({
+  useReviewAfterSave: () => mockReviewAfterSave,
+}));
 
 describe('useAddRehearsalSubmit Hook', () => {
   const mockProject: Project = {
@@ -302,6 +307,49 @@ describe('useAddRehearsalSubmit Hook', () => {
       );
     });
 
+    // Not over the form or its "Saved" alert: once OK has closed the form (T-410).
+    it('asks for iOS\'s rating window once the form has closed, not before', async () => {
+      (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
+        data: { rehearsal: { id: 'r1' } },
+      });
+      const mockGoBack = jest.fn();
+      jest.spyOn(require('@react-navigation/native'), 'useNavigation').mockReturnValue({
+        goBack: mockGoBack,
+      });
+
+      const { result } = renderHook(() => useAddRehearsalSubmit(defaultProps));
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+      expect(mockReviewAfterSave).not.toHaveBeenCalled();
+
+      const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.at(-1);
+      act(() => buttons.find((b: { text: string }) => b.text === 'OK').onPress());
+      expect(mockGoBack).toHaveBeenCalledTimes(1);
+      expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks after a save on the way out, which closes the form itself', async () => {
+      (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
+        data: { rehearsal: { id: 'r1' } },
+      });
+      const { result } = renderHook(() => useAddRehearsalSubmit(defaultProps));
+      await act(async () => {
+        await result.current.handleSubmit(true);
+      });
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(mockReviewAfterSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not ask after a save that failed', async () => {
+      (rehearsalsAPI.create as jest.Mock).mockRejectedValue(new Error('boom'));
+      const { result } = renderHook(() => useAddRehearsalSubmit(defaultProps));
+      await act(async () => {
+        await result.current.handleSubmit(true);
+      });
+      expect(mockReviewAfterSave).not.toHaveBeenCalled();
+    });
+
     it('should handle empty location (trim and set to undefined)', async () => {
       (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
         data: { rehearsal: { id: 'r1' } },
@@ -469,27 +517,25 @@ describe('useAddRehearsalSubmit Hook', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    it('should show API error message when available', async () => {
+    // The server's sentence is English and for the logs; its code is said in
+    // the app's words (T-281).
+    it("says the server's refusal by its code, never its English", async () => {
       (rehearsalsAPI.create as jest.Mock).mockRejectedValue({
         response: {
-          data: {
-            error: 'Project not found',
-          },
+          status: 403,
+          data: { error: 'Only admins can create rehearsals', code: 'ADMIN_ONLY' },
         },
       });
 
       const { result } = renderHook(() =>
-        useAddRehearsalSubmit(defaultProps)
+        useAddRehearsalSubmit({ ...defaultProps, t: { ...mockT, errors: { adminOnly: 'Admins only' } } as any })
       );
 
       await act(async () => {
         await result.current.handleSubmit();
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Project not found'
-      );
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Admins only');
     });
 
     it('should show update error in edit mode', async () => {

@@ -18,7 +18,20 @@ data step (T-278) that deletes the "joined", "is now an administrator" and
 "has seen" notices written before they recorded whom they name — notices
 deleting an account cannot reach. Not in the manifest; nothing has applied it.
 
-Order, when the owner applies them to production:
+`016-usage-statistics.sql` is a forward step of the runner, in the manifest
+(T-294): the days someone used the app and the invitation counts. It is schema
+version 2 (`database/schema/README.md`): `--apply` adds it to a database with a
+version 1 history, production's among them; `--fresh` creates version 2 with it.
+The server works without it and records nothing until it is applied.
+
+`017-weekend-defaults.sql` is a forward step too (T-406): three columns of
+`native_users` for weekends busy by default — the switch, on for everyone, and
+how far the server has laid the busy rows out. Schema version 3: `--apply` adds
+it after 016 (production's `--dry` after 016 plans it alone); `--fresh`
+creates version 3 with it. Apply it before the server of T-406, which works
+without it but marks no weekend and answers the switch with 503.
+
+Order for 014 and 015, when the owner applies them to production:
 
 1. Deploy the server with T-278 (and T-273). From then on every such notice
    records whom it names.

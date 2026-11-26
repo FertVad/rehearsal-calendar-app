@@ -109,13 +109,8 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       setProjectInfo({ ...response.data, code: inviteCode });
     } catch (err: any) {
       if (!isLatest()) return;
-      if (err.response?.status === 404) {
-        setError(t.projects.inviteNotFound);
-      } else if (err.response?.status === 410) {
-        setError(t.projects.inviteExpired);
-      } else {
-        setError(requestErrorMessage(t, err, t.projects.inviteLoadError));
-      }
+      // Not found and expired come as the server's codes (T-281).
+      setError(requestErrorMessage(t, err, t.projects.inviteLoadError));
     } finally {
       if (isLatest()) setLoading(false);
     }

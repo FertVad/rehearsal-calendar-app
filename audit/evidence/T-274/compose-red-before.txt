@@ -1,0 +1,14 @@
+T-274 — the composer's test before the composer (base 475ddc7, the test file alone added)
+
+$ node --test e2e/__tests__/store-compose.test.mjs
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../rehearsal-calendar-native/e2e/store/compose.mjs' imported from .../rehearsal-calendar-native/e2e/__tests__/store-compose.test.mjs
+  code: 'ERR_MODULE_NOT_FOUND',
+✖ e2e/__tests__/store-compose.test.mjs (180.389333ms)
+ℹ tests 1
+ℹ pass 0
+ℹ fail 1
+
+✖ failing tests:
+test at e2e/__tests__/store-compose.test.mjs:1:1
+  'test failed'

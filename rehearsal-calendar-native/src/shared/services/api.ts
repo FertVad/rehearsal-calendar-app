@@ -346,12 +346,14 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
 
   // OAuth Authentication. Repeatable as login is: the provider's token is
-  // checked again and a session issued again.
-  loginWithGoogle: (idToken: string) =>
-    api.post('/auth/google', { idToken }, REPEATABLE),
+  // checked again and a session issued again. `locale` is the language the app
+  // shows: an account created by this sign-in gets it, so the app does not
+  // switch to English afterwards and its notifications come in it (T-291).
+  loginWithGoogle: (idToken: string, locale: string) =>
+    api.post('/auth/google', { idToken, locale }, REPEATABLE),
 
-  loginWithApple: (idToken: string, user?: any) =>
-    api.post('/auth/apple', { idToken, user }, REPEATABLE),
+  loginWithApple: (idToken: string, user: any, locale: string) =>
+    api.post('/auth/apple', { idToken, user, locale }, REPEATABLE),
 
   // Auth Provider Management
   getAuthProviders: () =>
@@ -517,6 +519,13 @@ export const availabilityAPI = {
   // Delete availability for a specific date
   delete: (date: string) =>
     api.delete(`/native/availability/${date}`),
+
+  // The switch "Weekends busy" (T-406): its state and the ISO weekdays of the
+  // profile's zone; on or off, answered the same way.
+  getWeekends: () =>
+    api.get<{ enabled: boolean; days: number[] }>('/native/availability/weekends'),
+  setWeekends: (enabled: boolean) =>
+    api.put<{ enabled: boolean; days: number[] }>('/native/availability/weekends', { enabled }),
 
   // Delete all imported calendar events
   deleteAllImported: (session?: SessionStamp) =>

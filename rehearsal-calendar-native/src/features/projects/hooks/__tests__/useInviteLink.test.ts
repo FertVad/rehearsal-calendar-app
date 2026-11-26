@@ -118,9 +118,10 @@ describe('useInviteLink Hook', () => {
       expect(result.current.generatingInvite).toBe(false);
     });
 
-    it('should prefer the server error over the generic message', async () => {
+    // Said by the server's code in the app's language, not in its English (T-281).
+    it("says the server's refusal by its code, never its English", async () => {
       (invitesAPI.createInvite as jest.Mock).mockRejectedValue({
-        response: { data: { error: 'Only admins can invite' } },
+        response: { status: 403, data: { error: 'Only admins can create invite links', code: 'ADMIN_ONLY' } },
         message: 'Request failed with status code 403',
       });
 
@@ -130,7 +131,7 @@ describe('useInviteLink Hook', () => {
         await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Only admins can invite');
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Это может сделать только администратор проекта.');
     });
 
     it('should show default error message when error has no message', async () => {

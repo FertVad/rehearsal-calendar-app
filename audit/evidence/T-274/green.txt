@@ -1,0 +1,37 @@
+T-274 — App Store screenshots: what ran on the fix (19.11.2026, this Mac)
+
+$ node --test e2e/__tests__/store-compose.test.mjs
+✔ eight pictures a language, 1320×2868 and 1206×2622, RGB without alpha
+✔ each caption is captions.json's, broken where the file breaks it, read back off the picture
+✔ one size of type for the whole language, made smaller for all when one caption is too wide
+✔ the screenshot is under the caption, whole, with rounded corners
+✔ a missing screenshot or language is refused, not drawn over
+ℹ pass 5
+ℹ fail 0
+(red before: compose-red-before.txt — the module did not exist)
+
+$ node e2e/store/shoot.mjs <locale>      (one locale a run, under the e2e lock)
+[store] en-US: [Passed] App Store screenshots (3m 15s) — 8 pictures, type 104 px
+[store] ru:    [Passed] App Store screenshots (3m 37s) — 8 pictures, type 101 px
+[store] de-DE: [Passed] App Store screenshots (3m 24s) — 8 pictures, type 97 px
+[store] es-ES: [Passed] App Store screenshots (3m 7s)  — 8 pictures, type 101 px
+[store] en-GB: [Passed] App Store screenshots (3m 36s) — 8 pictures, type 104 px
+
+$ node e2e/store/compose.mjs --preview=../audit/evidence/T-274
+previews: en-US.png, en-GB.png, ru.png, es-ES.png, de-DE.png (the eight pictures in a row, 600 px tall)
+
+$ npm run e2e -- e2e/flows/01-login.yaml   (run.mjs without --store: unchanged)
+[Passed] Sign in (1m 39s)
+
+npm run check:dead, npm run type-check: clean.
+
+Looked at by eye: every frame of en-US, and of the others the planner, form,
+sync, details, calendar, invite and profile in at least one language each, and
+every preview whole. Planner: green, yellow, orange and red windows on the
+first screen; form: "Busy: <name> (11:00…) and 4 more"; details: 5/8; sync on,
+"Synced just now"; times 12-hour in en-US, 24-hour elsewhere.
+
+Found on the way, not fixed (outside the task): the project page asks
+GET /native/projects/:id/invite for the code up front, the server answers
+{ invite: { inviteCode } }, and ProjectDetailScreen reads res.data.inviteCode —
+so admins always see "Show Code" instead of the code. Frame 7 taps it.

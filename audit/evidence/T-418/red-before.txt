@@ -1,0 +1,80 @@
+T-418 - red before: flow 44 as it is at e0e2c9d (unchanged since 07b6a76, the
+supervisor's red check), run alone on 2026-11-26.
+
+$ npm run e2e -- e2e/flows/44-profile-language.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] The profile's language, kept by the account (3m 9s) (App crashed or stopped while executing flow, please check diagnostic logs: ~/Library/Logs/DiagnosticReports directory)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+maestro.log - the step the supervisor's run failed at:
+06:12:08.109 ... Assert that ".*support@rehearsly.me.*" is visible FAILED
+
+$ node ../audit/evidence/T-418/safari-ax-scan.mjs ".../2026-11-26_060739/The profile's language, kept by the account/logs/device-xctest.log"
+  18:11:31.620688  Safari reads: 0, kAXErrorAPIDisabled: 2   <- lost
+Safari opened 1 time(s); lost: 1
+
+device-simulator.log: "app ax: 0" 16 times, "app ax: 1" none.
+
+The supervisor's red run (e2e/out/failed/T-416-2026-11-26T01-50-23-464Z), the same:
+  15:46:39.650911  Safari reads: 0, kAXErrorAPIDisabled: 2   <- lost
+Safari opened 1 time(s); lost: 1
+
+The probe (probe-help-from-app.yaml), its wait for the page required (first
+run) - it stopped at the first opening:
+[Failed] T-418 probe - Help opened from the app, Safari launched by the link (2m 26s) (App crashed or stopped while executing flow, ...)
+  17:43:54.208066  Safari reads: 0, kAXErrorAPIDisabled: 2   <- lost
+
+The probe with the wait optional (as committed), all twelve openings:
+[Passed] T-418 probe - Help opened from the app, Safari launched by the link (4m 18s)
+[e2e] Safari launches: 12, tabs restored: 0 (fresh-safari.yaml)
+  18:00:48.902973  Safari reads: 0, kAXErrorAPIDisabled: 2   <- lost
+  18:01:33.622320  Safari reads: 5 (first 18:01:36.379306), kAXErrorAPIDisabled: 0
+  18:01:45.224018  Safari reads: 1 (first 18:01:48.177883), kAXErrorAPIDisabled: 0
+  18:01:55.273020  Safari reads: 6 (first 18:01:56.974236), kAXErrorAPIDisabled: 0
+  18:02:05.722795  Safari reads: 1 (first 18:02:08.714635), kAXErrorAPIDisabled: 0
+  18:02:18.878936  Safari reads: 7 (first 18:02:21.301796), kAXErrorAPIDisabled: 0
+  18:02:35.497452  Safari reads: 6 (first 18:02:38.196686), kAXErrorAPIDisabled: 0
+  18:02:46.970711  Safari reads: 1 (first 18:02:50.018553), kAXErrorAPIDisabled: 0
+  18:02:56.983813  Safari reads: 6 (first 18:02:58.692434), kAXErrorAPIDisabled: 0
+  18:03:07.701702  Safari reads: 6 (first 18:03:09.672466), kAXErrorAPIDisabled: 0
+  18:03:18.309621  Safari reads: 1 (first 18:03:21.491468), kAXErrorAPIDisabled: 0
+  18:03:30.024780  Safari reads: 5 (first 18:03:31.938967), kAXErrorAPIDisabled: 0
+Safari opened 12 time(s); lost: 1
+
+Each Safari's accessibility at its start (device-simulator.log, its first
+"AXS AccessibilityEnabled" line, and XCTest's handshake with it):
+  MobileSafari[82892]  18:00:48 launched by the link, app ax: 0, asked 18:00:49.54 - stayed 0
+  MobileSafari[83131]  18:01:33 app ax: 1                              (asked 18:01:34.58)
+  MobileSafari[83225]  18:01:44 app ax: 1 at 18:01:46.55, before it was asked at 18:01:47.60
+  MobileSafari[83388]  18:02:05 app ax: 1 at 18:02:07.09, before it was asked at 18:02:08.11
+  ... and so to the twelfth.
+
+Review 1: flow 107, the same order ("fresh-safari.yaml", then a tap in the app
+that launches Safari), run alone on the runner as it is at 347cebc (e2e/run.mjs
+without firstSafari), 2026-11-26 08:34:
+
+$ npm run e2e -- e2e/flows/107-rate-the-app.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[Failed] iOS's rating window after a save, once a version; Rate Rehearsly in the profile (3m 19s) (App crashed or stopped while executing flow, please check diagnostic logs: ~/Library/Logs/DiagnosticReports directory)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+maestro.log: 08:39:18.172 Assert that ".*apps\.apple\.com.*" is visible FAILED
+
+$ node ../audit/evidence/T-418/safari-ax-scan.mjs ".../2026-11-26_083451/iOS's rating window .../logs/device-xctest.log"
+  20:38:41.926134  Safari reads: 0, kAXErrorAPIDisabled: 2   <- lost
+Safari opened 1 time(s); lost: 1
+
+$ node ../audit/evidence/T-418/safari-starts.mjs ".../2026-11-26_083451/.../logs/device-simulator.log"
+  MobileSafari[38622] 20:38:41.210  app ax: 0  home inaccessible: com.apple.mobilesafari, kCFPreferencesAnyApplication, com.apple.ImageIO, com.apple.UIKit, com.apple.Accessibility, ...
+
+The first Safari of the boot, its home inaccessible, its accessibility off:
+flow 44's failure, on flow 107 (first-safari.txt).

@@ -30,8 +30,15 @@ tags:
 # The confirmation is the system's alert, which carries no testID. It asks
 # nothing, so its one button is "OK", not "Yes" (T-261).
 - extendedWaitUntil:
-    visible: "Settings Are in Your Profile"
+    visible: "Settings are in\u00a0your\u00a0profile\\."
     timeout: 10000
+# The weekends among what is set later: whoever skips keeps them busy (T-408).
+# T-417: the title a sentence, so sentence case and its full stop (HIG,
+# Alerts); the message typeset, its groups by sense held by no-break spaces —
+# not "the / week", nor "in Profile → / Settings." (Maestro's regex does not
+# take a space for U+00A0.)
+- assertVisible: "You can choose the\u00a0first\u00a0day of\u00a0the\u00a0week, decide whether your\u00a0weekends are\u00a0marked\u00a0as\u00a0busy, and set\u00a0up calendar\u00a0sync at\u00a0any\u00a0time in\u00a0Profile\u00a0→\u00a0Settings\\."
+- takeScreenshot: 09-invite-skip-en
 - assertNotVisible: "Yes"
 - tapOn: "OK"
 - extendedWaitUntil:

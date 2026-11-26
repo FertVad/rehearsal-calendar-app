@@ -1,0 +1,53 @@
+T-405: what `simctl terminate` answers, on the "Rehearsly E2E" simulator
+(iOS 26.5), 2026-11-24 15:14 UTC, under the e2e lock.
+
+The output of the probe below, with two shortenings, each marked
+[shortened: ...]: the boot progress lines of bootstatus, and the stderr of the
+last terminate, which repeated the "Safari not running" one line for line.
+
+$ node e2e/hold-lock.mjs node ../audit/evidence/T-405/probe-terminate.mjs
+simulator 0E96462E-BD5B-4C19-9847-8E63D550B36E
+$ simctl bootstatus -b
+  exit 0
+  [shortened: boot progress lines removed] Finished
+launchctl list, Safari lines, after boot: []
+$ simctl terminate (Safari not running)
+  exit 3
+  stdout: (empty)
+  stderr: An error was encountered processing the command (domain=NSPOSIXErrorDomain, code=3):
+Simulator device failed to terminate com.apple.mobilesafari.
+found nothing to terminate
+Underlying error (domain=NSPOSIXErrorDomain, code=3):
+	The request to terminate "com.apple.mobilesafari" failed. found nothing to terminate
+	found nothing to terminate
+$ simctl terminate (no such app)
+  exit 3
+  stdout: (empty)
+  stderr: An error was encountered processing the command (domain=NSPOSIXErrorDomain, code=3):
+Simulator device failed to terminate com.example.none.
+found nothing to terminate
+Underlying error (domain=NSPOSIXErrorDomain, code=3):
+	The request to terminate "com.example.none" failed. found nothing to terminate
+	found nothing to terminate
+$ simctl launch Safari
+  exit 0
+  stdout: com.apple.mobilesafari: 99398
+  stderr: (empty)
+launchctl list, Safari lines, Safari launched: ["99398\t0\tUIKitApplication:com.apple.mobilesafari[eea7][rb-legacy]"]
+$ simctl terminate (Safari running)
+  exit 0
+  stdout: (empty)
+  stderr: (empty)
+launchctl list, Safari lines, after terminate: []
+$ simctl terminate again (just stopped)
+  exit 3
+  stdout: (empty)
+  stderr: [shortened: the same six lines as "Safari not running" above - NSPOSIXErrorDomain code=3, "found nothing to terminate"]
+$ simctl shutdown
+  exit 0
+
+So: Safari stopped by terminate is exit 0, and launchctl lists no Safari job
+after it. Nothing to stop is exit 3 (ESRCH, NSPOSIXErrorDomain code=3) with
+"found nothing to terminate". The helper (freshSafari in e2e/safari.mjs) takes those
+two as "Safari is not running" and anything else - another code, another
+text, a timeout - as a failure: it removes nothing and answers 500.

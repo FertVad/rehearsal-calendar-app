@@ -56,6 +56,19 @@ tags:
     text: "${THIS_MONTH_LABEL}"
     below:
       id: availability-legend
+# Today, not marked, is free; yesterday, gone, has no dot (T-292). Yesterday is
+# in today's row unless today is a Monday.
+- assertVisible:
+    id: day-${TODAY_DAY}
+    text: "\\d+, Free"
+- runFlow:
+    when:
+      visible:
+        id: day-${YESTERDAY_DAY}
+    commands:
+      - assertVisible:
+          id: day-${YESTERDAY_DAY}
+          text: "\\d+"
 - takeScreenshot: 10-opens-on-this-week
 # Loaded once OTHER_DAY shows the seeded mark.
 - scrollUntilVisible:
@@ -182,13 +195,15 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
-# On its own day, not a neighbour.
+# On its own day, not a neighbour: they are as they were, not marked, and so
+# free, as the planner reads them (T-292). A day not marked had no dot and
+# read as unknown, and people marked whole weeks "Free" to make them green.
 - assertVisible:
     id: day-${BEFORE_DAY}
-    text: "\\d+"
+    text: "\\d+, Free"
 - assertVisible:
     id: day-${AFTER_DAY}
-    text: "\\d+"
+    text: "\\d+, Free"
 # The other device's save stands.
 - scrollUntilVisible:
     element:

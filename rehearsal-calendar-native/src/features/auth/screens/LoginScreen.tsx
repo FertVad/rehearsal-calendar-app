@@ -37,7 +37,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [appleAvailable, setAppleAvailable] = useState(false);
   const passwordInput = useRef<TextInput>(null);
   const { login, loginWithGoogle, loginWithApple, busy } = useAuth();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { error, fail, clear, here } = useAttemptError(navigation);
 
   // Google OAuth
@@ -89,7 +89,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Send to backend
       clear();
-      const result = await loginWithGoogle(idToken);
+      // The language on screen goes with it: a new account gets it (T-291).
+      const result = await loginWithGoogle(idToken, language);
 
       // Show message if account was linked
       if (result.linked) {
@@ -117,7 +118,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       if (!credential) return;
 
       clear();
-      const result = await loginWithApple(credential.identityToken, credential.user);
+      const result = await loginWithApple(credential.identityToken, credential.user, language);
 
       if (result.linked) {
         Alert.alert(t.auth.accountLinked, t.auth.appleAccountLinkedToExisting);

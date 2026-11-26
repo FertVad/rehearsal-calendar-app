@@ -191,6 +191,18 @@ by hand with `NOW()`, in the same millisecond as others, could fall between two
 pages and not be shown. Left alone: nothing in the app writes such rows, and a
 cursor with microseconds would need the database to hand the time back as text.
 
+### The admin statistics read whole tables into memory (T-293)
+
+The admin dashboard computes its figures in the server from whole lists, not
+in SQL. The inbox section reads every `native_notifications` row of the period
+— for "all time", every row — to take a median time to read
+([analytics.js](../server/services/admin/analytics.js), `notifications`). The
+list of people is read in full by each of the three routes on one opening of
+the page (stats, users, analytics). With a dozen accounts this costs nothing; it
+becomes noticeable at tens of thousands of notifications, only while the owner
+has the dashboard open, and only to the owner. When it does, take the median in
+PostgreSQL (`percentile_cont`) and share one read of the people per request.
+
 ### Migration 013 needs the push-token keys under their original names
 
 The migrator recognises a schema from before 013 by what its push-token keys do
@@ -221,6 +233,48 @@ The same id would also settle a rarer iOS case: a full iCloud resync gives the
 calendars new ids, and rows imported under the old ones stay until "remove all
 imported" is pressed. It needs signing out of iCloud and back in, and costs
 extra busy hours the person can see and clear.
+
+### Deleting the account without calendar access counts only this install's exports (T-409)
+
+Before DELETE /me the app removes what it exported to this iPhone's calendar
+and says how many events stayed (`removeExportedBeforeDeletion`,
+services/calendarSync.ts). Without calendar access it can neither remove nor
+look, so it counts what this phone's own record says it exported. That record
+goes when the app is deleted, and iOS takes the calendar access with it: events
+exported by an earlier install, on a phone whose new install was never given
+the calendar, are not counted, and the alert says nothing of them. It needs a
+reinstall plus a refusal of the calendar, and costs events the person can
+delete in Calendar; the policy says other devices keep theirs the same way.
+Special case, minor: a line here.
+
+### Deleting the account forgets that iOS's rating window was asked for (T-410, T-414)
+
+What the rating request counts — the days of use and the version and time of
+the last ask (`reviewPrompt.ts`) — lives in AsyncStorage, and `deleteAccount`
+(contexts/AuthContext.tsx) clears AsyncStorage whole. A new account on the same
+phone, used on three days, can therefore be asked a second time in the same
+version. It costs at most one more of Apple's windows, which iOS itself shows
+no more than three times in 365 days, and needs an account deleted and another
+made on one phone. Keeping these keys through the clear would carry one
+person's traces past the deletion of their account, which is worse than the
+repeat. Special case, minor: a line here.
+
+### The rating window can follow Availability closed by something other than the person (T-414, T-415)
+
+On Availability the rating request is tied to the screen's unmount after a
+save went through (`visit`, features/availability/screens/AvailabilityScreen.tsx).
+But the screen is also unmounted when the stack is reset from outside while it
+is open and the person never closed it: a tapped notification takes the stack
+back to the tabs, or the session ends and sign-in is shown. Apple's window then
+comes a second later over whatever is on the screen by then, and at the end of
+a session it is asked with the `onboardingCompleted` the user had before. It
+needs three things at once: a save in this visit, the rule for asking holding
+(`reviewDue`, shared/services/reviewPrompt.ts), and an outside reset of the
+stack while the screen is open. It costs one of Apple's windows out of place,
+which "Not Now" closes and which iOS shows no more than three times a year
+anyway. A fix would ask only when the person left on their own — `beforeRemove`
+with a back or modal-dismiss action, the close question's Save included —
+which the unmount cannot tell apart. Special case, minor: a line here.
 
 ### Android App Links wait for an Android release (IC01)
 
@@ -263,6 +317,16 @@ client sends a short invite code in capitals, as issued (T-025).
 ---
 
 ## Known and left alone on purpose — not defects
+
+- The usage statistics (T-294) are approximate in known ways. A day of use is
+  any request the app makes in a session: opening the app counts, whatever
+  the person then does, and a session refresh alone does not. A link preview
+  is recognised by its user agent; one that calls itself an ordinary browser
+  counts as a person opening the page. The page is counted after it is sent:
+  on Vercel through the platform's `waitUntil` hook, and where that is absent a
+  count may be lost if the function is frozen first — never the page. Each
+  server instance writes a person's day once; several instances write it once
+  each, onto the same row.
 
 - Push delivery is not shown to anyone: Expo's ticket says the message was
   accepted, and `sent` means accepted. The receipts are read by the reminder

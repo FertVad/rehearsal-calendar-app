@@ -21,18 +21,12 @@ import { styles } from '../styles/calendarSyncSettingsScreenStyles';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
 import { formatLastSync } from '../../../shared/utils/formatLastSync';
 import { CalendarSyncSettings, DeviceCalendar } from '../../../shared/types/calendar';
+// Auto Sync off, both directions: the switch, the removals and the account's deletion save the same.
+import { SYNC_OFF } from '../../../shared/services/calendarSync';
 
 type CalendarSyncSettingsScreenProps = NativeStackScreenProps<any, 'CalendarSyncSettings'>;
 
 type CalendarProvider = 'google' | 'apple' | null;
-
-/** Auto Sync off, both directions: what the switch saves, and what a removal saves first. */
-const SYNC_OFF: Partial<CalendarSyncSettings> = {
-  exportEnabled: false,
-  importEnabled: false,
-  importCalendarIds: [],
-  importInterval: 'manual',
-};
 
 export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncSettingsScreenProps) {
   const { t } = useI18n();
@@ -468,7 +462,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
           <>
             {/* Sync Toggle */}
             <View style={styles.section}>
-              <View style={styles.settingItem}>
+              <View testID="calendar-sync-row" style={styles.settingItem}>
                 <View style={styles.settingLeft}>
                   <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                     <Ionicons name="sync" size={20} color={Colors.accent.purple} />
@@ -522,6 +516,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               {/* Apple Calendar Option */}
               {hasAppleCalendar && (
                 <TouchableOpacity
+                  testID="calendar-provider-apple"
                   style={[
                     styles.calendarPickerButton,
                     selectedProvider === 'apple' && styles.calendarPickerButtonSelected,

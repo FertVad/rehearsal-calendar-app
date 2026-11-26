@@ -75,6 +75,19 @@ tags:
     direction: DOWN
     centerElement: true
 - assertNotVisible: ".*Honolulu.*"
+# His weekend is the one of his profile's zone, Israel's: Friday and Saturday,
+# named under the switch below "Start Week On" (T-406), with no-break spaces
+# between the days (T-408).
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-days
+      text: "Your weekend: Fri\u00a0and\u00a0Sat"
+    direction: DOWN
+    centerElement: true
+- scrollUntilVisible:
+    element: ".*Tel Aviv \\(UTC\\+[23]\\).*"
+    direction: UP
+    centerElement: true
 - tapOn: ".*Tel Aviv \\(UTC\\+[23]\\).*"
 # The picker offers the phone's own zone first: the simulator is in Honolulu,
 # ten hours behind UTC. It read "Honolulu (UTC)": the offset was Intl's
@@ -99,6 +112,13 @@ tags:
     notVisible: "Honolulu \\(.*\\)"
     timeout: 10000
 - assertVisible: ".*Tokyo \\(UTC\\+9\\).*"
+# And his weekend with it: Japan's, Saturday and Sunday (T-406).
+- scrollUntilVisible:
+    element:
+      id: profile-weekends-days
+      text: "Your weekend: Sat\u00a0and\u00a0Sun"
+    direction: DOWN
+    centerElement: true
 # The calendar follows: Night watch at Tokyo's time — today's or tomorrow's,
 # by the hour the flow runs at.
 - tapOn:

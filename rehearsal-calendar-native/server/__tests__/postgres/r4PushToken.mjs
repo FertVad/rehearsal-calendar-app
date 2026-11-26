@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { inspectSchema } from '../../database/schema/inspect.mjs';
-import { manifest } from '../../database/schema/manifest.mjs';
+import { manifest, inspectSchema } from '../../database/schema/manifest.mjs';
 import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
 
 // One owner per push token on PostgreSQL (R4, cause fix 11: G01). Two people
@@ -108,7 +107,7 @@ export async function probeR4PushToken({ connectionString, control, allowedPorts
         ALTER TABLE native_push_tokens DROP CONSTRAINT native_push_tokens_device_token_key;
         ALTER TABLE native_push_tokens ADD UNIQUE (user_id, device_token);
         CREATE INDEX idx_push_tokens_token ON native_push_tokens(device_token)`);
-      const before = await inspectSchema(q, { schema: 'r0_fixture', profile: 'rehearsly-pg-current-v1' });
+      const before = await inspectSchema(q, { schema: 'r0_fixture', profile: manifest.currentProfile });
       assert.equal(before.compatible, false, 'the old shape is not the current catalog');
       await q(`INSERT INTO native_push_tokens (user_id, device_token, last_active_at) VALUES
         ($1, 'ExponentPushToken[twice]', '2026-10-01T10:00:00Z'), ($2, 'ExponentPushToken[twice]', '2026-10-01T11:00:00Z'),
@@ -120,7 +119,7 @@ export async function probeR4PushToken({ connectionString, control, allowedPorts
         { device_token: 'ExponentPushToken[tie]', user_id: previous },
         { device_token: 'ExponentPushToken[twice]', user_id: next },
       ]);
-      const after = await inspectSchema(q, { schema: 'r0_fixture', profile: 'rehearsly-pg-current-v1' });
+      const after = await inspectSchema(q, { schema: 'r0_fixture', profile: manifest.currentProfile });
       assert.equal(after.compatible, true, `013 yields the current catalog: ${JSON.stringify(after.issues)}`);
     } finally { await q('ROLLBACK'); }
     contracts.push('migration 013 keeps the most recently active holder of each token and yields the current catalog');

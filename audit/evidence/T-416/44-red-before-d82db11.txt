@@ -1,0 +1,29 @@
+T-416 - red before: flow 44 as it is on d82db11 (git restore --source=d82db11 -- e2e/flows/44-profile-language.yaml),
+run alone on 2026-11-26, the app of HEAD f8621d1 (no app code changed since d82db11 for this flow).
+
+$ npm run e2e -- e2e/flows/44-profile-language.yaml
+
+[e2e] native inputs acff156eab94 (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] The profile's language, kept by the account (3m 43s) (Assertion is false: ".*Язык, Русский.*" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-26T00:11:08.530Z  tapped "id tab-profile" again: no ".*Язык, Русский.*" after the first tap
+[e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
+
+The same failure as the full run of d82db11 on 25.11 (checks.log): the third
+"Язык, Русский" check, after the privacy page, the profile scrolled to its foot
+and profile-language above the screen's top, out of the hierarchy.

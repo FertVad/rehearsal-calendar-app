@@ -1,0 +1,86 @@
+T-418 (review 1) - which Safari came up with its accessibility off, and why.
+
+$ node ../audit/evidence/T-418/safari-starts.mjs e2e/out/artifacts/*/*/logs/device-simulator.log \
+    e2e/out/failed/*/artifacts/*/logs/device-simulator.log
+(every MobileSafari process: its start, "app ax" of its WebContent processes,
+and whether CoreFoundation said its home directory was inaccessible; the
+domain list cut after com.apple.Accessibility)
+
+Runs alone, the runner before this change (each its own boot; F = the boot's
+first Safari to start):
+
+  2026-11-26_061522  flow 44 (order 1)
+    F MobileSafari[89734] 18:19:47  app ax: 1  home readable
+      MobileSafari[89914] 18:20:13  app ax: 1  home readable
+  2026-11-26_062405  flow 44 (order 1), failed
+    F MobileSafari[92754] 18:28:26  app ax: 0  home inaccessible: com.apple.mobilesafari, kCFPreferencesAnyApplication, com.apple.ImageIO, com.apple.UIKit, com.apple.Accessibility, ...
+  2026-11-26_063411  flow 44 (order 2), failed
+    F MobileSafari[96102] 18:38:07  app ax: 0  home inaccessible: ..., com.apple.Accessibility, ...
+      (Maestro's Safari, 96044, launched 06:38:02.39 and stopped by fresh-safari
+      0.2 s later, never logged a line: the tap's Safari was the first to start)
+  2026-11-26_064302  flow 44 (fe9b1a9)
+    F MobileSafari[99100] 18:46:52  app ax: 0  home inaccessible: ..., com.apple.Accessibility, ...
+      MobileSafari[99318] 18:47:33  app ax: 1  home readable
+      MobileSafari[99428] 18:47:50  app ax: 1  home readable
+  2026-11-26_065129  flow 44 (fe9b1a9)
+    F MobileSafari[2476]  18:55:43  app ax: 1  home readable
+      MobileSafari[2584]  18:55:55  app ax: 1  home readable
+      MobileSafari[2744]  18:56:18  app ax: 1  home readable
+  2026-11-26_072109  flow 44 (fe9b1a9)
+    F MobileSafari[13136] 19:25:05  app ax: 1  home readable
+      MobileSafari[13238] 19:25:17  app ax: 1  home readable
+      MobileSafari[13348] 19:25:35  app ax: 1  home readable
+  2026-11-26_083451  flow 107, failed (red-before.txt)
+    F MobileSafari[38622] 20:38:41  app ax: 0  home inaccessible: ..., com.apple.Accessibility, ...
+  T-416-2026-11-26T01-50-23-464Z  flow 44, the supervisor's red check
+    F MobileSafari[36426] 15:46:38  app ax: 0  home inaccessible: ..., com.apple.Accessibility, ...
+
+Night runs (their failed flows' folders kept; none of these Safaris the boot's
+first, which came 28-67 min after the boot, review 1):
+
+  full-e2e-19ae506  flow 70   MobileSafari[15255]  app ax: 1  home readable
+  full-e2e-25e2d1d  flow 98   MobileSafari[51738]  app ax: 1  home readable
+  full-e2e-25e2d1d  flow 70   MobileSafari[38046]  app ax: 1  home readable
+  full-e2e-477ea2f  flow 70   MobileSafari[12404]  app ax: 1  home readable
+  full-e2e-d82db11  flow 44   MobileSafari[95290]  app ax: 1  home readable
+                              MobileSafari[95409]  app ax: 1  home readable
+  T-296             flow 70   MobileSafari[61803]  app ax: 1  home readable
+
+So: 5 Safaris "app ax: 0", all five "home inaccessible", com.apple.Accessibility
+among the domains; 17 "app ax: 1", all "home readable". Each "app ax: 0" one
+was the first Safari to start since the boot - the first in 5 of the 8 runs
+alone; no later Safari ever was, the one right after an inaccessible first
+(99318) among them.
+
+The two side by side (ax-lines.mjs, the 064302 run): the same XCTest handshake,
+"Returning 1 for enabled state" in both; the first difference is at the
+process's start -
+
+  MobileSafari[99100] 18:46:52.329  Disabling saving preferences for { com.apple.Accessibility, kCFPreferencesCurrentUser, any host, (null) } because home directory is inaccessible
+  ...
+  MobileSafari[99100] 18:46:55.220  WebContent[0] Stored App AX setting: 0
+  MobileSafari[99100] 18:46:55.220  WebContent[0] AXS AccessibilityEnabled: (app ax: 0), ax settings: 1, cached: 1
+
+  MobileSafari[99318] (no "home directory is inaccessible" line)
+  MobileSafari[99318] 18:47:36.425  WebContent[0] Stored App AX setting: 1
+  MobileSafari[99318] 18:47:36.425  WebContent[0] AXS AccessibilityEnabled: (app ax: 1), ax settings: 1, cached: 1
+
+What review 1 asked, and what the logs answer:
+
+- "In the night run earlier flows had opened Safari" (the first round's docs
+  and README) was wrong: in d82db11's night run flow 44 failed before "Help"
+  (".*Язык, Русский.*"), and in the night runs review 1 read, flow 44's or
+  107's Safari was the first the driver met. What those Safaris had in common
+  was not an earlier Safari but not being the boot's first.
+- "Once the driver had asked Safari, later launches came up on" (the first
+  round's conclusion): every later Safari came up readable whether or not the
+  driver had asked the first (99100 was asked; 96044 in 063411 never started,
+  so the tap's was the first). The asking was not the cause.
+- A pause from the boot (probe-pause-then-help.yaml: signed in, the app read
+  for four more minutes, then flow 44's old order): the first Safari, the
+  tap's, 6.5 min after Maestro started, was read ("[Done] View hierarchy
+  snapshot for Application 'com.apple.mobilesafari'", xctest_runner of
+  2026-11-26_073604). One run; the command's limit stopped it right after, and
+  Maestro's device logs were not written. Whether the time since the boot
+  makes the first Safari's home readable is not settled by it; the runner's
+  step does not depend on it.

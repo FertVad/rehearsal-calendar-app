@@ -15,6 +15,8 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.0' } } }));
 jest.mock('../../../../shared/services/api', () => ({
+  // The weekends switch (T-406) reads its state on focus.
+  availabilityAPI: { getWeekends: () => Promise.resolve({ data: { enabled: true, days: [6, 7] } }), setWeekends: jest.fn() },
   authAPI: { registerPushToken: jest.fn(), unregisterPushToken: jest.fn(() => Promise.resolve()) },
   supportPageUrl: () => 'http://127.0.0.1:3001/support',
 }));

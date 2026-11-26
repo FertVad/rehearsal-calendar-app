@@ -458,6 +458,59 @@ describe('DP01 — member selection follows the project', () => {
   });
 });
 
+// T-287: the participants row said "No members in this project" for as long as
+// the Planner was loading, every time it opened, and after a failed load too.
+// An empty list then is not a project with nobody in it (CLAUDE.md §10).
+describe('The participants row before the people are known (T-287)', () => {
+  const rowText = (screen: ReturnType<typeof render>) =>
+    within(screen.getByTestId('participants-row')).getAllByText(/.+/).map(n => n.props.children);
+
+  it('while the members are on their way: loading, not "no members", and no tap', async () => {
+    getMembers.mockImplementation(() => new Promise(() => { /* never answers */ }));
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+
+    expect(screen.queryByText(t.rehearsals.noMembers)).toBeNull();
+    expect(rowText(screen)).toEqual([t.rehearsals.loadingMembers]);
+    expect(screen.getByTestId('participants-row').props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('when their load failed: says so, not "no members"', async () => {
+    getMembers.mockRejectedValue(new Error('offline'));
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(screen.queryByText(t.rehearsals.noMembers)).toBeNull();
+    expect(screen.queryByText(t.rehearsals.loadingMembers)).toBeNull();
+    expect(rowText(screen)).toEqual([t.rehearsals.loadMembersError]);
+    expect(screen.getByTestId('participants-row').props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('switched to another project: loading until its own members are in', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+    expect(rowText(screen)).toContain('All participants · 3');
+
+    getMembers.mockImplementation(() => new Promise(() => { /* never answers */ }));
+    screen.rerender(<SmartPlannerScreen {...makeProps('B')} />);
+    await settle();
+
+    expect(screen.queryByText(t.rehearsals.noMembers)).toBeNull();
+    expect(rowText(screen)).toEqual([t.rehearsals.loadingMembers]);
+  });
+
+  it('a project with nobody in it still says so, once that is known', async () => {
+    getMembers.mockResolvedValue({ data: { members: [] } });
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(rowText(screen)).toEqual([t.rehearsals.noMembers]);
+  });
+});
+
 // T-032: the tab's first screen, a large title and no way back; opened from
 // the tab with no project, it is set to the first one in its params.
 describe('the Planner tab\'s root screen (T-032)', () => {

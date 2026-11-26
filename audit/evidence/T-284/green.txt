@@ -1,0 +1,66 @@
+T-284 - green after the fix.
+
+What changed
+------------
+- e2e/server-with-mailbox.mjs: /notify finds whom a "joined", "is now an
+  administrator" and "has seen" notice names as the one account with that full
+  name (fullName, server/utils/names.js, as the server names them) and passes
+  { id, name } to notifyMemberJoined / notifyAdminAppointed /
+  notifyMemberResponse, as inviteRedemption.js, members.js and rehearsals.js
+  do. No made-up id: no account by that name answers 404, two answer 409, and
+  nothing is written. The 'Somebody' fallback is gone.
+- e2e/seed.mjs: NAMED, the five people the flows' notices name, as accounts
+  in no project that never sign in: Malcolm Prince (61, 62), Banquo Thane
+  (88), Jacinta Labradora, Marthe Schwerdtlein, Варвара Кабанова (86).
+- e2e/flows/86: the Russian woman is Варвара Кабанова, not Марфа Кабанова.
+  Марфа is Kabanikha's account, which flow 89 deletes, so 86 run after 89
+  would name nobody (and a second "Марфа Кабанова" would make the name
+  ambiguous). The checks are the same: a woman's name, «в курсе», «теперь в
+  проекте «Гроза»», each read in the inbox.
+- e2e/flows/70: en and de are matched by the words the native editors gave
+  them in 64d7860 (T-269): "sends our emails: your codes for signing up ...
+  Ireland", "Versand unserer E-Mails: Codes für Registrierung ... Irland".
+  Still by the line's words, not only "Resend". ru and es did not change.
+
+$ npm run e2e -- e2e/flows/61-inbox-new-member-opens-members.yaml \
+    e2e/flows/62-inbox-says-when.yaml e2e/flows/88-inbox-new-admin-opens-members.yaml
+[Passed] Inbox, new member opens the members (55s)
+[Passed] Inbox says when (37s)
+[Passed] Inbox, new administrator opens the members (38s)
+
+3/3 Flows Passed in 2m 10s
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[Passed] Rehearsal notices read right in Spanish, German and Russian (4m 36s)
+
+1/1 Flow Passed in 4m 37s
+
+server.log of that run: every notify.js call was written, among them
+  [e2e] told laurencia@e2e.test of member_response on Escena del balcón
+  [e2e] told gretchen@e2e.test of member_response on Fechtszene
+  [e2e] told katerina@e2e.test of member_joined in Гроза
+  [e2e] told katerina@e2e.test of member_response on Прогон
+
+Flow 70 with the whole setup takes longer than the ten minutes a command gets
+here (the page grew from 706 to 1250 lines with T-269; each scroll takes
+50-60 s). In the run that was cut off, every step up to the German one
+passed, each scroll inside its own 60 s timeout (maestro.log,
+e2e/out/artifacts/2026-11-20_052712):
+  Scrolling DOWN until ".*sends our emails: your codes for signing up.*Ireland.*" is visible ... COMPLETED
+  Scrolling UP until "Русский" is visible ... COMPLETED
+  Scrolling DOWN until ".*отправка писем с кодами.*Ирландия.*" is visible ... COMPLETED
+  Scrolling UP until "Español" is visible ... COMPLETED
+  Scrolling DOWN until ".*envío de los correos con códigos.*Irlanda.*" is visible ... COMPLETED
+  Scrolling UP until "Deutsch" is visible ... COMPLETED
+and the command's ten minutes ended at the German tap.
+
+The German step alone, as flow 70 reaches it (open en, tap "Deutsch",
+scroll to the row), in a temporary flow:
+  new words:  [Passed] T-284 probe, flow 70 German only    1/1 Flow Passed in 1m 10s
+  old words:  [Failed] T-284 probe, flow 70 German only (1m 28s)
+              (No visible element found: ".*Versand der E-Mails mit Codes.*Irland.*")
+
+70's length and its 60 s scrolls are T-277's (the flakiness of 70 and 98),
+left to it; no timeout was raised here.
+
+npm run check:dead (knip): clean.

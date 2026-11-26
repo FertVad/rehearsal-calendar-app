@@ -1,0 +1,220 @@
+# The App Store's eight screenshots (T-274), taken of the app as it is, on the
+# store's simulator (iPhone 17 Pro Max), as the director of e2e/store/seed.mjs's
+# world. Not one of e2e/flows: run by e2e/store/shoot.mjs, one language at a
+# time, through `node e2e/run.mjs --store=<locale>`.
+#
+# Each frame starts from a fresh launch, the session kept, so a screen left
+# open never stands in the next. The phone is set as one of the page's
+# country: its language and region, and the 24-hour clock everywhere but the
+# US (AppleICUForce24HourTime, read as a property list — flow 53). And a
+# phone, not a simulator: rehearslyPushDevice (e2e/device, docs/e2e.md), or the
+# profile says the device cannot receive notifications. Screenshots
+# store-01 … store-08, in the order the store shows them:
+#   1 the Planner, its windows at every level   5 a rehearsal's details, 5 of 8 seen
+#   2 the director's month of busy times        6 the calendar, every project
+#   3 the form, who is busy by name             7 the play's page: its link and code
+#   4 Calendar Sync on, the calendars           8 the profile: language, time zone
+appId: ${APP_ID}
+name: App Store screenshots
+tags:
+  - store
+---
+# Signed in on the simulator's own English: Maestro types through the
+# keyboard, and with the app in Russian the address typed went through a
+# Russian layout and lost its letters (docs/e2e.md). Every frame is taken
+# after a launch with the country's settings.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      rehearslyPushDevice: "1"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 30000
+
+# 6. The calendar, its rehearsals in every project.
+- launchApp:
+    arguments:
+      AppleICUForce24HourTime: "${CLOCK24_LABEL}"
+      AppleLanguages: "${APPLE_LANGUAGES_LABEL}"
+      AppleLocale: "${APPLE_LOCALE_LABEL}"
+      rehearslyPushDevice: "1"
+- extendedWaitUntil:
+    visible: ".*${CONCERT_LABEL}.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: store-06
+
+# 1. The Planner on the play, whole cast: its first day's windows.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: ".*${PLAY_LABEL}.*"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible:
+      id: planner-list-dates
+    timeout: 30000
+# Its first day's windows: today's, or tomorrow's late in the evening.
+- extendedWaitUntil:
+    visible:
+      id: "planner-row-.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: store-01
+
+# 3. Tomorrow 11:00, when five are busy: the form names them.
+- scrollUntilVisible:
+    element:
+      id: planner-add-${FORM_DAY}-${FORM_TIME}
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn:
+    id: planner-add-${FORM_DAY}-${FORM_TIME}
+- extendedWaitUntil:
+    visible:
+      id: participants-conflict
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store-03
+
+# 2. The director's own busy times, in the month.
+- launchApp:
+    arguments:
+      AppleICUForce24HourTime: "${CLOCK24_LABEL}"
+      AppleLanguages: "${APPLE_LANGUAGES_LABEL}"
+      AppleLocale: "${APPLE_LOCALE_LABEL}"
+      rehearslyPushDevice: "1"
+- extendedWaitUntil:
+    visible:
+      id: tab-create
+    timeout: 30000
+- tapOn:
+    id: tab-create
+- tapOn: "${MARK_BUSY_LABEL}"
+- extendedWaitUntil:
+    visible:
+      id: availability-legend
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: day-${TOMORROW_DAY}
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: store-02
+
+# 5. The rehearsal five of eight have seen.
+- launchApp:
+    arguments:
+      AppleICUForce24HourTime: "${CLOCK24_LABEL}"
+      AppleLanguages: "${APPLE_LANGUAGES_LABEL}"
+      AppleLocale: "${APPLE_LOCALE_LABEL}"
+      rehearslyPushDevice: "1"
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 30000
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://rehearsal/${SEEN_REHEARSAL}
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-seen-count
+      text: "5/8"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: store-05
+
+# 7. The play's page: its link to share and its code.
+- launchApp:
+    arguments:
+      AppleICUForce24HourTime: "${CLOCK24_LABEL}"
+      AppleLanguages: "${APPLE_LANGUAGES_LABEL}"
+      AppleLocale: "${APPLE_LOCALE_LABEL}"
+      rehearslyPushDevice: "1"
+- extendedWaitUntil:
+    visible:
+      id: tab-projects
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-projects
+      SEE: ".*${PLAY_LABEL}.*"
+      WAIT_MS: "15000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*${PLAY_LABEL}.*"
+      SEE: ".*${SHOW_CODE_LABEL}.*"
+      WAIT_MS: "15000"
+# The page asks for the code up front and reads it from the wrong place in the
+# answer, so it offers "Show Code" (the owner's report, T-274); a person taps it.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*${SHOW_CODE_LABEL}.*"
+      GONE: ".*${SHOW_CODE_LABEL}.*"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: store-07
+
+# 8. The profile: the language and the time zone.
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible:
+      id: profile-language
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store-08
+
+# 4. Calendar Sync, on, with the iPhone's calendars.
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-calendar-sync
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-toggle
+    timeout: 15000
+- tapOn: ".*${APPLE_LABEL}.*"
+- runFlow:
+    when:
+      notVisible:
+        id: calendar-sync-toggle
+        checked: true
+    commands:
+      - tapOn:
+          id: calendar-sync-toggle
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-run
+    timeout: 15000
+- tapOn:
+    id: calendar-sync-run
+# What the run did comes in an alert; the screen is shot after it.
+- extendedWaitUntil:
+    visible: "OK|ОК"
+    timeout: 60000
+- tapOn: "OK|ОК"
+- extendedWaitUntil:
+    notVisible: "OK|ОК"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-status
+    timeout: 60000
+- waitForAnimationToEnd
+- takeScreenshot: store-04

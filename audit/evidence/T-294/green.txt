@@ -1,0 +1,37 @@
+T-294 green — HEAD 9d6fa2a, 2026-11-24, Node 26.13.0, from rehearsal-calendar-native.
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest server/__tests__/routes/usageStatistics.test.js --verbose
+    ✓ a request in a session records the day in the person's own zone, not UTC
+    ✓ a person without a stored zone is counted in UTC
+    ✓ a second request the same day writes nothing more
+    ✓ the row keeps the last build of the day; a request naming none keeps it
+    ✓ no build header: the build is empty
+    ✓ deleting the account deletes its days
+    ✓ refused requests record nothing: 401, 403 and 426
+    ✓ a failing write does not fail the request: one line in the log, no stack
+    ✓ the page opened in a browser is counted after it is sent
+    ✓ a link preview (Telegram|WhatsApp|iMessage|Slack|Discord|no user agent) is not counted   (6)
+    ✓ HEAD, a code of the wrong shape and an unknown code count nothing
+    ✓ the page goes out when the database is down, and nothing is read before it
+    ✓ the invitation opened in the app is counted, an expired one too
+    ✓ a join is counted with the membership
+    ✓ a join that does not happen is not counted: already a member, or the transaction failing
+    ✓ a write deletes what is older than 13 months
+    ✓ the purge on writes runs at most once an hour on an instance
+    ✓ everything works as before, said once in the log
+Tests: 23 passed, 23 total
+
+adminUsage.test.js 8/8; privacyPage.test.js + privacyProcessors.test.js 136/136;
+usageStatistics + tokenRefreshTtl + appleAuth 56/56 after 9d6fa2a.
+
+Whole backend Jest (`npx jest --selectProjects backend --silent`):
+Test Suites: 1 failed, 89 passed, 90 total
+Tests:       8 failed, 1425 passed, 1433 total
+  — the 8 are runtimeStartup.test.js, failing the same on the base: this sandbox forbids
+    reading the .env its fixture writes ("Unable to load the explicitly selected server
+    environment file"). Environment, not this task.
+
+Browser: npm run test:admin-browser — adminDashboard 10/10 (new: "use of the app shows its figures,
+or "no data" without migration 016"), adminFailures 18/18; npm run test:admin-stored-browser 6/6.
+npm run check:dead (knip, both modes): clean. npm run type-check: clean. npm run lint: 0 errors.
+npm run check:secrets -- --staged: not completed here (timed out after 2 min); left to the supervisor.

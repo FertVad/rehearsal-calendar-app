@@ -73,3 +73,5 @@ server/uploads/
 e2e/out/
 e2e/.native/
 e2e/.build/
+# The App Store's pictures and the shots they are made of (e2e/store, T-274)
+e2e/store/out/

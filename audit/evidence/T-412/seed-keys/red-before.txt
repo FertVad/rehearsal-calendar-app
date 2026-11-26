@@ -1,0 +1,19 @@
+$ git restore --source=HEAD -- rehearsal-calendar-native/e2e/seed.mjs   # HEAD = 8386481
+$ cd rehearsal-calendar-native && node --test e2e/__tests__/seed-keys.test.mjs
+
+✖ failing tests:
+
+test at e2e/__tests__/seed-keys.test.mjs:15:3
+✖ e2e/seed.mjs has no key twice in an object literal (307.121541ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+  + [
+  +   "e2e/seed.mjs:176 Duplicate key 'olga'.",
+  +   "e2e/seed.mjs:351 Duplicate key 'sonya'."
+  + ]
+  - []
+
+The supervisor's e2e on 8386481: 42, 66 and 78 failed at "id: calendar-filter is visible" —
+they sign in as ${OLGA_EMAIL} and got the new, not onboarded Russian Olga (line 176) that
+replaced Olga Prozorova (line 130).

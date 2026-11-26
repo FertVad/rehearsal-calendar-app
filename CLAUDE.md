@@ -137,14 +137,19 @@ server/public/
 ### Database
 - **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
 - **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
-- **Canonical schema**: twenty-three `native_*` application tables: thirteen domain
+- **Canonical schema**: twenty-five `native_*` application tables: thirteen domain
   tables, six shared-budget tables, two for email address proof (group 010),
-  one for push tickets awaiting their receipts (group 011) and one for the
-  idempotency keys of creates (group 012).
+  one for push tickets awaiting their receipts (group 011), one for the
+  idempotency keys of creates (group 012) and two for the usage statistics —
+  the days someone used the app and the invitation counts (group 016, T-294).
+  Group 013 is a key, not a table; 014 and 015 are data steps outside the manifest.
   Migration history is separate. Retired
   payment/activity/participant tables are not created by fresh provisioning.
-  Actual production catalog and migration history have not been inspected here.
-- **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
+  Production's database was created by `migrate --fresh` on 2026-10-28 and is
+  kept by the migrator: history root `rehearsly-pg-current-v1` (23 tables).
+  Version 1's artifacts are therefore immutable; 016 is schema version 2, which
+  `--apply` adds to that root ([schema README](rehearsal-calendar-native/server/database/schema/README.md)).
+- **Schema**: [rehearsal-calendar-native/server/database/init-native-schema-v2.sql](rehearsal-calendar-native/server/database/init-native-schema-v2.sql) (version 2, what `--fresh` creates; version 1 is `init-native-schema.sql`)
 - **Note**: runtime SQL uses PostgreSQL types and constraints; fixture SQL conversion is test-only.
 - **Runtime/lifecycle and safe local startup**: [server runtime contract](rehearsal-calendar-native/docs/server-runtime.md).
 - **Provisioning**: [explicit schema/migration contract](rehearsal-calendar-native/docs/server-migrations.md); no automatic startup/deployment migrations.
@@ -493,8 +498,13 @@ would count as busy twice — once as itself and once as an imported event.
 
 **Deleting the event in the phone's calendar does not stick.** The next sync
 sees the mapping has no event and recreates it: the rehearsal is the source of
-truth, the calendar a mirror. The only ways out are deleting the rehearsal or
-"remove all exported" on the sync screen.
+truth, the calendar a mirror. The only ways out are deleting the rehearsal,
+"remove all exported" on the sync screen, or deleting the account: before
+`DELETE /me`, while the server still has the mappings, `deleteAccount` turns
+Auto Sync off and removes this phone's exported events the same way
+(`removeExportedBeforeDeletion`, T-409). It never stops the deletion; the alert
+after it says how many events stayed, or that it could not find out. Other
+devices' calendars keep theirs.
 
 **Only hours cross over, never what the events are.** The app sends each
 event's key and times and nothing else; the server titles the rows
@@ -693,10 +703,15 @@ Two rules it exists to enforce:
 
 Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWORD` env var.
 
+The page is in Russian only, no language switch (the owner, 26.11.2026; T-419): every word is the native editor's (`audit/evidence/T-419/natives-ru.md`), API values and JSON errors stay English; project names are quoted by `public/admin/quoteName.js`, generated from `shared/quoteName.cjs` (`npm run build:admin-quote-name` in `server/` after editing it).
+
 **Features**:
 - User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
+- Use of the app (T-294, `services/admin/usage.js`): active today / 7 / 30 days, retention on days 1, 7, 30 by registration week, builds among the active, each invitation from page to join; the users table's "last day in app". Read from migration 016's tables; without them the sections say "no data: migration 016 not applied", never zeros
 - Users table with pagination
 - Bug reports table with inline status management
+
+**What 016 records** (`services/usage/`): the session check (`authenticateToken`) writes the day in the person's zone with the `X-App-Build` build — once a day per person per instance, never failing the request, nothing on 401/403/426. The invite page counts after it is sent (not HEAD, a malformed code or a link preview); `GET /api/native/invite/:code` counts an app opening; a join counts inside its transaction. No IP, nothing linking a count to a person. Rows older than 13 months are deleted when the admin opens and at most hourly on a write — there is no scheduler. Before 016 is applied all of it logs once and does nothing.
 
 **Auth**: `server/middleware/adminAuth.js` — bcrypt password login → JWT token (24h expiry)
 - Set `ADMIN_PASSWORD_HASH` (bcrypt hash, recommended) or `ADMIN_PASSWORD` (plaintext, legacy)
@@ -706,7 +721,8 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 **API Endpoints**:
 - `POST /admin/api/login` — authenticate with password
 - `GET /admin/api/stats` — aggregate stats: `users`, `signIns` (`notInLast30Days`, `rate`; a never-signed-in user counts from registration), `usage`
-- `GET /admin/api/users` — paginated user list
+- `GET /admin/api/analytics` — funnel, sources, projects, notifications and `usage` (`recorded: false` without 016); deletes statistics past 13 months first
+- `GET /admin/api/users` — paginated user list, with `lastAppDay` and `appDaysRecorded`
 - `GET /admin/api/bug-reports` — paginated bug reports (sorted: new → in_progress → fixed)
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
 
@@ -1136,6 +1152,11 @@ The SQLite harness in `__tests__/integration/setup.js` translates the
 PostgreSQL dialect the routes are written in. It covers only the constructs
 actually used; anything else surfaces as a `SqliteError`, which is the signal to
 extend it rather than to work around it in the test.
+
+**Everything `npm run check` runs also runs on Linux in GitHub's "Application
+checks"; a test that needs a Mac (xcrun swiftc, ffmpeg, the simulator) says so
+with a skip by platform (`{ skip: process.platform === 'darwin' ? false : 'needs macOS: …' }`),
+never by whether the tool is installed — on a Mac a missing tool fails it (T-282).**
 
 ### Frontend Tests
 ```bash

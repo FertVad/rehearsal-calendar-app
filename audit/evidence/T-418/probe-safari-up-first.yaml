@@ -1,0 +1,56 @@
+# T-418 probe, not a flow of the suite: probe-help-from-app.yaml with Safari
+# already up when "Help" is tapped. After fresh-safari.yaml Maestro launches
+# Safari itself, then brings the app back and taps "Help": the link opens a tab
+# in the running Safari. Twelve times. The wait for ".+" after the launch was
+# answered by the app behind Safari, not by Safari (README.md): this probe's
+# first Safari was never asked, and it passed because that Safari came up with
+# its accessibility on - a run of flow 44 in this order lost it (README.md).
+appId: ${APP_ID}
+name: T-418 probe - Help opened from the app, Safari up first
+---
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${VERSHININA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+    timeout: 30000
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-help
+    direction: DOWN
+    centerElement: true
+- repeat:
+    times: 12
+    commands:
+      - runFlow: ../../../rehearsal-calendar-native/e2e/subflows/fresh-safari.yaml
+      - launchApp:
+          appId: com.apple.mobilesafari
+          stopApp: false
+      - extendedWaitUntil:
+          visible: ".+"
+          timeout: 20000
+      - launchApp:
+          stopApp: false
+      - extendedWaitUntil:
+          visible:
+            id: profile-help
+          timeout: 20000
+      - tapOn:
+          id: profile-help
+      - extendedWaitUntil:
+          visible: ".*support@rehearsly.me.*"
+          timeout: 20000
+      - launchApp:
+          stopApp: false
+      - extendedWaitUntil:
+          visible:
+            id: profile-help
+          timeout: 20000

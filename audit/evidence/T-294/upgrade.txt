@@ -1,0 +1,72 @@
+T-294 rework (review of 24.11): 016 as schema version 2; version 1 exactly as production recorded it.
+Node v26.13.0 (server/package.json engines "26.x"), PostgreSQL 15.13 (postgres:15 image sha256:b8e11f8a8b38...),
+disposable container per run. From rehearsal-calendar-native/server.
+
+== The identities production recorded ==
+Production's database: migrate --fresh on 2026-10-28 by release 8a6dd5e. `git diff --stat 8a6dd5e 477ea2f` over
+server/database (migrations/, schema/, init-native-schema.sql) and migrations/007-013: only database/db.js differs
+(not the migrator). 477ea2f's manifest loaded by the real loadArtifacts against this tree (proves the v1 bytes):
+  rehearsly-pg-current-v1                 bootstrap 48284687...  definition 8bf27697...
+  rehearsly-pg-domain13-v1                definition ee4070df...
+  rehearsly-pg-domain13-pre-import-key-v1 definition 7b9ebd32...
+  steps availability-conflict-key-v1 .. 013-push-token-owner: 8c22ec90 f3859db4 b74460fe 91194ef2 c9889b65 2b22d9e8 aec7039c b722a304
+`git diff --stat 477ea2f -- database/init-native-schema.sql database/schema/catalog.json database/schema/inspect.mjs
+ database/schema/availability-conflict-key-v1.sql migrations/007..013 database/migrations/core.mjs database/migrations/history.mjs`
+  -> empty (byte for byte).
+
+== RED on 43b5e86 (its manifest.mjs, artifacts.mjs, inspect.mjs, catalog.json, init-native-schema.sql restored;
+   the new tests kept), then `git restore --source=HEAD` ==
+
+node scripts/r0-postgres.mjs --t294-upgrade-only
+{"scenario":"controls","outcome":"PASS",...}
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+  {
++   code: 'HISTORY_INVALID',
++   type: 'error'
+-   code: 0,
+-   eligibleActions: [ 'apply' ],
+-   frontier: { availabilityConflictKey: true, budgets: [ '007', ..., '013', '016' ], domain: 'v1' },
+-   mode: 'dry', outcome: 'planned', rootId: 'rehearsly-pg-current-v1', state: 'managed',
+-   stepIds: [ '016-usage-statistics' ], type: 'result'
+  }
+T294_UPGRADE probe failed unexpectedly (1 !== 0)
+  -> the first --dry of 43b5e86 on a database created by 477ea2f's --fresh: HISTORY_INVALID.
+
+npx jest __tests__/database/schemaHistoryIdentity.test.js
+    ✕ keeps every v1 profile exactly as recorded: bootstrap bytes and definition
+    ✕ keeps every step before 016 exactly as recorded
+        Expected: "8c22ec9013689ba94f8d2fff38aff89fb651affbd6f63ffe947a04d8eb37bdd9"
+        Received: "4d062b27f2c09e17220fda6a32e960dd38c3f03518e751fae246fbe3ea320f88"
+    ✕ creates new databases as version 2, from its own artifacts
+    ✕ plans 016 alone for production's root: fresh v1 with 007–013
+Tests:       4 failed, 4 total
+
+== GREEN (this tree) ==
+
+node scripts/r0-postgres.mjs --t294-upgrade-only
+{"scenario":"T294_UPGRADE","outcome":"PASS","base":"477ea2f","contracts":[
+ "477ea2f's CLI --fresh: root fresh rehearsly-pg-current-v1 with production's hashes, 23 tables",
+ "this tree's --dry on that database: managed, root v1, plans 016-usage-statistics alone",
+ "--apply: 016 recorded after the untouched root; the next --dry plans nothing; the catalog equals this tree's --fresh (v2, 25 tables)",
+ "the server on the upgraded database records the day and the build"],"externalConnections":0}
+T294_UPGRADE REGRESSION PASS
+  (477ea2f's CLI is taken from git: database/migrations, database/schema, init-native-schema.sql,
+   scripts/migrate.js, migrations/; run as a child process with an explicit SERVER_ENV_FILE. Its --dry
+   after --fresh answers as production's of 16.11 and 20.11: managed, root v1, budgets 007-013, no steps.)
+
+npx jest __tests__/database/schemaHistoryIdentity.test.js      4 passed
+
+--t294-only                  T294_USAGE+T294_UPGRADE REGRESSION PASS
+--r2-migrations-schema-only  R2_SCHEMA PASS (40 checks, catalogTables 25: fresh v2; modern v1 schema adopted through
+                             the pre-import-key profile, --apply runs availability key, 007..013, then 016; a v1 schema
+                             without 008 gets 008 and 016) + R2_MIGRATIONS PASS (16 contracts; the copied CLI's --fresh
+                             is v2) -> REGRESSION PASS
+--r3-only --r4-only --r6-only --r7-only --r8-only --t278-only --t293-only
+--a02-b03-only --b04-only --h04-only --is02-only --f05-only     each REGRESSION PASS
+--security-only              stops at R2_STARTUP: the copied entrypoint reads the .env its fixture writes and this
+                             sandbox forbids reading .env files - the same on the base (green.txt, postgres.txt).
+
+Backend Jest: 90 suites passed, 1 failed (runtimeStartup, 8 tests, the same .env sandbox); 1433 passed.
+privacyPage + privacyProcessors: 140 passed (red before the text fix: 12 failed, 3 per language).
+knip clean, tsc clean, lint 0 errors, check:secrets pass.

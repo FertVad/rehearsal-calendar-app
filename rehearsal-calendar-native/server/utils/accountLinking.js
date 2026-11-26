@@ -7,7 +7,7 @@
 
 import db from '../database/db.js';
 import { logger } from './logger.js';
-import { normalizeEmail } from './accountInput.js';
+import { normalizeEmail, LOCALES } from './accountInput.js';
 import { SESSION_USER_COLUMNS } from './userSerializer.js';
 import { identityOf, isVerified, markVerified } from '../services/email/identity.js';
 import { voidCodes } from '../services/email/codes.js';
@@ -52,11 +52,15 @@ const ATTEMPTS = 3;
  * version with it — is read before COMMIT, so a later revocation reaches the
  * tokens signed from it.
  *
+ * `locale` is the language the app showed (T-291). Only an account this
+ * sign-in creates takes it — one of the app's languages, English otherwise; an
+ * existing account, signed into or linked, keeps its own.
+ *
  * @returns {Promise<{ user: Object, isNewUser: boolean, linked: boolean, passwordRevoked: boolean }>}
  * @throws {ProviderSignInRefused}
  */
 export async function signInWithProvider({
-  provider, providerUserId, email, emailVerified, firstName, lastName,
+  provider, providerUserId, email, emailVerified, firstName, lastName, locale,
 }) {
   const address = normalizeEmail(email) || null;
   const claim = {
@@ -72,6 +76,7 @@ export async function signInWithProvider({
     lastName: typeof lastName === 'string' ? lastName.trim() || null : lastName,
     // No photo: the app draws initials, so a provider's picture is not kept
     // (T-273).
+    locale: LOCALES.includes(locale) ? locale : 'en',
   };
   for (let attempt = 1; ; attempt++) {
     try {
@@ -126,9 +131,9 @@ async function providerSignIn(tx, claim, now) {
       linked = true;
     } else {
       const created = await tx.run(
-        `INSERT INTO native_users (email, password_hash, first_name, last_name, created_at, updated_at)
-         VALUES ($1, NULL, $2, $3, $4::timestamptz, $4::timestamptz)`,
-        [proof, claim.firstName || 'User', claim.lastName || null, now.toISOString()]
+        `INSERT INTO native_users (email, password_hash, first_name, last_name, locale, created_at, updated_at)
+         VALUES ($1, NULL, $2, $3, $4, $5::timestamptz, $5::timestamptz)`,
+        [proof, claim.firstName || 'User', claim.lastName || null, claim.locale, now.toISOString()]
       );
       user = await lockUser(created.lastInsertId);
       await insertProvider(tx, user.id, claim, now);

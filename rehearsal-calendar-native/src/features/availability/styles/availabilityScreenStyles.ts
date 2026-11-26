@@ -111,6 +111,11 @@ export const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: Spacing.xl,
   },
+  // With the weekend's hint under it (T-411): the hint is the buttons'
+  // footnote, nearer them than the block that follows it.
+  modeSelectorWithNote: {
+    marginBottom: Spacing.sm,
+  },
   modeButton: {
     flex: 1,
     flexDirection: 'column',
@@ -196,6 +201,13 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.text.tertiary,
     lineHeight: 16,
+  },
+  // The weekend's hint (T-411), on top of importedNote's text: no side margin
+  // of its own, so its edges are the buttons' and the plate's (the sheet's
+  // padding), and the room the buttons had under them now under it, before
+  // the plate or the "From calendar" section.
+  weekendDefaultNote: {
+    marginBottom: Spacing.xl,
   },
   slotInputs: {
     flex: 1,

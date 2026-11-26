@@ -1,0 +1,52 @@
+T-297 red before: T294_UPGRADE in a clone of depth 1, as CI's actions/checkout makes it.
+
+$ git clone --depth 1 --branch auto/main file:///Users/vadimfertik/Desktop/reh_app-auto /tmp/t297-red
+$ node audit/evidence/T-297/depth1.mjs /tmp/t297-red
+
+The clone is auto/main at 23f9b48 (T-291's audit commit). It descends from
+ffc81af (the commit CI ran 45320175318 on); between the two nothing under the
+PostgreSQL checks or the migrator changed:
+$ git diff --stat ffc81af 23f9b48 -- rehearsal-calendar-native/server
+ .../server/__tests__/routes/providerSignIn.test.js | 48 ++++++++++++++++++++++
+ rehearsal-calendar-native/server/routes/auth.js    |  4 +-
+ .../server/utils/accountLinking.js                 | 15 ++++---
+So t294Upgrade.mjs, probe.mjs, r0-postgres.mjs, database/ and migrations/ are
+those of ffc81af.
+
+clone: /tmp/t297-red
+HEAD: 23f9b48 docs(audit): T-291 - red on 32ca8f0, green on 43f9510: first-launch and sign-in language tests, provider route tests, R3_AUTH on PostgreSQL 15, flow 100 on a Russian phone, flows 01/09/65 unchanged
+shallow: true; commits in clone: 1
+.git/shallow: 23f9b48cdaa50b36acd81efcb517be7b38e4ad80
+477ea2f in clone: no
+$ node scripts/r0-postgres.mjs --t294-upgrade-only
+{"harness":"R0","node":"v26.13.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:56500","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+R0 cleanup: owned disposable container removed
+[WARN] [Usage] Migration 016 is not applied: app days and invitation counts are not recorded
+fatal: Not a valid object name 477ea2f
+node:internal/errors:999
+  const err = new Error(message);
+              ^
+
+Error: Command failed: git -C /private/tmp/t297-red ls-tree -r --name-only 477ea2f -- rehearsal-calendar-native/server/database/migrations rehearsal-calendar-native/server/database/schema rehearsal-calendar-native/server/database/init-native-schema.sql rehearsal-calendar-native/server/scripts/migrate.js rehearsal-calendar-native/server/migrations
+fatal: Not a valid object name 477ea2f
+
+    at genericNodeError (node:internal/errors:999:15)
+    at wrappedFn (node:internal/errors:544:14)
+    at checkExecSyncError (node:child_process:990:11)
+    at execFileSync (node:child_process:1026:15)
+    at git (file:///private/tmp/t297-red/rehearsal-calendar-native/server/__tests__/postgres/t294Upgrade.mjs:28:28)
+    at baseMigrator (file:///private/tmp/t297-red/rehearsal-calendar-native/server/__tests__/postgres/t294Upgrade.mjs:29:17)
+    at async Module.probeT294Upgrade (file:///private/tmp/t297-red/rehearsal-calendar-native/server/__tests__/postgres/t294Upgrade.mjs:58:19)
+    at async file:///private/tmp/t297-red/rehearsal-calendar-native/server/__tests__/postgres/probe.mjs:74:21 {
+  status: 128,
+  ...
+}
+AssertionError [ERR_ASSERTION]: T294_UPGRADE probe failed unexpectedly
+
+1 !== 0
+
+    at file:///private/tmp/t297-red/rehearsal-calendar-native/server/scripts/r0-postgres.mjs:100:12
+exit code: 1
+
+The same failure as CI run 45320175318 (job postgres-a02).

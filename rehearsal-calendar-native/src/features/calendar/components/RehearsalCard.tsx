@@ -92,7 +92,7 @@ export default function RehearsalCard({
   const day = dateColumn === 'day' && rehearsal.date ? rehearsal.date : null;
 
   const row = (
-    <View style={styles.rehearsalRow}>
+    <View testID={`rehearsal-item-${rehearsal.id}`} style={styles.rehearsalRow}>
       <GestureTouchable
         onPress={onPress}
         activeOpacity={0.7}

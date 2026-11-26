@@ -25,12 +25,34 @@
 # The second reading (T-261): the last step joins a project "by invitation" in
 # all three, and all three leave by Skip, whose window answers nothing and so
 # has one "OK" — «ОК» in Russian, as iOS — not «Да», "Sí", "Ja".
+#
+# T-412: one design on every step — «‹ Назад» at the top, the answers together
+# at the bottom, no «Далее» — the calendar step «Синхронизация календаря»,
+# "Sincronización del calendario", "Kalender-Sync", the weekends' question in
+# three lines with the days on their own, the descriptions in the native
+# speakers' lines, and every text typeset by its language's rule: «в», «на»,
+# «по» glued to the next word, Spanish "o" too, no line begun by "→" or a dash.
+# Each of the five steps is shot in each language for the monitor.
+#
+# T-417: where a line may break is each native speaker's, measured on the
+# phone: a group of words by its sense held by no-break spaces (U+00A0) in the
+# strings — «когда свободны все», "al calendario de cada uno", "die allen
+# passen" — a label of "What's Where" whole where the speaker said so (not
+# «Присоединиться по коду»), and the two alerts, "Skip" and the refused
+# calendar, typeset as the steps are: «Профиль → Настройки.» no longer breaks
+# before its arrow. Maestro's regex does not take a space for U+00A0, so each
+# text is matched with its no-break spaces where they are.
 appId: ${APP_ID}
 name: Onboarding in Russian, the greeting on one line
 tags:
   - onboarding
   - language
   - calendar
+# iOS's calendar prompt outlives the app: a failure here must not leave it
+# over the next flows (T-299).
+onFlowComplete:
+  - runFlow:
+      file: ../subflows/no-calendar-prompt-left.yaml
 ---
 - evalScript: ${output.wrong = ''}
 - launchApp:
@@ -56,29 +78,98 @@ tags:
     text: "Добро пожаловать, Нина!"
     height: 35
     tolerance: 9
+- runFlow:
+    when:
+      notVisible: "Планируйте репетиции,\nуправляйте расписанием\nи\u00a0синхронизируйте календари\nв\u00a0одном месте\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the welcome in its lines, typeset | '}"
+- assertNotVisible:
+    id: onboarding-back
+# T-417: the clause whole on the second line, «…время, / когда свободны все».
+- assertVisible: "Rehearsly находит\u00a0время, когда\u00a0свободны\u00a0все"
 - takeScreenshot: 60-onboarding-welcome-ru
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Начать"
-      SEE: "Ваша занятость"
+      SEE: "(?-i)Отметить все выходные\n\\(${WEEKEND_DAYS_RU_LABEL}\\)\nкак занятые\\?"
       WAIT_MS: 10000
-- assertVisible: "Это можно сделать потом: Профиль → .*"
+# The weekends, asked outright in her language with the days of her zone's
+# country, and where to change it later in the Profile's words (T-406).
+#
+# T-408: the days in lower case inside the question, «(пт и сб)» — the phone
+# said «(Пт и Сб)»: iOS names a day alone with a capital. Maestro matches text
+# whatever its case (this flow passed with «пт и сб» then), so the question is
+# asked with "(?-i)", which turns that off. The question wraps, up to three
+# lines at the title's size, rather than shrinking to one line: there it was
+# about 14.5 pt, smaller than the text under it, 17 high; wrapped it is two or
+# three lines at about 32. The path whole on its line, no-break spaces in it,
+# and the text in the native speaker's words.
+- assertVisible: "Это можно включить\u00a0или\u00a0выключить позже: Профиль\u00a0→\u00a0Выходные\u00a0заняты"
+- assertVisible: "Тогда при подборе времени\nваши выходные будут считаться занятыми\\.\nЛюбой выходной можно отметить иначе\nв\u00a0«Занятости»\\."
+# T-412: three lines, made smaller only so far as the longest fits whole,
+# never below 26 pt — about 90 to 120 high.
+- assertVisible:
+    id: onboarding-title
+    height: 105
+    tolerance: 17
+- assertVisible:
+    id: onboarding-back
+    text: "Назад"
+    above:
+      id: onboarding-title
+- assertVisible:
+    text: "Нет, оставить свободными"
+    below:
+      text: "Да, отметить"
+- takeScreenshot: 60-onboarding-weekends-ru
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-weekends-ru
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Да, отметить"
+      SEE: "Синхронизация календаря"
+      WAIT_MS: 10000
+# The path whole: no line begins with "→" (settingPath, T-412).
+- assertVisible: "Это можно сделать потом: Профиль\u00a0→\u00a0Синхронизация"
+- runFlow:
+    when:
+      notVisible: "Репетиции сами попадут в\u00a0ваш календарь,\nа\u00a0занятые часы из\u00a0него\u00a0— в\u00a0Rehearsly\\.\nКоманда видит только эти часы,\nно\u00a0не\u00a0ваши дела\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'ru: the calendar description, typeset | '}"
 - runFlow:
     when:
       notVisible: "Разрешить доступ"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: Разрешить доступ, as iOS | '}"
+# Access asked at the bottom, over «Настроить позже»; no «Далее».
+- assertVisible:
+    text: "Настроить позже"
+    below:
+      text: "Разрешить доступ"
+- assertNotVisible: "Далее"
+- takeScreenshot: 60-onboarding-calendar-ru
 # Refused: the app says why it asks, in her language.
 - tapOn: "(Разрешить|Предоставить) доступ"
 - extendedWaitUntil:
     visible: "Don’t Allow|Don't Allow"
     timeout: 10000
-- tapOn: "Don’t Allow|Don't Allow"
-- extendedWaitUntil:
-    visible: "Требуется разрешение"
-    timeout: 10000
-- assertVisible: "Для этого нужен доступ к календарю"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Don’t Allow|Don't Allow"
+      SEE: "Требуется разрешение"
+      WAIT_MS: 10000
+# Typeset (T-417): «к» glued to its word, the sentence with its full stop (HIG).
+- assertVisible: "Для этого нужен доступ к\u00a0календарю\\."
 - assertNotVisible: "Calendar access is required.*"
 - takeScreenshot: 60-onboarding-calendar-refused-ru
 - tapOn: "OK"
@@ -86,36 +177,47 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Настроить позже"
-      SEE: "Не сейчас"
+      SEE: "Не\u00a0сейчас"
       WAIT_MS: 10000
 - assertVisible: "Уведомления"
 - takeScreenshot: 60-onboarding-notifications-ru
 - runFlow:
     when:
-      notVisible: ".*Вас позвали на репетицию.*"
+      notVisible: ".*Вас позвали на\u00a0репетицию.*"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'ru: the example push, Вас позвали на репетицию | '}"
+# The owner's words (T-412), the dash at the end of the first line.
 - runFlow:
     when:
-      notVisible: ".*Придёт уведомление, когда вас позовут на репетицию или изменят её время.*"
+      notVisible: "Новая репетиция, отменили или перенесли\u00a0—\nвы узнаете сразу\\."
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'ru: Придёт уведомление, no gender | '}"
-- assertVisible: "Назад"
-- assertVisible: "Включить"
+      - evalScript: "${output.wrong = output.wrong + 'ru: the notifications description | '}"
+- assertVisible:
+    id: onboarding-back
+    text: "Назад"
+    above:
+      id: onboarding-title
+- assertVisible:
+    text: "Не\u00a0сейчас"
+    below:
+      text: "Включить"
 - assertVisible:
     id: onboarding-skip
     text: "Пропустить"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Не сейчас"
+      TAP: "Не\u00a0сейчас"
       SEE: "Что где"
       WAIT_MS: 10000
-- assertVisible: ".*Создать проект.*"
+- assertVisible: ".*Создать\u00a0проект.*"
 - takeScreenshot: 60-onboarding-what-where-ru
 # Where to join a project: «По приглашению», not «По коду: … «Присоединиться
-# по коду»», the code twice (T-258).
-- assertVisible: "«\\+» → «Создать проект»\\. По приглашению: «Проекты» → «Присоединиться по коду»"
+# по коду»», the code twice (T-258). T-417: each path whole, «Создать проект»
+# whole, «Присоединиться по коду» not — only «по коду» glued.
+- assertVisible: "«\\+»\u00a0→\u00a0«Создать\u00a0проект»\\. По\u00a0приглашению: «Проекты»\u00a0→\u00a0«Присоединиться по\u00a0коду»"
+# T-417: the action on one line, where on the next.
+- assertVisible: "«\\+»\u00a0→\u00a0«Создать\u00a0репетицию»,\nв\u00a0проектах, где\u00a0вы\u00a0администратор"
 # She leaves by «Пропустить», not «Начать»: the window that says where the
 # settings are answers nothing, so its one button is «ОК», as in Russian iOS,
 # not «Да» (T-261).
@@ -123,9 +225,11 @@ tags:
 - tapOn:
     id: onboarding-skip
 - extendedWaitUntil:
-    visible: "Настройки доступны в профиле"
+    visible: "Настройки доступны в\u00a0профиле"
     timeout: 10000
-- assertVisible: ".*в разделе «Профиль» → «Настройки»\\."
+# With the weekends among what is set later: whoever skips keeps them busy
+# (T-408). T-417: typeset — the path whole, no line begun by «→».
+- assertVisible: "Начало недели, синхронизацию\u00a0календаря и\u00a0то, отмечать\u00a0ли выходные\u00a0занятыми, можно\u00a0настроить в\u00a0любое\u00a0время: Профиль\u00a0→\u00a0Настройки\\."
 - takeScreenshot: 60-onboarding-skip-ru
 - assertNotVisible: "Да"
 - runFlow:
@@ -153,17 +257,87 @@ tags:
       id: onboarding-skip
     timeout: 20000
 - runFlow:
+    when:
+      notVisible: "Planifica ensayos, gestiona horarios\ny\u00a0sincroniza calendarios en un solo lugar\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the welcome in its lines, typeset | '}"
+# T-417: "que les sirven a todos" whole, and "al calendario de cada uno" — on
+# the SE it left "uno" alone on its line.
+- runFlow:
+    when:
+      notVisible: "Rehearsly encuentra las\u00a0horas que\u00a0les\u00a0sirven\u00a0a\u00a0todos"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: feature2, que les sirven a todos whole | '}"
+- runFlow:
+    when:
+      notVisible: "El ensayo llega al\u00a0calendario\u00a0de\u00a0cada\u00a0uno"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: feature3, al calendario de cada uno whole | '}"
+- takeScreenshot: 60-onboarding-welcome-es
+- runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Empezar"
-      SEE: "Tu disponibilidad"
+      SEE: "Sí, marcarlos"
       WAIT_MS: 10000
+# Her weekends' step in the native speaker's words (T-408): the days in lower
+# case — "(?-i)", as in Russian — the question whole, wrapped at the title's
+# size, the path whole on its line.
+- runFlow:
+    when:
+      notVisible: "(?-i)¿Marcar como ocupados\ntodos los fines de semana\n\\(${WEEKEND_DAYS_ES_LABEL}\\)\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the question in its three lines, its days in lower case | '}"
+- runFlow:
+    when:
+      notVisible: "Así, cuando alguien busque un horario,\ntus fines de semana contarán como ocupados\\.\nPuedes cambiar cualquier día\npor separado en Disponibilidad\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the weekends description | '}"
+- runFlow:
+    when:
+      notVisible: "Puedes activarlo o\u00a0desactivarlo más\u00a0tarde en\u00a0Perfil\u00a0→\u00a0Fines\u00a0de\u00a0semana\u00a0ocupados"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the weekends note, the path whole | '}"
+- assertVisible:
+    id: onboarding-title
+    height: 105
+    tolerance: 17
+- takeScreenshot: 60-onboarding-weekends-es
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-weekends-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Sí, marcarlos"
+      SEE: "Sincronización del\u00a0calendario"
+      WAIT_MS: 10000
+- runFlow:
+    when:
+      notVisible: "Los ensayos aparecerán solos en tu calendario,\ny\u00a0de él llegarán a\u00a0Rehearsly tus horas ocupadas\\.\nEl equipo ve solo esas horas, no tus planes\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the calendar description, typeset | '}"
+- waitForAnimationToEnd
+- takeScreenshot: 60-onboarding-calendar-es
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Configurar más tarde"
       SEE: "Ahora no"
       WAIT_MS: 10000
+- runFlow:
+    when:
+      notVisible: "Ensayo nuevo, cancelado o\u00a0reprogramado:\nte enterarás al instante\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the notifications description | '}"
+- waitForAnimationToEnd
+- takeScreenshot: 60-onboarding-notifications-es
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -175,30 +349,40 @@ tags:
 # code twice (T-261).
 - runFlow:
     when:
-      notVisible: "«\\+» → «Crear proyecto»\\. Con una invitación: «Proyectos» → «Unirse con un código»"
+      notVisible: "«\\+»\u00a0→\u00a0«Crear\u00a0proyecto»\\. Con\u00a0una\u00a0invitación: «Proyectos»\u00a0→\u00a0«Unirse\u00a0con\u00a0un\u00a0código»"
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'es: a project, in «», Con una invitación | '}"
+      - evalScript: "${output.wrong = output.wrong + 'es: a project, in «», Con una invitación, each path whole | '}"
+# T-417: "en los proyectos que administras" whole — "que / administras" left
+# one word on the last line.
 - runFlow:
     when:
-      notVisible: "«\\+» → «.*», en los proyectos que administras"
+      notVisible: "«\\+»\u00a0→\u00a0«Crear\u00a0ensayo», en\u00a0los\u00a0proyectos\u00a0que\u00a0administras"
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'es: a rehearsal, in «» | '}"
+      - evalScript: "${output.wrong = output.wrong + 'es: a rehearsal, in «», where whole | '}"
 - runFlow:
     when:
-      notVisible: "«\\+» → «Marcar horas ocupadas»"
+      notVisible: "«\\+»\u00a0→ «Marcar\u00a0horas\u00a0ocupadas»"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'es: availability, in «» | '}"
 - runFlow:
     when:
-      notVisible: "«Smart Planner», debajo del calendario"
+      notVisible: "«Smart\u00a0Planner», debajo\u00a0del\u00a0calendario"
     commands:
       - evalScript: "${output.wrong = output.wrong + 'es: the planner, in «» | '}"
 # Skipped, the window's one button is "OK", not "Sí" (T-261).
 - tapOn:
     id: onboarding-skip
 - extendedWaitUntil:
-    visible: "Ajustes disponibles en el perfil"
+    visible: "Ajustes disponibles en\u00a0el\u00a0perfil"
     timeout: 10000
+# The weekends among what is set later (T-408), each part of the sentence on
+# its own line (T-417).
+- runFlow:
+    when:
+      notVisible: "Puedes elegir el\u00a0inicio de\u00a0la\u00a0semana, decidir si\u00a0tus\u00a0fines\u00a0de\u00a0semana se\u00a0marcan como\u00a0ocupados y\u00a0configurar la\u00a0sincronización del\u00a0calendario cuando\u00a0quieras en\u00a0Perfil\u00a0→\u00a0Ajustes\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'es: the skip message names the weekends | '}"
+- takeScreenshot: 60-onboarding-skip-es
 - runFlow:
     when:
       notVisible: "OK"
@@ -216,7 +400,8 @@ tags:
     timeout: 15000
 
 # German (T-256): Kattrin, new, her account in German, to the last step. The
-# calendar's step is "Deine Verfügbarkeit", not "Deine Zeiten", and with the
+# calendar's step is "Kalender-Sync" (T-412; it was "Deine Verfügbarkeit",
+# before that "Deine Zeiten"), and with the
 # calendar allowed its button is "Apple Kalender", not "Apple Calendar" (the
 # simulator has no Google account, so no "Google Kalender"); the last is "Wo ist
 # was?", not "Was ist wo", its availability "Verfügbarkeit" — each whole on the
@@ -235,9 +420,63 @@ tags:
       id: onboarding-skip
     timeout: 20000
 - runFlow:
+    when:
+      notVisible: "Plane Proben, verwalte Termine\nund synchronisiere Kalender an einem Ort\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the welcome in its lines | '}"
+# T-417: the clause "die allen passen" whole, not "die / allen passen".
+- runFlow:
+    when:
+      notVisible: "Rehearsly findet die\u00a0Stunden, die\u00a0allen\u00a0passen"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: feature2, die allen passen whole | '}"
+- takeScreenshot: 60-onboarding-welcome-de
+- runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Loslegen"
+      SEE: "Ja, markieren"
+      WAIT_MS: 10000
+# Her weekends' step in the native speaker's words (T-408), the question in
+# its three lines (T-412), the path whole on its line.
+- runFlow:
+    when:
+      notVisible: "(?-i)Alle Wochenenden\n\\(${WEEKEND_DAYS_DE_LABEL}\\)\nals belegt markieren\\?"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the question | '}"
+- runFlow:
+    when:
+      notVisible: "Dann gelten deine Wochenenden\nbei der Terminsuche als belegt\\.\nEinzelne Tage kannst du\nunter Verfügbarkeit ändern\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the weekends description | '}"
+- runFlow:
+    when:
+      notVisible: "Ein- und ausschalten kannst\u00a0du\u00a0das\u00a0später unter\u00a0Profil\u00a0→\u00a0Wochenenden\u00a0belegt"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the weekends note, the path whole | '}"
+- runFlow:
+    when:
+      notVisible: "Nein, nicht markieren"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: Nein, nicht markieren | '}"
+- assertVisible:
+    id: onboarding-title
+    height: 105
+    tolerance: 17
+- takeScreenshot: 60-onboarding-weekends-de
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 60-onboarding-weekends-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.95"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Ja, markieren"
       SEE: "Später einrichten"
       WAIT_MS: 10000
 - extendedWaitUntil:
@@ -247,9 +486,14 @@ tags:
 - takeScreenshot: 60-onboarding-calendar-de
 - runFlow:
     when:
-      notVisible: "Deine Verfügbarkeit"
+      notVisible: "Kalender-Sync"
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'de: Deine Verfügbarkeit, not Deine Zeiten | '}"
+      - evalScript: "${output.wrong = output.wrong + 'de: Kalender-Sync, the step named for what it is | '}"
+- runFlow:
+    when:
+      notVisible: "Proben landen von selbst in deinem Kalender,\nbelegte Zeiten von dort in Rehearsly\\.\nDie anderen im Projekt sehen nur diese Zeiten,\naber nicht, was du vorhast\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the calendar description | '}"
 - runFlow:
     when:
       notVisible: ".*Apple Kalender.*"
@@ -270,6 +514,24 @@ tags:
       TAP: "Später einrichten"
       SEE: "Jetzt nicht"
       WAIT_MS: 10000
+- runFlow:
+    when:
+      notVisible: "Neue Probe, Absage oder Verschiebung\u00a0–\ndu erfährst es sofort\\."
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the notifications description | '}"
+# T-417: "für eine Probe eingeteilt" and "hat sich geändert" each whole.
+- runFlow:
+    when:
+      notVisible: ".*Du wurdest für\u00a0eine\u00a0Probe\u00a0eingeteilt.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the example push, für eine Probe eingeteilt whole | '}"
+- runFlow:
+    when:
+      notVisible: ".*Die Zeit einer Probe hat\u00a0sich\u00a0geändert.*"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: the example push, hat sich geändert whole | '}"
+- waitForAnimationToEnd
+- takeScreenshot: 60-onboarding-notifications-de
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -300,21 +562,28 @@ tags:
 # "Per Einladung", not "Mit einem Code: … „Mit einem Code beitreten“" (T-261).
 - runFlow:
     when:
-      notVisible: "„\\+“ → „Projekt erstellen“\\. Per Einladung: „Projekte“ → „Mit einem Code beitreten“"
+      notVisible: "„\\+“\u00a0→ „Projekt\u00a0erstellen“\\. Per\u00a0Einladung:\n„Projekte“\u00a0→ „Mit\u00a0einem\u00a0Code\u00a0beitreten“"
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'de: Per Einladung, not the code twice | '}"
+      - evalScript: "${output.wrong = output.wrong + 'de: Per Einladung, not the code twice; the second path on its line | '}"
+# T-417: "in denen du Admin bist" whole, not "in denen du / Admin bist".
+- runFlow:
+    when:
+      notVisible: "„\\+“\u00a0→ „Probe\u00a0erstellen“, in\u00a0Projekten, in\u00a0denen\u00a0du\u00a0Admin\u00a0bist"
+    commands:
+      - evalScript: "${output.wrong = output.wrong + 'de: a rehearsal, in denen du Admin bist whole | '}"
 # Skipped: the message ends with its full stop, and the one button is "OK",
 # not "Ja" — nothing was asked (T-261).
 - tapOn:
     id: onboarding-skip
 - extendedWaitUntil:
-    visible: "Einstellungen im Profil verfügbar"
+    visible: "Einstellungen im\u00a0Profil\u00a0verfügbar"
     timeout: 10000
 - runFlow:
     when:
-      notVisible: ".*unter Profil → Einstellungen ändern\\."
+      notVisible: "Du kannst jederzeit den\u00a0Wochenbeginn\u00a0ändern, die\u00a0Kalendersynchronisation einrichten und festlegen, ob\u00a0deine\u00a0Wochenenden als\u00a0belegt\u00a0gelten\u00a0– alles\u00a0unter\u00a0Profil\u00a0→\u00a0Einstellungen\\."
     commands:
-      - evalScript: "${output.wrong = output.wrong + 'de: the skip message ends with a full stop | '}"
+      - evalScript: "${output.wrong = output.wrong + 'de: the skip message names the weekends, ends with a full stop | '}"
+- takeScreenshot: 60-onboarding-skip-de
 - runFlow:
     when:
       notVisible: "OK"

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight } from '../../../shared/constants/colors';
@@ -8,6 +8,7 @@ import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
+import StepText from '../components/StepText';
 import { phoneWeekStart } from '../../../hooks/useWeekStart';
 import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 
@@ -57,22 +58,19 @@ export default function WhatWhereScreen({ navigation }: WhatWhereScreenProps) {
   return (
     <OnboardingStep
       title={w.title}
-      currentStep={3}
-      totalSteps={4}
+      currentStep={4}
+      totalSteps={5}
       onBack={() => navigation.goBack()}
-      onNext={handleStart}
       onSkip={skipOnboarding}
-      nextButtonTitle={w.start}
-      nextButtonDisabled={isSaving || isCompleting}
-      showBackButton
+      answer={{ title: w.start, onPress: handleStart, disabled: isSaving || isCompleting }}
     >
       <View style={styles.content}>
         {rows.map((row) => (
           <View key={row.id} testID={`what-where-${row.id}`} style={styles.row}>
             <Ionicons name={row.icon} size={28} color={Colors.accent.purple} />
             <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>{row.label}</Text>
-              <Text style={styles.rowWhere}>{row.where}</Text>
+              <StepText style={styles.rowLabel}>{row.label}</StepText>
+              <StepText style={styles.rowWhere}>{row.where}</StepText>
             </View>
           </View>
         ))}

@@ -1,0 +1,63 @@
+# T-420 probe, not a flow of the suite: flow 107's "Rate Rehearsly", with the
+# losing order made every time. After the tap the probe first waits for what
+# Safari shows once apps.apple.com has sent it on to itms-appss:// - "Safari
+# cannot open the page because the address is invalid." - and only then runs
+# the wait under test, the one flow 107 runs after its tap:
+# e2e/subflows/safari-from-app.yaml. Twice, each from a fresh Safari.
+#
+# Red before: safari-from-app.yaml holding flow 107's old wait (".*apps\.apple
+# \.com.*", 20 s) - it cannot pass, the site's name is gone. Green after: the
+# subflow as committed.
+appId: ${APP_ID}
+name: T-420 probe - Rate Rehearsly, the wait after Safari has left the page
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${SONYA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Calendar, tab.*"
+    timeout: 30000
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-rate-app
+    direction: DOWN
+    centerElement: true
+- repeat:
+    times: 2
+    commands:
+      - runFlow: ../../../rehearsal-calendar-native/e2e/subflows/fresh-safari.yaml
+      - tapOn:
+          id: profile-rate-app
+      # The leap done: Safari's answer to itms-appss://.
+      - extendedWaitUntil:
+          visible: "Safari cannot open the page because the address is invalid."
+          timeout: 30000
+      # The wait under test.
+      - runFlow: ../../../rehearsal-calendar-native/e2e/subflows/safari-from-app.yaml
+      - assertNotVisible:
+          id: profile-rate-app
+      - takeScreenshot: t420-probe-after-the-leap
+      - runScript:
+          file: ../../../rehearsal-calendar-native/e2e/scripts/opened-url.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            SIMULATOR: ${SIMULATOR}
+            URL: "https://apps.apple.com/app/id6830809401?action=write-review"
+      - launchApp:
+          stopApp: false
+      - extendedWaitUntil:
+          visible:
+            id: profile-rate-app
+          timeout: 20000

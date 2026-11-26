@@ -1,0 +1,14 @@
+# Safari with no tabs: stopped and its tabs forgotten, before a flow opens a
+# page in it (T-404). Every link opens a tab of its own and none is closed,
+# and Safari restored the same 26 tabs, of earlier runs and builds, at every
+# launch. A restored tab could show the page a flow waits for - an older
+# build's, or another flow's "Rehearsly" - before the link's own. The runner's
+# helper stops Safari and removes the simulator's Library/Safari/SafariTabs.db
+# (server-with-mailbox.mjs, /fresh-safari; e2e/safari.mjs), and answers 500 -
+# the flow fails here - when Safari is not known to be stopped (T-405).
+# Maestro's clearState reinstalls an app, and the simulator will not uninstall
+# Safari (docs/e2e.md, "A fresh Safari"). The runner counts the tabs every
+# launch restored after the run, and fails it on any (run.mjs, reportSafari).
+appId: com.apple.mobilesafari
+---
+- runScript: ../scripts/fresh-safari.js

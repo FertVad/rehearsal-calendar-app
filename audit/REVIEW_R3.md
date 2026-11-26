@@ -1313,3 +1313,37 @@ SHA-256 исторических файлов: AuthContext — `c395da04cf316964
 Записи refresh/updateUser/loadUser/logout вне очереди и зависание native storage остаются причиной №12 разбора, R5/AC01–AC03. Новые ID для них не заведены. Контракт завершения при уходе не является обещанием ACID-транзакции накопителя или успешной записи при постоянном отказе storage. Дополнительные механизмы на такие случаи для закрытия этого пункта не требуются. Устройство и оставшиеся клиентские потоки здесь не проверялись.
 
 Изменён только `audit/REVIEW_R3.md`, дописан этот раздел. Код, тесты, реестр, отчёты реализации и evidence в review-дереве не менялись; коммитов и push нет. Основное дерево, `codex/systematic-repair`, production, `server/.env` и `rehearsly.me` не затрагивались.
+
+## T-294: миграция 016 на базе с историей v1 — независимый тест на PostgreSQL
+
+Повод: поправка Claude-монитора от 24.11.2026 и замечание 1 ревьюера. `3265a9d` перепривязал хэши профилей v1, а production ведётся мигратором. База `rehearsly` создана `migrate --fresh` 28.10.2026, релиз 8a6dd5e. Корень истории — `fresh` `rehearsly-pg-current-v1`. На такой базе `43b5e86` отвечал бы `HISTORY_INVALID`.
+
+Исправление — `2c5d237`:
+- Артефакты v1 (`init-native-schema.sql`, `schema/catalog.json`, `schema/inspect.mjs`) байт в байт как на 477ea2f. В манифесте те же хэши и определения v1, у шагов availability…013 тоже.
+- 016 — версия 2: `init-native-schema-v2.sql`, `schema/catalog-v2.json`, `schema/inspect-v2.mjs`, профиль `rehearsly-pg-current-v2`.
+- Корни шага 016 — три профиля v1, проверка — профилем v2. Мигратор (`core.mjs`, `history.mjs`) не менялся.
+
+Мигратор и артефакты на 8a6dd5e и 477ea2f совпадают: `git diff 8a6dd5e 477ea2f` по `server/database` меняет только `db.js`.
+
+### Тест
+
+`server/__tests__/postgres/t294Upgrade.mjs`, режим `node scripts/r0-postgres.mjs --t294-upgrade-only`. Одноразовый PostgreSQL 15.13.
+
+1. CLI кода 477ea2f берётся из git (`git show`) и запускается отдельным процессом. Он делает `--fresh` пустой схемы. История проверяется побайтно: корень `fresh` `rehearsly-pg-current-v1`, artifact `48284687…`, descriptor `8bf27697…`, бюджеты 007–013. Его `--dry` отвечает так же, как `--dry` production 16.11 и 20.11: managed, шагов нет. Руками история не трогается.
+2. Настоящий CLI этого дерева, `--dry`: `managed`, `rootId: rehearsly-pg-current-v1`, `stepIds: ["016-usage-statistics"]`. История не изменилась.
+3. `--apply` применяет 016. Корневая запись побайтно та же, за ней одна строка `016-usage-statistics`. Следующий `--dry` шагов не планирует, следующий `--apply` отвечает `unchanged`.
+4. Каталог после апгрейда совпадает с `--fresh` этого дерева (v2, 25 таблиц): одинаковый evidence-хэш проверяльщика v2.
+5. Сервер на этой базе принимает запрос с сессией и пишет день со сборкой.
+
+Дополнительно `__tests__/database/schemaHistoryIdentity.test.js` (Jest, без базы) закрепляет идентичности, записанные production. Он также проверяет план `buildPlan` для корня v1 с 007–013: ровно 016.
+
+### Результат
+
+| Дерево | `--t294-upgrade-only` | `schemaHistoryIdentity` |
+|---|---|---|
+| 43b5e86 (файлы схемы восстановлены, тесты новые) | **FAIL**: первый `--dry` → `{"type":"error","code":"HISTORY_INVALID"}` | 4 из 4 FAIL (хэши v1 и шагов другие) |
+| bf0b749 | **PASS**, 4 контракта | 4 из 4 PASS |
+
+Остальные PG-режимы на bf0b749 — PASS: `--r2-migrations-schema-only` (fresh v2; принятие v1-схемы и `--apply` до 016), `--t294-only`, r3, r4, r6, r7, r8, t278, t293, a02-b03, b04, h04, is02, f05. R2_STARTUP падает так же, как на базе: песочница запрещает читать `.env`. Выводы — `audit/evidence/T-294/upgrade.txt`. Node 26.13.0 (`server/package.json`: `engines.node` = `26.x`).
+
+К production ничего не применялось. 016 там применяет только владелец: `--dry`, затем `--apply`.

@@ -1,0 +1,42 @@
+T-404 green after: e2e/subflows/fresh-safari.yaml in flows 44 (twice), 70, 98, 2026-11-24 13:36
+
+$ npm run e2e -- e2e/flows/44-profile-language.yaml e2e/flows/70-privacy-lists-resend.yaml e2e/flows/98-invite-page-in-safari.yaml
+[Passed] The profile's language, kept by the account (3m 28s)
+[Passed] Privacy policy lists Resend in every language (32s)
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (29s)
+3/3 Flows Passed in 4m 30s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+e2e/out/server.log, one line per runFlow of fresh-safari.yaml (4):
+[e2e] Safari stopped, its tabs removed: BrowserState.db, BrowserState.db-shm, BrowserState.db-wal, SafariTabs.db, SafariTabs.db-shm, SafariTabs.db-wal
+
+$ node audit/evidence/T-404/restored-tabs.mjs e2e/out/artifacts/2026-11-24_133601
+Invite page in Safari reads Rehearsly and its App Store steps in every language: 1 Safari launch(es); tabs restored: 0 at 2026-11-24 01:41:43.763691-1000; links opened as new tabs: 1
+Privacy policy lists Resend in every language: 1 Safari launch(es); tabs restored: 0 at 2026-11-24 01:41:14.015072-1000; links opened as new tabs: 4
+The profile's language, kept by the account: 2 Safari launch(es); tabs restored: 0 at 2026-11-24 01:40:10.005393-1000, 0 at 2026-11-24 01:40:28.066183-1000; links opened as new tabs: 2
+total: 4 launch(es), 0 tab(s) restored
+(exit 0)
+
+Flow 70 alone, first run with the final mechanism (2026-11-24_132403): passed in
+50 s, "tabs restored: 0", after 26 on the old flow (red-before-70.txt).
+
+The run before this one (2026-11-24_132938) lost Maestro's driver in flow 44's
+sign-in, before any Safari step ("Device became unreachable", docs/e2e.md "A
+lost driver"); 70 and 98 then failed at their first command. Run again
+unchanged: the run above.
+
+What did not work, on the way (each with flow 70):
+
+1. `clearState: com.apple.mobilesafari` in the subflow (2026-11-24_125704):
+   Clear state of com.apple.mobilesafari FAILED
+   CommandFailed: An error was encountered processing the command (domain=IXErrorDomain, code=22):
+   Simulator device failed to uninstall com.apple.mobilesafari.
+   Maestro 2.11 clears an iOS app's state by reinstalling it.
+
+2. The runner emptying Safari's data container (`simctl get_app_container
+   <udid> com.apple.mobilesafari data`; 2026-11-24_130227): passed, and
+   "tabs restored: 26 at 2026-11-24 01:04:13" - the tabs are not there.
+   A probe of the simulator's containers then found them in the device's own
+   Library/Safari: SafariTabs.db (+ BrowserState.db, -shm, -wal), next to
+   Bookmarks.db and History.db; Safari's app group (group.com.apple.BrowserKit)
+   and data container held no tab store.

@@ -1,0 +1,38 @@
+# T-299 check: flow 09 up to iOS's calendar prompt, its "Don't Allow" tap
+# left out - what the simulator made of it in the red run of T-291 (06:33:26,
+# backboardd: "we already have a service for senderID", the touch skipped).
+# The flow fails waiting for the app's "OK", as there. Run before flows 100 and
+# 65: on the old flows the prompt it leaves stays over their sign-in screen.
+appId: ${APP_ID}
+name: T-299 check, the Don't Allow tap lost
+tags:
+  - onboarding
+  - calendar
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: unset
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${NEWCOMER_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP: "Get Started"
+      SEE: "Your availability"
+      WAIT_MS: 10000
+- tapOn: "Grant Access"
+- extendedWaitUntil:
+    visible: "Don’t Allow|Don't Allow"
+    timeout: 10000
+# The tap on "Don't Allow" is lost here.
+- extendedWaitUntil:
+    visible: "OK"
+    timeout: 10000

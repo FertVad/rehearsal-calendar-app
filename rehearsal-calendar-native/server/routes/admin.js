@@ -4,6 +4,12 @@ import db from '../database/db.js';
 import { adminLogin, requireAdmin } from '../middleware/adminAuth.js';
 import { generateAdminPageHTML } from './admin/dashboardPage.js';
 import { fullName } from './../utils/names.js';
+import { analytics, summary } from '../services/admin/analytics.js';
+import { lastAppDays } from '../services/admin/usage.js';
+import { purgeExpired } from '../services/usage/statsStore.js';
+import {
+  FilterRefused, emptyFacts, loadFacts, loadPeople, matches, parseFilters, registeredSince, userRow,
+} from '../services/admin/people.js';
 
 const router = Router();
 
@@ -15,103 +21,79 @@ router.get('/', (_req, res) => {
 // Login
 router.post('/api/login', adminLogin);
 
-// Aggregate stats
-router.get('/api/stats', requireAdmin, asyncHandler(async (_req, res) => {
+// The filters every statistics route takes; a malformed one is a 400, not a guess.
+function filtersOf(req, res) {
   try {
-    const now = new Date();
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(now);
-    monthAgo.setDate(monthAgo.getDate() - 30);
+    return parseFilters(req.query);
+  } catch (error) {
+    if (!(error instanceof FilterRefused)) throw error;
+    res.status(400).json({ error: error.message });
+    return null;
+  }
+}
 
-    const [
-      totalUsers,
-      newWeek,
-      newMonth,
-      notSignedIn,
-      totalProjects,
-      totalRehearsals,
-    ] = await Promise.all([
-      db.get('SELECT COUNT(*) as count FROM native_users'),
-      db.get('SELECT COUNT(*) as count FROM native_users WHERE created_at >= $1', [weekAgo.toISOString()]),
-      db.get('SELECT COUNT(*) as count FROM native_users WHERE created_at >= $1', [monthAgo.toISOString()]),
-      // Who has not signed in for 30 days — and that is all it can say. This
-      // was "churn", "inactive users", but a sign-in is not use: the app renews
-      // its session without one for months, and nothing records use, so people
-      // in the app every day counted as gone. Someone who never signed in
-      // since registering counts from the registration; they were left out (H03).
-      db.get(`
-        SELECT COUNT(*) as count
-        FROM native_users
-        WHERE COALESCE(last_login_at, created_at) < $1
-      `, [monthAgo.toISOString()]),
-      db.get('SELECT COUNT(*) as count FROM native_projects'),
-      db.get('SELECT COUNT(*) as count FROM native_rehearsals'),
-    ]);
-
-    const totalUsersCount = Number(totalUsers.count);
-    const notSignedInCount = Number(notSignedIn.count);
-    const notSignedInRate = totalUsersCount > 0
-      ? Math.round((notSignedInCount / totalUsersCount) * 1000) / 10
-      : 0;
-
-    res.json({
-      users: {
-        total: totalUsersCount,
-        newThisWeek: Number(newWeek.count),
-        newThisMonth: Number(newMonth.count),
-      },
-      signIns: {
-        notInLast30Days: notSignedInCount,
-        rate: notSignedInRate,
-      },
-      usage: {
-        projects: Number(totalProjects.count),
-        rehearsals: Number(totalRehearsals.count),
-      },
-    });
+// The cards: as of now, real people only — service accounts never count (T-293).
+// Who has not signed in for 30 days is all the sign-in figure can say: a
+// session renews itself without one (H03). Use is in /api/analytics (T-294).
+router.get('/api/stats', requireAdmin, asyncHandler(async (req, res) => {
+  try {
+    const filters = filtersOf(req, res);
+    if (!filters) return;
+    res.json(await summary(db, filters));
   } catch (err) {
     console.error('[Admin] Stats error:', err);
     res.status(500).json({ error: 'Failed to load stats' });
   }
 }));
 
-// Users list
+// Everything under the cards: funnel, sources, projects, notifications (T-293),
+// use of the app (T-294). No addresses here — they stay in the users table.
+// Opening the admin is also when app days and invitation counts older than 13
+// months are deleted: there is no scheduler (services/usage/statsStore.js).
+router.get('/api/analytics', requireAdmin, asyncHandler(async (req, res) => {
+  try {
+    const filters = filtersOf(req, res);
+    if (!filters) return;
+    await purgeExpired(db, filters.now);
+    res.json(await analytics(db, filters));
+  } catch (err) {
+    console.error('[Admin] Analytics error:', err);
+    res.status(500).json({ error: 'Failed to load analytics' });
+  }
+}));
+
+// Users list: one row per person registered in the period, newest first, with
+// where they came from and how far they got. Service accounts only with ?service=1.
 router.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
   try {
+    const filters = filtersOf(req, res);
+    if (!filters) return;
     const limit = Math.min(parseInt(req.query.limit) || 30, 100);
-    const offset = parseInt(req.query.offset) || 0;
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
-    const [total, users] = await Promise.all([
-      db.get('SELECT COUNT(*) as count FROM native_users'),
-      db.all(`
-        SELECT
-          u.id, u.email, u.first_name, u.last_name,
-          u.created_at, u.last_login_at
-        FROM native_users u
-        ORDER BY u.created_at DESC
-        LIMIT $1 OFFSET $2
-      `, [limit, offset]),
-    ]);
+    const directory = await loadPeople(db);
+    const listed = [...directory.people.values()]
+      .filter((person) => (filters.service || !person.service) && matches(person, filters)
+        && registeredSince(person, filters.since))
+      .sort((a, b) => (b.createdAt ?? -Infinity) - (a.createdAt ?? -Infinity) || b.id - a.id);
+    const page = listed.slice(offset, offset + limit);
+    const ids = page.map((person) => person.id);
+    const [facts, lastDays] = await Promise.all([loadFacts(db, ids), lastAppDays(db, ids)]);
 
     res.json({
-      users: users.map(u => ({
-        id: u.id,
-        email: u.email,
-        firstName: u.first_name,
-        lastName: u.last_name,
-        createdAt: u.created_at,
-        lastLoginAt: u.last_login_at,
+      users: page.map((person) => ({
+        ...userRow(person, facts.get(person.id) || emptyFacts(), directory),
+        lastAppDay: lastDays?.get(person.id) ?? null,
       })),
-      total: Number(total.count),
+      total: listed.length,
+      // False until migration 016 is applied: no last day is "not recorded", not "never".
+      appDaysRecorded: lastDays !== null,
     });
   } catch (err) {
     console.error('[Admin] Users error:', err);
     res.status(500).json({ error: 'Failed to load users' });
   }
 }));
-
-// Transactions list
 
 // Bug reports list
 router.get('/api/bug-reports', requireAdmin, asyncHandler(async (req, res) => {

@@ -1,0 +1,54 @@
+T-287 — the participants row before the people are known
+
+Fix commit: 0da3e0a. Base: 673dc5f.
+Files of the fix, put back to the base for the red run:
+  src/shared/components/ParticipantPicker.tsx
+  src/features/smart-planner/hooks/useSmartPlanner.ts
+  src/features/smart-planner/screens/SmartPlannerScreen.tsx
+  src/features/calendar/screens/AddRehearsalScreen.tsx
+Tests (new in 0da3e0a, kept): SmartPlannerScreen.test.tsx "T-287" block,
+AddRehearsalScreen.test.tsx "after the load failed" (three assertions added).
+
+== RED BEFORE: git restore --source=673dc5f -- <files above>
+$ npx jest --selectProjects frontend --testPathPatterns 'SmartPlannerScreen.test|AddRehearsalScreen.test' -t 'T-287|after the load failed'
+
+FAIL frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx
+  ● Before the people are known (R9-02) › after the load failed, it says so under the participants; trying again from there loads them, and then it saves
+    expect(received).toBeNull()
+    Received: {... "elementType": "Text" ...}      <- the row's "No members in this project"
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+  ● The participants row before the people are known (T-287) › while the members are on their way: loading, not "no members", and no tap
+    expect(received).toBeNull()
+    Received: {... "elementType": "Text" ...}      <- "No members in this project"
+  ● The participants row before the people are known (T-287) › when their load failed: says so, not "no members"
+    expect(received).toBeNull()
+    Received: {... "elementType": "Text" ...}
+  ● The participants row before the people are known (T-287) › switched to another project: loading until its own members are in
+    expect(received).toBeNull()
+    Received: {... "elementType": "Text" ...}
+Test Suites: 2 failed, 2 total
+Tests:       4 failed, 61 skipped, 1 passed, 66 total
+(the one passing: "a project with nobody in it still says so, once that is known" —
+ the control, true before and after)
+
+== GREEN: git restore --source=HEAD -- <files above>
+$ same command, --verbose
+    ✓ while the members are on their way: loading, not "no members", and no tap
+    ✓ when their load failed: says so, not "no members"
+    ✓ switched to another project: loading until its own members are in
+    ✓ a project with nobody in it still says so, once that is known
+    ✓ after the load failed, it says so under the participants; trying again from there loads them, and then it saves
+Tests:       61 skipped, 5 passed, 66 total
+
+$ npx jest --selectProjects frontend --testPathPatterns 'SmartPlannerScreen.test|AddRehearsalScreen.test|ParticipantPicker.test'
+Test Suites: 3 passed, 3 total
+Tests:       90 passed, 90 total
+
+$ npx jest --selectProjects frontend   (whole frontend, with the fix)
+Test Suites: 158 passed, 158 total
+Tests:       1688 passed, 1688 total
+
+tsc --noEmit: clean. eslint on the changed files: 0 errors (old warnings only).
+No new strings: rehearsals.loadingMembers and rehearsals.loadMembersError exist
+in ru/en/es/de already; nothing for the natives' report.
+e2e: not run — the task says e2e is not required.

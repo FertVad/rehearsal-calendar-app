@@ -469,6 +469,11 @@ describe('Before the people are known (R9-02)', () => {
     const screen = await open();
 
     expect(screen.getByTestId('rehearsal-participants-note').props.children).toBe(t.rehearsals.loadMembersError);
+    // The row over it does not say the opposite: a failed load is not a
+    // project with nobody in it (T-287).
+    expect(screen.queryByText(t.rehearsals.noMembers)).toBeNull();
+    expect(screen.getByTestId('participants-row').props.accessibilityLabel).toBe(t.rehearsals.participants);
+    expect(screen.getByTestId('participants-row').props.accessibilityState).toMatchObject({ disabled: true });
     expect(offered(screen)).toBe(false);
     await submit(screen);
     expect(create).not.toHaveBeenCalled();
