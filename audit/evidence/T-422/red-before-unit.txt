@@ -1,0 +1,45 @@
+T-422 — the plugin's test on app.json at 6eb3094 (git restore --source=6eb3094 -- app.json):
+
+$ node --test plugins/pods-deployment-target/__tests__/podfile.test.mjs
+✖ app.json applies the plugin at prebuild (7.690334ms)
+✔ post_install raises every Pods target below the platform to it (240.921417ms)
+✔ a second prebuild over the same Podfile adds nothing (0.586333ms)
+✔ a Podfile without post_install is an error, not a project left to fail in Xcode (1.145583ms)
+ℹ pass 3
+ℹ fail 1
+✖ failing tests:
+✖ app.json applies the plugin at prebuild (7.690334ms)
+  AssertionError [ERR_ASSERTION]: app.json plugins: ["expo-web-browser","expo-apple-authentication",["expo-notifications",{"icon":"./assets/notification-icon.png","color":"#A855F7"}],"expo-localization","expo-calendar","./plugins/prebuilt-dsyms/withPrebuiltDsyms","./plugins/connection-renewal/withConnectionRenewal"]
+
+With the fix (app.json from HEAD + the plugin):
+✔ app.json applies the plugin at prebuild
+✔ post_install raises every Pods target below the platform to it
+✔ a second prebuild over the same Podfile adds nothing
+✔ a Podfile without post_install is an error, not a project left to fail in Xcode
+ℹ pass 4
+ℹ fail 0
+
+The real `expo prebuild --platform ios --no-install --clean` of this tree's app.json into a scratch
+root (as e2e/native.mjs makes e2e/.native) writes the Podfile's post_install as:
+
+  post_install do |installer|
+    # rehearsly: pods-deployment-target (T-422)
+    min_ios = podfile_properties['ios.deploymentTarget'] || '15.1'
+    installer.pods_project.targets.each do |pod_target|
+      pod_target.build_configurations.each do |build_config|
+        current = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        next if current.nil? || Gem::Version.new(current) >= Gem::Version.new(min_ios)
+        build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios
+      end
+    end
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      :ccache_enabled => ccache_enabled?(podfile_properties),
+    )
+  end
+end
+
+Not run here: pod install + xcodebuild of that project (pod install alone is >600 s on this
+network, see red-before-e2e-build.txt). The green build is the supervisor's e2e run.

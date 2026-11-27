@@ -97,7 +97,8 @@
       "expo-localization",
       "expo-calendar",
       "./plugins/prebuilt-dsyms/withPrebuiltDsyms",
-      "./plugins/connection-renewal/withConnectionRenewal"
+      "./plugins/connection-renewal/withConnectionRenewal",
+      "./plugins/pods-deployment-target/withPodsDeploymentTarget"
     ],
     "extra": {
       "eas": {

@@ -20,6 +20,8 @@
         "plugins/prebuilt-dsyms/dsyms.mjs",
         // app.json's config plugin that compiles RehearslyConnections.m into the app (T-240).
         "plugins/connection-renewal/withConnectionRenewal.js",
+        // app.json's config plugin that keeps every Pods target at the app's iOS (T-422).
+        "plugins/pods-deployment-target/withPodsDeploymentTarget.js",
         "plugins/**/__tests__/**/*.mjs"
       ],
       "project": [

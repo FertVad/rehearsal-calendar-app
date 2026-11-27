@@ -79,6 +79,8 @@ try {
       'e2e/__tests__/store-video.test.mjs', 'e2e/__tests__/store-touches.test.mjs'], appDirectory);
     console.log('[tests] Running the prebuilt frameworks\' dSYMs regressions (T-237).');
     runNode(['--test', 'plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs'], appDirectory);
+    console.log('[tests] Running the Pods\' deployment target regressions (T-422).');
+    runNode(['--test', 'plugins/pods-deployment-target/__tests__/podfile.test.mjs'], appDirectory);
   }
   await prepareBrowser({ withDeps: mode === 'install' && args.includes('--with-deps') });
   if (mode === 'all' || mode === 'backend') {

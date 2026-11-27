@@ -1,0 +1,38 @@
+T-422 — red before: the full e2e run on auto/main 6eb3094 stopped before the flows.
+
+Source: rehearsal-calendar-native/e2e/out/failed/full-e2e-6eb3094-2026-11-27T18-07-13-832Z/checks.log
+(the supervisor's run in reh_app-auto-review, 27.11.2026):
+
+[e2e] native inputs 93019847db71 (app.json, locales, assets, packages)
+[e2e] generating the iOS project from app.json (expo prebuild, pod install, some 7 minutes) — its inputs changed
+[e2e]   prebuild 6 s, pod install 2419 s
+[e2e] building the Debug app — from nothing it takes a while
+[e2e] xcodebuild -workspace failed (65) — see .../e2e/out/build.log
+.../e2e/.native/ios/Pods/Pods.xcodeproj: error: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 12.4, but the range of supported deployment target versions is 15.0 to 27.2.x. (in target 'RNSVG-RNSVGFilter…
+.../e2e/.native/ios/Pods/Pods.xcodeproj: error: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 13.4, but the range of supported deployment target versions is 15.0 to 27.2.x. (in target 'RNCAsyncStorage-R…
+
+Why 773fda9 was green and 6eb3094 is not
+- The only native input changed in 773fda9..6eb3094 is app.json: c3e9e494 "chore(ios): 1.0.1 (8)"
+  (version 1.0.0 -> 1.0.1, buildNumber 7 -> 8). It changes the inputs' hash, so the run made the
+  iOS project anew (prebuild + pod install) and built the app from nothing; at 773fda9 the project
+  and the Debug app stamped with its hash were reused.
+- Between the two, the machine's Xcode became 27.2 (/Applications/Xcode.app/Contents/version.plist:
+  CFBundleShortVersionString 27.2, 27B52). The last green Debug build in this tree
+  (e2e/out/build.log, 27.11 12:11) was made with SDK iphonesimulator26.5 and has no deployment
+  target message at all — Xcode 26 let a pod at 12.4 build; Xcode 27 refuses it as an error.
+- That Pods project (this tree's e2e/.native before this task) had exactly four configurations
+  below 15: IPHONEOS_DEPLOYMENT_TARGET = 13.4 (x2) and 12.4 (x2) — the resource bundle targets
+  RNCAsyncStorage_resources and RNSVGFilters, which keep their podspecs' targets.
+  React Native's post_install (ReactNativePodsUtils.updateOSDeploymentTarget,
+  node_modules/react-native/scripts/cocoapods/utils.rb:345) raises only
+  pod_target_installation_results' native targets, not their resource bundles.
+
+So c3e9e494 is the commit that brought the failure to light (it made the project anew); the
+cause is the generated Podfile, which leaves two Pods targets below what Xcode 27 builds.
+Any new project from 773fda9 fails the same on this Xcode.
+
+Reproducing it here: `npm run e2e -- --build e2e/flows/01-login.yaml` with app.json at 6eb3094
+did not reach xcodebuild in 600 s — pod install was still downloading React Native's tarballs
+from Maven (reactnative-core-debug 78.5 MB at ~60 KB/s; e2e/out/prepare.log ends in
+"[!] Invalid `Podfile` file: SIGTERM."). The 2419 s pod install of the supervisor's run says the
+same. A build from a new project does not fit in one 10-minute command on this machine.
