@@ -8,10 +8,11 @@ import { translations, Language } from '../../../i18n/translations';
 
 const member = (userId: string, firstName: string, lastName = '') =>
   ({ userId, firstName, lastName } as any);
-const busy = { start: '10:00', end: '14:00', type: 'busy' } as any;
+// 10:00–14:00, as minutes of the day (conflictDetection.ts, BusySpan).
+const busy: [number, number] = [600, 840];
 const conflict = (...members: any[]): ConflictInfo => ({
   hasConflicts: true,
-  busyMembers: members.map((m) => ({ member: m, conflictingSlots: [busy] })),
+  busyMembers: members.map((m) => ({ member: m, conflictingSpans: [busy] })),
 });
 
 it('says it in English to an English app', () => {

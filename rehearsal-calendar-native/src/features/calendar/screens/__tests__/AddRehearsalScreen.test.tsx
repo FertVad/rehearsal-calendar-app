@@ -279,6 +279,38 @@ describe('The participants row (T-010)', () => {
     expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Maya Lopez, all day');
   });
 
+  // Valery's Friday (T-421): a trip imported from his phone's calendar, from
+  // Thursday evening to Sunday, and the weekend busy by default (T-406) — two
+  // rows for the day, both right. The sheet said "all day, all day"; his busy
+  // time is their union, said once, and so are someone else's overlapping hours.
+  it('says a person\'s busy time once: the union of their rows, not each row', async () => {
+    getMembers.mockImplementation(async () => ({ data: { members: [
+      { userId: '3', firstName: 'Valery', lastName: 'Zuev', role: 'member', status: 'active' },
+      { userId: '7', firstName: 'Anna', lastName: 'Smith', role: 'member', status: 'active' },
+      { userId: '9', firstName: 'Boris', lastName: '', role: 'member', status: 'active' },
+    ] } }));
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue({ data: { availability: [
+      { userId: '3', dates: [{ date: '2026-11-10', timeRanges: [
+        // The middle day of the imported trip, as the server cuts it into days.
+        { start: '00:00', end: '23:59', type: 'busy', isAllDay: false },
+        // The weekend's default, a whole day.
+        { start: '00:00', end: '23:59', type: 'busy', isAllDay: true },
+      ] }] },
+      { userId: '7', dates: [{ date: '2026-11-10', timeRanges: [
+        { start: '19:00', end: '21:00', type: 'busy' },
+        { start: '18:00', end: '20:00', type: 'busy' },
+      ] }] },
+    ] } });
+    const screen = await open();
+    await settle();
+
+    expect(screen.getByTestId('participants-conflict').props.children).toBe('Busy: Valery Zuev (all day)');
+    fireEvent.press(screen.getByTestId('participants-row'));
+    expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Valery Zuev, all day');
+    expect(screen.getByTestId('participant-7').props.accessibilityLabel).toBe('Anna Smith, 18:00–21:00');
+    expect(screen.getByTestId('participant-9').props.accessibilityLabel).toBe('Boris');
+  });
+
   // T-017 review r1: the phone's 12/24 hours changed while the form is open.
   // Every time on it follows, the ones it keeps memoized too; the form used to
   // show the start in the new way and the busy time in the old.

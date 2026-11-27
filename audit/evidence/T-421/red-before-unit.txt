@@ -1,0 +1,49 @@
+T-421 — red before: the new tests on the old code (c3e9e49), 27.11.2026.
+
+$ npx jest --selectProjects frontend --ci src/shared/utils/__tests__/busyUnion.test.ts
+
+    ✕ says the whole day once for two rows that are each the whole day
+    ✕ glues overlapping ranges into one span
+    ✕ glues ranges that touch into one span
+    ✕ glues a range inside another into the larger one, and the whole day over hours
+    ✕ keeps spans apart where there is free time between them, in the order of the day
+    ✓ counts only the busy rows
+    ✕ keeps an evening to the end of the day as the server says it
+    ✓ says the whole day once
+    ✕ gives the glued span that clashes, not its first row
+    ✓ gives the span that clashes, not one earlier in the day
+    ✕ glues the evening and the next morning across midnight
+    ✓ says the next morning alone when only it clashes
+    ✓ says the whole day for a whole day running into the next morning
+    ✕ splits at midnight a span longer than a day, which one clock range cannot say
+    ✓ still finds nobody busy where nobody is
+    Expected: "all day"
+    Received: "all day, all day"
+    Expected: "18:00–21:00"
+    Received: "18:00–20:00, 19:00–21:00"
+    Expected: "18:00–20:00"
+    Received: "18:00–19:00, 19:00–20:00"
+    Expected: "10:00–18:00"
+    Received: "10:00–18:00, 12:00–13:00"
+    Expected: "10:00–12:00, 18:00–20:00"
+    Received: "18:00–20:00, 10:00–12:00"
+    Expected: "18:00–23:59"
+    Received: "18:00–23:59, 20:00–22:00"
+    Expected: "Busy: Valery Zuev (18:00–21:00)"
+    Received: "Busy: Valery Zuev (18:00–20:00)"
+    Expected: "Busy: Valery Zuev (22:00–02:00)"
+    Received: "Busy: Valery Zuev (22:00–23:59)"
+    Expected: "Busy: Valery Zuev (10:00–23:59, 00:00–12:00)"
+    Received: "Busy: Valery Zuev (10:00–23:59)"
+Tests:       9 failed, 6 passed, 15 total
+
+$ npx jest --selectProjects frontend --ci src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx -t "union of their rows"
+
+    ✕ says a person's busy time once: the union of their rows, not each row
+  ● The participants row (T-010) › says a person's busy time once: the union of their rows, not each row
+    Expected: "Valery Zuev, all day"
+    Received: "Valery Zuev, all day, all day"
+Tests:       1 failed, 40 skipped, 41 total
+
+After the fix: both files green (busyUnion 15/15, AddRehearsalScreen 41/41), and
+src/shared, src/features/calendar, src/features/smart-planner green.

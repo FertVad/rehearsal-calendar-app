@@ -14,7 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../constants/colors';
 import type { TimeRange } from '../utils/availability';
-import { busySpanText } from '../utils/conflictDetection';
+import { busySpans, busySpansText } from '../utils/conflictDetection';
 import { useI18n } from '../../contexts/I18nContext';
 import type { Translations } from '../../i18n/translations';
 import { AppModal } from './AppModal';
@@ -326,13 +326,12 @@ function Checkbox({ checked }: { checked: boolean | 'mixed' }) {
 
 /**
  * Someone's busy time on a day, as the sheet shows it beside their name: the
- * ranges, or the whole day. Nothing for someone free. Busy as the conflict
- * check on save counts it (conflictDetection.ts): rows of type 'busy'.
+ * spans, or the whole day. Nothing for someone free. Busy as the conflict
+ * check on save counts and names it (conflictDetection.ts): the union of their
+ * busy rows, each span once (T-421).
  */
 export function busyText(ranges: TimeRange[] | undefined, t: Translations, locale: string, uses24: boolean): string | undefined {
-  const busy = (ranges ?? []).filter(r => r.type === 'busy');
-  if (busy.length === 0) return undefined;
-  return busy.map(r => busySpanText(r, t, locale, uses24)).join(', ');
+  return busySpansText(busySpans(ranges), t, locale, uses24);
 }
 
 const styles = StyleSheet.create({

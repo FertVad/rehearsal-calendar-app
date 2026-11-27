@@ -4,7 +4,7 @@
  * the whole day as the participants sheet says it; and how many more. It said
  * the surname alone, and "12:00 AM–11:59 PM" for someone busy all day.
  */
-import { busyLine, busySpanText, ConflictInfo } from '../conflictDetection';
+import { busyLine, busySpans, busySpansText, ConflictInfo } from '../conflictDetection';
 import { busyText } from '../../components/ParticipantPicker';
 import { translations } from '../../../i18n/translations';
 import type { ProjectMember } from '../../types';
@@ -13,11 +13,12 @@ import type { TimeRange } from '../availability';
 const member = (userId: string, firstName: string, lastName = ''): ProjectMember =>
   ({ id: userId, userId, firstName, lastName, role: 'member', status: 'active' });
 const span = (start: string, end: string): TimeRange => ({ start, end, type: 'busy' } as TimeRange);
+const spanOf = (range: TimeRange) => busySpans([range])[0];
 const conflict = (first: [ProjectMember, TimeRange], more = 0): ConflictInfo => ({
   hasConflicts: true,
   busyMembers: [
-    { member: first[0], conflictingSlots: [first[1]] },
-    ...Array.from({ length: more }, (_, i) => ({ member: member(`m${i}`, `M${i}`), conflictingSlots: [span('10:00', '12:00')] })),
+    { member: first[0], conflictingSpans: [spanOf(first[1])] },
+    ...Array.from({ length: more }, (_, i) => ({ member: member(`m${i}`, `M${i}`), conflictingSpans: [spanOf(span('10:00', '12:00'))] })),
   ],
 });
 
@@ -66,8 +67,8 @@ it('someone with no surname is named by the first name; nobody busy is no line',
 it('one rule for the whole day, in the line and in the sheet', () => {
   const t = translations.en;
   for (const day of [allDay, span('00:00', '24:00')]) {
-    expect(busySpanText(day, t, 'en-US', false)).toBe('all day');
+    expect(busySpansText(busySpans([day]), t, 'en-US', false)).toBe('all day');
     expect(busyText([day], t, 'en-US', false)).toBe('all day');
   }
-  expect(busySpanText(span('00:00', '12:00'), t, 'en-US', true)).toBe('00:00–12:00');
+  expect(busySpansText(busySpans([span('00:00', '12:00')]), t, 'en-US', true)).toBe('00:00–12:00');
 });
