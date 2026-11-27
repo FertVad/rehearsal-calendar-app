@@ -1317,6 +1317,14 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual'),
             ($2, $3::timestamptz, $4::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.wang, ids.yangsun, localInstant(1, 10), localInstant(1, 14)]);
+  // Smirnov's tomorrow (07, T-421): over his own 10:00-14:00, an event from
+  // his phone's calendar, 12:00-14:00 - two rows, both right. Olga's sheet says
+  // his busy time once, "10:00 AM–2:00 PM", not each row; the planner's slots
+  // stay as they were, its busy time being their union already.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'apple_calendar', 'e2e-smirnov-lunch')`,
+    [ids.smirnov, localInstant(1, 12), localInstant(1, 14)]);
   // Acres' and O'Trigger's tomorrow (96, T-256): both busy in Lydia's slot at
   // 10:00, so her save names two - "Busy at this time: …". Acres all day, as
   // a save of that day writes it, O'Trigger 10:00-14:00, which makes the slot:

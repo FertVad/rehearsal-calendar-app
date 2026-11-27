@@ -108,7 +108,12 @@ tags:
       TAP: "Participants, 2 of 2, Busy: Grigory Smirnov.*"
       SEE: "All participants, 2 of 2"
       WAIT_MS: "5000"
+# His day has two rows, both right: his own 10:00-14:00 and 12:00-14:00 from
+# his phone's calendar. The sheet says his busy time once, their union - it
+# said each row, "10:00 AM–2:00 PM, 12:00 PM–2:00 PM", and a trip imported
+# over a weekend's default "all day, all day" (T-421).
 - assertVisible: "Grigory Smirnov, 10:00.AM–2:00.PM"
+- assertNotVisible: "Grigory Smirnov, .*12:00.PM.*"
 - assertVisible: "Olga Stage, admin"
 - takeScreenshot: 07-form-participants-sheet
 - tapOn:

@@ -1,0 +1,25 @@
+T-421 — the e2e red run of e2e/flows/07-planner-project-switch.yaml, 27.11.2026.
+
+The case added: Smirnov's tomorrow has his own 10:00-14:00 and, over it, an
+event from his phone's calendar 12:00-14:00 (e2e/seed.mjs, 'e2e-smirnov-lunch').
+Flow 07 asserts his sheet row is "Grigory Smirnov, 10:00 AM–2:00 PM" and that
+no "12:00 PM" follows it.
+
+Expected red on the old code: the old busyText said each row, so his row
+read "Grigory Smirnov, 10:00 AM–2:00 PM, 12:00 PM–2:00 PM" (the unit and the
+component tests show the same rule red: red-before-unit.txt).
+
+The run on the old code (conflictDetection.ts and ParticipantPicker.tsx from
+c3e9e49) did not get to the flow: the machine's Docker daemon is not running.
+
+$ npm run e2e -- e2e/flows/07-planner-project-switch.yaml
+[e2e] native inputs 84a290627fd6 (app.json, locales, assets, packages)
+[e2e] generating the iOS project from app.json (expo prebuild, pod install, some 7 minutes) — its inputs changed
+[e2e]   prebuild 5 s, pod install 109 s
+[e2e] E2E_APP (.../Rehearsly.app) was not built from this tree's app.json and packages: not used
+[e2e] building the Debug app — from nothing it takes a while
+[e2e] starting a disposable PostgreSQL
+Cannot connect to the Docker daemon at unix:///Users/vadimfertik/.docker/run/docker.sock. Is the docker daemon running?
+[e2e] not ready, not the change: Command failed: /usr/local/bin/docker --context desktop-linux version --format {{.Server.Version}}
+
+A machine failure, not the task's: the flow is left for the supervisor's run.
