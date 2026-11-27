@@ -1,0 +1,44 @@
+T-423 - red before: the new test against the runner of 82015d8.
+
+The full run of 82015d8 (28.11.2026, 00:00) passed every flow, then stopped at
+the day's turn:
+  [e2e] the day turned (2026-11-27 → 2026-11-28): a new database, server and seed for it
+  [e2e] POST /auth/login answered 429: {"error":"Too many requests, please try again later"}
+Its metro.log, as the new server came up: the Debug app, left signed in by
+the last flow (49-touch-targets), asked the new server with its old token:
+  ERROR  [ERROR] Response Error: 401 GET /native/projects/69 {"error": "Invalid or expired token"}
+  INFO  [INFO] [Auth] The session was refused; signing out
+  ERROR  [ERROR] [Smart Planner] Error loading data: {... "path": "http://127.0.0.1:3001/api/auth/refresh", "serverError": "Invalid or expired refresh token", "status": 401}
+POST /api/auth/refresh is in the /api/auth budget (20 a minute from one
+address, services/operationIpRateLimit.js), from 127.0.0.1, as the seed's
+sign-ins are; the seed spends all twenty (seed.mjs: director ... charlotta,
+then treplev, the twentieth at line 1216, after "Night run" - where the second
+server's log stops). So Treplev's sign-in was the 21st request: 429.
+
+Not a commit of 773fda9..82015d8: the seed's sign-ins and the day's turn are as
+they were at 773fda9 (5d5d688 added a row by SQL, no sign-in). The path breaks
+whenever a day turns between batches with the app left signed in; this run
+reached midnight because its pod install took 2417 s (started 20:49 local).
+
+$ git restore --source=82015d8 -- e2e/run.mjs
+$ node --test --test-name-pattern="day that turned" e2e/__tests__/midnight.test.mjs
+✖ a day that turned is seeded with the app closed: its refresh does not take the seed's twentieth sign-in (38.528833ms)
+
+✖ failing tests:
+
+test at e2e/__tests__/midnight.test.mjs:100:1
+✖ a day that turned is seeded with the app closed: its refresh does not take the seed's twentieth sign-in (38.528833ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /await turnDay\(\{\s*closeApp: \(\) => \{ try \{ simctl\('terminate', udid, BUNDLE_ID\); \}/. Input:
+
+  'the day turned (${day.date} → ${localDate(0)}): a new database, server and seed for it`);\n' +
+    '        await stopServer(server);\n' +
+    '        earlierTaps.push(...tapsAgain());\n' +
+    '        const url = await databaseFor(databaseUrl, localDate(0));\n' +
+    '        migrate(url, { append: true });\n' +
+    '        server = await startServer(url, { append: true });\n' +
+    '        day = await seedDay(url);\n' +
+    '      }\n' +
+    '      '
+$ git restore --source=HEAD -- e2e/run.mjs
+
+After the fix: node --test e2e/__tests__/midnight.test.mjs - tests 12, pass 12.

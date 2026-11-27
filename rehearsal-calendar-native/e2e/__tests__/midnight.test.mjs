@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { E2E_LIMIT_FROM, e2eLimitMs, failedFlows, maestroRuns } from '../../../tools/autodev/lib/checks.mjs';
-import { exitCode, flattenBatches, limitMs, nextStep, startClock } from '../midnight.mjs';
+import { exitCode, flattenBatches, limitMs, nextStep, startClock, turnDay } from '../midnight.mjs';
 
 const S = 1000;
 // Measured: a setup of 3 min 19 s (T-226 green) to 3 min 39 s (T-226 red),
@@ -95,6 +95,42 @@ test('a stop for the machine with nothing failed is 75; the other ends as before
   assert.equal(exitCode({ failed: true, error: 'error' }), 1);
   assert.equal(exitCode({ failed: true }), 1);
   assert.equal(exitCode({ failed: false }), 0);
+});
+
+test('a day that turned is seeded with the app closed: its refresh does not take the seed\'s twentieth sign-in', async () => {
+  // T-423, the full run of 82015d8 (28.11.2026, 00:00): the last flow left the
+  // app signed in; on the new server it asked POST /auth/refresh from
+  // 127.0.0.1 in the middle of the seed, and the seed's twentieth sign-in,
+  // Treplev's, answered 429 (/api/auth: twenty a minute from an address).
+  const AUTH_BUDGET = 20;
+  const SEED_SIGN_INS = 20;
+  const log = [];
+  let appRunning = true;
+  let budget = 0;
+  const auth = (who) => {
+    budget += 1;
+    log.push(`${who} ${budget > AUTH_BUDGET ? 429 : 200}`);
+  };
+  const seeded = await turnDay({
+    closeApp: () => { appRunning = false; },
+    stopServer: async () => { log.push('server stopped'); },
+    startDay: async () => {
+      budget = 0; // a new database: a new budget
+      log.push('server started');
+      if (appRunning) auth('app'); // its token refused by the new server
+      for (let n = 1; n <= SEED_SIGN_INS; n += 1) auth(`seed ${n}`);
+      return 'new day';
+    },
+  });
+  assert.equal(seeded, 'new day');
+  assert.ok(!log.some((line) => line.endsWith(' 429')), log.join('\n'));
+  assert.equal(log.filter((line) => line.startsWith('app')).length, 0, 'the app reached the new server');
+
+  // And the runner turns the day through it, the app terminated on the simulator.
+  const runner = fs.readFileSync(path.join(import.meta.dirname, '..', 'run.mjs'), 'utf8');
+  const turn = runner.slice(runner.indexOf('the day turned ('), runner.indexOf('const next = nextStep('));
+  assert.match(turn, /await turnDay\(\{\s*closeApp: \(\) => \{ try \{ simctl\('terminate', udid, BUNDLE_ID\); \}/);
+  assert.doesNotMatch(turn.slice(0, turn.indexOf('await turnDay(')), /stopServer\(|startServer\(|seedDay\(/);
 });
 
 test('far from midnight the whole set is one batch', () => {

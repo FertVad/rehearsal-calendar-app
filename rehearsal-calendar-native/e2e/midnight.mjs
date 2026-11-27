@@ -75,6 +75,22 @@ export function nextStep({ now = new Date(), left, deadline = Infinity }) {
 }
 
 /**
+ * A day that turned between batches: the app closed, the old server stopped,
+ * the new day's database, server and seed made (`startDay`, its result
+ * returned). The app first (T-423): the last flow left it signed in, and on
+ * the new server its token is refused and it asks POST /auth/refresh from
+ * 127.0.0.1 — the address the seed signs in from, which /api/auth takes twenty
+ * requests a minute from, and the seed spends all twenty. On the full run of
+ * 82015d8 (28.11.2026, 00:00) the app's refresh came in the middle of the
+ * seed, and Treplev's sign-in, the twentieth, answered 429.
+ */
+export async function turnDay({ closeApp, stopServer, startDay }) {
+  closeApp();
+  await stopServer();
+  return startDay();
+}
+
+/**
  * The run's exit code: 0 green, 1 a flow failed or the run broke, 75 the
  * machine not ready. `failed` — a batch already failed; `error` — how the run
  * stopped early: 'machine' (75's, a stop before midnight among them), another

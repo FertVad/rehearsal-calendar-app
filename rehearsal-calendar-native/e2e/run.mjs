@@ -64,7 +64,7 @@ import { fileURLToPath } from 'node:url';
 import { getText } from './http.mjs';
 import { mergeJunit } from './junit.mjs';
 import { LOCK, takeLock } from './lock.mjs';
-import { exitCode, flattenBatches, limitMs, nextStep, startClock } from './midnight.mjs';
+import { exitCode, flattenBatches, limitMs, nextStep, startClock, turnDay } from './midnight.mjs';
 import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, requireInstalledAsLocked, splitFlows } from './native.mjs';
 import { firstSafari, runsFreshSafari, safariLaunches, safariVerdict } from './safari.mjs';
 import { localDate, seed } from './seed.mjs';
@@ -746,12 +746,17 @@ async function main() {
     for (let index = 0; index < queue.length;) {
       if (localDate(0) !== day.date) {
         step(`the day turned (${day.date} → ${localDate(0)}): a new database, server and seed for it`);
-        await stopServer(server);
-        earlierTaps.push(...tapsAgain());
-        const url = await databaseFor(databaseUrl, localDate(0));
-        migrate(url, { append: true });
-        server = await startServer(url, { append: true });
-        day = await seedDay(url);
+        day = await turnDay({
+          closeApp: () => { try { simctl('terminate', udid, BUNDLE_ID); } catch { /* not running */ } },
+          stopServer: () => stopServer(server),
+          startDay: async () => {
+            earlierTaps.push(...tapsAgain());
+            const url = await databaseFor(databaseUrl, localDate(0));
+            migrate(url, { append: true });
+            server = await startServer(url, { append: true });
+            return seedDay(url);
+          },
+        });
       }
       const next = nextStep({ left, deadline });
       if (next.stop) {

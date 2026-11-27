@@ -496,7 +496,11 @@ plays it for any start in the half hour before midnight. Before each batch
 it compares the day with the seed's; a day that turned gets a database of its
 own in the same container (`rehearsly_e2e_<YYYYMMDD>`), the server restarted
 on it and the seed made again, so the next flows get the new day's
-`${…_DAY}`, `${…_LABEL}` and ids. Far from midnight the whole set is one batch,
+`${…_DAY}`, `${…_LABEL}` and ids. The app is closed first (`turnDay`): left
+signed in by the last flow, it asked the new server for a refresh from
+127.0.0.1 in the middle of the seed, which spends all twenty of `/api/auth`'s
+requests a minute from that address, and the seed's last sign-in answered 429
+(T-423). Far from midnight the whole set is one batch,
 one Maestro. The batches' reports are merged into `e2e/out/junit.xml`
 (`e2e/junit.mjs`), rewritten after each, and their screenshots go to one
 folder under `e2e/out/artifacts`, a flow's folder in it as from one Maestro —
