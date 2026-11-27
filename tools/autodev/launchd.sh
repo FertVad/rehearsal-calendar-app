@@ -8,20 +8,29 @@
 #   tools/autodev/launchd.sh status
 #
 # The repository is on the Desktop, which macOS keeps from background processes
-# until allowed: System Settings → Privacy & Security → Files and Folders (or
-# Full Disk Access) → node. Without it the supervisor's log says
-# "Operation not permitted".
+# until allowed: System Settings → Privacy & Security → Full Disk Access → node.
+# Without it the supervisor's log says "Operation not permitted".
+#
+# The log itself is not on the Desktop: launchd opens the stdout path before
+# node starts, and launchd cannot be allowed a folder. From macOS 27 (27.11.2026)
+# a log there stopped every start with exit 78, "Unable to open stdout path ...
+# Operation not permitted", and nothing in the log to say so. It lives in
+# ~/Library/Logs; AUTODEV/.state/supervisor.log is a link to it.
 set -euo pipefail
 
 LABEL=com.rehearsly.autodev
 REPO=${0:A:h:h:h}
 NODE=${AUTODEV_NODE:-$HOME/.nvm/versions/node/v26.13.0/bin/node}
 PLIST=$HOME/Library/LaunchAgents/$LABEL.plist
-LOG=$REPO/AUTODEV/.state/supervisor.log
+LOG=$HOME/Library/Logs/rehearsly-autodev.log
+LINK=$REPO/AUTODEV/.state/supervisor.log
 
 case ${1:-status} in
   install)
-    mkdir -p "$REPO/AUTODEV/.state" "${PLIST:h}"
+    mkdir -p "$REPO/AUTODEV/.state" "${PLIST:h}" "${LOG:h}"
+    # The log of the days before it moved goes with it.
+    if [[ -f $LINK && ! -L $LINK ]]; then cat "$LINK" >> "$LOG"; rm "$LINK"; fi
+    ln -sfn "$LOG" "$LINK"
     cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
