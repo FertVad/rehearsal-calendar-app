@@ -108,6 +108,16 @@ const next = (zone, weekday, weeks = 0) => {
   while (isoWeekday(date) !== weekday) date = addDays(date, 1);
   return addDays(date, 7 * weeks);
 };
+/**
+ * The next Israeli weekend, Friday then its Saturday, as a window in order.
+ * Not next(5) and next(6): on a Friday the next Saturday is tomorrow and the
+ * next Friday a week on, and the routes rightly refuse a window ending before
+ * it starts.
+ */
+const nextIsraeliWeekend = () => {
+  const friday = next('Asia/Jerusalem', 5);
+  return [friday, addDays(friday, 1)];
+};
 const rows = (userId, source) => testDb.all(
   `SELECT substr(starts_at, 1, 10) AS date, starts_at, ends_at, type, is_all_day, source, external_event_id
    FROM native_user_availability WHERE user_id = ? ${source ? 'AND source = ?' : ''} ORDER BY starts_at, source`,
@@ -290,8 +300,7 @@ describe('calendar import and rehearsals', () => {
   const window = (first, last) => ({ from: `${first}T00:00:00.000Z`, to: `${addDays(last, 1)}T00:00:00.000Z`, firstDate: first, lastDate: last });
 
   it('a sync and "Delete imported" leave the defaults, and imported events do not stop them', async () => {
-    const friday = next('Asia/Jerusalem', 5);
-    const saturday = next('Asia/Jerusalem', 6);
+    const [friday, saturday] = nextIsraeliWeekend();
     // Imported before any default was laid out.
     ok(await request(app).post('/api/native/availability/imported/sync').set(...auth(member)).send({
       source: 'apple_calendar', window: window(friday, saturday), deviceCalendars: ['cal-1'], unreadable: [],
@@ -325,7 +334,7 @@ describe('calendar import and rehearsals', () => {
 describe('requests at once', () => {
   it('write each day once', async () => {
     await Promise.all([
-      readOwn(member), readOwn(member), planner(next('Asia/Jerusalem', 5), next('Asia/Jerusalem', 6)),
+      readOwn(member), readOwn(member), planner(...nextIsraeliWeekend()),
       setSwitch(member, true), readOwn(member),
     ]);
     const dates = weekendDates(member);
@@ -354,7 +363,7 @@ describe('the planner', () => {
   });
 
   it('still says who has entered nothing themselves', async () => {
-    const shown = await planner(next('Asia/Jerusalem', 5), next('Asia/Jerusalem', 6));
+    const shown = await planner(...nextIsraeliWeekend());
     expect(shown.find((a) => Number(a.userId) === member).hasData).toBe(false);
     expect(weekendDates(member).length).toBeGreaterThan(0);
   });

@@ -1,0 +1,24 @@
+T-421 — supervisor's tests failed: server/__tests__/routes/weekendDefaults.test.js (3 tests, status 400)
+
+Not the T-421 commits: they touch no server file. The test is date-dependent.
+Today, 2026-11-27, is a Friday in Asia/Jerusalem. The test took
+  friday   = next('Asia/Jerusalem', 5) -> 2026-12-04
+  saturday = next('Asia/Jerusalem', 6) -> 2026-11-28
+so the import window and the planner's startDate..endDate ended before they
+started, and the routes rightly answered 400. The same failure on any Friday.
+
+Fix (test only): nextIsraeliWeekend() gives the next Friday and that Friday's
+Saturday, in order. No server code changed.
+
+Before (HEAD 5d5d688, run on 2026-11-27):
+  ● calendar import and rehearsals › a sync and "Delete imported" leave the defaults, and imported events do not stop them
+      Expected "status": 200, Received "status": 400   (weekendDefaults.test.js:296)
+  ● requests at once › write each day once
+      Expected "status": 200, Received "status": 400   (planner, weekendDefaults.test.js:327)
+  ● the planner › still says who has entered nothing themselves
+      Expected "status": 200, Received "status": 400   (planner, weekendDefaults.test.js:357)
+  Tests: 3 failed, 14 passed, 17 total
+
+After:
+  Test Suites: 1 passed, 1 total
+  Tests:       17 passed, 17 total
