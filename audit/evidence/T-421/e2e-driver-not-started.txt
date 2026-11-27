@@ -1,0 +1,49 @@
+T-421 — the supervisor's e2e failure on 3b54e59, e2e/flows/07-planner-project-switch.yaml, 27.11.2026.
+
+What failed: Maestro's iOS driver never started ("iOS driver not ready in time",
+IOSDriverTimeoutException in LocalXCTestInstaller.start). Not a step of flow 07
+ran, so Maestro wrote no report: the flow's text and the app's code were never
+reached.
+
+Why: xcodebuild, starting Maestro's XCTest runner, could not connect to the
+simulator's instruments service hub. The runner's log
+(e2e/out/artifacts/<run>/xctest_runner_*.log) says, three times in each run:
+
+  iOSSimulator: <DVTiPhoneSimulator, Rehearsly E2E, 26.5 (23F77),
+  0E96462E-BD5B-4C19-9847-8E63D550B36E> unable to connect to
+  "com.apple.instruments.deviceservice.lockdown" (... "DTServiceHubClient failed
+  to bless service hub for simulator Rehearsly E2E ..." ...
+  "'localDeviceConnectionWithError:' failed but didn't provide an error.")
+
+The same three lines are in the supervisor's run (2026-11-27_160114,
+xctest_runner_2026-11-27_160209.log) and in this session's rerun
+(2026-11-27_160815, xctest_runner_2026-11-27_160914.log), which failed the same way:
+
+  $ npm run e2e -- e2e/flows/07-planner-project-switch.yaml
+  ...
+  [e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+  [e2e] Safari's first launch since the boot: 5901, its home inaccessible; stopped
+  [e2e] installing the Debug app and running the flows
+  iOS driver not ready in time, consider increasing timeout by configuring
+  MAESTRO_DRIVER_STARTUP_TIMEOUT env variable
+
+That is the state of Xcode's CoreSimulator/instruments services on this
+machine, below the app, the flow and the runner. T-421 changed none of them:
+its diff (c3e9e49..3b54e59) is ParticipantPicker.tsx, conflictDetection.ts,
+their tests, server/__tests__/routes/weekendDefaults.test.js, e2e/seed.mjs (a
+seeded row) and five lines of flow 07. No app.json, native project, package,
+runner or subflow. The runner said so itself: "native inputs 84a290627fd6 ...
+kept", "the Debug app was built from these inputs: kept".
+
+A machine failure, not the task's; per the rules it is not fixed here. What
+brings the hub back is the machine's: e.g. `xcrun simctl shutdown all` and
+quitting/restarting CoreSimulatorService (or the Mac), then running flow 07
+again. Flow 07's red run on the old code is still owed for the same reason
+(e2e-red-not-run.txt): the machine has not let a flow run today.
+
+The client tests of the change, run here on 3b54e59:
+  $ npx jest --selectProjects frontend --silent -- busyUnion busyLine conflictMessage AddRehearsalScreen ProviderSignInLanguage
+  Test Suites: 5 passed, 5 total
+  Tests:       68 passed, 68 total
+(A full frontend run failed one suite outside the change each time - first
+useCalendarSync.test.ts, then ProviderSignInLanguage.test.tsx; both pass alone.)
