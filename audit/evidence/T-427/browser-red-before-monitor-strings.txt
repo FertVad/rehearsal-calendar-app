@@ -1,0 +1,21 @@
+T-427, the monitor's three strings (28.11): the admin browser tests red on 90b99083
+(public/admin/dashboard.js as committed, the tests already updated).
+
+$ npm run test:admin-browser   (rehearsal-calendar-native/server)
+
+✖ dates and the test cohort: the switch locks the source, wrong dates ask nothing, the choice survives a reload
+      at adminDashboard.browser.test.mjs:401  — the cohort note does not end with
+      «Прочерк в⍽шагах организатора: за⍽первые 7⍽дней проект не создал никто.»
+✖ the dashboard with data: Russian words, codes named, dates, decimals and units
+      at adminRussian.browser.test.mjs:175  — the newcomer funnel's medians read «(по 12⍽чел.)»,
+      an ordinary space after «по», not «(по⍽12⍽чел.)»
+✖ the organiser funnel: its columns, shares of those who created a project, the median and the notes
+      at adminRussian.browser.test.mjs:290  — note 2:
+  actual:   'Приглашение открыли: … в приложении либо к проекту кто-то присоединился. Открытия ни с кем не связаны, …
+             Открытия записываются с 10.09.2026; до этого шаг засчитывается, только если кто-то присоединился.'
+  expected: 'Приглашение открыли: … в приложении, либо к проекту кто-то присоединился. Открытия не привязаны к людям, …
+             Открытия записываются с 10.09.2026; до этого шаг засчитывается, только если в проекте сейчас есть участник.'
+
+ℹ tests 19
+ℹ pass 16
+ℹ fail 3

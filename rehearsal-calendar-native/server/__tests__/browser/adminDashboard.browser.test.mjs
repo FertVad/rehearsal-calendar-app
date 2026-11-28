@@ -397,7 +397,9 @@ test('dates and the test cohort: the switch locks the source, wrong dates ask no
   assert.deepEqual(rows[15], [`Открыли приложение на${NB}7-й${NB}день`, '', '']);
   assert.ok((await block.locator('.note').textContent()).includes(`у${NB}него не записано время. Шаги организатора `
     + `после «Создали проект»${NB}— доля от${NB}создавших проект. Пустая ячейка:`));
-  assert.match(await block.locator('.note').textContent(), /Пустая ячейка: срок ещё ни у кого не прошёл\.$/);
+  // The monitor's note of 28.11: «—» in the organiser's steps is named after the empty cell.
+  assert.ok((await block.locator('.note').textContent()).endsWith(`Пустая ячейка: срок ещё ни у${NB}кого не прошёл. `
+    + `Прочерк в${NB}шагах организатора: за${NB}первые 7${NB}дней проект не создал никто.`));
 
   // The server's refusal is named in the page's words.
   state.refusal = { error: 'at most 21 days', code: 'DATES_TOO_LONG', maxDays: 21 };
