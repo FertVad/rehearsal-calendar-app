@@ -101,6 +101,8 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
   app.get('/admin/api/analytics', reply('analytics', () => ({
     period: 'all', from: null, to: date, people: 0, languages: [],
     funnel: { weeks: [], total: { invite: empty, other: empty }, medians: { invite: noWait, other: noWait } },
+    organizers: { weeks: [], total: { registered: 0, project: 0, invite: 0, member: 0, threeMembers: 0,
+      firstRehearsal: 0, secondRehearsal: 0 }, median: { toFirstRehearsalHours: null, toFirstRehearsalOf: 0 } },
     sources: { byDay: [], byWeek: [], projects: [], languages: [], timezones: [] },
     projects: [], notifications: { devices: { people: 0, of: 0, rate: null }, inbox: [], emailCodes: [] },
     usage: { recorded: false },

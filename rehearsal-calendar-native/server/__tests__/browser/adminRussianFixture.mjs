@@ -32,6 +32,8 @@ const users = [
     steps: { ...steps, projects: 0, roles: { owner: 0, admin: 0, member: 0 } }, lastAppDay: null },
 ];
 const counts = { registered: 3, onboarding: 2, project: 2, calendar: 1, manual: 1, engaged: 1 };
+const organizerCounts = { registered: 3, project: 2, invite: 2, member: 1, threeMembers: 0, firstRehearsal: 1,
+  secondRehearsal: 0 };
 export const analytics = {
   period: 'all', from: null, to: '2026-09-11T12:00:00Z', people: 3, languages: ['en', 'ru'],
   funnel: { weeks: [{ week: '2026-09-07', invite: counts, other: counts }], total: { invite: counts, other: counts },
@@ -39,6 +41,9 @@ export const analytics = {
       toManualHours: null, toManualOf: 0 },
       other: { toProjectHours: 30, toProjectOf: 1, toCalendarHours: null, toCalendarOf: 0,
       toManualHours: 0.5, toManualOf: 2 } } },
+  // T-427: the organiser funnel.
+  organizers: { weeks: [{ week: '2026-09-07', ...organizerCounts }], total: organizerCounts,
+    median: { toFirstRehearsalHours: 26.5, toFirstRehearsalOf: 1 } },
   sources: { byDay: [{ date: '2026-09-10', invite: 1, own: 0, none: 0 }], byWeek: [{ date: '2026-09-07', invite: 1, own: 1, none: 0 }],
     projects: [{ project: 'Гамлет', owner: 'Ольга О.', joined: 1, newcomers: 1 }],
     languages: [{ value: 'ru', people: 2 }, { value: null, people: 1 }], timezones: [{ value: ZONE, people: 1 }] },

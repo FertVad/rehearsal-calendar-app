@@ -83,6 +83,20 @@ export async function openedOnDays(conn, groups, now, days) {
   })));
 }
 
+/**
+ * Per project, the first UTC day its invitation was opened — in a browser or in
+ * the app — or joined (T-427), as UTC midnight in ms. Counts tie to no person,
+ * so the owner's own opening counts too. Empty without 016: then only a member
+ * can say anyone joined.
+ */
+export async function firstInviteDays(conn) {
+  const rows = await readRecorded(() => conn.all(
+    `SELECT project_id, CAST(MIN(day) AS TEXT) AS first_day FROM native_invite_counts
+     WHERE page_opens + app_opens + joins > 0 GROUP BY project_id`));
+  return new Map((rows || []).map((row) => [Number(row.project_id),
+    Date.parse(`${String(row.first_day).slice(0, 10)}T00:00:00.000Z`)]));
+}
+
 /** "YYYY-MM-DD" of the Monday of a date's week. */
 function mondayOf(date) {
   const back = (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7;

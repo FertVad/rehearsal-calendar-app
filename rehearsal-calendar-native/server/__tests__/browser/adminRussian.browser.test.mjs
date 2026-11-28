@@ -269,6 +269,46 @@ test('loading, failure, stale data and the status messages are in Russian', { ti
   await assertRussian(page, 'session expired');
 });
 
+// T-427: the organiser funnel, after the newcomer one, in the editor's words
+// (audit/evidence/T-427/natives-ru.md).
+test('the organiser funnel: its columns, shares of those who created a project, the median and the notes', { timeout: 30000 }, async t => {
+  const { page, state } = await fixture(t);
+  await login(page);
+  const titles = await page.locator('#analytics-body .block-title').allTextContents();
+  assert.equal(titles[titles.indexOf('Воронка новичков') + 1], 'Воронка организаторов');
+  const block = page.locator('#analytics-body .analytics-block', { has: page.getByRole('heading', { name: 'Воронка организаторов' }) });
+  assert.deepEqual(await block.locator('th').allTextContents(), ['Неделя регистрации', 'Зарегистрировались', 'Создали проект',
+    'Приглашение открыли', 'Есть участник', `3${NB}участника и${NB}больше`, 'Первая репетиция', 'Вторая репетиция']);
+  const rows = await block.locator('tbody tr').evaluateAll(trs => trs.map(tr => [...tr.children].map(cell => cell.textContent)));
+  // «Создали проект» of the registered; the rest of the two who created one.
+  const shares = ['3', `2 (66,7${NB}%)`, `2 (100${NB}%)`, `1 (50${NB}%)`, `0 (0${NB}%)`, `1 (50${NB}%)`, `0 (0${NB}%)`];
+  assert.deepEqual(rows, [['Все недели', ...shares], ['07.09.2026', ...shares]]);
+  const opened = `Приглашение открыли: приглашение в${NB}проект организатора открыли в${NB}браузере или в${NB}приложении `
+    + `либо к${NB}проекту кто-то присоединился. Открытия ни с${NB}кем не связаны, поэтому засчитывается и${NB}открытие `
+    + 'самим организатором. ';
+  assert.deepEqual(await block.locator('.note').allTextContents(), [
+    `Медиана от${NB}регистрации до${NB}первой репетиции${NB}— 26,5${NB}ч (по${NB}1${NB}чел.).`,
+    `Зарегистрировавшиеся за${NB}период${NB}— по${NB}неделям регистрации, как в${NB}воронке новичков. Создали проект: `
+      + `владеют хотя бы одним проектом (удалённые не в${NB}счёт); доля${NB}— от${NB}зарегистрировавшихся. Остальные `
+      + `шаги${NB}— доля от${NB}создавших проект.`,
+    opened + `Открытия записываются с${NB}10.09.2026; до${NB}этого шаг засчитывается, только если кто-то присоединился.`,
+    `Есть участник, 3${NB}участника и${NB}больше: действующие участники, кроме самого организатора, в${NB}одном `
+      + `из${NB}его проектов${NB}— участники разных проектов не складываются.`,
+    `Первая и${NB}вторая репетиция: репетиции, которые организатор создал в${NB}своих проектах; удалённые не в${NB}счёт.`,
+  ]);
+
+  // Nobody with a first rehearsal, and nothing recorded (migration 016 not applied).
+  state.plans.analytics.push({ status: 200, body: { ...analytics, usage: { recorded: false },
+    organizers: { ...analytics.organizers, median: { toFirstRehearsalHours: null, toFirstRehearsalOf: 0 } } } });
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('#analytics-body')?.textContent
+    .includes('первой репетиции — пока никого.'));
+  const notes = await block.locator('.note').allTextContents();
+  assert.equal(notes[0], `Медиана от${NB}регистрации до${NB}первой репетиции${NB}— пока никого.`);
+  assert.equal(notes[2], opened + `Записей об${NB}открытиях пока нет, поэтому шаг засчитывается, только если кто-то присоединился.`);
+  await assertRussian(page, 'organiser funnel');
+});
+
 test('nobody registered in the period: the devices line is one "—", not "0 из 0 (—)"', { timeout: 30000 }, async t => {
   const { page, state } = await fixture(t);
   state.plans.analytics.push({ status: 200, body: { ...analytics,

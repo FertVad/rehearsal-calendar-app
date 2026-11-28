@@ -12,7 +12,7 @@ import { seenBeforeStart } from '../rehearsals/roster.js';
 import {
   MARK_SOURCES_SQL, count, counted, emptyFacts, loadFacts, loadPeople, registeredSince, shortName, toMs,
 } from './people.js';
-import { openedOnDays, usage } from './usage.js';
+import { firstInviteDays, openedOnDays, usage } from './usage.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const iso = (ms) => new Date(ms).toISOString();
@@ -114,6 +114,95 @@ function funnel(cohort, facts) {
     toManualHours: hours(median(wait.manual)), toManualOf: wait.manual.length,
   }]));
   return { weeks: [...weeks.values()].sort((a, b) => b.week.localeCompare(a.week)), total, medians };
+}
+
+// The organiser's steps (T-427), after owning a project still there.
+const ORGANIZER_STEPS = ['invite', 'member', 'threeMembers', 'firstRehearsal', 'secondRehearsal'];
+/** The earliest of times reached; null when reached at an unknown time, undefined when not at all. */
+const earliest = (times) => (times.length === 0 ? undefined
+  : times.reduce((known, at) => (known === null ? at : at === null ? known : Math.min(known, at))));
+
+/**
+ * The first two rehearsals each person created in a project they own and that
+ * is still there — not in someone else's project. A deleted rehearsal or
+ * project has no row left. Nulls last in both dialects.
+ */
+async function ownRehearsals(conn) {
+  const rows = await conn.all(
+    `SELECT created_by, created_at FROM (
+       SELECT r.created_by, r.created_at, ROW_NUMBER() OVER (PARTITION BY r.created_by
+         ORDER BY CASE WHEN r.created_at IS NULL THEN 1 ELSE 0 END, r.created_at, r.id) AS n
+       FROM native_rehearsals r
+       JOIN native_projects p ON p.id = r.project_id
+       JOIN native_project_members m ON m.project_id = r.project_id AND m.user_id = r.created_by
+         AND m.role = 'owner' AND m.status = 'active'
+       WHERE r.created_by IS NOT NULL) ranked
+     WHERE n <= 2 ORDER BY created_by, n`
+  );
+  const byPerson = new Map();
+  for (const row of rows) {
+    const id = Number(row.created_by);
+    if (!byPerson.has(id)) byPerson.set(id, []);
+    byPerson.get(id).push(toMs(row.created_at));
+  }
+  return byPerson;
+}
+
+/**
+ * Per person, a function of their organiser steps: null without a project of
+ * their own still there; otherwise when each step was reached (earliest()).
+ * Members are active ones other than the organiser and service accounts, in
+ * one project — those of different projects are not added up. The invitation
+ * is opened when 016 counted an opening or a join on one of their projects, or
+ * one of them has such a member.
+ */
+async function loadOrganizers(conn, { people, projects }) {
+  const [inviteDays, rehearsals] = await Promise.all([firstInviteDays(conn), ownRehearsals(conn)]);
+  return (person) => {
+    const owned = person.memberships.filter((membership) => membership.role === 'owner' && projects.has(membership.projectId))
+      .map((membership) => projects.get(membership.projectId));
+    if (owned.length === 0) return null;
+    const joined = owned.map((project) => project.members.filter((membership) => membership.userId !== person.id
+      && people.has(membership.userId) && !people.get(membership.userId).service).map((membership) => membership.joinedAt));
+    const nth = (n) => earliest(joined.filter((times) => times.length >= n).map((times) => times[n - 1]));
+    const created = rehearsals.get(person.id) || [];
+    return {
+      invite: earliest(owned.flatMap((project, index) => [
+        ...(inviteDays.has(project.id) ? [inviteDays.get(project.id)] : []), ...joined[index].slice(0, 1)])),
+      member: nth(1),
+      threeMembers: nth(3),
+      firstRehearsal: created.length >= 1 ? created[0] : undefined,
+      secondRehearsal: created.length >= 2 ? created[1] : undefined,
+    };
+  };
+}
+
+/** The organiser funnel: by registration week, steps as of now; the median to the first own rehearsal. */
+function organizerFunnel(cohort, organizer) {
+  const empty = () => Object.fromEntries(['registered', 'project', ...ORGANIZER_STEPS].map((step) => [step, 0]));
+  const weeks = new Map();
+  const total = empty();
+  const waits = [];
+  for (const person of cohort) {
+    if (person.createdAt === null) continue;
+    const week = weekOf(person.createdAt);
+    if (!weeks.has(week)) weeks.set(week, { week, ...empty() });
+    const rows = [weeks.get(week), total];
+    const reached = organizer(person);
+    const add = (step) => rows.forEach((row) => { row[step] += 1; });
+    add('registered');
+    if (reached === null) continue;
+    add('project');
+    for (const step of ORGANIZER_STEPS) if (reached[step] !== undefined) add(step);
+    if (reached.firstRehearsal !== undefined && reached.firstRehearsal !== null) {
+      waits.push(Math.max(0, reached.firstRehearsal - person.createdAt));
+    }
+  }
+  return {
+    weeks: [...weeks.values()].sort((a, b) => b.week.localeCompare(a.week)),
+    total,
+    median: { toFirstRehearsalHours: hours(median(waits)), toFirstRehearsalOf: waits.length },
+  };
 }
 
 function sources(cohort, everyone, projects, people, { since, until }) {
@@ -295,7 +384,7 @@ const cell = (part, whole) => (whole > 0 ? { count: part, of: whole, rate: rate(
  * column. Each other step is reached within STEP_DAYS of registering, of those
  * whose STEP_DAYS are over; days 1 and 7 are usage.js's.
  */
-function cohortColumn({ since, until, begun }, people, { facts, projects, now, opened }) {
+function cohortColumn({ since, until, begun }, people, { facts, projects, now, opened, organizer }) {
   const days = Math.round((until - since) / DAY_MS);
   // The days already begun (T-425, point 6): a running test divided by all its
   // days would read low beside a full week before. None begun: no figure.
@@ -304,6 +393,18 @@ function cohortColumn({ since, until, begun }, people, { facts, projects, now, o
   const within = (person, at) => at !== null && at !== undefined && at < person.createdAt + STEP_MS;
   const reached = (step) => cell(due.filter(step).length, due.length);
   const day = (n) => (opened === null ? null : cell(opened[n].opened, opened[n].of));
+  // Owns a project, still there, created within the days.
+  const createdProject = (person) => person.memberships.some((membership) => membership.role === 'owner'
+    && within(person, projects.get(membership.projectId)?.createdAt));
+  // The organiser's steps (T-427): of those who created a project within the
+  // days, as in the funnel. Nobody's time up: null; time up, but nobody created
+  // a project: 0 of 0, no figure.
+  const creators = due.filter(createdProject);
+  const organizerStep = (step) => {
+    if (due.length === 0) return null;
+    const count = creators.filter((person) => within(person, organizer(person)?.[step])).length;
+    return { count, of: creators.length, rate: rate(count, creators.length) };
+  };
   return {
     from: dayOf(since),
     to: dayOf(until - DAY_MS),
@@ -311,9 +412,8 @@ function cohortColumn({ since, until, begun }, people, { facts, projects, now, o
     registered: people.length,
     perDay: daysBegun > 0 ? Math.round((people.length / daysBegun) * 10) / 10 : null,
     onboarding: cell(people.filter((person) => person.onboarding).length, people.length),
-    // Owns a project, still there, created within the days.
-    project: reached((person) => person.memberships.some((membership) => membership.role === 'owner'
-      && within(person, projects.get(membership.projectId)?.createdAt))),
+    project: reached(createdProject),
+    ...Object.fromEntries(ORGANIZER_STEPS.map((step) => [step, organizerStep(step)])),
     // The earliest membership still active.
     inProject: reached((person) => within(person, person.memberships[0]?.joinedAt)),
     // The earliest record of a connected calendar still kept: an export, an import.
@@ -326,7 +426,7 @@ function cohortColumn({ since, until, begun }, people, { facts, projects, now, o
 }
 
 /** The test cohort (the dates) beside the seven days before its first one, same filters. */
-async function testCohort(conn, filters, everyone, projects, facts) {
+async function testCohort(conn, filters, everyone, projects, facts, organizer) {
   // The test counts up to the end of today (UTC); the week before is always whole.
   const today = Math.floor(filters.now / DAY_MS) * DAY_MS;
   const ranges = [
@@ -337,7 +437,7 @@ async function testCohort(conn, filters, everyone, projects, facts) {
     && registeredSince(person, since, until)));
   const opened = await openedOnDays(conn, groups, filters.now, OPENED_DAYS);
   const [test, before] = ranges.map((range, index) => cohortColumn(range, groups[index], {
-    facts, projects, now: filters.now, opened: opened === null ? null : opened[index],
+    facts, projects, now: filters.now, opened: opened === null ? null : opened[index], organizer,
   }));
   return { stepDays: STEP_DAYS, recorded: opened !== null, test, before };
 }
@@ -347,12 +447,12 @@ export async function analytics(conn, filters) {
   const directory = await loadPeople(conn);
   const everyone = counted(directory.people, filters);
   const cohort = everyone.filter((person) => registeredSince(person, filters.since, filters.until));
-  const facts = await loadFacts(conn, null);
+  const [facts, organizer] = await Promise.all([loadFacts(conn, null), loadOrganizers(conn, directory)]);
   const [health, delivery, use, test] = await Promise.all([
     projectHealth(conn, filters, directory, everyone, facts),
     notifications(conn, filters, cohort, everyone, facts),
     usage(conn, filters, directory, everyone, cohort),
-    filters.cohort ? testCohort(conn, filters, everyone, directory.projects, facts) : null,
+    filters.cohort ? testCohort(conn, filters, everyone, directory.projects, facts, organizer) : null,
   ]);
   const languages = [...new Set([...directory.people.values()].filter((person) => !person.service)
     .map((person) => person.locale).filter(Boolean))].sort();
@@ -364,6 +464,7 @@ export async function analytics(conn, filters) {
     languages,
     ...(test ? { cohort: test } : {}),
     funnel: funnel(cohort, facts),
+    organizers: organizerFunnel(cohort, organizer),
     sources: sources(cohort, everyone, directory.projects, directory.people, filters),
     projects: health,
     notifications: delivery,

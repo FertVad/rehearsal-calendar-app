@@ -170,6 +170,16 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     assert.deepEqual(month.sources.projects, [{ project: 'Hamlet', owner: 'Olga O.', joined: 2, newcomers: 2 }]);
     contracts.push('funnel and medians (the calendar connected apart from hand marks), and the projects that brought people, on PostgreSQL types');
 
+    // T-427: Olga owns Hamlet — Ivan and Anna in it (Maria is a service
+    // account), her two rehearsals; Anna owns Second, empty, and her rehearsal
+    // is in Olga's project. Olga's first rehearsal: 6 h after registering.
+    await q('UPDATE native_rehearsals SET created_at = $1 WHERE id = 1', [ago(20 * D - 6 * H)]);
+    const organizers = (await get('/admin/api/analytics?period=30')).organizers;
+    assert.deepEqual(organizers.total, { registered: 5, project: 2, invite: 1, member: 1, threeMembers: 0,
+      firstRehearsal: 1, secondRehearsal: 1 });
+    assert.deepEqual(organizers.median, { toFirstRehearsalHours: 6, toFirstRehearsalOf: 1 });
+    contracts.push('organiser funnel: own projects, members in one project without service accounts, own rehearsals ranked by ROW_NUMBER');
+
     const hamlet = month.projects.find((project) => project.name === 'Hamlet');
     assert.deepEqual(hamlet.seenBeforeStart, { seen: 2, of: 4, rate: 50 });
     assert.deepEqual(hamlet.coverage, { people: 2, of: 3, rate: 66.7 });
@@ -237,6 +247,8 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     assert.equal(cohort.recorded, true);
     assert.deepEqual(cohort.test, { from: date(firstDate - 9 * D), to: date(firstDate - 2 * D), days: 8, registered: 2,
       perDay: 0.3, onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 0, of: 1, rate: 0 },
+      ...Object.fromEntries(['invite', 'member', 'threeMembers', 'firstRehearsal', 'secondRehearsal']
+        .map((step) => [step, { count: 0, of: 0, rate: null }])),
       inProject: { count: 0, of: 1, rate: 0 }, calendar: { count: 0, of: 1, rate: 0 },
       manual: { count: 0, of: 1, rate: 0 }, day1: null, day7: null });
     assert.equal(cohort.before.registered, 0);

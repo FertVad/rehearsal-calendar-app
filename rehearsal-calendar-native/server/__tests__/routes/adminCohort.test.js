@@ -41,7 +41,7 @@ const SCHEMA = `
   CREATE TABLE native_project_members (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, project_id INTEGER NOT NULL,
     role TEXT NOT NULL DEFAULT 'member', status TEXT NOT NULL DEFAULT 'active', joined_at TEXT, created_at TEXT);
   CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL, starts_at TEXT NOT NULL,
-    ends_at TEXT NOT NULL, created_by INTEGER);
+    ends_at TEXT NOT NULL, created_by INTEGER, created_at TEXT);
   CREATE TABLE native_rehearsal_responses (id INTEGER PRIMARY KEY, rehearsal_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
     response TEXT NOT NULL, notes TEXT, created_at TEXT, updated_at TEXT);
   CREATE TABLE native_user_availability (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, starts_at TEXT NOT NULL,
@@ -152,6 +152,12 @@ describe('the test cohort and the week before it', () => {
         from: '2026-11-10', to: '2026-11-16', days: 7, registered: 2, perDay: 0.3,
         onboarding: { count: 1, of: 2, rate: 50 },
         project: { count: 1, of: 2, rate: 50 },
+        // T-427: of first@, the one who created a project — invited@ joined on day 2.
+        invite: { count: 1, of: 1, rate: 100 },
+        member: { count: 1, of: 1, rate: 100 },
+        threeMembers: { count: 0, of: 1, rate: 0 },
+        firstRehearsal: { count: 0, of: 1, rate: 0 },
+        secondRehearsal: { count: 0, of: 1, rate: 0 },
         inProject: { count: 1, of: 2, rate: 50 },
         calendar: { count: 0, of: 2, rate: 0 },
         manual: { count: 1, of: 2, rate: 50 },
@@ -163,6 +169,12 @@ describe('the test cohort and the week before it', () => {
         onboarding: { count: 1, of: 2, rate: 50 },
         // Their project came ten days after registering: not within seven.
         project: { count: 0, of: 2, rate: 0 },
+        // Nobody created a project within the days: no figure, not 0.
+        invite: { count: 0, of: 0, rate: null },
+        member: { count: 0, of: 0, rate: null },
+        threeMembers: { count: 0, of: 0, rate: null },
+        firstRehearsal: { count: 0, of: 0, rate: null },
+        secondRehearsal: { count: 0, of: 0, rate: null },
         inProject: { count: 0, of: 2, rate: 0 },
         calendar: { count: 0, of: 2, rate: 0 },
         manual: { count: 1, of: 2, rate: 50 },

@@ -44,7 +44,7 @@ const SCHEMA = `
   CREATE TABLE native_project_members (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, project_id INTEGER NOT NULL,
     role TEXT NOT NULL DEFAULT 'member', status TEXT NOT NULL DEFAULT 'active', joined_at TEXT, created_at TEXT);
   CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL, starts_at TEXT NOT NULL,
-    ends_at TEXT NOT NULL, created_by INTEGER);
+    ends_at TEXT NOT NULL, created_by INTEGER, created_at TEXT);
   CREATE TABLE native_rehearsal_responses (id INTEGER PRIMARY KEY, rehearsal_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
     response TEXT NOT NULL, notes TEXT, created_at TEXT, updated_at TEXT);
   CREATE TABLE native_user_availability (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, starts_at TEXT NOT NULL,
@@ -101,7 +101,7 @@ function seed() {
   member.run(7, 4, 'member', 'active', ago(100 * D), ago(100 * D));
   // Removed from Hamlet: the membership is gone, a leftover roster row is not.
 
-  const rehearsal = sqlite.prepare('INSERT INTO native_rehearsals VALUES (?, ?, ?, ?, ?)');
+  const rehearsal = sqlite.prepare('INSERT INTO native_rehearsals (id, project_id, starts_at, ends_at, created_by) VALUES (?, ?, ?, ?, ?)');
   rehearsal.run(1, 1, ago(2 * D), ago(2 * D - 2 * H), 1);
   rehearsal.run(3, 1, at(NOW + 3 * D), at(NOW + 3 * D + 2 * H), 1);
   rehearsal.run(4, 1, ago(1 * D), ago(1 * D - 2 * H), 3);

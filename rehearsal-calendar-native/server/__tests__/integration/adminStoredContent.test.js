@@ -165,7 +165,7 @@ beforeEach(async () => {
     CREATE TABLE native_projects (id INTEGER PRIMARY KEY, name TEXT NOT NULL, created_at TEXT);
     CREATE TABLE native_project_members (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, project_id INTEGER NOT NULL,
       role TEXT NOT NULL, status TEXT NOT NULL, joined_at TEXT, created_at TEXT);
-    CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY, project_id INTEGER, starts_at TEXT, ends_at TEXT, created_by INTEGER);
+    CREATE TABLE native_rehearsals (id INTEGER PRIMARY KEY, project_id INTEGER, starts_at TEXT, ends_at TEXT, created_by INTEGER, created_at TEXT);
     CREATE TABLE native_rehearsal_responses (id INTEGER PRIMARY KEY, rehearsal_id INTEGER, user_id INTEGER,
       response TEXT, notes TEXT, created_at TEXT, updated_at TEXT);
     CREATE TABLE native_user_availability (id INTEGER PRIMARY KEY, user_id INTEGER, starts_at TEXT, ends_at TEXT,

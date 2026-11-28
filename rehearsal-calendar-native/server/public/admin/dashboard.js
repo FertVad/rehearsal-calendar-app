@@ -659,6 +659,43 @@
         + 'отметки заменяются, поэтому у⍽того, кто пересохранил свой первый день, первая отметка окажется позже.')));
   }
 
+  // The organiser's steps after «Создали проект» (T-427), in the funnel and the cohort alike.
+  const ORGANIZER_STEPS = ['invite', 'member', 'threeMembers', 'firstRehearsal', 'secondRehearsal'];
+  const ORGANIZER_LABELS = ['Приглашение открыли', 'Есть участник', typeset('3⍽участника и⍽больше'),
+    'Первая репетиция', 'Вторая репетиция'];
+
+  // The organiser funnel (T-427): the editor's strings (audit/evidence/T-427/natives-ru.md).
+  // «Создали проект» is of those registered; the steps after it, of those who created one.
+  function renderOrganizers(organizers, usage) {
+    const line = (label, counts) => [label, counts.registered, share(counts.project, counts.registered),
+      ...ORGANIZER_STEPS.map(step => share(counts[step], counts.project))];
+    const rows = [line('Все недели', organizers.total), ...organizers.weeks.map(week => line(fmtDay(week.week), week))];
+    const m = organizers.median;
+    const median = m.toFirstRehearsalHours === null || m.toFirstRehearsalHours === undefined
+      ? typeset('Медиана от⍽регистрации до⍽первой репетиции⍽— пока никого.')
+      : typeset('Медиана от⍽регистрации до⍽первой репетиции⍽— ') + decimal(m.toFirstRehearsalHours)
+        + typeset('⍽ч (по⍽') + m.toFirstRehearsalOf + typeset('⍽чел.).');
+    // usage.since: the first day 016 recorded; the invitation counts are 016's too.
+    const since = usage.recorded && usage.since;
+    const opened = 'Приглашение открыли: приглашение в⍽проект организатора открыли в⍽браузере или в⍽приложении '
+      + 'либо к⍽проекту кто-то присоединился. Открытия ни с⍽кем не связаны, поэтому засчитывается и⍽открытие '
+      + 'самим организатором. ';
+    return block('Воронка организаторов',
+      table(['Неделя регистрации', 'Зарегистрировались', 'Создали проект', ...ORGANIZER_LABELS], rows),
+      note(median),
+      note(typeset('Зарегистрировавшиеся за⍽период⍽— по⍽неделям регистрации, как в⍽воронке новичков. Создали проект: '
+        + 'владеют хотя бы одним проектом (удалённые не в⍽счёт); доля⍽— от⍽зарегистрировавшихся. Остальные '
+        + 'шаги⍽— доля от⍽создавших проект.')),
+      note(typeset(opened) + (since
+        ? typeset('Открытия записываются с⍽') + fmtDay(since)
+          + typeset('; до⍽этого шаг засчитывается, только если кто-то присоединился.')
+        : typeset('Записей об⍽открытиях пока нет, поэтому шаг засчитывается, только если кто-то присоединился.'))),
+      note(typeset('Есть участник, 3⍽участника и⍽больше: действующие участники, кроме самого организатора, '
+        + 'в⍽одном из⍽его проектов⍽— участники разных проектов не складываются.')),
+      note(typeset('Первая и⍽вторая репетиция: репетиции, которые организатор создал в⍽своих проектах; '
+        + 'удалённые не в⍽счёт.')));
+  }
+
   // Counted only for the people the source and language filters select (analytics.js: `everyone`).
   const FILTERED = ' Считаются только люди, подходящие под фильтры «Источник» и «Язык».';
 
@@ -785,6 +822,8 @@
       [typeset('Онбординг (на⍽текущий момент)'), column => part(column.onboarding)],
       typeset('За⍽первые ' + cohort.stepDays + '⍽дней после регистрации'),
       ['Создали проект', column => part(column.project)],
+      // Of those who created a project; with none, 0 of 0 is «—» (ratio).
+      ...ORGANIZER_STEPS.map((step, index) => [ORGANIZER_LABELS[index], column => part(column[step])]),
       ['В проекте', column => part(column.inProject)],
       ['Календарь подключён', column => part(column.calendar)],
       ['Ручные отметки', column => part(column.manual)],
@@ -819,20 +858,25 @@
         + 'за⍽первые 7⍽дней после регистрации, а⍽доля⍽— от⍽тех, у⍽кого эти 7⍽дней уже прошли; для 1-го и⍽7-го '
         + 'дня⍽— от⍽тех, у⍽кого этот день уже закончился (день регистрации⍽— нулевой). Онбординг⍽— на⍽текущий '
         + 'момент и⍽от⍽всех зарегистрировавшихся: у⍽него не записано время. '
+        + 'Шаги организатора после «Создали проект»⍽— доля от⍽создавших проект. '
         + 'Пустая ячейка: срок ещё ни у⍽кого не прошёл.')));
   }
 
-  const validShare = value => value === null || hasFields(value, ['count', 'of', 'rate']);
+  // 0 of 0 (T-427: nobody created a project) has no rate.
+  const validShare = value => value === null || (hasFields(value, ['count', 'of'])
+    && hasFields(value, ['rate'], isNullableText));
   const validColumn = column => hasFields(column, ['from', 'to', 'registered'])
     && hasFields(column, ['perDay'], isNullableText)
-    && ['onboarding', 'project', 'inProject', 'calendar', 'manual', 'day1', 'day7'].every(key => Object.hasOwn(column, key)
-      && validShare(column[key]));
+    && ['onboarding', 'project', ...ORGANIZER_STEPS, 'inProject', 'calendar', 'manual', 'day1', 'day7']
+      .every(key => Object.hasOwn(column, key) && validShare(column[key]));
   const validCohort = cohort => cohort === undefined || (isObject(cohort) && typeof cohort.recorded === 'boolean'
     && Number.isSafeInteger(cohort.stepDays) && validColumn(cohort.test) && validColumn(cohort.before));
 
   const validAnalytics = data => isObject(data) && Array.isArray(data.languages) && data.languages.every(isText)
     && validUsage(data.usage) && validCohort(data.cohort)
     && isObject(data.funnel) && Array.isArray(data.funnel.weeks) && isObject(data.funnel.total) && isObject(data.funnel.medians)
+    && isObject(data.organizers) && Array.isArray(data.organizers.weeks) && data.organizers.weeks.every(isObject)
+      && isObject(data.organizers.total) && isObject(data.organizers.median)
     && isObject(data.sources) && ['byDay', 'byWeek', 'projects', 'languages', 'timezones'].every(key => Array.isArray(data.sources[key]))
     && Array.isArray(data.projects) && data.projects.every(p => isObject(p) && isObject(p.seenBeforeStart) && isObject(p.coverage)
       && isObject(p.calendar))
@@ -860,7 +904,7 @@
       document.getElementById('analytics-body').replaceChildren(
         ...(data.cohort ? [renderCohort(data.cohort)] : []),
         note('Зарегистрировались за период: ' + data.people + ' (без служебных аккаунтов).'),
-        renderFunnel(data.funnel), renderSources(data.sources),
+        renderFunnel(data.funnel), renderOrganizers(data.organizers, data.usage), renderSources(data.sources),
         renderUsage(data.usage), renderProjects(data.projects), renderNotifications(data.notifications));
     }));
   }

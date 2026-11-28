@@ -34,6 +34,9 @@ const usageBody = (payload, recorded) => (recorded ? { recorded: true, since: '2
 const counts = { registered: 1, onboarding: 1, project: 1, calendar: 1, manual: 1, engaged: 0 };
 const medians = { toProjectHours: 2, toProjectOf: 1, toCalendarHours: null, toCalendarOf: 0,
   toManualHours: null, toManualOf: 0 };
+// The organiser funnel (T-427).
+const organizerCounts = { registered: 1, project: 1, invite: 1, member: 0, threeMembers: 0, firstRehearsal: 0,
+  secondRehearsal: 0 };
 // Project, owner, language, zone and inbox type are stored text too (T-293).
 const analyticsBody = (payload, recorded = true) => ({
   usage: usageBody(payload, recorded),
@@ -41,6 +44,8 @@ const analyticsBody = (payload, recorded = true) => ({
   languages: payload ? [html] : ['en', 'ru'],
   funnel: { weeks: [{ week: '2026-11-16', invite: counts, other: { ...counts, registered: 0 } }],
     total: { invite: counts, other: { ...counts, registered: 0 } }, medians: { invite: medians, other: medians } },
+  organizers: { weeks: [{ week: '2026-11-16', ...organizerCounts }], total: organizerCounts,
+    median: { toFirstRehearsalHours: null, toFirstRehearsalOf: 0 } },
   sources: { byDay: [{ date: '2026-11-17', invite: 1, own: 0, none: 0 }], byWeek: [{ date: '2026-11-16', invite: 1, own: 0, none: 0 }],
     projects: [{ project: payload ? html : 'Hamlet', owner: payload ? svg : 'Olga O.', joined: 1, newcomers: 1 }],
     languages: [{ value: payload ? html : 'en', people: 1 }], timezones: [{ value: payload ? svg : 'UTC', people: 1 }] },
@@ -54,11 +59,14 @@ const analyticsBody = (payload, recorded = true) => ({
 });
 // The test cohort and the week before it (T-425), as /analytics?…&cohort=1 answers.
 const cohortColumn = (from, to, registered, perDay = 0.3) => ({ from, to, days: 7, registered, perDay,
-  onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 1, of: 2, rate: 50 }, inProject: null,
+  onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 1, of: 2, rate: 50 },
+  // T-427: nobody created a project — 0 of 0; the test's own below.
+  invite: { count: 0, of: 0, rate: null }, member: null, threeMembers: null, firstRehearsal: null, secondRehearsal: null, inProject: null,
   calendar: { count: 1, of: 2, rate: 50 }, manual: { count: 0, of: 2, rate: 0 }, day1: { count: 1, of: 2, rate: 50 }, day7: null });
 // The test's per day is null: none of its days begun yet.
 const cohortBody = { stepDays: 7, recorded: true,
-  test: cohortColumn('2026-11-10', '2026-11-16', 2, null), before: cohortColumn('2026-11-03', '2026-11-09', 2) };
+  test: { ...cohortColumn('2026-11-10', '2026-11-16', 2, null), invite: { count: 1, of: 1, rate: 100 } },
+  before: cohortColumn('2026-11-03', '2026-11-09', 2) };
 const report = { id: '1);window.__xss=4;//', name: html, message: html + '\n' + escaped,
   screen: svg, status: 'new" onclick="window.__xss=5', createdAt: user.createdAt };
 let browser;
@@ -373,14 +381,22 @@ test('dates and the test cohort: the switch locks the source, wrong dates ask no
   assert.deepEqual(await block.locator('th').allTextContents(), ['', 'Когорта (10.11–16.11)', `Неделя до${NB}теста (03.11–09.11)`]);
   const rows = await block.locator('tr').evaluateAll(trs => trs.map(tr => [...tr.children].map(cell => cell.textContent)));
   assert.deepEqual(rows.slice(1).map(row => row[0]), ['Зарегистрировались', `В среднем за${NB}день`,
-    `Онбординг (на${NB}текущий момент)`, `За${NB}первые 7${NB}дней после регистрации`, 'Создали проект', 'В проекте',
-    'Календарь подключён', 'Ручные отметки', `Открыли приложение на${NB}1-й${NB}день`, `Открыли приложение на${NB}7-й${NB}день`]);
+    `Онбординг (на${NB}текущий момент)`, `За${NB}первые 7${NB}дней после регистрации`, 'Создали проект',
+    // T-427: the organiser's steps, in the order of the editor's list.
+    'Приглашение открыли', 'Есть участник', `3${NB}участника и${NB}больше`, 'Первая репетиция', 'Вторая репетиция',
+    'В проекте', 'Календарь подключён', 'Ручные отметки', `Открыли приложение на${NB}1-й${NB}день`,
+    `Открыли приложение на${NB}7-й${NB}день`]);
   assert.deepEqual(rows[2], [`В среднем за${NB}день`, '', '0,3'], 'no day begun: empty, not 0 or "null"');
   assert.deepEqual(rows[5], ['Создали проект', `1 из 2 (50${NB}%)`, `1 из 2 (50${NB}%)`]);
-  assert.deepEqual(rows[6], ['В проекте', '', ''], 'nobody\'s seven days are over: empty, not 0');
-  assert.deepEqual(rows[7], ['Календарь подключён', `1 из 2 (50${NB}%)`, `1 из 2 (50${NB}%)`]);
-  assert.deepEqual(rows[8], ['Ручные отметки', `0 из 2 (0${NB}%)`, `0 из 2 (0${NB}%)`]);
-  assert.deepEqual(rows[10], [`Открыли приложение на${NB}7-й${NB}день`, '', '']);
+  // Of those who created a project; nobody did in the week before: «—», not 0.
+  assert.deepEqual(rows[6], ['Приглашение открыли', `1 из 1 (100${NB}%)`, '—']);
+  assert.deepEqual(rows[7], ['Есть участник', '', '']);
+  assert.deepEqual(rows[11], ['В проекте', '', ''], 'nobody\'s seven days are over: empty, not 0');
+  assert.deepEqual(rows[12], ['Календарь подключён', `1 из 2 (50${NB}%)`, `1 из 2 (50${NB}%)`]);
+  assert.deepEqual(rows[13], ['Ручные отметки', `0 из 2 (0${NB}%)`, `0 из 2 (0${NB}%)`]);
+  assert.deepEqual(rows[15], [`Открыли приложение на${NB}7-й${NB}день`, '', '']);
+  assert.ok((await block.locator('.note').textContent()).includes(`у${NB}него не записано время. Шаги организатора `
+    + `после «Создали проект»${NB}— доля от${NB}создавших проект. Пустая ячейка:`));
   assert.match(await block.locator('.note').textContent(), /Пустая ячейка: срок ещё ни у кого не прошёл\.$/);
 
   // The server's refusal is named in the page's words.
