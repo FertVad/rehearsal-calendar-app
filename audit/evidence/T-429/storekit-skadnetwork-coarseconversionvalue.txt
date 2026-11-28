@@ -1,0 +1,10 @@
+Page: https://developer.apple.com/documentation/storekit/skadnetwork/coarseconversionvalue
+
+# SKAdNetwork.CoarseConversionValue
+Coarse values to use for updating conversion values.
+
+## Discussion
+
+When you provide the coarse conversion value to the updatePostbackConversionValue(_:coarseValue:completionHandler:) or updatePostbackConversionValue(_:coarseValue:lockWindow:completionHandler:) methods, use the static constants low, medium, or high.
+
+These constants have no special meaning. The app or ad network can define their meaning, as is useful for their ad campaigns. The app is responsible for assigning a coarse conversion value, as well as the fine conversion value, when it calls one of the conversion value methods. You can determine how the coarse and fine conversion values relate to the types of conversion events you want to measure.

@@ -291,30 +291,69 @@ SKAdNetwork on every launch. Nothing appears on screen, and iOS reports
 success even when no ad led to the install. The tests check what the
 generated project compiles, and `e2e/release/01-launch.yaml` checks that the
 app still starts. Whether Apple actually sends a postback to Meta can only be
-checked on a phone and in Meta:
+checked on a phone and in Meta. The steps follow Apple's pages, read by the
+monitor on 28.11.2026; the texts are in `audit/evidence/T-429/` (one file per
+page, `SOURCES.md` lists the page addresses).
 
-The steps below are written from memory, not from Apple's pages (see the
-end of this entry); the names of the Settings items are to be checked on the
-phone, and whatever differs corrected here.
+**On a real Meta ad the only check is Meta's report, days later.** Apple's
+testing switch does not shorten anything there. "Developer Mode only affects
+the time-windows of development postbacks. Postbacks that the system generates
+from production impressions use the full time-windows."
+([Testing ad attributions with Developer Mode](https://developer.apple.com/documentation/adattributionkit/testing-adattributionkit-with-developer-mode)).
+A development impression is one the ad network signs with "a source App Store
+identifier of `0`" (same page). The ad network does this, not the app. An
+impression from a real Meta ad is a production one, so it has the full windows.
 
-1. On an iPhone with Developer Mode on (Settings → Privacy & Security →
-   Developer Mode), open Settings → Developer and look for a section on ad
-   attribution — "SKAdNetwork Testing" in older iOS, possibly an
-   AdAttributionKit item in newer. Its developer switch is meant to shorten
-   the conversion windows and the delay before a postback to minutes.
-2. Install build 1.0.2 from an ad in a Meta app-install campaign, or with an
-   ad network's test profile, if the section above offers one.
-3. Open the app once. That is the call. Connected to a Mac, Console.app shows
-   the app's line only if it failed: `[WARN] [Attribution] …` (success is
-   `logger.debug`, dropped in Release).
-4. Meta: Events Manager → the app → SKAdNetwork (or the campaign's results in
-   Ads Manager). Installs from real devices appear 24–48 hours or more after
-   the first window closes, without Developer Mode. Meta gets no per-person
-   data; small numbers may arrive with only the coarse value, or with nothing.
+1. Phone: a production Apple Account. "SKAdNetwork doesn't support Sandbox
+   Apple Accounts"
+   ([Testing ad attributions with a downloaded profile](https://developer.apple.com/documentation/storekit/testing-ad-attributions-with-a-downloaded-profile)).
+2. Install build 1.0.2 from an ad in a Meta app-install campaign, then open the
+   app once. That launch makes the call. With the phone connected to a Mac,
+   Console.app shows the app's line only if the call failed:
+   `[WARN] [Attribution] …`. Success is `logger.debug`, which Release drops.
+3. Wait. "The first conversion window spans days 0 to 2" from "when the user
+   first launches the app". Then "the random delay is 24–48 hours for the first
+   postback"
+   ([Receiving postbacks in multiple conversion windows](https://developer.apple.com/documentation/storekit/receiving-postbacks-in-multiple-conversion-windows)).
+   The window stays open because the app calls with `lockWindow:NO`. So the
+   first postback reaches Meta about 3–4 days after the first launch, plus
+   whatever time Meta itself takes.
+4. Meta: Events Manager → the app → SKAdNetwork, or the campaign's results in
+   Ads Manager. Meta gets no per-person data. The postback data tier decides
+   what arrives: at Tier 0 only the two-digit `source-identifier`, with no
+   value at all (same page).
 
-**What is checked and what is not.** Apple's documentation pages could not
-be opened from the build machine (no network; T-424's review, round 1, asked
-for quotes). What the iOS SDK's own header says (`StoreKit/SKAdNetwork.h`,
+The fast path needs a development impression from an ad network, so it does
+not check a Meta campaign. In iOS 18 and later: turn on Developer Mode, then
+"access the developer settings in Settings on your test device. Then scroll
+down to the Ad Attribution Testing section and enable the AdAttributionKit
+Developer Mode switch". "This setting automatically turns off after two weeks."
+The windows then become 0–3, 3–6 and 6–9 minutes, and the postback delay
+becomes 5 to 10 minutes (Developer Mode page). Before iOS 18 the switch is not
+there. Apple's testing profile takes its place ("For devices running OS
+versions earlier than iOS 18, use the AdAttributionKit testing profile", same
+page; the profile expires two weeks after it is installed, profile page).
+
+**Second and third postbacks.** Apple: "The advertised app needs to call …
+to update the conversion values during each conversion window", and the
+windows are days 0–2, 3–7 and 8–35 (multiple conversion windows page). The app
+makes the call only on a cold start: `App.tsx` calls `registerInstall()` at its
+top level, and `RehearslyAttribution.m` wraps the call in `dispatch_once`, so
+each process makes it once. Coming back from the background does not call
+again. Therefore:
+
+- the second postback goes only if the app was cold-started in days 3–7, and
+  the third only if it was cold-started in days 8–35;
+- both carry only the coarse value, `low`: "For ads in Tier 1, Tier 2, and
+  Tier 3, the second and third postbacks contain … `source-identifier` …
+  with two digits, `coarse-conversion-value`";
+- at Tier 0 neither is sent: "For ads in Tier 0, the system doesn't send a
+  second or third postback";
+- ads signed with SKAdNetwork 3 or earlier get one postback only.
+
+This is how the code works now, and it stays as it is (T-429).
+
+**What is checked.** The iOS SDK's own header says (`StoreKit/SKAdNetwork.h`,
 Xcode's iPhoneOS SDK, read 28.11.2026), quoted:
 
 - `registerAppForAdNetworkAttribution`: "Participating apps should call this
@@ -327,27 +366,42 @@ Xcode's iPhoneOS SDK, read 28.11.2026), quoted:
 - `startImpression`/`endImpression` are under "Source apps should call these
   methods" — the side that shows ads, which with `SKAdNetworkItems` is not ours.
 
-Three claims the code rests on are **not verified** against Apple's
-documentation — questions to the owner (or to whoever can open
-developer.apple.com):
+Apple's pages confirm the three claims the code rests on (T-429; texts in
+`audit/evidence/T-429/`):
 
-1. *Repeating the same value on every launch is harmless* (no timer restarts,
-   no window closes, nothing is lost). This is why there is no first-launch
-   flag. If Apple says otherwise, the fix is a stored flag around the one call
-   in `attribution.ts`.
-2. *Coarse `low` is what fits "installed, nothing more".* The header only
-   defines low, medium, high. If Apple advises otherwise, it is one constant in
-   `RehearslyAttribution.m`.
+1. *Repeating the same value on every launch is harmless*, so there is no
+   first-launch flag.
+   - The method's page asks for exactly this: "Call this method when the user
+     first launches an app to register the app installation, and again to
+     update conversion values as the user engages with the app"
+     ([updatePostbackConversionValue(_:coarseValue:lockWindow:completionHandler:)](https://developer.apple.com/documentation/storekit/skadnetwork/updatepostbackconversionvalue(_:coarsevalue:lockwindow:completionhandler:))).
+   - SKAdNetwork 3 and earlier: "The 24-hour timer restarts each time the app
+     calls this method with a valid conversion value greater than the previous
+     value" (same page). An equal value does not restart it.
+   - SKAdNetwork 4: the windows are fixed from the first launch (days 0–2,
+     3–7, 8–35, multiple conversion windows page). A repeated call does not
+     move them. With `lockWindow` `false`, the system "continues updating the
+     conversion value throughout the conversion window" (method page).
+2. *Coarse `low` fits "installed, nothing more".* "These constants have no
+   special meaning. The app or ad network can define their meaning"
+   ([SKAdNetwork.CoarseConversionValue](https://developer.apple.com/documentation/storekit/skadnetwork/coarseconversionvalue)).
 3. *AdAttributionKit (iOS 17.4+) takes the value set through SKAdNetwork*, so
-   no AdAttributionKit call is needed. If not, an `AdAttributionKit`
-   `Postback.updateConversionValue` call is to be added for 17.4+.
+   there is no AdAttributionKit code. "SKAdNetwork bridges the conversion
+   values between the two frameworks by mirroring the call into
+   AdAttributionKit"
+   ([Understanding AdAttributionKit and SKAdNetwork interoperability](https://developer.apple.com/documentation/adattributionkit/adattributionkit-skadnetwork-interoperability)).
+   The same page says what happens to installs that no ad led to: "If your app
+   doesn't have any pending postbacks … the system ignores calls to both
+   AdAttributionKit and SKAdNetwork."
 
 The new architecture part is verified: a Debug e2e build with
 `newArchEnabled: true` logged `[WARN] [Attribution] the install conversion
 value was not taken: … SKANErrorDomain error 10` — the error is SKAdNetwork's,
 raised inside `RehearslyAttribution`, so the module was there and the call
 reached StoreKit (`audit/evidence/T-424/metro-debug-launch.txt`). The
-simulator refuses the value; what code 10 means is not in the public headers.
+simulator refuses the value. Code 10 is `SKANErrorUnknown`, in the public
+header: `SKANErrorUnknown = 10` in `StoreKit.framework/Headers/SKANError.h`
+of the iPhoneOS SDK (Xcode 26.6).
 
 ---
 
