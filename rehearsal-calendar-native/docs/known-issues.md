@@ -284,6 +284,34 @@ when it is released. This is audit finding IC01, deferred in
 `audit/TRIAGE_R4_R9.md`. The other R4–R9 findings are being fixed at their
 cause rather than listed here.
 
+### The install postback cannot be seen in the simulator or in e2e (T-424)
+
+`RehearslyAttribution.m` (CLAUDE.md, «Реклама установок: SKAdNetwork») calls
+SKAdNetwork on every launch. Nothing appears on screen, and iOS reports
+success even when no ad led to the install. The tests check what the
+generated project compiles, and `e2e/release/01-launch.yaml` checks that the
+app still starts. Whether Apple actually sends a postback to Meta can only be
+checked on a phone and in Meta:
+
+1. On an iPhone with Developer Mode on (Settings → Privacy & Security →
+   Developer Mode), open Settings → Developer and turn on AdAttributionKit
+   Developer Mode / SKAdNetwork Testing. With it on, iOS shortens the
+   conversion windows and the delay before a postback to minutes.
+2. Install build 1.0.2 from an ad in a Meta app-install campaign, or with an
+   ad network test profile: Apple's "Testing ad attributions with a downloaded
+   profile" (Settings → Developer → SKAdNetwork Testing → Managed Profiles).
+3. Open the app once. That is the call.
+4. Meta: Events Manager → the app → SKAdNetwork (or the campaign's results in
+   Ads Manager). Installs from real devices appear 24–48 hours or more after
+   the first window closes, without Developer Mode. Meta gets no per-person
+   data; small numbers may arrive with only the coarse value, or with nothing.
+
+Apple's documentation pages could not be opened from the build machine
+(no network). The API names and iOS versions come from the iOS 27.2 SDK's
+headers (`StoreKit/SKAdNetwork.h`, AdAttributionKit's `.swiftinterface`).
+That AdAttributionKit uses SKAdNetwork's conversion value is Apple's
+documented interoperability, not re-checked here.
+
 ---
 
 ## Candidates from the 2026-09-01 sweep — **not verified**

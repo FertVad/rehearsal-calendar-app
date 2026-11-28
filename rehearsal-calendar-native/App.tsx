@@ -11,6 +11,11 @@ import { UnreadProvider } from './src/contexts/UnreadContext';
 import Navigation from './src/navigation';
 import { useAutoCalendarSync } from './src/shared/hooks/useAutoCalendarSync';
 import { useUsageDays } from './src/shared/hooks/useUsageDays';
+import { registerInstall } from './src/shared/services/attribution';
+
+// Once per launch, before anything is drawn: for Apple's install postback to an
+// ad network whose ad led here (T-424). Never throws; a failure is logged.
+void registerInstall();
 
 function AppContent() {
   // Enable automatic calendar sync on app foreground

@@ -22,6 +22,8 @@
         "plugins/connection-renewal/withConnectionRenewal.js",
         // app.json's config plugin that keeps every Pods target at the app's iOS (T-422).
         "plugins/pods-deployment-target/withPodsDeploymentTarget.js",
+        // app.json's config plugin that compiles RehearslyAttribution.m into the app (T-424).
+        "plugins/install-attribution/withInstallAttribution.js",
         "plugins/**/__tests__/**/*.mjs"
       ],
       "project": [

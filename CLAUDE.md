@@ -746,6 +746,21 @@ The "Test Flight" banner over every tab is gone (owner, 29.10.2026, T-008); a bu
 
 **E2E**: `e2e/flows/47-bug-report-from-profile.yaml` — no banner, report from the profile, read back from the server.
 
+### Реклама установок: SKAdNetwork
+**Location**: `plugins/install-attribution/` (`RehearslyAttribution.m`, config plugin `withInstallAttribution.js`), `src/shared/services/attribution.ts`, the call at the top of `App.tsx` (T-424).
+
+Install ads in Meta (Facebook, Instagram) are confirmed by Apple's install postback, and Apple sends it only after the advertised app has set a conversion value. On every launch `registerInstall()` calls the native module once. The module is guarded by `dispatch_once`, so it makes one call per process:
+- iOS 16.1+: `+[SKAdNetwork updatePostbackConversionValue:0 coarseValue:Low lockWindow:NO completionHandler:]`
+- 15.4–16.0: `updatePostbackConversionValue:0 completionHandler:`
+- 15.1–15.3: `registerAppForAdNetworkAttribution`
+
+The value always means "installed": fine 0, coarse low, window open. Repeating the same value neither raises nor lowers it, so no timer restarts and no window closes. That is why there is no "first launch" flag, and a failed launch is retried by the next one. An error goes to `logger.warn` and nothing else.
+- **No SDK.** No Meta SDK and no AdAttributionKit code. AdAttributionKit (iOS 17.4+) works with SKAdNetwork, and SKAdNetwork alone also covers the app's iOS 15.1.
+- **No `SKAdNetworkItems`** (that is for apps that show ads), no ATT, no `NSUserTrackingUsageDescription`.
+- **The privacy policy and App Privacy do not change.** SKAdNetwork is part of iOS: the app sends nothing, reads no identifier, and Apple itself sends the postback to the ad network, anonymised.
+- **Test**: `plugins/install-attribution/__tests__/attribution.test.mjs` runs a real `expo prebuild` into a temp folder. It checks that the module is in the target's Sources once, that the calls and their guard are as above, and that Info.plist has no `SKAdNetworkItems` or tracking prompt. `src/shared/services/__tests__/attribution.test.ts` covers the JS side. No e2e flow, since nothing shows on screen; `e2e/release/01-launch.yaml` covers the launch.
+- **Checking on a phone**: Settings → Developer → SKAdNetwork Testing (`docs/known-issues.md`, T-424).
+
 ### Logging Convention
 Use `logger` utility instead of `console.log` — automatically suppressed in production:
 
