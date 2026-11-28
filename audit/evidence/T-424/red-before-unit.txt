@@ -1,0 +1,31 @@
+T-424 red before: plugins/install-attribution/__tests__/attribution.test.mjs
+against the base's app.json and App.tsx (dc3ade12), the test and the plugin
+files of ef08518a in place:
+
+  git restore --source=dc3ade12 -- app.json App.tsx
+  node --test plugins/install-attribution/__tests__/attribution.test.mjs
+  git restore --source=HEAD -- app.json App.tsx
+
+✖ the generated app target compiles the attribution module once
+  AssertionError [ERR_ASSERTION]: RehearslyAttribution.m is not in the generated project
+✖ the module sets the value "installed", once per launch, the window left open
+  Error: ENOENT: no such file or directory, open '/var/folders/.../rehearsly-prebuild-XzfPMO/ios/Rehearsly/RehearslyAttribution.m'
+✖ the nothing else is asked of iOS: no ad network list, no tracking prompt
+  Error: ENOENT: no such file or directory, open '/var/folders/.../rehearsly-prebuild-XzfPMO/ios/Rehearsly/RehearslyAttribution.m'
+✖ the app calls it once, as it loads
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: 0 !== 1
+ℹ tests 4
+ℹ pass 0
+ℹ fail 4
+ℹ duration_ms 6189
+
+On HEAD (ef08518a):
+
+✔ the generated app target compiles the attribution module once
+✔ the module sets the value "installed", once per launch, the window left open
+✔ nothing else is asked of iOS: no ad network list, no tracking prompt
+✔ the app calls it once, as it loads
+ℹ tests 4
+ℹ pass 4
+ℹ fail 0
+ℹ duration_ms 7018

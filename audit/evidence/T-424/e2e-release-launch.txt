@@ -1,0 +1,20 @@
+T-424: npm run e2e -- e2e/release/01-launch.yaml, twice, at ef08518a.
+
+The new plugin is a native input (e2e/native.mjs nativeInputs: plugins/), so
+the run makes the iOS project anew: prebuild, then pod install, then the
+Release build. Both runs were cut off by the agent's 10-minute command limit
+(exit 143) while pod install was still evaluating the Podfile, which downloads
+React Native's tarballs from Maven (native.mjs: "145 s to 1782 s, measured").
+e2e/out/prepare.log:
+
+  ✔ Finished prebuild
+  ...
+  [!] Invalid `Podfile` file: SIGTERM.
+
+The prebuild did generate the project with the module:
+e2e/.native/ios/Rehearsly/RehearslyAttribution.m (2984 bytes, beside
+RehearslyConnections.m).
+
+No inputs.sha256 stamp was written, so the supervisor's run starts the project
+over. The scenario was neither green nor red here; the supervisor's run is the
+one that decides.
