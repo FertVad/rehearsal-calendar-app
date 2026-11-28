@@ -1,5 +1,6 @@
 /**
- * The admin's figures (T-293): the cards, the newcomer funnel, where people come
+ * The admin's figures (T-293): the cards, the newcomer funnel, the organiser
+ * funnel (T-427), where people come
  * from, how projects live, notifications and email codes, and use of the app
  * (T-294, usage.js). Read-only, computed when the admin page asks and at no
  * other time.

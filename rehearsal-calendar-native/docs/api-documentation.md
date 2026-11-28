@@ -1958,7 +1958,11 @@ the seven days before `from` (`before`), the same source and language.
   "stepDays": 7, "recorded": true,
   "test": { "from": "2026-11-10", "to": "2026-11-16", "days": 7, "registered": 2, "perDay": 0.3,
     "onboarding": { "count": 1, "of": 2, "rate": 50 },
-    "project": { "count": 1, "of": 2, "rate": 50 }, "inProject": null, "marks": { "count": 0, "of": 2, "rate": 0 },
+    "project": { "count": 1, "of": 2, "rate": 50 },
+    "invite": { "count": 1, "of": 1, "rate": 100 }, "member": { "count": 1, "of": 1, "rate": 100 },
+    "threeMembers": { "count": 0, "of": 1, "rate": 0 }, "firstRehearsal": { "count": 0, "of": 1, "rate": 0 },
+    "secondRehearsal": { "count": 0, "of": 1, "rate": 0 },
+    "inProject": null, "calendar": { "count": 0, "of": 2, "rate": 0 }, "manual": { "count": 1, "of": 2, "rate": 50 },
     "day1": { "count": 1, "of": 2, "rate": 50 }, "day7": null },
   "before": { "from": "2026-11-03", "to": "2026-11-09", "...": "the same fields" }
 }
@@ -1969,12 +1973,47 @@ the seven days before `from` (`before`), the same source and language.
   come. `before` always divides by 7.
 - `onboarding`: now, of everyone registered (no time is recorded for it).
 - `project` (owns a project created within `stepDays` of registering),
-  `inProject` (earliest active membership), `marks` (earliest kept mark):
-  reached within `stepDays`, of those whose `stepDays` are over.
+  `inProject` (earliest active membership), `calendar` (earliest kept import
+  or export record), `manual` (earliest kept hand mark): reached within
+  `stepDays`, of those whose `stepDays` are over.
+- `invite`, `member`, `threeMembers`, `firstRehearsal`, `secondRehearsal`
+  (T-427, as in `organizers` below): reached within `stepDays`, of those who
+  created a project within them. `{ "count": 0, "of": 0, "rate": null }` when
+  someone's time is up but nobody created a project; `null` when nobody's time
+  is up. An invitation's counts are by UTC day: a day that began within
+  `stepDays` counts.
 - `day1`, `day7`: opened the app that day after registering, in their zone,
   of those for whom it is over (as the retention table). `recorded: false`
   without migration 016.
 - A cell is `null` when nobody's time is up — never 0.
+
+`/admin/api/analytics` always has `organizers` (T-427): the people registered
+in the period, by the Monday (UTC) of their registration week, newest first,
+with each step as of now.
+
+```json
+"organizers": {
+  "weeks": [{ "week": "2026-11-02", "registered": 7, "project": 5, "invite": 4, "member": 3,
+    "threeMembers": 1, "firstRehearsal": 2, "secondRehearsal": 0 }],
+  "total": { "registered": 7, "project": 5, "...": "the same fields" },
+  "median": { "toFirstRehearsalHours": 24, "toFirstRehearsalOf": 3 }
+}
+```
+
+- `project`: owns at least one project still there (deleting one deletes it).
+  The steps after it are counts among those; the page divides them by `project`.
+- `invite`: migration 016 counted an opening of one of their projects'
+  invitation — the page in a browser or the app — or a join, on any day; or one
+  of their projects has an active member other than them. Counts tie to no
+  person, so the organiser's own opening counts. Before 016 (and without it)
+  only a member counts.
+- `member`, `threeMembers`: at least 1 / 3 active members, the organiser and
+  service accounts aside, in one project — members of different projects are
+  not added up. Someone who left has no membership row left.
+- `firstRehearsal`, `secondRehearsal`: rehearsals they created (`created_by`)
+  in a project they own; one deleted has no row left.
+- `median`: registration to the first such rehearsal (`created_at`), over
+  `toFirstRehearsalOf` people; `null` with nobody.
 
 ---
 
