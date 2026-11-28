@@ -293,16 +293,38 @@ generated project compiles, and `e2e/release/01-launch.yaml` checks that the
 app still starts. Whether Apple actually sends a postback to Meta can only be
 checked on a phone and in Meta. The steps follow Apple's pages, read by the
 monitor on 28.11.2026; the texts are in `audit/evidence/T-429/` (one file per
-page, `SOURCES.md` lists the page addresses).
+page, `SOURCES.md` lists the page addresses) and, for the AdAttributionKit
+profile page, `audit/evidence/T-430/`.
 
-**On a real Meta ad the only check is Meta's report, days later.** Apple's
-testing switch does not shorten anything there. "Developer Mode only affects
-the time-windows of development postbacks. Postbacks that the system generates
-from production impressions use the full time-windows."
-([Testing ad attributions with Developer Mode](https://developer.apple.com/documentation/adattributionkit/testing-adattributionkit-with-developer-mode)).
-A development impression is one the ad network signs with "a source App Store
-identifier of `0`" (same page). The ad network does this, not the app. An
-impression from a real Meta ad is a production one, so it has the full windows.
+**On a phone with current iOS (18 and later), a real Meta ad is checked only
+in Meta's report, days later.** Apple has two ways to shorten the wait, and
+which one exists depends on the iOS version:
+
+- **iOS 18 and later: Developer Mode only.** The testing profile does not work
+  there: "In iOS 18 and later, the testing profile no longer works in
+  AdAttributionKit or SKAdNetwork, so you need to use the AdAttributionKit
+  Developer Mode"
+  ([Testing ad attributions with a downloaded profile](https://developer.apple.com/documentation/adattributionkit/testing-ad-attributions-with-a-downloaded-profile),
+  AdAttributionKit). And Developer Mode does not shorten a real ad's wait:
+  "Developer Mode only affects the time-windows of development postbacks.
+  Postbacks that the system generates from production impressions use the full
+  time-windows"
+  ([Testing ad attributions with Developer Mode](https://developer.apple.com/documentation/adattributionkit/testing-adattributionkit-with-developer-mode)).
+  A development impression is one the ad network signs with "a source App
+  Store identifier of `0`" (same page). The ad network does this, not the app.
+  An impression from a real Meta ad is a production one, so it has the full
+  windows.
+- **Before iOS 18: the testing profile.** "You can only use the
+  AdAttributionKit testing profile for devices running OS versions earlier
+  than iOS 18"; it installs on "iOS or iPadOS 17.4 or later" (AdAttributionKit
+  profile page; the older StoreKit page with the same title says "iOS or
+  iPadOS 14 or later" and sends you to the AdAttributionKit one for the
+  download). "Using this profile reduces the conversion value update and
+  postback window from 24–48 hours to 5–10 minutes." The page sets no
+  condition about development impressions, unlike the Developer Mode page, so
+  the profile may well shorten a real ad's wait too. Apple does not say so
+  outright; not tried here. "This testing profile expires 2 weeks after you
+  install it on the device."
 
 1. Phone: a production Apple Account. "SKAdNetwork doesn't support Sandbox
    Apple Accounts"
@@ -323,16 +345,25 @@ impression from a real Meta ad is a production one, so it has the full windows.
    what arrives: at Tier 0 only the two-digit `source-identifier`, with no
    value at all (same page).
 
-The fast path needs a development impression from an ad network, so it does
-not check a Meta campaign. In iOS 18 and later: turn on Developer Mode, then
-"access the developer settings in Settings on your test device. Then scroll
-down to the Ad Attribution Testing section and enable the AdAttributionKit
-Developer Mode switch". "This setting automatically turns off after two weeks."
-The windows then become 0–3, 3–6 and 6–9 minutes, and the postback delay
-becomes 5 to 10 minutes (Developer Mode page). Before iOS 18 the switch is not
-there. Apple's testing profile takes its place ("For devices running OS
-versions earlier than iOS 18, use the AdAttributionKit testing profile", same
-page; the profile expires two weeks after it is installed, profile page).
+**The fast paths, by iOS version.**
+
+- *iOS 18 and later* — needs a development impression from an ad network, so
+  it does not check a Meta campaign. Turn on Developer Mode, then "access the
+  developer settings in Settings on your test device. Then scroll down to the
+  Ad Attribution Testing section and enable the AdAttributionKit Developer
+  Mode switch". "This setting automatically turns off after two weeks." The
+  windows then become 0–3, 3–6 and 6–9 minutes, and the postback delay becomes
+  5 to 10 minutes (Developer Mode page).
+- *iOS 17.4 to 17.x* — the switch is not there ("For devices running OS
+  versions earlier than iOS 18, use the AdAttributionKit testing profile",
+  Developer Mode page). Download the AdAttributionKit profile from the Apple
+  Developer account and install it; the app then "has 5 minutes to update the
+  conversion value after initially registering", and the postback goes
+  "within another 5 minutes". With a Wi-Fi HTTP proxy set on the phone
+  (Settings → Wi-Fi → the network → Configure Proxy), "the AdAttributionKit
+  postbacks that the device sends go through the proxy" (AdAttributionKit
+  profile page). Only on such a phone could a real Meta ad perhaps be seen
+  in minutes, as said above.
 
 **Second and third postbacks.** Apple: "The advertised app needs to call …
 to update the conversion values during each conversion window", and the
