@@ -207,6 +207,29 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
       calendar['olga@example.test'], calendar['loner@example.test']], [true, true, true, false, false]);
     assert.ok(!('maria@demo.rehearsly.me' in calendar));
     contracts.push('calendar sync used: an import from a calendar or an export record; neither — no');
+
+    // T-425: dates bound every section from both ends, on timestamptz and on
+    // 016's date column; the test cohort is own + none. 9 to 2 days ago, UTC.
+    await q(`INSERT INTO native_notifications (user_id, type, title, created_at) VALUES (2, 'member_left', 'T', $1)`,
+      [at(firstDate - D + H)]);
+    for (const [day, opens] of [[date(firstDate - 5 * D), 3], [date(firstDate - D), 7]]) {
+      await q('INSERT INTO native_invite_counts (project_id, day, page_opens, app_opens, joins) VALUES (1, $1, $2, 0, 0)', [day, opens]);
+    }
+    const dates = `from=${date(firstDate - 9 * D)}&to=${date(firstDate - 2 * D)}`;
+    const dated = await get(`/admin/api/analytics?${dates}`);
+    assert.equal(dated.period, 'dates');
+    assert.deepEqual(dated.notifications.inbox.map((row) => [row.type, row.created]),
+      [['member_joined', 1], ['rehearsal_created', 1]]);
+    assert.deepEqual(dated.usage.invitations.map((row) => [row.project, row.pageOpens]), [['Hamlet', 3]]);
+    const cohort = (await get(`/admin/api/analytics?${dates}&cohort=1`)).cohort;
+    assert.equal(cohort.recorded, true);
+    assert.deepEqual(cohort.test, { from: date(firstDate - 9 * D), to: date(firstDate - 2 * D), days: 8, registered: 2,
+      perDay: 0.3, onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 0, of: 1, rate: 0 },
+      inProject: { count: 0, of: 1, rate: 0 }, marks: { count: 0, of: 1, rate: 0 }, day1: null, day7: null });
+    assert.equal(cohort.before.registered, 0);
+    const refused = await call('GET', '/admin/api/analytics?from=0001-01-01&to=9999-12-31&cohort=1', { token });
+    assert.deepEqual([refused.status, refused.body.code], [400, 'DATES_TOO_LONG']);
+    contracts.push('dates bound inbox and invitation counts from both ends; the test cohort counts own + none; a huge range is 400');
   } finally {
     delete process.env.ADMIN_SERVICE_EMAILS;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

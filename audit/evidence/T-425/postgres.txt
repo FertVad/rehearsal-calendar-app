@@ -1,0 +1,13 @@
+T-425 — PostgreSQL 15.13 in a disposable Docker container (scripts/r0-postgres.mjs), 28.11.2026.
+
+$ npm run test:r0-postgres -- --t293-only
+{"scenario":"T293_ADMIN","outcome":"PASS","contracts":[…,"dates bound inbox and invitation counts from both ends; the test cohort counts own + none; a huge range is 400"],"externalConnections":0}
+T293_ADMIN REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+
+The new contract (t293Admin.mjs, last block): from = 9 days ago, to = 2 days ago (UTC dates).
+A notification yesterday and an invitation count yesterday are left out, one on day -10 too;
+the cohort is Leo and Lone (own/none), Anna (invited the same day) is not; 0001-01-01..9999-12-31
+is 400 DATES_TOO_LONG.
+
+$ npm run test:r0-postgres -- --t294-only      (usage.js: days 1/7/30 moved into openedOnDay)
+T294_USAGE+T294_UPGRADE REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.

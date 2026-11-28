@@ -1,0 +1,28 @@
+T-425 — the new browser test on the base page (b6127aae), the test file from 074d3d5f.
+$ git restore --source=b6127aae -- public/admin/dashboard.js public/admin/dashboard.css routes/admin/dashboardPage.js services/admin routes/admin.js
+$ node --test --test-name-pattern="dates and the test cohort" __tests__/browser/adminDashboard.browser.test.mjs
+
+✖ dates and the test cohort: the switch locks the source, wrong dates ask nothing, the choice survives a reload (7677.088916ms)
+ℹ tests 1
+ℹ pass 0
+ℹ fail 1
+
+test at __tests__/browser/adminDashboard.browser.test.mjs:321:1
+  locator.selectOption: Timeout 5000ms exceeded.
+  Call log:
+    - waiting for locator('#filter-period')
+      - locator resolved to <select id="filter-period">…</select>
+    - attempting select option action
+      2 × waiting for element to be visible and enabled
+        - did not find some options
+
+The base page has no "Даты" in «Период», no date fields and no cohort switch.
+$ git restore --source=HEAD -- (the same files)
+
+After the fix (HEAD): npm run test:admin-browser — pass 18, fail 0 (the new test included);
+npm run test:admin-errors-browser — pass 18, fail 0; npm run test:admin-stored-browser — 6 passed.
+
+Server jest, full run: 95 of 97 suites pass. __tests__/routes/privacyPage.test.js failed only
+under the full run's load and passes alone (148/148). __tests__/startup/runtimeStartup.test.js
+fails 8 of 11 on the base code too ("import-failed", code null: the copied server is not
+started in this sandbox) — not this change.
