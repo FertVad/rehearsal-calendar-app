@@ -29,6 +29,35 @@
   const LOGIN_FAILED = 'Не удалось войти. ' + TRY_AGAIN;
   const STALE = 'Показаны прежние данные — возможно, они устарели.';
 
+  // The editor's strings are copied with ⍽ where a no-break space goes (T-425).
+  const typeset = text => text.split('⍽').join(NB);
+
+  // Registration dates (T-425): UTC days, both in, at most this many — the
+  // server's cap (services/admin/people.js), checked here before asking.
+  const MAX_PERIOD_DAYS = 366;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const FILTERS_KEY = 'admin_filters';
+  const COHORT_SOURCE = 'Свой / без проекта';
+  const DATES_FORMAT = 'Неверная дата: нужен формат ГГГГ-ММ-ДД.';
+  const DATES_ORDER = 'Начальная дата позже конечной.';
+  const DATES_MISSING = 'Укажите обе даты.';
+  const COHORT_DATES = 'Выберите даты теста.';
+  const daysWord = n => (n % 10 === 1 && n % 100 !== 11 ? 'дня' : 'дней');
+  const datesTooLong = n => 'Слишком длинный период: не больше ' + n + NB + daysWord(n) + '.';
+
+  // A 400 the page can name, by the server's code; anything else is generic.
+  function refusalText(refusal) {
+    switch (refusal?.code) {
+      case 'DATES_FORMAT': return DATES_FORMAT;
+      case 'DATES_ORDER': return DATES_ORDER;
+      case 'DATES_MISSING': return DATES_MISSING;
+      case 'COHORT_DATES': return COHORT_DATES;
+      case 'DATES_TOO_LONG':
+        return datesTooLong(Number.isSafeInteger(refusal.maxDays) ? refusal.maxDays : MAX_PERIOD_DAYS);
+      default: return null;
+    }
+  }
+
   class RequestError extends Error {}
   class ObsoleteRequest extends Error {}
   const malformedResponse = () => new RequestError(MALFORMED);
@@ -89,6 +118,13 @@
     if (!response.ok) {
       // The page's own words: never a server's error text, login included.
       if (!request.token) throw new RequestError(await loginFailure(response, request));
+      if (response.status === 400) {
+        let refusal;
+        try { refusal = await response.json(); } catch { /* No code to name. */ }
+        ensureCurrent(request);
+        const text = refusalText(refusal);
+        if (text) throw new RequestError(text);
+      }
       throw new RequestError('Запрос не выполнен. ' + TRY_AGAIN);
     }
     let data;
@@ -343,19 +379,110 @@
     return element('p', 'note', text.split(' — ').join(NB + '— '));
   }
 
-  // The period, source and language every section is read for.
-  function filterQuery() {
+  const byId = id => document.getElementById(id);
+  // The test cohort counts only with dates: the switch sits beside them.
+  const cohortOn = () => byId('filter-period').value === 'dates' && byId('filter-cohort').checked;
+  const realDay = text => /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text))
+    && new Date(Date.parse(text)).toISOString().slice(0, 10) === text;
+
+  /**
+   * The period (or dates), source, language and cohort every section is read
+   * for, as a query; or what is wrong with the dates, before anything is asked.
+   */
+  function readFilters() {
     const params = new URLSearchParams();
-    params.set('period', document.getElementById('filter-period').value);
-    for (const [key, id] of [['source', 'filter-source'], ['lang', 'filter-lang']]) {
-      const value = document.getElementById(id).value;
-      if (value) params.set(key, value);
+    const period = byId('filter-period').value;
+    if (period === 'dates') {
+      const from = byId('filter-from').value;
+      const to = byId('filter-to').value;
+      if (!from && !to && cohortOn()) return { error: COHORT_DATES };
+      if (!from || !to) return { error: DATES_MISSING };
+      if (!realDay(from) || !realDay(to)) return { error: DATES_FORMAT };
+      if (from > to) return { error: DATES_ORDER };
+      if ((Date.parse(to) - Date.parse(from)) / DAY_MS + 1 > MAX_PERIOD_DAYS) return { error: datesTooLong(MAX_PERIOD_DAYS) };
+      params.set('from', from);
+      params.set('to', to);
+      if (cohortOn()) params.set('cohort', '1');
+    } else {
+      params.set('period', period);
     }
-    return params.toString();
+    const source = byId('filter-source').value;
+    if (source && !cohortOn()) params.set('source', source);
+    const lang = byId('filter-lang').value;
+    if (lang) params.set('lang', lang);
+    return { query: params.toString() };
+  }
+
+  function showFilterError(text) {
+    const error = byId('filter-error');
+    error.textContent = text || '';
+    error.classList.toggle('hidden', !text);
+  }
+
+  // Dates that cannot be asked for: nothing is sent, and what is shown is
+  // marked as the earlier figures. A read still on its way is dropped.
+  function withFilters(section, load) {
+    const filters = readFilters();
+    showFilterError(filters.error);
+    if (!filters.error) return load(filters.query);
+    section.controller?.abort();
+    section.controller = null;
+    section.sequence += 1;
+    setLoading(section, false);
+    clearSectionError(section);
+    setStale(section, section.hasData ? STALE : '');
+    return Promise.resolve(false);
+  }
+
+  // While the cohort is on, the source list shows what it is fixed to and
+  // cannot be changed; turned off, the earlier choice comes back.
+  let sourceBeforeCohort = '';
+  function applyFilterControls() {
+    const dates = byId('filter-period').value === 'dates';
+    const on = cohortOn();
+    byId('filter-dates').classList.toggle('hidden', !dates);
+    byId('filter-dates-note').classList.toggle('hidden', !dates);
+    byId('filter-cohort-note').classList.toggle('hidden', !dates);
+    const select = byId('filter-source');
+    let fixed = byId('filter-source-cohort');
+    if (on && !fixed) {
+      sourceBeforeCohort = select.value;
+      fixed = element('option', '', COHORT_SOURCE);
+      fixed.id = 'filter-source-cohort';
+      fixed.value = 'cohort';
+      select.append(fixed);
+      select.value = 'cohort';
+    } else if (!on && fixed) {
+      fixed.remove();
+      select.value = sourceBeforeCohort;
+    }
+    select.disabled = on;
+  }
+
+  // The dates and the switch outlive a reload; without storage, "all time".
+  function saveFilters() {
+    try {
+      localStorage.setItem(FILTERS_KEY, JSON.stringify({ period: byId('filter-period').value,
+        from: byId('filter-from').value, to: byId('filter-to').value, cohort: byId('filter-cohort').checked }));
+    } catch { /* Not remembered: the page works the same. */ }
+  }
+
+  function restoreFilters() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(FILTERS_KEY) || 'null'); } catch { saved = null; }
+    if (isObject(saved)) {
+      const period = byId('filter-period');
+      if ([...period.options].some(option => option.value === saved.period)) period.value = saved.period;
+      for (const [key, id] of [['from', 'filter-from'], ['to', 'filter-to']]) {
+        if (typeof saved[key] === 'string' && realDay(saved[key])) byId(id).value = saved[key];
+      }
+      byId('filter-cohort').checked = saved.cohort === true;
+    }
+    applyFilterControls();
   }
 
   function loadStats() {
-    return loadSection(sections.stats, 0, '/stats?' + filterQuery(), data => isObject(data)
+    return withFilters(sections.stats, query => loadSection(sections.stats, 0, '/stats?' + query, data => isObject(data)
       && hasFields(data.users, ['total', 'newThisWeek', 'newThisMonth'])
       && hasFields(data.signIns, ['rate', 'notInLast30Days'])
       && hasFields(data.usage, ['projects', 'rehearsals']), data => {
@@ -381,7 +508,7 @@
       const container = document.getElementById('stats-cards');
       container.replaceChildren(users, signIns, projects, rehearsals);
       container.classList.remove('hidden');
-    });
+    }));
   }
 
   function emptyRow(columns, message) {
@@ -444,8 +571,8 @@
 
   function loadUsers(page = 0) {
     const service = document.getElementById('show-service').checked ? '&service=1' : '';
-    return loadSection(sections.users, page, '/users?limit=' + PAGE_SIZE + '&offset=' + (page * PAGE_SIZE)
-      + '&' + filterQuery() + service,
+    return withFilters(sections.users, query => loadSection(sections.users, page, '/users?limit=' + PAGE_SIZE + '&offset=' + (page * PAGE_SIZE)
+      + '&' + query + service,
     data => validList(data, 'users', validUser) && typeof data.appDaysRecorded === 'boolean', data => {
       const rows = data.users.map(user => {
         const row = element('tr', user.service ? 'service-row' : '');
@@ -464,7 +591,7 @@
       });
       document.getElementById('users-body').replaceChildren(...(rows.length ? rows : [emptyRow(9, 'Пользователей нет')]));
       renderPagination('users-pagination', data.total, page, loadUsers);
-    });
+    }));
   }
 
   // Analytics: every value is text in a cell or a line, never markup.
@@ -626,8 +753,68 @@
         && ['day1', 'day7', 'day30'].every(key => isObject(row[key])))
       && Array.isArray(usage.builds) && Array.isArray(usage.invitations)));
 
+  // The test cohort and the week before it (T-425). The strings are the editor's
+  // (audit/evidence/T-425/natives-ru.md); the organiser's steps after «Создали
+  // проект» and the calendar apart from hand marks are T-427's and T-426's.
+  const dayMonth = day => String(day).slice(8, 10) + '.' + String(day).slice(5, 7);
+  const span = column => '(' + (column.from === column.to ? dayMonth(column.from)
+    : dayMonth(column.from) + '–' + dayMonth(column.to)) + ')';
+
+  function renderCohort(cohort) {
+    // A cell with nobody whose time is up stays empty, not 0 (the note says so).
+    const part = value => (value === null ? '' : ratio(value.count, value.of, value.rate));
+    const opened = value => (cohort.recorded ? part(value) : NOT_RECORDED);
+    const rows = [
+      ['Зарегистрировались', column => String(column.registered)],
+      [typeset('В среднем за⍽день'), column => decimal(column.perDay)],
+      [typeset('Онбординг (на⍽текущий момент)'), column => part(column.onboarding)],
+      typeset('За⍽первые ' + cohort.stepDays + '⍽дней после регистрации'),
+      ['Создали проект', column => part(column.project)],
+      ['В проекте', column => part(column.inProject)],
+      ['Отметки занятости', column => part(column.marks)],
+      [typeset('Открыли приложение на⍽1-й⍽день'), column => opened(column.day1)],
+      [typeset('Открыли приложение на⍽7-й⍽день'), column => opened(column.day7)],
+    ];
+    const columns = [cohort.test, cohort.before];
+    const node = element('table', 'mini-table cohort-table');
+    const head = element('tr');
+    head.append(element('th', '', ''), element('th', '', 'Когорта ' + span(cohort.test)),
+      element('th', '', typeset('Неделя до⍽теста ') + span(cohort.before)));
+    const thead = element('thead');
+    thead.append(head);
+    const body = element('tbody');
+    for (const row of rows) {
+      const line = element('tr', typeof row === 'string' ? 'cohort-divider' : '');
+      if (typeof row === 'string') {
+        const cell = element('td', '', row);
+        cell.colSpan = columns.length + 1;
+        line.append(cell);
+      } else {
+        line.append(element('td', '', row[0]), ...columns.map(column => element('td', '', row[1](column))));
+      }
+      body.append(line);
+    }
+    node.append(thead, body);
+    const wrap = element('div', 'table-scroll');
+    wrap.append(node);
+    return block('Тестовая когорта', wrap,
+      note(typeset('Неделя до⍽теста⍽— семь дней перед первым днём когорты, с⍽тем же отбором по⍽источнику и⍽языку. '
+        + 'По⍽ней видно, сколько людей приходит и⍽без рекламы. Чтобы у⍽столбцов был равный срок, шаги считаются '
+        + 'за⍽первые 7⍽дней после регистрации, а⍽доля⍽— от⍽тех, у⍽кого эти 7⍽дней уже прошли; для 1-го и⍽7-го '
+        + 'дня⍽— от⍽тех, у⍽кого этот день уже закончился (день регистрации⍽— нулевой). Онбординг⍽— на⍽текущий '
+        + 'момент и⍽от⍽всех зарегистрировавшихся: у⍽него не записано время. '
+        + 'Пустая ячейка: срок ещё ни у⍽кого не прошёл.')));
+  }
+
+  const validShare = value => value === null || hasFields(value, ['count', 'of', 'rate']);
+  const validColumn = column => hasFields(column, ['from', 'to', 'registered', 'perDay'])
+    && ['onboarding', 'project', 'inProject', 'marks', 'day1', 'day7'].every(key => Object.hasOwn(column, key)
+      && validShare(column[key]));
+  const validCohort = cohort => cohort === undefined || (isObject(cohort) && typeof cohort.recorded === 'boolean'
+    && Number.isSafeInteger(cohort.stepDays) && validColumn(cohort.test) && validColumn(cohort.before));
+
   const validAnalytics = data => isObject(data) && Array.isArray(data.languages) && data.languages.every(isText)
-    && validUsage(data.usage)
+    && validUsage(data.usage) && validCohort(data.cohort)
     && isObject(data.funnel) && Array.isArray(data.funnel.weeks) && isObject(data.funnel.total) && isObject(data.funnel.medians)
     && isObject(data.sources) && ['byDay', 'byWeek', 'projects', 'languages', 'timezones'].every(key => Array.isArray(data.sources[key]))
     && Array.isArray(data.projects) && data.projects.every(p => isObject(p) && isObject(p.seenBeforeStart) && isObject(p.coverage))
@@ -650,13 +837,14 @@
   }
 
   function loadAnalytics() {
-    return loadSection(sections.analytics, 0, '/analytics?' + filterQuery(), validAnalytics, data => {
+    return withFilters(sections.analytics, query => loadSection(sections.analytics, 0, '/analytics?' + query, validAnalytics, data => {
       renderLanguages(data.languages);
       document.getElementById('analytics-body').replaceChildren(
+        ...(data.cohort ? [renderCohort(data.cohort)] : []),
         note('Зарегистрировались за период: ' + data.people + ' (без служебных аккаунтов).'),
         renderFunnel(data.funnel), renderSources(data.sources),
         renderUsage(data.usage), renderProjects(data.projects), renderNotifications(data.notifications));
-    });
+    }));
   }
 
   function renderPagination(id, total, page, loadPage) {
@@ -800,8 +988,11 @@
     loadBugReports(0);
   }
 
-  for (const id of ['filter-period', 'filter-source', 'filter-lang']) {
+  restoreFilters();
+  for (const id of ['filter-period', 'filter-from', 'filter-to', 'filter-cohort', 'filter-source', 'filter-lang']) {
     document.getElementById(id).addEventListener('change', () => {
+      applyFilterControls();
+      saveFilters();
       loadStats();
       loadAnalytics();
       loadUsers(0);

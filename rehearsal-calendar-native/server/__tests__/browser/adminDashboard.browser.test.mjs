@@ -50,6 +50,12 @@ const analyticsBody = (payload, recorded = true) => ({
     inbox: [{ type: payload ? html : 'member_joined', created: 2, read: 1, readRate: 50, medianMinutesToRead: 30 }],
     emailCodes: [{ purpose: 'verify', created: 2, sent: 2, failed: 0, used: 1, replaced: 1, locked: 0 }] },
 });
+// The test cohort and the week before it (T-425), as /analytics?…&cohort=1 answers.
+const cohortColumn = (from, to, registered) => ({ from, to, days: 7, registered, perDay: 0.3,
+  onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 1, of: 2, rate: 50 }, inProject: null,
+  marks: { count: 0, of: 2, rate: 0 }, day1: { count: 1, of: 2, rate: 50 }, day7: null });
+const cohortBody = { stepDays: 7, recorded: true,
+  test: cohortColumn('2026-11-10', '2026-11-16', 2), before: cohortColumn('2026-11-03', '2026-11-09', 2) };
 const report = { id: '1);window.__xss=4;//', name: html, message: html + '\n' + escaped,
   screen: svg, status: 'new" onclick="window.__xss=5', createdAt: user.createdAt };
 let browser;
@@ -104,7 +110,11 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
     next();
   });
   app.get('/admin/api/stats', (_req, res) => res.json(stats));
-  app.get('/admin/api/analytics', (_req, res) => res.json(analyticsBody(payload, state.recorded)));
+  app.get('/admin/api/analytics', (req, res) => {
+    if (state.refusal) return res.status(400).json(state.refusal);
+    const body = analyticsBody(payload, state.recorded);
+    res.json(req.query.cohort === '1' ? { ...body, cohort: cohortBody } : body);
+  });
   app.get('/admin/api/users', (req, res) => {
     const all = state.empty ? [] : users;
     const offset = Number(req.query.offset);
@@ -304,6 +314,102 @@ test('the filters reach every statistics request, and the service switch only th
   await shown;
   assert.equal(query('users').get('service'), '1');
   assert.equal(await page.locator('#filter-lang').inputValue(), 'ru', 'the chosen language survives a reload of the list');
+  assert.deepEqual(errors, []);
+});
+
+// T-425: registration dates, and the test cohort, which fixes the source while on.
+test('dates and the test cohort: the switch locks the source, wrong dates ask nothing, the choice survives a reload', { timeout: 30000 }, async t => {
+  const { page, state, errors } = await fixture(t);
+  await waitForDashboard(page);
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const last = name => new URL(state.requests.filter(r => r.path.startsWith('/admin/api/' + name)).at(-1).path,
+    'http://fixture.test').searchParams;
+  const answered = (name, test) => page.waitForResponse(r => {
+    const url = new URL(r.url());
+    return url.pathname === '/admin/api/' + name && test(url.searchParams);
+  });
+  const filterError = page.locator('#filter-error');
+  const source = page.locator('#filter-source');
+  assert.equal(await page.locator('#filter-dates').isVisible(), false);
+  await source.selectOption('invite');
+  await answered('analytics', params => params.get('source') === 'invite');
+
+  // Dates chosen, none filled: nothing is asked.
+  const asked = state.requests.length;
+  await page.locator('#filter-period').selectOption('dates');
+  assert.equal(await page.locator('#filter-dates').isVisible(), true);
+  assert.equal(await filterError.textContent(), 'Укажите обе даты.');
+  assert.equal(await page.locator('#filter-dates-note').textContent(),
+    `Дни${NB}— по${NB}UTC; первый и${NB}последний входят в${NB}период.`);
+  await page.locator('#filter-cohort').check();
+  assert.equal(await filterError.textContent(), 'Выберите даты теста.');
+  assert.equal(await source.isDisabled(), true, 'the cohort fixes the source');
+  assert.equal(await source.locator('option:checked').textContent(), 'Свой / без проекта');
+  assert.match(await page.locator('#filter-cohort-note').textContent(), /^Все, кто зарегистрировался в эти даты/);
+  await page.locator('#filter-from').fill('2026-11-16');
+  await page.locator('#filter-to').fill('2026-11-10');
+  assert.equal(await filterError.textContent(), 'Начальная дата позже конечной.');
+  await page.locator('#filter-from').fill('2025-01-01');
+  await page.locator('#filter-to').fill('2026-11-16');
+  assert.equal(await filterError.textContent(), `Слишком длинный период: не больше 366${NB}дней.`);
+  assert.equal(state.requests.length, asked, 'wrong dates are not sent');
+  assert.equal(await page.locator('#analytics-stale').textContent(), 'Показаны прежние данные — возможно, они устарели.');
+
+  // Good dates: every section asks for them and the cohort, never a source.
+  const all = ['stats', 'analytics', 'users'].map(name => answered(name, params => params.get('from') === '2026-11-10'));
+  await page.locator('#filter-from').fill('2026-11-10');
+  await Promise.all(all);
+  assert.equal(await filterError.isVisible(), false);
+  for (const name of ['stats', 'analytics', 'users']) {
+    const params = last(name);
+    assert.deepEqual([params.get('period'), params.get('from'), params.get('to'), params.get('cohort'), params.get('source')],
+      [null, '2026-11-10', '2026-11-16', '1', null], name);
+  }
+  const block = page.locator('#analytics-body .analytics-block').first();
+  await block.getByRole('heading', { name: 'Тестовая когорта' }).waitFor();
+  assert.deepEqual(await block.locator('th').allTextContents(), ['', 'Когорта (10.11–16.11)', `Неделя до${NB}теста (03.11–09.11)`]);
+  const rows = await block.locator('tr').evaluateAll(trs => trs.map(tr => [...tr.children].map(cell => cell.textContent)));
+  assert.deepEqual(rows.slice(1).map(row => row[0]), ['Зарегистрировались', `В среднем за${NB}день`,
+    `Онбординг (на${NB}текущий момент)`, `За${NB}первые 7${NB}дней после регистрации`, 'Создали проект', 'В проекте',
+    'Отметки занятости', `Открыли приложение на${NB}1-й${NB}день`, `Открыли приложение на${NB}7-й${NB}день`]);
+  assert.deepEqual(rows[2], [`В среднем за${NB}день`, '0,3', '0,3']);
+  assert.deepEqual(rows[5], ['Создали проект', `1 из 2 (50${NB}%)`, `1 из 2 (50${NB}%)`]);
+  assert.deepEqual(rows[6], ['В проекте', '', ''], 'nobody\'s seven days are over: empty, not 0');
+  assert.deepEqual(rows[9], [`Открыли приложение на${NB}7-й${NB}день`, '', '']);
+  assert.match(await block.locator('.note').textContent(), /Пустая ячейка: срок ещё ни у кого не прошёл\.$/);
+
+  // The server's refusal is named in the page's words.
+  state.refusal = { error: 'at most 21 days', code: 'DATES_TOO_LONG', maxDays: 21 };
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
+  await page.locator('#analytics-error').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#analytics-error span').textContent(),
+    `Не удалось загрузить аналитику. Слишком длинный период: не больше 21${NB}дня.`);
+  state.refusal = null;
+
+  // A reload keeps the dates and the switch.
+  const restored = answered('analytics', params => params.get('cohort') === '1');
+  await page.reload();
+  await restored;
+  await waitForDashboard(page);
+  assert.deepEqual([await page.locator('#filter-period').inputValue(), await page.locator('#filter-from').inputValue(),
+    await page.locator('#filter-to').inputValue(), await page.locator('#filter-cohort').isChecked(), await source.isDisabled()],
+  ['dates', '2026-11-10', '2026-11-16', true, true]);
+
+  // Off: the source is free again, the earlier choice back in the requests.
+  const freed = answered('analytics', params => params.get('cohort') === null);
+  await page.locator('#filter-cohort').uncheck();
+  await freed;
+  assert.equal(await source.isDisabled(), false);
+  assert.equal(await source.locator('option', { hasText: 'Свой / без проекта' }).count(), 0);
+  await source.selectOption('own');
+  await answered('analytics', params => params.get('source') === 'own');
+  assert.equal(await page.locator('#analytics-body .block-title').first().textContent(), 'Воронка новичков');
+
+  // Something unreadable stored: all time.
+  await page.evaluate(() => localStorage.setItem('admin_filters', '{not json'));
+  await page.reload();
+  await waitForDashboard(page);
+  assert.equal(await page.locator('#filter-period').inputValue(), 'all');
   assert.deepEqual(errors, []);
 });
 

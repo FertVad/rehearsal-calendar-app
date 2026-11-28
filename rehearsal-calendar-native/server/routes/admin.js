@@ -27,7 +27,7 @@ function filtersOf(req, res) {
     return parseFilters(req.query);
   } catch (error) {
     if (!(error instanceof FilterRefused)) throw error;
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: error.message, code: error.code, ...error.details });
     return null;
   }
 }
@@ -74,7 +74,7 @@ router.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
     const directory = await loadPeople(db);
     const listed = [...directory.people.values()]
       .filter((person) => (filters.service || !person.service) && matches(person, filters)
-        && registeredSince(person, filters.since))
+        && registeredSince(person, filters.since, filters.until))
       .sort((a, b) => (b.createdAt ?? -Infinity) - (a.createdAt ?? -Infinity) || b.id - a.id);
     const page = listed.slice(offset, offset + limit);
     const ids = page.map((person) => person.id);

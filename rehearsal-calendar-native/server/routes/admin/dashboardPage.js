@@ -44,8 +44,19 @@ export function generateAdminPageHTML() {
           <option value="30">Последние 30&nbsp;дней</option>
           <option value="90">Последние 90&nbsp;дней</option>
           <option value="all" selected>Всё время</option>
+          <option value="dates">Даты</option>
         </select>
       </label>
+      <!-- Registration dates, UTC days, both in; the test cohort beside them (T-425) -->
+      <div id="filter-dates" class="filter-dates hidden">
+        <label>С
+          <input type="date" id="filter-from">
+        </label>
+        <label>По
+          <input type="date" id="filter-to">
+        </label>
+        <label class="toggle"><input type="checkbox" id="filter-cohort"> Тестовая когорта</label>
+      </div>
       <label>Источник
         <select id="filter-source">
           <option value="" selected>Все</option>
@@ -59,6 +70,9 @@ export function generateAdminPageHTML() {
           <option value="" selected>Все языки</option>
         </select>
       </label>
+      <p class="filter-error hidden" id="filter-error" role="alert"></p>
+      <p class="note hidden" id="filter-dates-note">Дни&nbsp;— по&nbsp;UTC; первый и&nbsp;последний входят в&nbsp;период.</p>
+      <p class="note hidden" id="filter-cohort-note">Все, кто зарегистрировался в&nbsp;эти даты с&nbsp;источником «Свой проект» или «Без проекта», считаются пришедшими из&nbsp;рекламы. Пока переключатель включён, выбрать источник нельзя.</p>
       <p class="note">Служебные аккаунты (адреса на rehearsly.me и demo.rehearsly.me, а также из ADMIN_SERVICE_EMAILS) не входят ни в одну цифру. «Последние N&nbsp;дней» отсчитываются от текущего момента. Период отбирает людей по дате регистрации; карточки вверху&nbsp;— на текущий момент, без учёта периода.</p>
     </section>
 

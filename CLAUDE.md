@@ -707,6 +707,7 @@ The page is in Russian only, no language switch (the owner, 26.11.2026; T-419): 
 
 **Features**:
 - User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
+- Period "Даты" (T-425): `from`/`to`, UTC days, both in, at most 366, refused with a `code` the page names before anything is read; the "Тестовая когорта" switch fixes the source to own + none and puts the dates beside the week before them at the top of the analytics — steps within 7 days of registering, of those whose 7 days are over (`testCohort` in `services/admin/analytics.js`); the dates and the switch are kept in `localStorage` (`admin_filters`)
 - Use of the app (T-294, `services/admin/usage.js`): active today / 7 / 30 days, retention on days 1, 7, 30 by registration week, builds among the active, each invitation from page to join; the users table's "last day in app". Read from migration 016's tables; without them the sections say "no data: migration 016 not applied", never zeros
 - Users table with pagination
 - Bug reports table with inline status management

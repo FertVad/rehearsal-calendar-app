@@ -41,8 +41,48 @@ const CALENDAR_SOURCES_SQL = [AVAILABILITY_SOURCES.GOOGLE, AVAILABILITY_SOURCES.
 
 const PERIODS = { 7: 7, 30: 30, 90: 90, all: null };
 const SOURCES = ['invite', 'own', 'none'];
+// The test cohort (T-425): everyone who did not come by invitation. The source
+// is the earliest active membership, so this is only an approximation of "not
+// invited" — the one signal there is without a migration.
+const COHORT_SOURCES = ['own', 'none'];
+// The longest stretch of dates a request may name, both days counted (CLAUDE.md,
+// rule 8: the cap comes before anything is read for it). The page checks the
+// same number before asking (dashboard.js, MAX_PERIOD_DAYS).
+const MAX_PERIOD_DAYS = 366;
 
-export class FilterRefused extends Error {}
+/** `code` is what the page names the refusal by; the message stays English. */
+export class FilterRefused extends Error {
+  constructor(message, code = 'FILTER', details = {}) {
+    super(message);
+    this.code = code;
+    this.details = details;
+  }
+}
+
+const textOf = (value) => (value === undefined || value === '' ? null : String(value));
+
+/** UTC midnight of a real "YYYY-MM-DD" day, or null — 2026-02-30 is not one. */
+function dayStart(text) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  // Parsed as an ISO instant: Date.UTC would take the year 0001 for 1901.
+  const ms = Date.parse(`${text}T00:00:00.000Z`);
+  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === text ? ms : null;
+}
+
+/** from=YYYY-MM-DD&to=YYYY-MM-DD: UTC days, both in; until is the midnight after `to`. */
+function datesOf(query) {
+  const from = textOf(query.from);
+  const to = textOf(query.to);
+  if (from === null || to === null) throw new FilterRefused('from and to are both required', 'DATES_MISSING');
+  const since = dayStart(from);
+  const last = dayStart(to);
+  if (since === null || last === null) throw new FilterRefused('from and to must be dates, YYYY-MM-DD', 'DATES_FORMAT');
+  if (since > last) throw new FilterRefused('from is after to', 'DATES_ORDER');
+  if ((last - since) / DAY_MS + 1 > MAX_PERIOD_DAYS) {
+    throw new FilterRefused(`at most ${MAX_PERIOD_DAYS} days`, 'DATES_TOO_LONG', { maxDays: MAX_PERIOD_DAYS });
+  }
+  return { since, until: last + DAY_MS };
+}
 
 export const toMs = (value) => {
   if (value === null || value === undefined) return null;
@@ -52,16 +92,32 @@ export const toMs = (value) => {
 const truthy = (value) => value === true || value === 1 || value === '1' || value === 't' || value === 'true';
 export const count = (value) => Number(value) || 0;
 
-/** period, source, lang and the service switch, from a query string; refuses anything else. */
+/**
+ * period (or from and to), source, lang, the test cohort and the service switch,
+ * from a query string; refuses anything else. A period is [since, until):
+ * `until` is null for "the last N days" and "all time", which run up to now.
+ */
 export function parseFilters(query, now = Date.now()) {
-  const period = query.period === undefined || query.period === '' ? 'all' : String(query.period);
-  if (!Object.hasOwn(PERIODS, period)) throw new FilterRefused('period must be 7, 30, 90 or all');
-  const source = query.source === undefined || query.source === '' ? null : String(query.source);
+  const named = textOf(query.period);
+  const dated = named === 'dates' || textOf(query.from) !== null || textOf(query.to) !== null;
+  if (dated && named !== null && named !== 'dates') {
+    throw new FilterRefused('from and to go with period=dates, not with another period', 'DATES_PERIOD');
+  }
+  const period = dated ? 'dates' : named ?? 'all';
+  if (!dated && !Object.hasOwn(PERIODS, period)) throw new FilterRefused('period must be 7, 30, 90, all or dates');
+  const { since, until } = dated ? datesOf(query)
+    : { since: PERIODS[period] === null ? null : now - PERIODS[period] * DAY_MS, until: null };
+  const source = textOf(query.source);
   if (source !== null && !SOURCES.includes(source)) throw new FilterRefused('source must be invite, own or none');
-  const lang = query.lang === undefined || query.lang === '' ? null : String(query.lang);
+  const lang = textOf(query.lang);
   if (lang !== null && !/^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{1,8})?$/.test(lang)) throw new FilterRefused('lang is not a language code');
-  const days = PERIODS[period];
-  return { period, since: days === null ? null : now - days * DAY_MS, source, lang, service: query.service === '1', now };
+  const cohortValue = textOf(query.cohort);
+  if (cohortValue !== null && cohortValue !== '0' && cohortValue !== '1') throw new FilterRefused('cohort must be 0 or 1');
+  const cohort = cohortValue === '1';
+  if (cohort && !dated) throw new FilterRefused('the test cohort needs from and to', 'COHORT_DATES');
+  if (cohort && source !== null) throw new FilterRefused('the test cohort fixes the source', 'COHORT_SOURCE');
+  const sources = cohort ? COHORT_SOURCES : source === null ? null : [source];
+  return { period, since, until, source, sources, cohort, lang, service: query.service === '1', now };
 }
 
 function serviceAddresses() {
@@ -138,9 +194,12 @@ export async function loadPeople(conn) {
 }
 
 export const matches = (person, filters) =>
-  (!filters.source || person.source.kind === filters.source) && (!filters.lang || person.locale === filters.lang);
+  (!filters.sources || filters.sources.includes(person.source.kind)) && (!filters.lang || person.locale === filters.lang);
 
-export const registeredSince = (person, since) => since === null || (person.createdAt !== null && person.createdAt >= since);
+/** Registered in [since, until); a null end is open. */
+export const registeredSince = (person, since, until = null) => (since === null && until === null)
+  || (person.createdAt !== null && (since === null || person.createdAt >= since)
+    && (until === null || person.createdAt < until));
 
 /** The real people these filters select: never a service account. */
 export const counted = (people, filters) => [...people.values()].filter((person) => !person.service && matches(person, filters));

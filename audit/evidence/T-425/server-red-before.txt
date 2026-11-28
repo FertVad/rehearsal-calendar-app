@@ -1,0 +1,26 @@
+T-425 — the route test on the base code (b6127aae), before any fix.
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminCohort.test.js
+
+    ✕ both columns: registrations, onboarding now, steps within seven days, days 1 and 7 (139 ms)
+    ✕ without a language filter, every language the cohort has; the service account nowhere (30 ms)
+    ✕ a step whose seven days are not over is an empty cell, not 0; so is a day not yet over (28 ms)
+    ✕ a single day (26 ms)
+    ✕ without migration 016 the days are empty, the steps still counted (16 ms)
+    ✕ both days in, to the millisecond; every source (37 ms)
+    ✓ the period still means what it did without dates (21 ms)
+    ✕ from after to (68 ms)
+    ✕ no such day (26 ms)
+    ✕ not the format (25 ms)
+    ✕ a time in it (24 ms)
+    ✕ one of the two (25 ms)
+    ✕ longer than the cap (22 ms)
+    ✕ the millennium (25 ms)
+    ✕ dates and a period (20 ms)
+    ✕ the cohort without dates (20 ms)
+    ✕ the cohort with a source (13 ms)
+    ✕ the cap is 366 days, both ends counted (23 ms)
+Tests:       17 failed, 1 passed, 18 total
+
+Typical failures: `expected 400 "Bad Request", got 200 "OK"` (from/to/cohort were ignored,
+so 0001-01-01..9999-12-31 and from > to were answered as "all time"), and `body.cohort`
+undefined. The one passing test is the guard that the old period still means what it did.

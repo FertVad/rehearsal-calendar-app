@@ -36,6 +36,53 @@ export async function lastAppDays(conn, ids = null) {
   return rows && new Map(rows.map((row) => [Number(row.user_id), String(row.last_day).slice(0, 10)]));
 }
 
+const usedKey = (id, day) => `${Number(id)}|${String(day).slice(0, 10)}`;
+
+/** The app days of these people, as a set of usedKey. */
+async function usedDays(conn, people) {
+  if (people.length === 0) return new Set();
+  const rows = await conn.all(
+    `SELECT user_id, CAST(day AS TEXT) AS day FROM native_usage_days WHERE user_id IN (${people.map((_, i) => `$${i + 1}`).join(', ')})`,
+    people.map((person) => person.id));
+  return new Set(rows.map((row) => usedKey(row.user_id, row.day)));
+}
+
+/**
+ * Whether someone opened the app on day n after registering (registration day
+ * is 0), in their zone: null when that day is not over yet, or fell before
+ * recording began — before 016, nobody's use was recorded.
+ */
+function openedOnDay(person, n, now, firstDay, used) {
+  const target = addDays(dateIn(person.createdAt, person.timezone), n);
+  if (target >= dateIn(now, person.timezone) || firstDay === null || target < firstDay) return null;
+  return used.has(usedKey(person.id, target));
+}
+
+/**
+ * Days n of each group (T-425's test cohort and the week before it): per day,
+ * who opened the app and of how many that day is over for. null without 016.
+ */
+export async function openedOnDays(conn, groups, now, days) {
+  const recorded = await readRecorded(async () => {
+    const [first, used] = await Promise.all([
+      conn.get('SELECT CAST(MIN(day) AS TEXT) AS first_day FROM native_usage_days'),
+      usedDays(conn, [...new Map(groups.flat().map((person) => [person.id, person])).values()]),
+    ]);
+    return { firstDay: first?.first_day ? String(first.first_day).slice(0, 10) : null, used };
+  });
+  if (recorded === null) return null;
+  return groups.map((people) => Object.fromEntries(days.map((n) => {
+    const tally = { opened: 0, of: 0 };
+    for (const person of people) {
+      const opened = person.createdAt === null ? null : openedOnDay(person, n, now, recorded.firstDay, recorded.used);
+      if (opened === null) continue;
+      tally.of += 1;
+      if (opened) tally.opened += 1;
+    }
+    return [n, tally];
+  })));
+}
+
 /** "YYYY-MM-DD" of the Monday of a date's week. */
 function mondayOf(date) {
   const back = (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7;
@@ -49,7 +96,8 @@ function mondayOf(date) {
  * @param cohort   those of them registered in the period
  */
 export async function usage(conn, filters, { people, projects }, everyone, cohort) {
-  const { now, since } = filters;
+  const { now, since, until } = filters;
+  const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
   const recorded = await readRecorded(async () => {
     const [last, first, builds, invites] = await Promise.all([
       lastAppDays(conn),
@@ -59,8 +107,8 @@ export async function usage(conn, filters, { people, projects }, everyone, cohor
                 WHERE d.app_build IS NOT NULL AND d.day = (SELECT MAX(x.day) FROM native_usage_days x
                   WHERE x.user_id = d.user_id AND x.app_build IS NOT NULL)`),
       conn.all(`SELECT project_id, SUM(page_opens) AS page_opens, SUM(app_opens) AS app_opens, SUM(joins) AS joins
-                FROM native_invite_counts WHERE day >= $1 GROUP BY project_id`,
-      [since === null ? '0001-01-01' : new Date(since).toISOString().slice(0, 10)]),
+                FROM native_invite_counts WHERE day >= $1 ${until === null ? '' : 'AND day < $2'} GROUP BY project_id`,
+      [since === null ? '0001-01-01' : dayOf(since), ...(until === null ? [] : [dayOf(until)])]),
     ]);
     if (last === null) return null;
     return { last, firstDay: first?.first_day ? String(first.first_day).slice(0, 10) : null, builds, invites };
@@ -80,13 +128,8 @@ export async function usage(conn, filters, { people, projects }, everyone, cohor
   }
 
   // Retention: of the people registered in a week, who opened the app on
-  // day 1, 7 and 30 after registering (registration day is 0), in their zone.
-  // Only people whose day N is over and fell after recording began count:
-  // before 016, nobody's use was recorded.
-  const days = cohort.length ? await conn.all(
-    `SELECT user_id, CAST(day AS TEXT) AS day FROM native_usage_days WHERE user_id IN (${cohort.map((_, i) => `$${i + 1}`).join(', ')})`,
-    cohort.map((person) => person.id)) : [];
-  const used = new Set(days.map((row) => `${Number(row.user_id)}|${String(row.day).slice(0, 10)}`));
+  // day 1, 7 and 30 after registering (openedOnDay).
+  const used = await usedDays(conn, cohort);
   const weeks = new Map();
   for (const person of cohort) {
     if (person.createdAt === null) continue;
@@ -98,10 +141,10 @@ export async function usage(conn, filters, { people, projects }, everyone, cohor
     const row = weeks.get(week);
     row.registered += 1;
     for (const n of RETENTION_DAYS) {
-      const target = addDays(registered, n);
-      if (target >= todayOf(person) || recorded.firstDay === null || target < recorded.firstDay) continue;
+      const opened = openedOnDay(person, n, now, recorded.firstDay, used);
+      if (opened === null) continue;
       row[`day${n}`].of += 1;
-      if (used.has(`${person.id}|${target}`)) row[`day${n}`].opened += 1;
+      if (opened) row[`day${n}`].opened += 1;
     }
   }
   const retention = [...weeks.values()].sort((a, b) => b.week.localeCompare(a.week)).map((row) => ({

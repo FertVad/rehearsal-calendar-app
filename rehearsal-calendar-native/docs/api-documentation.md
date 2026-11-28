@@ -1923,6 +1923,58 @@ Join a project using an invite code.
 
 ---
 
+### Admin statistics filters
+
+`GET /admin/api/stats`, `/admin/api/analytics` and `/admin/api/users` (admin
+token) take the same filters, and refuse a malformed one with `400` before
+anything is read:
+
+| Parameter | Values |
+|-----------|--------|
+| `period` | `7`, `30`, `90` (days back from now), `all` (default), or `dates` |
+| `from`, `to` | `YYYY-MM-DD`, UTC days, both in, at most 366 days; both or neither. `from`/`to` alone mean `period=dates`; with another `period` they are refused (T-425) |
+| `cohort` | `1`: the test cohort — needs `from`/`to`; the source is fixed to `own` + `none` (the earliest active membership, as in the users table), so `source` is refused with it |
+| `source` | `invite`, `own`, `none` |
+| `lang` | a language code |
+| `service` | `1`: the users table shows service accounts |
+
+A period with dates bounds every section: registrations, joins, notifications,
+email codes and invitation counts fall in `[from, to + 1 day)`; a project is
+listed when created in it or with a rehearsal starting on `from` or later.
+
+```json
+400 { "error": "from is after to", "code": "DATES_ORDER" }
+```
+
+Codes: `DATES_MISSING`, `DATES_FORMAT` (not a real day), `DATES_ORDER`,
+`DATES_TOO_LONG` (with `maxDays`), `DATES_PERIOD`, `COHORT_DATES`,
+`COHORT_SOURCE`; `FILTER` for the rest. The page names each in Russian.
+
+With `cohort=1`, `/admin/api/analytics` adds `cohort`: the dates (`test`) and
+the seven days before `from` (`before`), the same source and language.
+
+```json
+"cohort": {
+  "stepDays": 7, "recorded": true,
+  "test": { "from": "2026-11-10", "to": "2026-11-16", "days": 7, "registered": 2, "perDay": 0.3,
+    "onboarding": { "count": 1, "of": 2, "rate": 50 },
+    "project": { "count": 1, "of": 2, "rate": 50 }, "inProject": null, "marks": { "count": 0, "of": 2, "rate": 0 },
+    "day1": { "count": 1, "of": 2, "rate": 50 }, "day7": null },
+  "before": { "from": "2026-11-03", "to": "2026-11-09", "...": "the same fields" }
+}
+```
+
+- `onboarding`: now, of everyone registered (no time is recorded for it).
+- `project` (owns a project created within `stepDays` of registering),
+  `inProject` (earliest active membership), `marks` (earliest kept mark):
+  reached within `stepDays`, of those whose `stepDays` are over.
+- `day1`, `day7`: opened the app that day after registering, in their zone,
+  of those for whom it is over (as the retention table). `recorded: false`
+  without migration 016.
+- A cell is `null` when nobody's time is up — never 0.
+
+---
+
 ## Data Models
 
 ### User
