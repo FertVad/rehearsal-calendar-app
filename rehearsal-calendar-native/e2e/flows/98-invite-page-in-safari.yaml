@@ -26,19 +26,24 @@
 # suspended it (T-277, docs/e2e.md). Safari's question still comes: it is
 # asked because the app is installed, not because it runs.
 #
-# Safari starts with no tabs (fresh-safari.yaml, T-404): ".*Rehearsly.*" is in
-# the title of any page of ours, and a tab restored from flow 70 or an earlier
-# run - "Privacy Policy — Rehearsly" - would answer the first wait before this
-# link's page came.
+# Safari starts with no tabs (T-404): ".*Rehearsly.*" is in the title of any
+# page of ours, and a tab restored from flow 70 or an earlier run - "Privacy
+# Policy — Rehearsly" - would answer the first wait before this link's page
+# came. And the Safari the link launches is checked readable
+# (open-in-safari.yaml, T-431): on c57a1dc's night run the one openLink
+# launched came up with its home inaccessible and its accessibility off, and
+# Maestro failed the first wait as "App crashed or stopped" with the page and
+# Safari's question on the screen.
 appId: com.apple.mobilesafari
 name: Invite page in Safari reads Rehearsly and its App Store steps in every language
 tags:
   - invite
 ---
 - stopApp: ${APP_ID}
-- runFlow: ../subflows/fresh-safari.yaml
-- openLink:
-    link: ${API_URL.replace('/api', '')}/invite/${TWELFTH_INVITE}?lang=en
+- runFlow:
+    file: ../subflows/open-in-safari.yaml
+    env:
+      LINK: ${API_URL.replace('/api', '')}/invite/${TWELFTH_INVITE}?lang=en
 # The brand, or Safari's question 'Open this page in "Rehearsly"?', which hides
 # the page from the screen's reader until it is answered.
 - extendedWaitUntil:
@@ -48,11 +53,22 @@ tags:
     visible: "Cancel"
     timeout: 5000
     optional: true
+# The question's Cancel through tap-and-see.yaml (T-207): the simulator lost
+# it in four runs of this flow alone of nine on 28.11, base and T-431 alike -
+# backboardd's "we already have a service for senderID", then "didn't see a
+# previous touch down ... skipping event" - and the question stayed over the
+# page for the whole wait below. Run alone, it is the first tap of Maestro's
+# session, the tap the simulator loses most (audit/evidence/T-431).
 - runFlow:
     when:
       visible: "Cancel"
     commands:
-      - tapOn: "Cancel"
+      - runFlow:
+          file: ../subflows/tap-and-see.yaml
+          env:
+            TAP: "Cancel"
+            GONE: "Open this page in.*"
+            WAIT_MS: 5000
 - extendedWaitUntil:
     visible: "Open in the App Store"
     timeout: 15000

@@ -1,0 +1,66 @@
+T-431 - green after: flows 70 and 98 open their link through
+e2e/subflows/open-in-safari.yaml (openInSafari, e2e/safari.mjs).
+
+1. The red condition: run.mjs's firstSafari step switched off for the run
+(as in red-before.txt), so the flow's link launches the boot's first Safari.
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml      (first boot)
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (42s)
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safaris replaced, their home inaccessible (open-in-safari.yaml): 0
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+  (this boot's first Safari came up readable)
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml      (second boot)
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (1m 2s)
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safaris replaced, their home inaccessible (open-in-safari.yaml): 1
+[e2e]   2026-11-28T18:01:44.161Z  Safari 93760 came up with its home directory inaccessible: stopped, http://127.0.0.1:3001/invite/B5ETSC2S?lang=en opened again
+[e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
+
+artifacts 2026-11-28_195958:
+  MobileSafari[93760] 08:01:17.644968  ax 0  home INACCESSIBLE  | ... Opening URL (http://127.0.0.1:3001/invite/B5ETSC2S?lang=en)
+  MobileSafari[94025] 08:01:39.348982  ax 1  home readable      | last terminate (asked) | ... Opening URL (same link)
+  device-xctest.log: kAXErrorAPIDisabled 0; device-simulator.log: no lost touch.
+
+The Safari that failed the night run came, was not handed to the flow, and
+the flow passed on the next one.
+
+2. The runner as it is (firstSafari on):
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml e2e/flows/70-privacy-lists-resend.yaml
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (37s)
+[Passed] Privacy policy lists Resend in every language (28s)
+2/2 Flows Passed in 1m 5s
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safaris replaced, their home inaccessible (open-in-safari.yaml): 0
+[e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
+
+3. Final, with "Cancel" through tap-and-see.yaml (README.md, "A second
+instability"):
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml e2e/flows/70-privacy-lists-resend.yaml
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (40s)
+[Passed] Privacy policy lists Resend in every language (31s)
+[e2e] taps taken again (tap-and-see.yaml): 0
+[e2e] Safaris replaced, their home inaccessible (open-in-safari.yaml): 0
+[e2e] Safari launches: 2, tabs restored: 0 (fresh-safari.yaml)
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml
+[Passed] Invite page in Safari reads Rehearsly and its App Store steps in every language (47s)
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-28T18:20:38.106Z  tapped "Cancel" again: no "Open this page in.* gone" after the first tap
+[e2e] Safaris replaced, their home inaccessible (open-in-safari.yaml): 0
+$ node ../audit/evidence/T-431/lost-touches.mjs e2e/out/artifacts
+artifacts/2026-11-28_201905/Invite page in Safari .../logs/device-simulator.log
+  lost: 1 20:20:29.373          <- backboardd lost the first "Cancel"
+  taps: 5, first 20:20:27.317 Tap on "${TAP}"
+
+The run before this change of the flow, 200907 (plain tapOn), lost it the same
+way and failed at "Open in the App Store".
+
+4. Unit tests: node --test e2e/__tests__/safari.test.mjs - 24 pass, the new
+ones: the link opened with openurl and its exact address, Safari left running
+when readable; a homeless one stopped and the link opened again; three
+homeless an error, Safari stopped; never started an error; no Safari after
+the link an error.

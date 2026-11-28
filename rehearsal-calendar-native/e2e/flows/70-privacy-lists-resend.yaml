@@ -31,19 +31,22 @@
 # with it behind Safari Maestro's driver read the app's screen, not the page,
 # and once waited 60 s on it as iOS suspended it (T-277, docs/e2e.md).
 #
-# Safari starts with no tabs (fresh-safari.yaml, T-404). It restored 26 at
-# every launch, from earlier runs and flows, this flow's four links among them:
-# a restored English page at its anchor, an older build's, could answer the
-# first wait before this link's page came.
+# Safari starts with no tabs (T-404). It restored 26 at every launch, from
+# earlier runs and flows, this flow's four links among them: a restored English
+# page at its anchor, an older build's, could answer the first wait before this
+# link's page came. And the Safari the first link launches is checked readable
+# (open-in-safari.yaml, T-431): one that openLink launched came up unreadable
+# to Maestro on flow 98's night run. The later links open in that Safari.
 appId: com.apple.mobilesafari
 name: Privacy policy lists Resend in every language
 tags:
   - legal
 ---
 - stopApp: ${APP_ID}
-- runFlow: ../subflows/fresh-safari.yaml
-- openLink:
-    link: ${API_URL.replace('/api', '')}/privacy?lang=en#processors-en
+- runFlow:
+    file: ../subflows/open-in-safari.yaml
+    env:
+      LINK: ${API_URL.replace('/api', '')}/privacy?lang=en#processors-en
 - extendedWaitUntil:
     visible: ".*sends our emails: your codes for signing up.*Ireland.*"
     timeout: 30000

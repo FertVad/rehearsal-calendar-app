@@ -1,0 +1,25 @@
+# A link opened in a fresh Safari that Maestro's driver can read - in place of
+# fresh-safari.yaml and openLink (T-431).
+#
+#   env: LINK - a page of the local server
+#
+# As fresh-safari.yaml - Safari stopped, its tabs removed (T-404) - then the
+# link opened with `simctl openurl`, as Maestro's openLink opens it, by the
+# runner's helper, which reads the first lines of the Safari it launched in the
+# device log. A Safari can come up with its home directory inaccessible and its
+# accessibility off ("app ax: 0") for its whole life, and Maestro then calls
+# every read of it a crash: the boot's first did so often (T-418), and the
+# fifth of c57a1dc's night run did too, 2 h 40 min after the boot, launched by
+# flow 98's openLink. One that came up so is stopped and the link opened again
+# in a new one; after three the helper answers 500 and the flow fails here
+# (server-with-mailbox.mjs, /open-in-safari; e2e/safari.mjs, openInSafari).
+# The runner prints each Safari replaced after the run.
+#
+# Not for a flow whose Safari the app launches (a tap on a link): that one runs
+# fresh-safari.yaml.
+appId: com.apple.mobilesafari
+---
+- runScript:
+    file: ../scripts/open-in-safari.js
+    env:
+      LINK: ${LINK}

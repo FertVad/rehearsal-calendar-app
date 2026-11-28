@@ -1,0 +1,18 @@
+# T-431 probe, not a flow of the suite: flow 98's opening, forty times in one
+# boot - Rehearsly stopped, Safari stopped with its tabs gone
+# (fresh-safari.yaml), the invite page opened with openLink (a new Safari
+# process each time), and flow 98's first wait. It stops at the first Safari
+# Maestro cannot read; safari-starts.mjs then tells each Safari's home.
+appId: com.apple.mobilesafari
+name: T-431 probe - flow 98's opening forty times
+---
+- stopApp: ${APP_ID}
+- repeat:
+    times: 40
+    commands:
+      - runFlow: ../../../rehearsal-calendar-native/e2e/subflows/fresh-safari.yaml
+      - openLink:
+          link: ${API_URL.replace('/api', '')}/invite/${TWELFTH_INVITE}?lang=en
+      - extendedWaitUntil:
+          visible: ".*Rehearsly.*"
+          timeout: 30000

@@ -282,9 +282,10 @@ starts the service at a sign-in, and this one is gone.
 
 ## Safari over a running app
 
-A Safari flow stops Rehearsly first: `- stopApp: ${APP_ID}`, then
-`- runFlow: ../subflows/fresh-safari.yaml` (Safari stopped, its tabs gone; next
-section) and `openLink`. The flows run one after another on one simulator,
+A Safari flow stops Rehearsly first: `- stopApp: ${APP_ID}`, then opens its
+link with `../subflows/open-in-safari.yaml` (Safari stopped, its tabs gone, the
+link opened in a Safari Maestro can read; the next two sections and "A Safari
+without its home"). The flows run one after another on one simulator,
 and the flow before a Safari one leaves the app running. With the app behind
 Safari, Maestro's driver (2.11.0) still took it for the app on screen: after
 the link opened it read Rehearsly's hierarchy, not the page's - flow 98's
@@ -310,7 +311,9 @@ and again at 12:51 (after three runs of flow 70 in T-403) (T-404,
 an older build's policy at its anchor, or any page of ours for flow 98's
 ".*Rehearsly.*" - before the link's own; that is why Safari starts empty. So
 every flow opens Safari through `e2e/subflows/fresh-safari.yaml` first (44
-before each of its two pages, 70, 98): its script asks the runner's helper,
+before each of its two pages, 107; 70 and 98 through `open-in-safari.yaml`,
+which does the same and then opens their link - "A Safari without its home"):
+its script asks the runner's helper,
 `GET /fresh-safari?device=<udid>` in `server-with-mailbox.mjs` (`freshSafari`
 in `e2e/safari.mjs`), to `simctl terminate` Safari and remove `SafariTabs.db`
 and `BrowserState.db` from the simulator's own `Library/Safari` (`simctl getenv
@@ -378,8 +381,44 @@ was:
     [e2e] Safari's first launch since the boot: 25816, its home readable; stopped
 
 Every flow's Safari is then a later one, flows 44 and 107 run alone among
-them; no flow needs a step of its own for it. A Safari that never says it
-started stops the run as the machine's (75).
+them. A Safari that never says it started stops the run as the machine's (75).
+A later Safari is not safe either (next section).
+
+## A Safari without its home
+
+"Never a later one" above held for the logs T-418 had. On c57a1dc's night run
+(28.11) flow 98 failed the same way - `kAXErrorAPIDisabled`, "App crashed or
+stopped" at its first wait, the page and Safari's question on the screen - and
+its Safari, launched by the flow's `openLink`, was the boot's fifth, 2 h 40
+min after the boot, the runner's first launch readable: "home directory is
+inaccessible" in its first lines, "app ax: 0" (T-431, `audit/evidence/T-431/`).
+Why iOS starts a Safari so is not in the logs: CoreFoundation says it before
+the process has talked to cfprefsd, with the same HOME as every readable
+Safari. Forty Safaris launched one after another by flow 98's opening, in one
+boot, were all readable; both late and boot-first ones came after a time with
+no Safari running ("found nothing to terminate").
+
+So a flow that opens a link in Safari does not open it itself: it runs
+`e2e/subflows/open-in-safari.yaml` with `LINK`, in place of `fresh-safari.yaml`
+and `openLink` (flows 70 and 98). The runner's helper (`GET /open-in-safari`
+in `server-with-mailbox.mjs`, `openInSafari` in `e2e/safari.mjs`) makes Safari
+fresh, opens the link with `simctl openurl` - what Maestro's `openLink` does,
+CoreSimulatorBridge's "Opening URL" in the device log either way - and reads
+the new Safari's lines in the device log until it says it started. One that
+said its home is inaccessible is stopped and the link opened again in a new
+process; after three the flow fails at the subflow. Each one replaced is
+printed after the run:
+
+    [e2e] Safaris replaced, their home inaccessible (open-in-safari.yaml): 0
+
+Flows 44 and 107, whose Safari the app launches with a tap, still take what
+comes (`fresh-safari.yaml`): a Safari running in front would cover the app
+they tap in.
+
+Flow 98's "Cancel" on Safari's question goes through `tap-and-see.yaml`: run
+alone, it is the first tap of Maestro's session, and the simulator lost it in
+four runs of nine on 28.11 (see "A lost tap"; in 6 of the 7 lost touches in
+the logs kept then, the lost one was the session's first tap).
 
 ## A link to an app the simulator does not have
 

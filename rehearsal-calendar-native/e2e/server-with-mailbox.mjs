@@ -153,6 +153,15 @@
  *                                            (and BrowserState.db); 500 and
  *                                            nothing removed unless Safari is
  *                                            known to be stopped (safari.mjs)
+ *   GET /open-in-safari?device=<udid>&link=<a local page>
+ *                                            the same, then `simctl openurl`
+ *                                            the link (as openLink does), and
+ *                                            the Safari it launched checked
+ *                                            readable in the device log; one
+ *                                            that came up with its home
+ *                                            inaccessible stopped and the link
+ *                                            opened again, 500 after three
+ *                                            (openInSafari, T-431)
  *
  * It delivers a push to the app on the simulator, which receives none from
  * Expo — as the server's own would arrive (flow 75, T-229):
@@ -194,11 +203,14 @@ import {
 } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
 import { ellipses, inkBox } from './ink.mjs';
-import { freshSafari } from './safari.mjs';
+import { freshSafari, openInSafari } from './safari.mjs';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
 const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
 const TAPS_AGAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'taps-again.log');
+// Kept across the server's restarts at a turn of the day; run.mjs empties it
+// before the flows and prints it after them.
+const SAFARIS_REPLACED = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'safaris-replaced.log');
 const APP_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'app.json');
 // The minimum a flow raised lapses on its own, as a hold does.
 const MIN_BUILD_WINDOW_MS = 180000;
@@ -620,6 +632,26 @@ http.createServer((request, response) => {
       answer(200, { was, removed });
     }, (error) => {
       console.error(`[e2e] fresh-safari: ${error.message}`);
+      answer(500, { error: error.message });
+    });
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/open-in-safari') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    // Only the local server's own pages: what the flows open.
+    const link = url.searchParams.get('link') || '';
+    if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+\/\S*$/.test(link)) return answer(400, { error: `not a local page: ${link}` });
+    openInSafari(device, link).then(({ pid, homeless }) => {
+      for (const gone of homeless) {
+        const line = `${new Date().toISOString()}  Safari ${gone} came up with its home directory inaccessible: stopped, ${link} opened again`;
+        console.log(`[e2e] ${line}`);
+        fs.appendFileSync(SAFARIS_REPLACED, `${line}\n`);
+      }
+      console.log(`[e2e] ${link} open in Safari ${pid}, its home readable`);
+      answer(200, { pid, homeless });
+    }, (error) => {
+      console.error(`[e2e] open-in-safari: ${error.message}`);
       answer(500, { error: error.message });
     });
     return;

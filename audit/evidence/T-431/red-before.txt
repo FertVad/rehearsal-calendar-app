@@ -1,0 +1,71 @@
+T-431 - red before.
+
+1. The night run's failure (e2e/out/failed/full-e2e-c57a1dc-2026-11-28T16-39-03-505Z,
+   not in git), flow 98's own logs:
+
+maestro.log
+  18:36:52.063 Opening link http://127.0.0.1:3001/invite/WGRZPBFY?lang=en for app: com.apple.mobilesafari
+  18:36:54.640 Assert that ".*Rehearsly.*" is visible RUNNING
+  18:37:12.056 CommandFailed: App crashed or stopped while executing flow
+  (thrown from IOSDriver.contentDescriptor - a read of the screen - after 17.4 s,
+  not at the step's 30 s)
+
+device-xctest.log (driver)
+  06:36:54.659558 Detected running apps: ["com.apple.mobilesafari"]
+  ... Find the Application 'com.apple.mobilesafari' (retry 1), (retry 2)
+  06:37:11.910168 Snapshot failure, cannot return view hierarchy due to ... Code=8
+                  "Error getting main window kAXErrorAPIDisabled"
+  ... the same at 06:37:28; Maestro, its app's window not readable, calls it a crash.
+
+$ node ../audit/evidence/T-431/safari-starts.mjs e2e/out
+failed/full-e2e-c57a1dc-.../Invite page in Safari .../logs/device-simulator.log
+  MobileSafari[56170] 06:36:53.725695  ax 0  home INACCESSIBLE  | last terminate 18:36:50.974226 (nothing to terminate)  | last open 18:36:53.112071 Opening URL (http://127.0.0.1:3001/invite/WGRZPBFY?lang=en)
+
+  56170's first lines (CoreFoundation), before it talked to cfprefsd:
+  "Disabling saving preferences for { com.apple.mobilesafari, kCFPreferencesCurrentUser, any host, (null) } because home directory is inaccessible"
+  ... the same for com.apple.Accessibility at 06:36:53.783, then every
+  WebContent of it: "AXS AccessibilityEnabled: (app ax: 0), ax settings: 1, cached: 1".
+  Its HOME in runningboardd's job (.../Containers/Data/Application/AD7D3E95-...)
+  is the one every readable Safari had (d82db11's 95290, T-416's 36426).
+  No crash report: Safari did not crash; it was never readable.
+
+  checks.log: "[e2e] Safari's first launch since the boot: 99489, its home
+  readable; stopped" - 56170 was the boot's fifth Safari ("Safari launches: 5"),
+  2 h 40 min after the boot, in the run's second Maestro batch, where the
+  driver never saw Safari running before flow 98. So T-418's "only the boot's
+  first Safari comes up so" does not hold, and the runner's first launch does
+  not cover it.
+
+  Not a lost tap: the step that failed is a wait, no tap before it in the flow.
+
+2. On demand. A late homeless Safari cannot be ordered: the probe below opened
+flow 98's page forty times in one boot (probe-open-invite-40.yaml, base
+code), every Safari readable:
+
+$ npm run e2e -- ../audit/evidence/T-431/probe-open-invite-40.yaml
+[e2e] Safari's first launch since the boot: 68696, its home inaccessible; stopped
+[Passed] T-431 probe - flow 98's opening forty times (4m 2s)
+[e2e] Safari launches: 40, tabs restored: 0 (fresh-safari.yaml)
+$ node ../audit/evidence/T-431/safari-starts.mjs e2e/out/artifacts/2026-11-28_190814
+  40 x "ax 1  home readable", each after "terminate (asked)"
+  (the runner's own first, 68696, was homeless again - the boot's first.)
+
+The same Safari is had on demand where T-418 found it: the boot's first. Flow
+98 at db83fa28 (fresh-safari.yaml + openLink), with run.mjs's firstSafari step
+switched off for this run only (`if (false)`, put back after), so the flow's
+openLink launches the boot's first Safari:
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+[Failed] Invite page in Safari reads Rehearsly and its App Store steps in every language (48s) (App crashed or stopped while executing flow, please check diagnostic logs: ~/Library/Logs/DiagnosticReports directory)
+1/1 Flow Failed
+[e2e] Safari launches: 1, tabs restored: 0 (fresh-safari.yaml)
+
+artifacts 2026-11-28_192008:
+  MobileSafari[75338] 07:21:48.133533  ax 0  home INACCESSIBLE  | last terminate 19:21:44.581274 (nothing to terminate)  | last open 19:21:47.204657 Opening URL (http://127.0.0.1:3001/invite/NXF9Y5SK?...)
+  19:21:49.466 Assert that ".*Rehearsly.*" is visible RUNNING
+  19:22:06.787 CommandFailed: App crashed or stopped while executing flow
+  device-xctest.log: kAXErrorAPIDisabled 6 times
+
+The night's failure, step for step.

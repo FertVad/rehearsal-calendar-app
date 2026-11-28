@@ -737,6 +737,7 @@ async function main() {
   const parts = path.join(OUT, 'junit-parts');
   fs.rmSync(parts, { recursive: true, force: true });
   fs.mkdirSync(parts, { recursive: true });
+  fs.rmSync(SAFARIS_REPLACED_LOG, { force: true });
   const reports = [];
   const earlierTaps = [];
   const total = releaseFlows.length + debugFlows.length;
@@ -802,6 +803,7 @@ async function main() {
     await runFlows(debugFlows);
   }
   reportTapsAgain(earlierTaps);
+  reportSafarisReplaced();
   await reportSafari(artifacts, [...releaseFlows, ...debugFlows]);
 }
 
@@ -854,6 +856,22 @@ function tapsAgain() {
 function reportTapsAgain(earlier = []) {
   const lines = [...earlier, ...tapsAgain()];
   step(`taps taken again (tap-and-see.yaml): ${lines.length}`);
+  for (const line of lines) step(`  ${line}`);
+}
+
+// Each Safari open-in-safari.yaml replaced, written by the server
+// (server-with-mailbox.mjs, /open-in-safari); emptied before the flows.
+const SAFARIS_REPLACED_LOG = path.join(OUT, 'safaris-replaced.log');
+
+/**
+ * The Safaris e2e/subflows/open-in-safari.yaml stopped, opening its link again
+ * in a new one: each came up with its home directory inaccessible, unreadable
+ * to Maestro (T-431, docs/e2e.md "A Safari without its home"). Printed every
+ * run, so how often it happens stays in sight.
+ */
+function reportSafarisReplaced() {
+  const lines = fs.existsSync(SAFARIS_REPLACED_LOG) ? fs.readFileSync(SAFARIS_REPLACED_LOG, 'utf8').split('\n').filter(Boolean) : [];
+  step(`Safaris replaced, their home inaccessible (open-in-safari.yaml): ${lines.length}`);
   for (const line of lines) step(`  ${line}`);
 }
 

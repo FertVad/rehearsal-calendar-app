@@ -7,7 +7,7 @@ import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { firstSafari, freshSafari, runsFreshSafari, safariLaunches, safariVerdict } from '../safari.mjs';
+import { firstSafari, freshSafari, openInSafari, runsFreshSafari, safariLaunches, safariVerdict } from '../safari.mjs';
 
 const UDID = '0E96462E-BD5B-4C19-9847-8E63D550B36E';
 const STORES = ['BrowserState.db', 'SafariTabs.db', 'SafariTabs.db-shm', 'SafariTabs.db-wal'];
@@ -141,6 +141,7 @@ test('a fresh flow passed with no launch in its log: red, the check saw nothing'
 test('the flows that run fresh-safari.yaml', () => {
   assert.equal(runsFreshSafari('---\n- stopApp: ${APP_ID}\n- runFlow: ../subflows/fresh-safari.yaml\n- openLink: x\n'), true);
   assert.equal(runsFreshSafari('---\n- runFlow:\n    file: ../subflows/fresh-safari.yaml\n'), true);
+  assert.equal(runsFreshSafari('---\n- stopApp: ${APP_ID}\n- runFlow: ../subflows/open-in-safari.yaml\n- openLink: x\n'), true);
   assert.equal(runsFreshSafari('---\n- runFlow:\n    file: ../subflows/open-link.yaml\n'), false);
   assert.equal(runsFreshSafari('# Safari starts with no tabs (fresh-safari.yaml, T-404).\n---\n- openLink: x\n'), false);
 });
@@ -161,6 +162,10 @@ function booted(home, logs) {
     if (command === 'getenv') return home;
     if (command === 'terminate') return '';
     if (command === 'launch') { launched += 1; return `com.apple.mobilesafari: ${1000 + launched}`; }
+    if (command === 'openurl') { launched += 1; return ''; }
+    if (command === 'spawn' && args[1] === 'launchctl') {
+      return `-\t0\tcom.apple.Preferences\n${1000 + launched}\t0\tUIKitApplication:com.apple.mobilesafari[3186][rb-legacy]\n`;
+    }
     if (command === 'spawn') {
       const pid = Number(/processIdentifier == (\d+)/.exec(args.at(-1))[1]);
       const answers = logs[pid - 1001];
@@ -200,4 +205,54 @@ test('a launch with no process in simctl\'s answer: an error', async () => {
   const { home } = device();
   const run = async (command) => (command === 'getenv' ? home : command === 'launch' ? 'An error was encountered' : '');
   await assert.rejects(firstSafari(UDID, { run, wait: async () => {} }), /gave no process: An error was encountered/);
+});
+
+// A link opened in a fresh Safari Maestro can read (T-431): tabs removed, the
+// link opened as openLink opens it, the Safari it launched checked.
+const LINK = 'http://127.0.0.1:3001/invite/WGRZPBFY?lang=en';
+
+test('a link in a fresh Safari: its tabs removed, the link opened with openurl, Safari left running once it said it started with its home readable', async () => {
+  const { home, left } = device();
+  const { run, calls, wait } = booted(home, [['', STARTED]]);
+  assert.deepEqual(await openInSafari(UDID, LINK, { run, wait }), { pid: 1001, homeless: [] });
+  assert.deepEqual(calls.filter((c) => c !== 'getenv'), ['terminate', 'openurl', 'spawn', 'spawn', 'spawn']);
+  assert.deepEqual(left(), ['Bookmarks.db', 'History.db']);
+});
+
+test('the link opened with its exact address', async () => {
+  const { home } = device();
+  const { run, wait } = booted(home, [[STARTED]]);
+  const opened = [];
+  await openInSafari(UDID, LINK, { run: async (command, ...args) => { if (command === 'openurl') opened.push(args); return run(command, ...args); }, wait });
+  assert.deepEqual(opened, [[UDID, LINK]]);
+});
+
+test('a Safari up with its home inaccessible is not handed over: stopped, the link opened again, and the readable one kept', async () => {
+  const { home } = device();
+  const { run, calls, wait } = booted(home, [[`${HOMELESS}\n${STARTED}`], [STARTED]]);
+  assert.deepEqual(await openInSafari(UDID, LINK, { run, wait }), { pid: 1002, homeless: [1001] });
+  assert.deepEqual(calls.filter((c) => c !== 'getenv'),
+    ['terminate', 'openurl', 'spawn', 'spawn', 'terminate', 'openurl', 'spawn', 'spawn']);
+});
+
+test('three Safaris up without their home: an error naming them, Safari stopped', async () => {
+  const { home } = device();
+  const homeless = [`${HOMELESS}\n${STARTED}`];
+  const { run, calls, wait } = booted(home, [homeless, homeless, homeless, [STARTED]]);
+  await assert.rejects(openInSafari(UDID, LINK, { run, wait }), /home directory inaccessible 3 times \(1001, 1002, 1003\)/);
+  assert.equal(calls.filter((c) => c === 'openurl').length, 3);
+  assert.equal(calls.filter((c) => c !== 'getenv').at(-1), 'terminate');
+});
+
+test('a Safari the link launched that never says it started: an error, Safari stopped', async () => {
+  const { home } = device();
+  const { run, calls, wait } = booted(home, [['']]);
+  await assert.rejects(openInSafari(UDID, LINK, { run, wait, startMs: 5000 }), /Safari \(1001\) did not say it had started .* in 5 s/);
+  assert.equal(calls.filter((c) => c !== 'getenv').at(-1), 'terminate');
+});
+
+test('a link that launched no Safari: an error', async () => {
+  const { home } = device();
+  const run = async (command) => (command === 'getenv' ? home : '');
+  await assert.rejects(openInSafari(UDID, LINK, { run, wait: async () => {}, startMs: 3000 }), /no Safari running after 3 s/);
 });
