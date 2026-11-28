@@ -1,0 +1,30 @@
+T-424, item 6 — the module is reached in a built app on the new architecture.
+
+Source: the supervisor's e2e run in this tree, 28.11.2026 10:15 (after commit
+7a00222a), Debug build, flow e2e/flows/01-login.yaml — junit.xml: 1 test,
+0 failures, status SUCCESS. Copied from rehearsal-calendar-native/e2e/out/metro.log.
+
+The generated project the build came from — e2e/.native/ios/Podfile.properties.json:
+  "newArchEnabled": "true"
+and RehearslyAttribution.m is in e2e/.native/ios/Rehearsly.xcodeproj/project.pbxproj.
+
+Metro log, the app's first lines after the bundle:
+
+iOS Bundled 3913ms index.ts (2124 modules)
+ INFO  [INFO] Using EXPO_PUBLIC_API_URL: http://127.0.0.1:3001/api
+ WARN  [WARN] [Attribution] the install conversion value was not taken: {"code": "attribution", "message": "The operation couldn’t be completed. (SKANErrorDomain error 10.)", "name": "Error", "stack": "Error: The operation couldn’t be completed. (SKANErrorDomain error 10.)"}
+ LOG  [DEBUG] Request: GET /native/app-version undefined
+
+Reading: that warning is printed only in the catch of registerInstall(), after
+NativeModules.RehearslyAttribution.install was found as a function and called.
+The rejection's code "attribution" is the one RehearslyAttribution.m passes to
+reject(); the NSError inside is SKANErrorDomain — StoreKit's SKAdNetwork
+answered the call. So under newArchEnabled the RCT_EXPORT_MODULE module is
+available through the interop layer and the call reaches SKAdNetwork; no
+move to Expo Modules API / TurboModule is needed. The simulator refuses the
+value (the task: success or error equally show the call got there).
+
+With round 1's change (attribution.ts), a missing module would print instead:
+ WARN  [WARN] [Attribution] the native module RehearslyAttribution is missing; no install postback
+and a taken value:
+ LOG  [DEBUG] [Attribution] the install conversion value was taken

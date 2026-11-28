@@ -754,12 +754,15 @@ Install ads in Meta (Facebook, Instagram) are confirmed by Apple's install postb
 - 15.4–16.0: `updatePostbackConversionValue:0 completionHandler:`
 - 15.1–15.3: `registerAppForAdNetworkAttribution`
 
-The value always means "installed": fine 0, coarse low, window open. Repeating the same value neither raises nor lowers it, so no timer restarts and no window closes. That is why there is no "first launch" flag, and a failed launch is retried by the next one. An error goes to `logger.warn` and nothing else.
-- **No SDK.** No Meta SDK and no AdAttributionKit code. AdAttributionKit (iOS 17.4+) works with SKAdNetwork, and SKAdNetwork alone also covers the app's iOS 15.1.
+The value always means "installed": fine 0, coarse low, window open. Repeating the same value neither raises nor lowers it, so no timer restarts and no window closes. That is why there is no "first launch" flag, and a failed launch is retried by the next one. (Unverified against Apple's pages, like the coarse value and AdAttributionKit below: `docs/known-issues.md`, T-424.)
+
+Three outcomes, all in the log, nothing sent anywhere: iOS took the value — `logger.debug` `[Attribution] the install conversion value was taken`; iOS refused it — `logger.warn` `… was not taken: <error>`; on iOS the native module is missing from the build — `logger.warn` `… RehearslyAttribution is missing; no install postback` (warn is kept in Release, so a module that stopped registering shows in the device log). Off iOS: nothing called, nothing logged.
+- **New architecture.** The module is declared with `RCT_EXPORT_MODULE` (old bridge); the app runs with `newArchEnabled: true` and reaches it through React Native's interop layer. Shown in a Debug e2e build, 28.11.2026: Metro logged `[WARN] [Attribution] the install conversion value was not taken: … SKANErrorDomain error 10` — the error comes from SKAdNetwork inside the module, so the call got there (`audit/evidence/T-424/metro-debug-launch.txt`). The simulator refuses the value; a phone is where it is taken.
+- **No SDK.** No Meta SDK and no AdAttributionKit code. AdAttributionKit (iOS 17.4+) is taken to pick up SKAdNetwork's value (unverified, see above), and SKAdNetwork alone also covers the app's iOS 15.1.
 - **No `SKAdNetworkItems`** (that is for apps that show ads), no ATT, no `NSUserTrackingUsageDescription`.
 - **The privacy policy and App Privacy do not change.** SKAdNetwork is part of iOS: the app sends nothing, reads no identifier, and Apple itself sends the postback to the ad network, anonymised.
-- **Test**: `plugins/install-attribution/__tests__/attribution.test.mjs` runs a real `expo prebuild` into a temp folder. It checks that the module is in the target's Sources once, that the calls and their guard are as above, and that Info.plist has no `SKAdNetworkItems` or tracking prompt. `src/shared/services/__tests__/attribution.test.ts` covers the JS side. No e2e flow, since nothing shows on screen; `e2e/release/01-launch.yaml` covers the launch.
-- **Checking on a phone**: Settings → Developer → SKAdNetwork Testing (`docs/known-issues.md`, T-424).
+- **Test**: `plugins/install-attribution/__tests__/attribution.test.mjs` runs a real `expo prebuild` into a temp folder. It checks that the module is in the target's Sources once, that the calls and their guard are as above, and that Info.plist has no `SKAdNetworkItems` or tracking prompt. `src/shared/services/__tests__/attribution.test.ts` covers the JS side: one call and debug when taken, warn when refused, warn when the module is missing on iOS, silence off iOS. No e2e flow, since nothing shows on screen; `e2e/release/01-launch.yaml` covers the launch.
+- **Checking on a phone**: `docs/known-issues.md`, T-424 (the steps there are to be checked against the phone's Settings → Developer).
 
 ### Logging Convention
 Use `logger` utility instead of `console.log` — automatically suppressed in production:

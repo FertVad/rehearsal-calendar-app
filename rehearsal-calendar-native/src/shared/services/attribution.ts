@@ -12,13 +12,23 @@ import { logger } from '../utils/logger';
  * app and nothing about the phone is read: no SDK, no advertising identifier,
  * no tracking prompt.
  *
+ * Every outcome on iOS is logged: taken — debug; refused, or the native module
+ * missing from the build — warn, which Release keeps too. A module that never
+ * registered would otherwise mean no postbacks at all, and nobody would know.
+ * Off iOS there is nothing to call and nothing is logged.
+ *
  * Never throws: a failure is only logged, and the next launch tries again.
  */
 export async function registerInstall(): Promise<void> {
+  if (Platform.OS !== 'ios') return;
   const native = NativeModules.RehearslyAttribution as { install?: () => Promise<void> } | undefined;
-  if (Platform.OS !== 'ios' || typeof native?.install !== 'function') return;
+  if (typeof native?.install !== 'function') {
+    logger.warn('[Attribution] the native module RehearslyAttribution is missing; no install postback');
+    return;
+  }
   try {
     await native.install();
+    logger.debug('[Attribution] the install conversion value was taken');
   } catch (error) {
     logger.warn('[Attribution] the install conversion value was not taken:', error);
   }

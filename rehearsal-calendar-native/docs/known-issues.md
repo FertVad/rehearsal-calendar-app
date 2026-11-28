@@ -293,24 +293,61 @@ generated project compiles, and `e2e/release/01-launch.yaml` checks that the
 app still starts. Whether Apple actually sends a postback to Meta can only be
 checked on a phone and in Meta:
 
+The steps below are written from memory, not from Apple's pages (see the
+end of this entry); the names of the Settings items are to be checked on the
+phone, and whatever differs corrected here.
+
 1. On an iPhone with Developer Mode on (Settings → Privacy & Security →
-   Developer Mode), open Settings → Developer and turn on AdAttributionKit
-   Developer Mode / SKAdNetwork Testing. With it on, iOS shortens the
-   conversion windows and the delay before a postback to minutes.
+   Developer Mode), open Settings → Developer and look for a section on ad
+   attribution — "SKAdNetwork Testing" in older iOS, possibly an
+   AdAttributionKit item in newer. Its developer switch is meant to shorten
+   the conversion windows and the delay before a postback to minutes.
 2. Install build 1.0.2 from an ad in a Meta app-install campaign, or with an
-   ad network test profile: Apple's "Testing ad attributions with a downloaded
-   profile" (Settings → Developer → SKAdNetwork Testing → Managed Profiles).
-3. Open the app once. That is the call.
+   ad network's test profile, if the section above offers one.
+3. Open the app once. That is the call. Connected to a Mac, Console.app shows
+   the app's line only if it failed: `[WARN] [Attribution] …` (success is
+   `logger.debug`, dropped in Release).
 4. Meta: Events Manager → the app → SKAdNetwork (or the campaign's results in
    Ads Manager). Installs from real devices appear 24–48 hours or more after
    the first window closes, without Developer Mode. Meta gets no per-person
    data; small numbers may arrive with only the coarse value, or with nothing.
 
-Apple's documentation pages could not be opened from the build machine
-(no network). The API names and iOS versions come from the iOS 27.2 SDK's
-headers (`StoreKit/SKAdNetwork.h`, AdAttributionKit's `.swiftinterface`).
-That AdAttributionKit uses SKAdNetwork's conversion value is Apple's
-documented interoperability, not re-checked here.
+**What is checked and what is not.** Apple's documentation pages could not
+be opened from the build machine (no network; T-424's review, round 1, asked
+for quotes). What the iOS SDK's own header says (`StoreKit/SKAdNetwork.h`,
+Xcode's iPhoneOS SDK, read 28.11.2026), quoted:
+
+- `registerAppForAdNetworkAttribution`: "Participating apps should call this
+  on launch to complete the install+open action associated with a product
+  view", `API_DEPRECATED("Use updatePostbackConversionValue:completionHandler:
+  instead.", ios(11.3, 15.4))`.
+- `updatePostbackConversionValue:completionHandler:` — `API_AVAILABLE(ios(15.4))`;
+  `updatePostbackConversionValue:coarseValue:lockWindow:completionHandler:` and
+  `SKAdNetworkCoarseConversionValueLow` — `API_AVAILABLE(ios(16.1))`.
+- `startImpression`/`endImpression` are under "Source apps should call these
+  methods" — the side that shows ads, which with `SKAdNetworkItems` is not ours.
+
+Three claims the code rests on are **not verified** against Apple's
+documentation — questions to the owner (or to whoever can open
+developer.apple.com):
+
+1. *Repeating the same value on every launch is harmless* (no timer restarts,
+   no window closes, nothing is lost). This is why there is no first-launch
+   flag. If Apple says otherwise, the fix is a stored flag around the one call
+   in `attribution.ts`.
+2. *Coarse `low` is what fits "installed, nothing more".* The header only
+   defines low, medium, high. If Apple advises otherwise, it is one constant in
+   `RehearslyAttribution.m`.
+3. *AdAttributionKit (iOS 17.4+) takes the value set through SKAdNetwork*, so
+   no AdAttributionKit call is needed. If not, an `AdAttributionKit`
+   `Postback.updateConversionValue` call is to be added for 17.4+.
+
+The new architecture part is verified: a Debug e2e build with
+`newArchEnabled: true` logged `[WARN] [Attribution] the install conversion
+value was not taken: … SKANErrorDomain error 10` — the error is SKAdNetwork's,
+raised inside `RehearslyAttribution`, so the module was there and the call
+reached StoreKit (`audit/evidence/T-424/metro-debug-launch.txt`). The
+simulator refuses the value; what code 10 means is not in the public headers.
 
 ---
 

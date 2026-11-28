@@ -1,0 +1,33 @@
+T-424, review round 1, item 1 — red before.
+The new src/shared/services/__tests__/attribution.test.ts against attribution.ts
+as committed in ef08518a (before the fix):
+
+$ npx jest --selectProjects frontend --testPathPatterns 'services/__tests__/attribution'
+FAIL frontend src/shared/services/__tests__/attribution.test.ts
+  ✕ asks the native module once and logs the value taken as debug (352 ms)
+  ✓ logs a refused value as a warning and resolves (3 ms)
+  ✕ warns on iOS when the native module is missing (2 ms)
+  ✓ does nothing and logs nothing off iOS (1 ms)
+
+  ● asks the native module once and logs the value taken as debug
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+    Expected: "[Attribution] the install conversion value was taken"
+    Number of calls: 0
+
+  ● warns on iOS when the native module is missing
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+    Expected: "[Attribution] the native module RehearslyAttribution is missing; no install postback"
+    Number of calls: 0
+
+Tests:       2 failed, 2 passed, 4 total
+
+The two branches the review asked for are red. "logs a refused value" and
+"off iOS" pass on the old code too: those were already right (warn on a
+refusal, silence off iOS) and the tests keep them so.
+
+After the fix:
+  ✓ asks the native module once and logs the value taken as debug
+  ✓ logs a refused value as a warning and resolves
+  ✓ warns on iOS when the native module is missing
+  ✓ does nothing and logs nothing off iOS
+Tests:       4 passed, 4 total
