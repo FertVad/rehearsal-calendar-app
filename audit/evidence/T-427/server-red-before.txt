@@ -1,0 +1,52 @@
+T-427 — the route tests red on the base (51aeb589).
+
+The tests of this task with services/admin/analytics.js and services/admin/usage.js
+restored from 51aeb589 (git restore --source=51aeb589 -- …), then back from HEAD:
+
+$ cd rehearsal-calendar-native/server
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminOrganizers.test.js
+FAIL __tests__/routes/adminOrganizers.test.js
+  the organiser funnel
+    ✕ by registration week: own project, the invitation opened, members in one project, own rehearsals (148 ms)
+    ✕ the period and the filters choose the people, as in the newcomer funnel (32 ms)
+    ✕ without migration 016 the invitation counts only as a join (16 ms)
+  the organiser steps in the test cohort
+    ✕ within seven days of registering, of those who created a project within them (50 ms)
+    ✕ a step whose seven days are not over is an empty cell (21 ms)
+  ● the organiser funnel › by registration week: own project, the invitation opened, members in one project, own rehearsals
+
+    TypeError: Cannot read properties of undefined (reading 'weeks')
+    > 186 |     expect(body.organizers.weeks).toEqual([
+
+  ● the organiser funnel › the period and the filters choose the people, as in the newcomer funnel
+
+    Expected: {"median": {"toFirstRehearsalHours": 2, "toFirstRehearsalOf": 1}, "total": {"firstRehearsal": 1, "invite": 1, "member": 0, "project": 1, "registered": 1, "secondRehearsal": 1, "threeMembers": 0}, "weeks": [{"firstRehearsal": 1, "invite": 1, "member": 0, "project": 1, "registered": 1, "secondRehearsal": 1, "threeMembers": 0, "week": "2026-11-09"}]}
+    Received: undefined
+
+  ● the organiser funnel › without migration 016 the invitation counts only as a join
+    TypeError: Cannot read properties of undefined (reading 'total')
+
+  ● the organiser steps in the test cohort › within seven days of registering, of those who created a project within them
+    expect(received).toMatchObject(expected)
+    - Expected  - 25
+    + Received  +  0
+    (invite, member, threeMembers, firstRehearsal, secondRehearsal: absent)
+
+  ● the organiser steps in the test cohort › a step whose seven days are not over is an empty cell
+    - Expected  - 5
+    + Received  + 0
+    (invite, member, threeMembers, firstRehearsal, secondRehearsal: absent)
+
+Tests:       5 failed, 5 total
+
+With adminCohort.test.js in the same run: "Tests: 6 failed, 18 passed, 24 total" —
+the sixth is adminCohort's first test, whose toEqual now names the five steps.
+
+On HEAD both files pass (5 + 9), and so does every admin suite:
+$ NODE_OPTIONS=--experimental-vm-modules npx jest admin weekendDefaults
+Tests:       121 passed, 121 total
+
+The whole server suite: 1565 passed, 8 failed — all 8 in
+__tests__/startup/runtimeStartup.test.js ("import-failed" of the copied
+entrypoint), which fails the same way with the base's services and page: the
+machine's sandbox, not this task.

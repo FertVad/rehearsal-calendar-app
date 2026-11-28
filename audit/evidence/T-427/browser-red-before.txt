@@ -1,0 +1,28 @@
+T-427 — the admin browser tests red on the base (51aeb589).
+
+public/admin/dashboard.js restored from 51aeb589 (git restore --source=51aeb589 -- …),
+then back from HEAD:
+
+$ cd rehearsal-calendar-native/server && npm run test:admin-browser
+✖ dates and the test cohort: the switch locks the source, wrong dates ask nothing, the choice survives a reload (2129.963625ms)
+✖ the organiser funnel: its columns, shares of those who created a project, the median and the notes (1945.287417ms)
+ℹ pass 17
+ℹ fail 2
+✖ failing tests:
+✖ dates and the test cohort: the switch locks the source, wrong dates ask nothing, the choice survives a reload (2129.963625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+    actual: [ 'Зарегистрировались', 'В среднем за день', 'Онбординг (на текущий момент)', 'За первые 7 дней после регистрации', 'Создали проект', 'В проекте', 'Календарь подключён', 'Ручные отметки', 'Открыли приложение на 1-й день', 'Открыли приложение на 7-й день' ],
+    expected: [ 'Зарегистрировались', 'В среднем за день', 'Онбординг (на текущий момент)', 'За первые 7 дней после регистрации', 'Создали проект', 'Приглашение открыли', 'Есть участник', '3 участника и больше', 'Первая репетиция', 'Вторая репетиция', 'В проекте', 'Календарь подключён', 'Ручные отметки', 'Открыли приложение на 1-й день', 'Открыли приложение на 7-й день' ],
+✖ the organiser funnel: its columns, shares of those who created a project, the median and the notes (1945.287417ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+    actual: 'Откуда приходят люди',
+    expected: 'Воронка организаторов',
+
+(The second suite of the script, adminFailures, passed: 18 of 18.)
+
+On HEAD:
+$ npm run test:admin-browser
+ℹ pass 19
+ℹ fail 0
+ℹ pass 18
+ℹ fail 0

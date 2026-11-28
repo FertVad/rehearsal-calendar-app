@@ -1,0 +1,12 @@
+T-427 — the admin contract on PostgreSQL (__tests__/postgres/t293Admin.mjs).
+
+$ cd rehearsal-calendar-native/server && npm run test:r0-postgres -- --t293-only
+{"scenario":"controls","outcome":"PASS", …}
+{"scenario":"T293_ADMIN","outcome":"PASS","contracts":["the three statistics routes refuse without the admin token","cards: service accounts (both domains, ADMIN_SERVICE_EMAILS) and demo-owned projects count nowhere","users: source from the earliest active membership, steps and sign-in methods, service accounts marked","funnel and medians (the calendar connected apart from hand marks), and the projects that brought people, on PostgreSQL types","organiser funnel: own projects, members in one project without service accounts, own rehearsals ranked by ROW_NUMBER","seen before start through ROSTER (the removed member counts nowhere); coverage stops at the 14th UTC date; calendar connected by member","inbox by type with median to read, email codes by purpose; no address in the summaries","coverage counts an all-day stretch begun before today and not yet over, not one that ended yesterday","calendar sync used: an import from a calendar or an export record; neither — no","users: hand marks with their last date apart from marks from a calendar; weekends neither","dates bound inbox and invitation counts from both ends; the test cohort counts own + none; a huge range is 400"],"externalConnections":0}
+
+$ npm run test:r0-postgres -- --t294-only
+T294_USAGE: PASS; T294_UPGRADE: PASS
+
+The full `npm run test:r0-postgres` stops at R2_STARTUP on this machine — the
+same copied-entrypoint "import-failed" as __tests__/startup/runtimeStartup.test.js,
+which fails with the base's code too; every scenario before it passed.
