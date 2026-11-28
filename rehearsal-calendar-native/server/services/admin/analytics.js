@@ -285,8 +285,11 @@ const cell = (part, whole) => (whole > 0 ? { count: part, of: whole, rate: rate(
  * column. Each other step is reached within STEP_DAYS of registering, of those
  * whose STEP_DAYS are over; days 1 and 7 are usage.js's.
  */
-function cohortColumn({ since, until }, people, { facts, projects, now, opened }) {
+function cohortColumn({ since, until, begun }, people, { facts, projects, now, opened }) {
   const days = Math.round((until - since) / DAY_MS);
+  // The days already begun (T-425, point 6): a running test divided by all its
+  // days would read low beside a full week before. None begun: no figure.
+  const daysBegun = Math.round((Math.min(until, begun) - since) / DAY_MS);
   const due = people.filter((person) => person.createdAt + STEP_MS <= now);
   const within = (person, at) => at !== null && at !== undefined && at < person.createdAt + STEP_MS;
   const reached = (step) => cell(due.filter(step).length, due.length);
@@ -296,7 +299,7 @@ function cohortColumn({ since, until }, people, { facts, projects, now, opened }
     to: dayOf(until - DAY_MS),
     days,
     registered: people.length,
-    perDay: Math.round((people.length / days) * 10) / 10,
+    perDay: daysBegun > 0 ? Math.round((people.length / daysBegun) * 10) / 10 : null,
     onboarding: cell(people.filter((person) => person.onboarding).length, people.length),
     // Owns a project, still there, created within the days.
     project: reached((person) => person.memberships.some((membership) => membership.role === 'owner'
@@ -312,9 +315,11 @@ function cohortColumn({ since, until }, people, { facts, projects, now, opened }
 
 /** The test cohort (the dates) beside the seven days before its first one, same filters. */
 async function testCohort(conn, filters, everyone, projects, facts) {
+  // The test counts up to the end of today (UTC); the week before is always whole.
+  const today = Math.floor(filters.now / DAY_MS) * DAY_MS;
   const ranges = [
-    { since: filters.since, until: filters.until },
-    { since: filters.since - 7 * DAY_MS, until: filters.since },
+    { since: filters.since, until: filters.until, begun: today + DAY_MS },
+    { since: filters.since - 7 * DAY_MS, until: filters.since, begun: filters.since },
   ];
   const groups = ranges.map(({ since, until }) => everyone.filter((person) => person.createdAt !== null
     && registeredSince(person, since, until)));

@@ -51,11 +51,12 @@ const analyticsBody = (payload, recorded = true) => ({
     emailCodes: [{ purpose: 'verify', created: 2, sent: 2, failed: 0, used: 1, replaced: 1, locked: 0 }] },
 });
 // The test cohort and the week before it (T-425), as /analytics?…&cohort=1 answers.
-const cohortColumn = (from, to, registered) => ({ from, to, days: 7, registered, perDay: 0.3,
+const cohortColumn = (from, to, registered, perDay = 0.3) => ({ from, to, days: 7, registered, perDay,
   onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 1, of: 2, rate: 50 }, inProject: null,
   marks: { count: 0, of: 2, rate: 0 }, day1: { count: 1, of: 2, rate: 50 }, day7: null });
+// The test's per day is null: none of its days begun yet.
 const cohortBody = { stepDays: 7, recorded: true,
-  test: cohortColumn('2026-11-10', '2026-11-16', 2), before: cohortColumn('2026-11-03', '2026-11-09', 2) };
+  test: cohortColumn('2026-11-10', '2026-11-16', 2, null), before: cohortColumn('2026-11-03', '2026-11-09', 2) };
 const report = { id: '1);window.__xss=4;//', name: html, message: html + '\n' + escaped,
   screen: svg, status: 'new" onclick="window.__xss=5', createdAt: user.createdAt };
 let browser;
@@ -372,7 +373,7 @@ test('dates and the test cohort: the switch locks the source, wrong dates ask no
   assert.deepEqual(rows.slice(1).map(row => row[0]), ['Зарегистрировались', `В среднем за${NB}день`,
     `Онбординг (на${NB}текущий момент)`, `За${NB}первые 7${NB}дней после регистрации`, 'Создали проект', 'В проекте',
     'Отметки занятости', `Открыли приложение на${NB}1-й${NB}день`, `Открыли приложение на${NB}7-й${NB}день`]);
-  assert.deepEqual(rows[2], [`В среднем за${NB}день`, '0,3', '0,3']);
+  assert.deepEqual(rows[2], [`В среднем за${NB}день`, '', '0,3'], 'no day begun: empty, not 0 or "null"');
   assert.deepEqual(rows[5], ['Создали проект', `1 из 2 (50${NB}%)`, `1 из 2 (50${NB}%)`]);
   assert.deepEqual(rows[6], ['В проекте', '', ''], 'nobody\'s seven days are over: empty, not 0');
   assert.deepEqual(rows[9], [`Открыли приложение на${NB}7-й${NB}день`, '', '']);

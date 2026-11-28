@@ -12,8 +12,10 @@ The strings are copied from `natives-ru.md` (this folder) word for word, ⍽ as 
    footnote's «срок ещё ни у⍽кого не прошёл» would be false.
 3. **Onboarding** is of everyone registered in the column, as of now (the monitor's
    decision); the footnote's «и⍽от⍽всех зарегистрировавшихся» stays.
-4. **«В среднем за⍽день»** divides by the number of days chosen, also when the dates
-   reach past today: a test still running reads lower until it ends.
+4. **«В среднем за⍽день»** — changed on the monitor's answer (28.11, task item 6): the
+   test divides by the days begun, from «С» to today (UTC) inclusive, at most «По»; with
+   «С» still to come the cell is empty (`perDay: null`). The week before divides by 7.
+   The string is unchanged. Red on `5e6d2e4f`: `per-day-red-before.txt`.
 5. **The 7 days** are instants: a step counts when reached before registration + 7×24 h,
    and someone counts in «из» once that moment has passed. Days 1 and 7 are the person's
    own dates, as in the retention table (usage.js).

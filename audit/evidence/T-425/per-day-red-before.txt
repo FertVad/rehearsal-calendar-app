@@ -1,0 +1,45 @@
+T-425, review fix: «В среднем за день» over the days begun (task item 6).
+Base 5e6d2e4f: services/admin/analytics.js and public/admin/dashboard.js restored
+from it (git restore --source=5e6d2e4f), the new tests kept.
+
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminCohort.test.js
+
+  ● the test cohort and the week before it › a test still running: per day over the days begun, today (UTC) in; none begun, no figure
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "days": 11,
+        "from": "2026-11-20",
+    -   "perDay": 0.2,
+    +   "perDay": 0.1,
+        "registered": 1,
+        "to": "2026-11-30",
+      }
+
+      at Object.toMatchObject (__tests__/routes/adminCohort.test.js:202:38)
+
+Tests:       1 failed, 18 passed, 19 total
+
+$ npm run test:admin-browser
+
+ℹ tests 18
+ℹ pass 17
+ℹ fail 1
+
+test at __tests__/browser/adminDashboard.browser.test.mjs:322:1
+✖ dates and the test cohort: the switch locks the source, wrong dates ask nothing, the choice survives a reload (7919.425625ms)
+  locator.waitFor: Timeout 5000ms exceeded.
+  Call log:
+    - waiting for locator('#analytics-body .analytics-block').first().getByRole('heading', { name: 'Тестовая когорта' }) to be visible
+  (the old validColumn refuses perDay: null as a broken answer, so the block never shows)
+
+With the fix:
+  adminCohort.test.js: 19 passed, 19 total
+  npm run test:admin-browser: 18 pass, 0 fail
+  npm run test:admin-errors-browser: 18 pass, 0 fail
+  npm run test:admin-stored-browser: 6 passed
+  npx jest admin: 10 suites, 95 passed

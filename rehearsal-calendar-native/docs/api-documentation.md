@@ -1964,6 +1964,9 @@ the seven days before `from` (`before`), the same source and language.
 }
 ```
 
+- `days`: the days chosen. `perDay`: `registered` over the days begun — from
+  `from` to today (UTC) inclusive, at most `to`; `null` when `from` is still to
+  come. `before` always divides by 7.
 - `onboarding`: now, of everyone registered (no time is recorded for it).
 - `project` (owns a project created within `stepDays` of registering),
   `inProject` (earliest active membership), `marks` (earliest kept mark):

@@ -196,6 +196,17 @@ describe('the test cohort and the week before it', () => {
     expect(body.cohort.before).toMatchObject({ from: '2026-11-09', to: '2026-11-15', registered: 2 });
   });
 
+  test('a test still running: per day over the days begun, today (UTC) in; none begun, no figure', async () => {
+    // 20–30 November with "now" 25 November: six days begun (20–25), not eleven.
+    const running = await get('/admin/api/analytics?from=2026-11-20&to=2026-11-30&cohort=1').expect(200);
+    expect(running.body.cohort.test).toMatchObject({ from: '2026-11-20', to: '2026-11-30', days: 11, registered: 1, perDay: 0.2 });
+    // The week before is always whole: divided by seven.
+    expect(running.body.cohort.before).toMatchObject({ from: '2026-11-13', to: '2026-11-19', registered: 2, perDay: 0.3 });
+    // Starts tomorrow: nothing to divide by, an empty cell rather than 0.
+    const future = await get('/admin/api/analytics?from=2026-11-26&to=2026-11-30&cohort=1').expect(200);
+    expect(future.body.cohort.test).toMatchObject({ days: 5, registered: 0, perDay: null });
+  });
+
   test('without migration 016 the days are empty, the steps still counted', async () => {
     sqlite.exec('DROP TABLE native_usage_days');
     const { body } = await get(TEST + '&lang=en').expect(200);

@@ -766,7 +766,8 @@
     const opened = value => (cohort.recorded ? part(value) : NOT_RECORDED);
     const rows = [
       ['Зарегистрировались', column => String(column.registered)],
-      [typeset('В среднем за⍽день'), column => decimal(column.perDay)],
+      // No day of the test begun yet: empty.
+      [typeset('В среднем за⍽день'), column => (column.perDay === null ? '' : decimal(column.perDay))],
       [typeset('Онбординг (на⍽текущий момент)'), column => part(column.onboarding)],
       typeset('За⍽первые ' + cohort.stepDays + '⍽дней после регистрации'),
       ['Создали проект', column => part(column.project)],
@@ -807,8 +808,9 @@
   }
 
   const validShare = value => value === null || hasFields(value, ['count', 'of', 'rate']);
-  const validColumn = column => hasFields(column, ['from', 'to', 'registered', 'perDay'])
-    && ['onboarding', 'project', 'inProject', 'marks', 'day1', 'day7'].every(key => Object.hasOwn(column, key)
+  const validColumn = column => hasFields(column, ['from', 'to', 'registered'])
+    && hasFields(column, ['perDay'], isNullableText)
+    &&['onboarding', 'project', 'inProject', 'marks', 'day1', 'day7'].every(key => Object.hasOwn(column, key)
       && validShare(column[key]));
   const validCohort = cohort => cohort === undefined || (isObject(cohort) && typeof cohort.recorded === 'boolean'
     && Number.isSafeInteger(cohort.stepDays) && validColumn(cohort.test) && validColumn(cohort.before));
