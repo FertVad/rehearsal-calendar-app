@@ -1,0 +1,80 @@
+T-431, review round 1 - the "Cancel" tap: flow 98 run alone, base and final,
+eight runs each, alternated (base, final, base, ...) on one machine on 28.11
+from 20:55 to 22:02, so that the hour and the machine's state fall on both
+alike. Each run boots the simulator again; run alone, "Cancel" on Safari's
+question is the first tap of Maestro's session.
+
+base  = e2e/flows/98-invite-page-in-safari.yaml from db83fa28 (fresh-safari.yaml,
+        openLink, plain tapOn "Cancel"), restored for the run with
+        git restore --source=db83fa28 -- e2e/flows/98-invite-page-in-safari.yaml
+        and put back with git restore --source=HEAD after it. The flow uses
+        none of T-431's runner changes, so the rest of the tree does not
+        change it.
+final = the flow at 25524c53 (open-in-safari.yaml, "Cancel" through
+        tap-and-see.yaml).
+
+$ npm run e2e -- e2e/flows/98-invite-page-in-safari.yaml   (each run)
+$ node ../audit/evidence/T-431/lost-touches.mjs e2e/out/artifacts/<run>
+
+run                code   result                                         lost  first tap
+2026-11-28_205538  final  Passed (39s), taps taken again 0               0     20:57:02.115 Tap on "${TAP}"
+2026-11-28_205953  base   Passed (36s)                                   0     21:01:26.936 Tap on "Cancel"
+2026-11-28_210413  final  Passed (37s), taps taken again 0               0     21:05:45.522 Tap on "${TAP}"
+2026-11-28_210829  base   Passed (37s)                                   0     21:10:01.915 Tap on "Cancel"
+2026-11-28_211246  final  Passed (40s), taps taken again 0               0     21:14:09.821 Tap on "${TAP}"
+2026-11-28_211718  base   Passed (38s)                                   0     21:18:38.284 Tap on "Cancel"
+2026-11-28_212124  final  Passed (38s), taps taken again 0               0     21:22:58.220 Tap on "${TAP}"
+2026-11-28_212542  base   FAILED (37s) (Assertion is false:              1     21:27:02.839 Tap on "Cancel"
+                          "Open in the App Store" is visible)                   lost at 21:27:05.510
+2026-11-28_212958  final  Passed (44s), taps taken again 0               0     21:31:29.293 Tap on "${TAP}"
+2026-11-28_213417  base   Passed (54s)                                   0     21:35:58.574 Tap on "Cancel"
+2026-11-28_213839  final  Passed (39s), taps taken again 0               0     21:40:19.291 Tap on "${TAP}"
+2026-11-28_214300  base   Passed (38s)                                   0     21:44:21.180 Tap on "Cancel"
+2026-11-28_214716  final  Passed (42s), taps taken again 0               0     21:48:40.943 Tap on "${TAP}"
+2026-11-28_215125  base   Passed (38s)                                   0     21:52:47.019 Tap on "Cancel"
+2026-11-28_215535  final  Passed (43s), taps taken again 0               0     21:57:03.766 Tap on "${TAP}"
+2026-11-28_215952  base   Passed (36s)                                   0     22:01:30.704 Tap on "Cancel"
+
+base: 1 lost of 8. final: 0 lost of 8.
+
+So the base flow loses "Cancel" too - red before for this instability on the
+old code: 212542 failed as 200907 did, its one tap lost and Safari's question
+left over the page for the whole wait for "Open in the App Store". Its
+signature in device-simulator.log, the same as 200907's:
+
+  21:27:05.5  backboardd  Connection added: ... process:testmanagerd
+              backboardd  we already have a service for senderID:...
+              backboardd  touch down without previous range event: 2
+              backboardd  didn't see a previous touch down or range-in event
+                          for pathIndex:2; skipping event   (every event
+                          of the touch after its down)
+
+A run that kept its tap (195552) has the same first three lines - every first
+tap of a testmanagerd session registers its digitizer twice - and its lift is
+not skipped; which state the events go to is backboardd's race (docs/e2e.md,
+"A lost tap"). Nothing of the helper runs then: openInSafari's last `log show`
+returned when Safari said it had started, seconds before the flow's two waits
+and the tap (200907: Safari started 20:10:25, the tap 20:10:33).
+
+All runs of flow 98 in which "Cancel" was the first tap of the session, by how
+the link was opened:
+
+  opened as                                  runs  lost  which
+  base (fresh-safari.yaml + openLink)          10     1  212542; 0 in 194415,
+                                                         184133 (the review's),
+                                                         and the 7 above
+  final (simctl openurl, open-in-safari.yaml)  14     2  200907, 201905; 0 in
+                                                         195552, 195958, 201417,
+                                                         204554 (supervisor) and
+                                                         the 8 above
+  dropped first version (simctl launch,         4     3  192458, 192940, 193916
+    then the link into the running Safari)
+
+Lost touches before this series: five, not four as the first report said -
+192458, 192940, 193916 (dropped version), 200907 and 201905 (final). With
+212542, six.
+
+The base and the final version lose the first tap at about the same rate
+(1 in 10, 2 in 14): what the final helper does before the tap does not make
+it lost more often. The dropped version, which launched Safari first and then
+opened the link into it, lost it in 3 of 4; it was dropped for that.

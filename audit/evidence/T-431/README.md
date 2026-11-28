@@ -66,16 +66,35 @@ tap, and a Safari started in front would cover the app.
 ## A second instability met on the way: the "Cancel" tap
 
 This is not the night's failure; the checks of this task found it. Run alone,
-flow 98 lost its tap on "Cancel" of Safari's question in four runs of nine on
-28.11: 192458, 192940 and 193916 (a first version that launched Safari before
-`openLink`) and 200907 (the final one, link opened by `openurl`). The base
-flow's run 194415 and the other final runs did not lose it. Each lost tap has
-the T-207 signature in backboardd: "we already have a service for senderID",
-then "didn't see a previous touch down ... skipping event". The question stayed
-up, and the wait for "Open in the App Store" failed (192458, 200907).
-`lost-touches.mjs` over every device log kept here finds 7 lost touches. In 6
-of them the lost touch was the first tap of Maestro's session. Run alone, flow
-98's first tap is "Cancel". In the night run it is not.
+flow 98's first tap - the first of Maestro's session - is "Cancel" of Safari's
+question (in the night run it is not), and the simulator loses it. Before the
+review this was counted as "four runs of nine, base and T-431 alike". That was
+wrong on both counts: the lost ones then were five - 192458, 192940, 193916
+(a first version that launched Safari before opening the link) and 200907,
+201905 (the final one, link opened by `openurl`) - and none on the base flow,
+which had been run alone only once (194415).
+
+So the review's round ran it eight times on each, alternated
+(`cancel-series.txt`): the base flow lost "Cancel" once (212542, failed at
+"Open in the App Store" as 200907 did), the final one never. Over every run
+where "Cancel" was the session's first tap:
+
+| opened as | runs | lost |
+| --- | --- | --- |
+| base: `fresh-safari.yaml` + `openLink` | 10 | 1 (212542) |
+| final: `open-in-safari.yaml` (`simctl openurl`) | 14 | 2 (200907, 201905) |
+| dropped: `simctl launch`, then the link into it | 4 | 3 |
+
+The base and the final version lose it at the same rate: the helper's
+`launchctl list` and `log show`, done seconds before the tap, do not cause it.
+Each lost tap has the T-207 signature in backboardd: "we already have a
+service for senderID", then "didn't see a previous touch down ... skipping
+event". The first tap of a testmanagerd session always registers its
+digitizer twice - 195552, which kept its tap, has "we already have a service"
+too - and then the touch's events go to one state or the other; the session's
+first tap is what T-207 already found lost most (the first tap of sign-in).
+The question stayed up, and the wait for "Open in the App Store" failed
+(192458, 200907, 212542).
 
 So "Cancel" now goes through `tap-and-see.yaml` (`GONE: "Open this page
 in.*"`), the one shared mechanism for a tap the simulator loses (T-207). The
@@ -99,6 +118,10 @@ assertions in EN, RU, ES and DE, including `assertNotVisible:
 - `safari-starts.mjs`: each Safari in device logs, with its start, "app ax",
   home, and the terminate and open just before it.
 - `window.mjs`: the processes that log in a window of a device log.
+- `lines.mjs`: the lines of a device log in a window, matching a pattern.
+- `lost-touches.mjs`: the touches backboardd lost, per log, with the flow's
+  first tap.
+- `cancel-series.txt`: the review's series, base and final, eight runs each.
 - `cf-strings.mjs`: the strings of a binary around a pattern (CoreFoundation's
   messages).
 - `probe-open-invite-40.yaml`: flow 98's opening, forty times. A probe, not a

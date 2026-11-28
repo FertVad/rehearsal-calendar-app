@@ -416,9 +416,12 @@ comes (`fresh-safari.yaml`): a Safari running in front would cover the app
 they tap in.
 
 Flow 98's "Cancel" on Safari's question goes through `tap-and-see.yaml`: run
-alone, it is the first tap of Maestro's session, and the simulator lost it in
-four runs of nine on 28.11 (see "A lost tap"; in 6 of the 7 lost touches in
-the logs kept then, the lost one was the session's first tap).
+alone, it is the first tap of Maestro's session, and the simulator lost it
+(see "A lost tap") in 1 of 10 such runs of the flow as it was before T-431
+(fresh-safari.yaml and `openLink`) and in 2 of 14 with `open-in-safari.yaml`
+- the same rate; eight runs of each, alternated, in
+`audit/evidence/T-431/cancel-series.txt`. A version that launched Safari
+first and then opened the link into it lost it in 3 of 4, and was dropped.
 
 ## A link to an app the simulator does not have
 

@@ -53,12 +53,12 @@ tags:
     visible: "Cancel"
     timeout: 5000
     optional: true
-# The question's Cancel through tap-and-see.yaml (T-207): the simulator lost
-# it in four runs of this flow alone of nine on 28.11, base and T-431 alike -
-# backboardd's "we already have a service for senderID", then "didn't see a
-# previous touch down ... skipping event" - and the question stayed over the
-# page for the whole wait below. Run alone, it is the first tap of Maestro's
-# session, the tap the simulator loses most (audit/evidence/T-431).
+# The question's Cancel through tap-and-see.yaml (T-207): run alone, it is the
+# first tap of Maestro's session, and the simulator lost it in 1 of 10 such
+# runs of the flow before T-431 and 2 of 14 since - backboardd's "we already
+# have a service for senderID", then "didn't see a previous touch down ...
+# skipping event" - and the question stayed over the page for the whole wait
+# below (audit/evidence/T-431/cancel-series.txt).
 - runFlow:
     when:
       visible: "Cancel"

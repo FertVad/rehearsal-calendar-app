@@ -169,8 +169,9 @@ export async function firstSafari(device, { run = simctl, wait = pause, startMs 
  * most `launches` in all; then it throws, Safari stopped.
  *
  * Safari is not launched first and the link opened in it: then iOS lost the
- * tap on Safari's question that follows, in three of four runs of flow 98
- * (T-431, audit/evidence/T-431).
+ * tap on Safari's question that follows, in three of four runs of flow 98,
+ * against 2 of 14 opened as here and 1 of 10 by the flow's own openLink
+ * (T-431, audit/evidence/T-431/cancel-series.txt).
  *
  * Returns `{ pid, homeless }`: the readable Safari left running with the link,
  * and the processes replaced (the runner counts them, safaris-replaced.log).
