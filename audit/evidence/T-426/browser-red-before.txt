@@ -1,0 +1,41 @@
+T-426 — the admin page, red before. dashboard.js and dashboardPage.js (and services/admin)
+restored to the base c99ba38f, the browser tests and fixtures of 36f1f28a kept; then
+restored to HEAD.
+
+$ cd rehearsal-calendar-native/server && npm run test:admin-browser
+(filtered)
+
+✖ untrusted admin API values remain literal text, even without CSP (7264.136459ms)
+✖ production CSP loads admin assets, blocks inline execution and preserves per-response nonces (5736.420125ms)
+✖ the sign-in figure is named for sign-ins, not churn or inactivity (5825.959875ms)
+✖ use of the app shows its figures, or "no data" without migration 016 (5787.048208ms)
+✖ the filters reach every statistics request, and the service switch only the users table (5797.108625ms)
+✖ dates and the test cohort: the switch locks the source, wrong dates ask nothing, the choice survives a reload (5764.942375ms)
+✖ login, pagination, status, refresh, empty states and logout work under production CSP (6691.948708ms)
+✖ 401 returns to login and removes the stored credential (5812.578625ms)
+✔ the login screen and each of its messages are in Russian, never the server's text (6847.827625ms)
+✖ the dashboard with data: Russian words, codes named, dates, decimals and units (6342.6585ms)
+✖ loading, failure, stale data and the status messages are in Russian (6346.665875ms)
+✖ nobody registered in the period: the devices line is one "—", not "0 из 0 (—)" (6345.736333ms)
+✖ at 1440 px every table of the dashboard fits without scrolling sideways (6325.565958ms)
+✖ at 1280 px every table of the dashboard fits without scrolling sideways (6247.557708ms)
+✖ at 390 px the page itself does not scroll sideways; wide tables scroll in their wrappers (6291.517334ms)
+✔ context cleanup precedes server closure and releases an actual idle preconnect (36.639459ms)
+✔ context cleanup failure still closes the owned server and fails the test boundary (7.400375ms)
+✔ a stalled context cleanup has a deadline and still closes the owned server (56.497583ms)
+ℹ pass 4
+ℹ fail 14
+    - waiting for locator('#users-body tr td:nth-child(4)').first() to be visible
+    - waiting for locator('#users-body tr td:nth-child(9)').first() to be visible
+
+The base page refuses the new users rows (its check wants steps.marks) and shows
+"Сервер ответил не так, как ожидалось." instead of the table, so the tests stop there. The
+strings themselves are checked in adminRussian.browser.test.mjs («the dashboard with data»):
+the cell «ручных отметок: 3, по⍽10.09.2026 · отметок из⍽календаря: 2 · календарь подключён: да»,
+the users note, the funnel's headers «Календарь подключён» / «Ручные отметки», both its notes,
+the medians, the projects' column «1 из 3 (33,3⍽%)», the notes «Покрытие занятости» and
+«Календарь подключён»; adminDashboard.browser.test.mjs — the cohort's two rows.
+
+After (HEAD 36f1f28a): test:admin-browser — dashboard 18 passed, errors 18 passed;
+test:admin-stored-browser — 6 passed.
+No Maestro flow: the admin is a web page, not the app (as in T-425).

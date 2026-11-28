@@ -1,0 +1,53 @@
+T-426 — red before. The fix's code files restored to the base c99ba38f
+(git restore --source=c99ba38f -- services/admin public/admin/dashboard.js routes/admin/dashboardPage.js),
+the tests of 36f1f28a kept; then git restore --source=HEAD -- the same files.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminAnalytics.test.js -t "T-426"
+(filtered: test lines, diffs, totals)
+
+    ✕ the funnel has two steps, the calendar connected and hand marks; weekends are neither (73 ms)
+    ✕ the users table: hand marks with their last date, marks from a calendar, calendar connected (83 ms)
+    ✕ projects: the share of members with the calendar connected, beside an unchanged coverage (28 ms)
+    ✕ the test cohort has the same two steps, within 7 days of registering (18 ms)
+  ● the calendar apart from hand marks (T-426) › the funnel has two steps, the calendar connected and hand marks; weekends are neither
+    - Expected  - 2
+    + Received  + 1
+    -   "calendar": 3,
+    -   "manual": 2,
+    +   "marks": 3,
+  ● the calendar apart from hand marks (T-426) › the users table: hand marks with their last date, marks from a calendar, calendar connected
+    - Expected  - 2
+    + Received  + 2
+    -   "calendarMarks": 0,
+    -   "manualMarks": 2,
+    +   "calendarMarks": undefined,
+    +   "manualMarks": undefined,
+  ● the calendar apart from hand marks (T-426) › projects: the share of members with the calendar connected, beside an unchanged coverage
+    - Expected  - 5
+    + Received  + 0
+    -   "calendar": Object {
+    -     "of": 6,
+    -     "people": 3,
+    -     "rate": 50,
+    -   },
+  ● the calendar apart from hand marks (T-426) › the test cohort has the same two steps, within 7 days of registering
+    - Expected  - 10
+    + Received  +  0
+    -   "calendar": Object {
+    -     "count": 3,
+    -     "of": 6,
+    -     "rate": 50,
+    -   },
+    -   "manual": Object {
+    -     "count": 2,
+    -     "of": 6,
+    -     "rate": 33.3,
+    -   },
+Tests:       4 failed, 20 skipped, 24 total
+
+On the base the one step "marks" counted Manu, Ines and Bea together (3): Edgar's export
+was not a mark, and Bea's import was one more mark; there was no hand-mark step, no
+median to the calendar, no share in "Проекты".
+
+After (HEAD 36f1f28a): the same file, 24 passed; all admin route suites
+(adminAnalytics, adminCohort, adminUsage, adminHttp, adminQuoteName, adminStoredContent) 95 passed.
