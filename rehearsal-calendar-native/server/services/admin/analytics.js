@@ -11,7 +11,8 @@
  */
 import { seenBeforeStart } from '../rehearsals/roster.js';
 import {
-  MARK_SOURCES_SQL, count, counted, emptyFacts, loadFacts, loadPeople, registeredSince, shortName, toMs,
+  MARK_SOURCES_SQL, count, counted, emptyFacts, leftOut, loadFacts, loadPeople, ownerAnswer, registeredSince,
+  shortName, shownProject, toMs,
 } from './people.js';
 import { firstInviteDays, openedOnDays, usage } from './usage.js';
 
@@ -63,8 +64,9 @@ export async function summary(conn, filters) {
   // renews its session without a sign-in (H03). Use is the days in the app
   // (usage.js, from migration 016).
   const notSignedIn = real.filter((person) => (person.lastLoginAt ?? person.createdAt ?? 0) < now - 30 * DAY_MS).length;
-  const liveProjects = [...projects.values()].filter((project) => !project.serviceOwned);
+  const liveProjects = [...projects.values()].filter((project) => shownProject(project, filters));
   return {
+    owner: ownerAnswer(filters),
     users: { total: real.length, newThisWeek: since(7), newThisMonth: since(30) },
     signIns: { notInLast30Days: notSignedIn, rate: rate(notSignedIn, real.length) ?? 0 },
     usage: {
@@ -152,19 +154,20 @@ async function ownRehearsals(conn) {
 /**
  * Per person, a function of their organiser steps: null without a project of
  * their own still there; otherwise when each step was reached (earliest()).
- * Members are active ones other than the organiser and service accounts, in
- * one project — those of different projects are not added up. The invitation
- * is opened when 016 counted an opening or a join on one of their projects, or
- * one of them has such a member.
+ * Members are active ones other than the organiser and those left out of every
+ * figure (people.js's leftOut), in one project — those of different projects
+ * are not added up. The invitation is opened when 016 counted an opening or a
+ * join on one of their projects, or one of them has such a member.
  */
-async function loadOrganizers(conn, { people, projects }) {
+async function loadOrganizers(conn, { people, projects }, filters) {
   const [inviteDays, rehearsals] = await Promise.all([firstInviteDays(conn), ownRehearsals(conn)]);
   return (person) => {
     const owned = person.memberships.filter((membership) => membership.role === 'owner' && projects.has(membership.projectId))
       .map((membership) => projects.get(membership.projectId));
     if (owned.length === 0) return null;
     const joined = owned.map((project) => project.members.filter((membership) => membership.userId !== person.id
-      && people.has(membership.userId) && !people.get(membership.userId).service).map((membership) => membership.joinedAt));
+      && people.has(membership.userId) && !leftOut(people.get(membership.userId), filters))
+      .map((membership) => membership.joinedAt));
     const nth = (n) => earliest(joined.filter((times) => times.length >= n).map((times) => times[n - 1]));
     const created = rehearsals.get(person.id) || [];
     return {
@@ -206,7 +209,8 @@ function organizerFunnel(cohort, organizer) {
   };
 }
 
-function sources(cohort, everyone, projects, people, { since, until }) {
+function sources(cohort, everyone, projects, people, filters) {
+  const { since, until } = filters;
   const byDay = new Map();
   const byWeek = new Map();
   const tally = (map, key, kind) => {
@@ -226,7 +230,7 @@ function sources(cohort, everyone, projects, people, { since, until }) {
   const real = new Set(everyone.map((person) => person.id));
   const brought = [];
   for (const project of projects.values()) {
-    if (project.serviceOwned) continue;
+    if (!shownProject(project, filters)) continue;
     const joined = project.members.filter((membership) => membership.role !== 'owner' && real.has(membership.userId)
       && ((since === null && until === null) || (membership.joinedAt !== null
         && (since === null || membership.joinedAt >= since) && (until === null || membership.joinedAt < until)))).length;
@@ -284,7 +288,7 @@ async function projectHealth(conn, filters, { people, projects }, everyone, fact
   }
   const list = [];
   for (const project of projects.values()) {
-    if (project.serviceOwned) continue;
+    if (!shownProject(project, filters)) continue;
     const counts = rehearsals.get(project.id) || { total: 0, lastFourWeeks: 0, sinceStart: 0, nextAt: null };
     // Created in the period, or a rehearsal from its start on — in the future
     // too, as the page's note says, whether or not the period has an end.
@@ -448,16 +452,17 @@ export async function analytics(conn, filters) {
   const directory = await loadPeople(conn);
   const everyone = counted(directory.people, filters);
   const cohort = everyone.filter((person) => registeredSince(person, filters.since, filters.until));
-  const [facts, organizer] = await Promise.all([loadFacts(conn, null), loadOrganizers(conn, directory)]);
+  const [facts, organizer] = await Promise.all([loadFacts(conn, null), loadOrganizers(conn, directory, filters)]);
   const [health, delivery, use, test] = await Promise.all([
     projectHealth(conn, filters, directory, everyone, facts),
     notifications(conn, filters, cohort, everyone, facts),
     usage(conn, filters, directory, everyone, cohort),
     filters.cohort ? testCohort(conn, filters, everyone, directory.projects, facts, organizer) : null,
   ]);
-  const languages = [...new Set([...directory.people.values()].filter((person) => !person.service)
+  const languages = [...new Set([...directory.people.values()].filter((person) => !leftOut(person, filters))
     .map((person) => person.locale).filter(Boolean))].sort();
   return {
+    owner: ownerAnswer(filters),
     period: filters.period,
     from: filters.since === null ? null : iso(filters.since),
     to: iso(filters.until ?? filters.now),

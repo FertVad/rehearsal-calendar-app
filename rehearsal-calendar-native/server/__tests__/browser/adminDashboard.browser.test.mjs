@@ -82,7 +82,8 @@ after(async () => { await browser?.close(); }, { timeout: 10000 });
 async function fixture(t, { csp = true, payload = false, signedIn = true } = {}) {
   const diagnostic = stage => console.log(`[admin-browser] ${t.name}: ${stage}`);
   diagnostic('fixture: starting');
-  const state = { empty: false, unauthorized: false, requests: [], statuses: new Map(), recorded: true };
+  const state = { empty: false, unauthorized: false, requests: [], statuses: new Map(), recorded: true,
+    ownerConfigured: true };
   const stats = payload ? {
     users: { total: html, newThisWeek: svg, newThisMonth: link },
     signIns: { rate: html, notInLast30Days: svg },
@@ -120,17 +121,19 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
     }
     next();
   });
-  app.get('/admin/api/stats', (_req, res) => res.json(stats));
+  // T-428: every statistics answer says whether ADMIN_OWNER_EMAILS is set.
+  const owner = req => ({ configured: state.ownerConfigured, excluded: state.ownerConfigured && req.query.owner === '1' });
+  app.get('/admin/api/stats', (req, res) => res.json({ ...stats, owner: owner(req) }));
   app.get('/admin/api/analytics', (req, res) => {
     if (state.refusal) return res.status(400).json(state.refusal);
-    const body = analyticsBody(payload, state.recorded);
+    const body = { ...analyticsBody(payload, state.recorded), owner: owner(req) };
     res.json(req.query.cohort === '1' ? { ...body, cohort: cohortBody } : body);
   });
   app.get('/admin/api/users', (req, res) => {
     const all = state.empty ? [] : users;
     const offset = Number(req.query.offset);
     res.json({ users: all.slice(offset, offset + 30).map(row => (state.recorded ? row : { ...row, lastAppDay: null })),
-      total: all.length, appDaysRecorded: state.recorded });
+      total: all.length, appDaysRecorded: state.recorded, owner: owner(req) });
   });
   app.get('/admin/api/bug-reports', (req, res) => {
     const all = state.empty ? [] : reports;
@@ -433,6 +436,61 @@ test('dates and the test cohort: the switch locks the source, wrong dates ask no
   await page.reload();
   await waitForDashboard(page);
   assert.equal(await page.locator('#filter-period').inputValue(), 'all');
+  assert.deepEqual(errors, []);
+});
+
+// T-428: the app owner out of every figure — off by default, remembered, and
+// not available while the server has no ADMIN_OWNER_EMAILS.
+test('the owner switch: off by default, reaches every statistics request, survives a reload, unavailable without the variable', { timeout: 30000 }, async t => {
+  const { page, state, errors } = await fixture(t);
+  await waitForDashboard(page);
+  await page.locator('#analytics-body .analytics-block').first().waitFor();
+  const last = name => new URL(state.requests.filter(r => r.path.startsWith('/admin/api/' + name)).at(-1).path,
+    'http://fixture.test').searchParams;
+  const answered = (name, test) => page.waitForResponse(r => {
+    const url = new URL(r.url());
+    return url.pathname === '/admin/api/' + name && test(url.searchParams);
+  });
+  const toggle = page.locator('#filter-owner');
+  const unavailable = page.locator('#filter-owner-unavailable');
+  assert.equal(await page.locator('#filters label.toggle', { has: toggle }).textContent(), ' Без аккаунта владельца приложения');
+  assert.equal(await page.locator('#filter-owner-note').textContent(), `Убирает из${NB}всех цифр аккаунт владельца `
+    + `приложения (адреса из${NB}ADMIN_OWNER_EMAILS) и${NB}проекты, которыми он владеет. Участники этих проектов `
+    + `в${NB}цифрах остаются.`);
+  assert.deepEqual([await toggle.isChecked(), await toggle.isDisabled(), await unavailable.isVisible()], [false, false, false]);
+  for (const name of ['stats', 'analytics', 'users']) assert.equal(last(name).get('owner'), null, name);
+
+  // On: every statistics request asks for it; bug reports do not take it.
+  const on = ['stats', 'analytics', 'users'].map(name => answered(name, params => params.get('owner') === '1'));
+  await toggle.check();
+  await Promise.all(on);
+  assert.equal(state.requests.filter(r => r.path.startsWith('/admin/api/bug-reports')).some(r => r.path.includes('owner')), false);
+
+  // A reload keeps it.
+  const restored = answered('analytics', params => params.get('owner') === '1');
+  await page.reload();
+  await restored;
+  await waitForDashboard(page);
+  assert.equal(await toggle.isChecked(), true);
+
+  // The server has no ADMIN_OWNER_EMAILS: off, cannot be turned on, and says why.
+  state.ownerConfigured = false;
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
+  await unavailable.waitFor({ state: 'visible' });
+  assert.equal(await unavailable.textContent(), `Недоступно: на${NB}сервере не задана переменная ADMIN_OWNER_EMAILS.`);
+  assert.deepEqual([await toggle.isChecked(), await toggle.isDisabled()], [false, true]);
+
+  // Set again: available once more.
+  state.ownerConfigured = true;
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click();
+  await unavailable.waitFor({ state: 'hidden' });
+  assert.equal(await toggle.isDisabled(), false);
+
+  // Unreadable storage: off.
+  await page.evaluate(() => localStorage.setItem('admin_filters', '{not json'));
+  await page.reload();
+  await waitForDashboard(page);
+  assert.equal(await toggle.isChecked(), false);
   assert.deepEqual(errors, []);
 });
 

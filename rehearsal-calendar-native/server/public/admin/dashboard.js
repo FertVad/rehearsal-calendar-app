@@ -410,7 +410,19 @@
     if (source && !cohortOn()) params.set('source', source);
     const lang = byId('filter-lang').value;
     if (lang) params.set('lang', lang);
+    if (byId('filter-owner').checked) params.set('owner', '1');
     return { query: params.toString() };
+  }
+
+  // The owner switch (T-428): every statistics answer says whether the server
+  // knows the owner's addresses. Without them the switch is off, cannot be
+  // turned on and says why; the server has counted everyone already.
+  function applyOwnerAnswer(answer) {
+    if (!isObject(answer) || typeof answer.configured !== 'boolean') return;
+    const toggle = byId('filter-owner');
+    toggle.disabled = !answer.configured;
+    if (!answer.configured) toggle.checked = false;
+    byId('filter-owner-unavailable').classList.toggle('hidden', answer.configured);
   }
 
   function showFilterError(text) {
@@ -459,11 +471,12 @@
     select.disabled = on;
   }
 
-  // The dates and the switch outlive a reload; without storage, "all time".
+  // The dates and the switches outlive a reload; without storage, "all time", everyone.
   function saveFilters() {
     try {
       localStorage.setItem(FILTERS_KEY, JSON.stringify({ period: byId('filter-period').value,
-        from: byId('filter-from').value, to: byId('filter-to').value, cohort: byId('filter-cohort').checked }));
+        from: byId('filter-from').value, to: byId('filter-to').value, cohort: byId('filter-cohort').checked,
+        owner: byId('filter-owner').checked }));
     } catch { /* Not remembered: the page works the same. */ }
   }
 
@@ -477,6 +490,7 @@
         if (typeof saved[key] === 'string' && realDay(saved[key])) byId(id).value = saved[key];
       }
       byId('filter-cohort').checked = saved.cohort === true;
+      byId('filter-owner').checked = saved.owner === true;
     }
     applyFilterControls();
   }
@@ -486,6 +500,7 @@
       && hasFields(data.users, ['total', 'newThisWeek', 'newThisMonth'])
       && hasFields(data.signIns, ['rate', 'notInLast30Days'])
       && hasFields(data.usage, ['projects', 'rehearsals']), data => {
+      applyOwnerAnswer(data.owner);
       const users = card('Пользователи', data.users.total);
       const summary = element('div', 'card-sub');
       // The last 7 and 30 days back from now (since(7), since(30)), not a calendar week and month.
@@ -575,6 +590,7 @@
     return withFilters(sections.users, query => loadSection(sections.users, page, '/users?limit=' + PAGE_SIZE + '&offset=' + (page * PAGE_SIZE)
       + '&' + query + service,
     data => validList(data, 'users', validUser) && typeof data.appDaysRecorded === 'boolean', data => {
+      applyOwnerAnswer(data.owner);
       const rows = data.users.map(user => {
         const row = element('tr', user.service ? 'service-row' : '');
         row.append(
@@ -901,6 +917,7 @@
 
   function loadAnalytics() {
     return withFilters(sections.analytics, query => loadSection(sections.analytics, 0, '/analytics?' + query, validAnalytics, data => {
+      applyOwnerAnswer(data.owner);
       renderLanguages(data.languages);
       document.getElementById('analytics-body').replaceChildren(
         ...(data.cohort ? [renderCohort(data.cohort)] : []),
@@ -1052,7 +1069,7 @@
   }
 
   restoreFilters();
-  for (const id of ['filter-period', 'filter-from', 'filter-to', 'filter-cohort', 'filter-source', 'filter-lang']) {
+  for (const id of ['filter-period', 'filter-from', 'filter-to', 'filter-cohort', 'filter-source', 'filter-lang', 'filter-owner']) {
     document.getElementById(id).addEventListener('change', () => {
       applyFilterControls();
       saveFilters();

@@ -1,8 +1,9 @@
 /**
  * The admin's figures of use (T-294), from what migration 016 records: the days
  * someone used the app, with its build, and the daily counts of each project's
- * invitation. Same people as every other figure (people.js): never a service
- * account, then the source and language filters.
+ * invitation. Same people and projects as every other figure (people.js):
+ * never a service account, nor the app owner while the switch is on (T-428),
+ * then the source and language filters.
  *
  * Without 016 there is nothing to count, and the answer says so — `recorded:
  * false` — rather than zeros, which would read as nobody using the app
@@ -12,7 +13,7 @@
  */
 import { isMissingTable } from '../usage/statsStore.js';
 import { addDays, dateIn } from '../../utils/dateIn.js';
-import { count, shortName } from './people.js';
+import { count, shortName, shownProject } from './people.js';
 
 const RETENTION_DAYS = [1, 7, 30];
 const rate = (part, whole) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null);
@@ -180,7 +181,7 @@ export async function usage(conn, filters, { people, projects }, everyone, cohor
   const invitations = [];
   for (const row of recorded.invites) {
     const project = projects.get(Number(row.project_id));
-    if (!project || project.serviceOwned) continue;
+    if (!project || !shownProject(project, filters)) continue;
     invitations.push({ project: project.name, owner: shortName(people.get(project.ownerId)),
       pageOpens: count(row.page_opens), appOpens: count(row.app_opens), joins: count(row.joins) });
   }

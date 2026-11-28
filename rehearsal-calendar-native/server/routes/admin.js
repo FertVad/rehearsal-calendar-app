@@ -8,7 +8,7 @@ import { analytics, summary } from '../services/admin/analytics.js';
 import { lastAppDays } from '../services/admin/usage.js';
 import { purgeExpired } from '../services/usage/statsStore.js';
 import {
-  FilterRefused, emptyFacts, loadFacts, loadPeople, matches, parseFilters, registeredSince, userRow,
+  FilterRefused, emptyFacts, loadFacts, loadPeople, matches, ownerAnswer, parseFilters, registeredSince, userRow,
 } from '../services/admin/people.js';
 
 const router = Router();
@@ -63,7 +63,8 @@ router.get('/api/analytics', requireAdmin, asyncHandler(async (req, res) => {
 }));
 
 // Users list: one row per person registered in the period, newest first, with
-// where they came from and how far they got. Service accounts only with ?service=1.
+// where they came from and how far they got. Service accounts only with ?service=1;
+// the app owner's accounts never with ?owner=1 (T-428).
 router.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
   try {
     const filters = filtersOf(req, res);
@@ -73,8 +74,8 @@ router.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
 
     const directory = await loadPeople(db);
     const listed = [...directory.people.values()]
-      .filter((person) => (filters.service || !person.service) && matches(person, filters)
-        && registeredSince(person, filters.since, filters.until))
+      .filter((person) => (filters.service || !person.service) && !(filters.owner && person.appOwner)
+        && matches(person, filters) && registeredSince(person, filters.since, filters.until))
       .sort((a, b) => (b.createdAt ?? -Infinity) - (a.createdAt ?? -Infinity) || b.id - a.id);
     const page = listed.slice(offset, offset + limit);
     const ids = page.map((person) => person.id);
@@ -86,6 +87,7 @@ router.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
         lastAppDay: lastDays?.get(person.id) ?? null,
       })),
       total: listed.length,
+      owner: ownerAnswer(filters),
       // False until migration 016 is applied: no last day is "not recorded", not "never".
       appDaysRecorded: lastDays !== null,
     });

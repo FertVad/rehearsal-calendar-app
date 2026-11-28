@@ -1937,6 +1937,15 @@ anything is read:
 | `source` | `invite`, `own`, `none` |
 | `lang` | a language code |
 | `service` | `1`: the users table shows service accounts |
+| `owner` | `0` (default) or `1`: without the app owner's account (T-428) — the accounts in `ADMIN_OWNER_EMAILS` (comma-separated, any case) leave every figure and the users table, even with `service=1`; the projects they own leave `usage.projects`/`usage.rehearsals` of `/stats` and `projects`, `usage.invitations`, `sources.projects` of `/analytics`. Members of those projects stay. Anything else is refused (`FILTER`) |
+
+Each of the three answers carries `owner`: whether the variable is set, and
+whether the owner was left out of this answer. Without the variable `owner=1`
+answers exactly as `owner=0`, with `configured: false`:
+
+```json
+"owner": { "configured": true, "excluded": true }
+```
 
 A period with dates bounds every section: registrations, joins, notifications,
 email codes and invitation counts fall in `[from, to + 1 day)`; a project is

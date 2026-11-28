@@ -12,6 +12,11 @@
  *   public. The users table shows them only when asked, marked.
  * - A project is left out only when its owner is on one of the two domains —
  *   the demo troupe. A project of the owner of the service is real people.
+ * - The owner of the app is the addresses in ADMIN_OWNER_EMAILS, the same way
+ *   (T-428). By default they count like anyone (the owner's decision of
+ *   25.11); with owner=1 their accounts count nowhere and the projects they own
+ *   leave the project figures, while the members of those projects stay people
+ *   in every figure. Without the variable owner=1 changes nothing.
  * - Where someone came from is their earliest active membership: role owner
  *   — their own project; any other — an invitation, whatever role they hold
  *   now (an invited member made admin is still "invited"). Someone who left
@@ -96,7 +101,7 @@ const truthy = (value) => value === true || value === 1 || value === '1' || valu
 export const count = (value) => Number(value) || 0;
 
 /**
- * period (or from and to), source, lang, the test cohort and the service switch,
+ * period (or from and to), source, lang, the test cohort, the service and owner switches,
  * from a query string; refuses anything else. A period is [since, until):
  * `until` is null for "the last N days" and "all time", which run up to now.
  */
@@ -120,11 +125,21 @@ export function parseFilters(query, now = Date.now()) {
   if (cohort && !dated) throw new FilterRefused('the test cohort needs from and to', 'COHORT_DATES');
   if (cohort && source !== null) throw new FilterRefused('the test cohort fixes the source', 'COHORT_SOURCE');
   const sources = cohort ? COHORT_SOURCES : source === null ? null : [source];
-  return { period, since, until, source, sources, cohort, lang, service: query.service === '1', now };
+  const ownerValue = textOf(query.owner);
+  if (ownerValue !== null && ownerValue !== '0' && ownerValue !== '1') throw new FilterRefused('owner must be 0 or 1');
+  // Without ADMIN_OWNER_EMAILS there is nobody to leave out: owner=1 reads as
+  // without it, and the answer says so (ownerAnswer).
+  const ownerConfigured = addressesIn('ADMIN_OWNER_EMAILS').size > 0;
+  return { period, since, until, source, sources, cohort, lang, service: query.service === '1',
+    owner: ownerConfigured && ownerValue === '1', ownerConfigured, now };
 }
 
-function serviceAddresses() {
-  return new Set(String(process.env.ADMIN_SERVICE_EMAILS || '').split(',')
+/** What every statistics answer says of the owner switch (T-428). */
+export const ownerAnswer = (filters) => ({ configured: filters.ownerConfigured, excluded: filters.owner });
+
+/** A comma-separated list of addresses in an environment variable, any case. */
+function addressesIn(name) {
+  return new Set(String(process.env[name] || '').split(',')
     .map((address) => address.trim().toLowerCase()).filter(Boolean));
 }
 
@@ -146,7 +161,8 @@ export function shortName(person) {
  * active members. Three queries whatever the number of people.
  */
 export async function loadPeople(conn) {
-  const listed = serviceAddresses();
+  const listed = addressesIn('ADMIN_SERVICE_EMAILS');
+  const owners = addressesIn('ADMIN_OWNER_EMAILS');
   const [users, memberships, projectRows] = await Promise.all([
     conn.all(`SELECT id, email, first_name, last_name, locale, timezone, onboarding_completed,
                 CASE WHEN password_hash IS NULL THEN 0 ELSE 1 END AS has_password, created_at, last_login_at
@@ -159,12 +175,14 @@ export async function loadPeople(conn) {
   const people = new Map();
   for (const row of users) {
     const email = row.email;
+    const address = String(email || '').trim().toLowerCase();
     people.set(Number(row.id), {
       id: Number(row.id), email, firstName: row.first_name, lastName: row.last_name,
       locale: row.locale ?? null, timezone: row.timezone ?? null,
       onboarding: truthy(row.onboarding_completed), hasPassword: truthy(row.has_password),
       createdAt: toMs(row.created_at), lastLoginAt: toMs(row.last_login_at),
-      service: onServiceDomain(email) || listed.has(String(email || '').trim().toLowerCase()),
+      service: onServiceDomain(email) || listed.has(address),
+      appOwner: owners.has(address),
       memberships: [], source: { kind: 'none', projectId: null },
     });
   }
@@ -172,7 +190,7 @@ export async function loadPeople(conn) {
   const projects = new Map();
   for (const row of projectRows) {
     projects.set(Number(row.id), { id: Number(row.id), name: row.name, createdAt: toMs(row.created_at),
-      ownerId: null, members: [], serviceOwned: false });
+      ownerId: null, members: [], serviceOwned: false, appOwnerOwned: false });
   }
 
   const ordered = memberships.map((row) => ({ id: Number(row.id), userId: Number(row.user_id),
@@ -192,9 +210,16 @@ export async function loadPeople(conn) {
   }
   for (const project of projects.values()) {
     project.serviceOwned = onServiceDomain(people.get(project.ownerId)?.email);
+    project.appOwnerOwned = people.get(project.ownerId)?.appOwner === true;
   }
   return { people, projects };
 }
+
+/** Left out of every figure: a service account, or the app's owner while the switch is on (T-428). */
+export const leftOut = (person, filters) => person.service || (filters.owner && person.appOwner);
+
+/** A project the figures show: not the demo troupe's, nor the app owner's while the switch is on. */
+export const shownProject = (project, filters) => !project.serviceOwned && !(filters.owner && project.appOwnerOwned);
 
 export const matches = (person, filters) =>
   (!filters.sources || filters.sources.includes(person.source.kind)) && (!filters.lang || person.locale === filters.lang);
@@ -204,8 +229,9 @@ export const registeredSince = (person, since, until = null) => (since === null 
   || (person.createdAt !== null && (since === null || person.createdAt >= since)
     && (until === null || person.createdAt < until));
 
-/** The real people these filters select: never a service account. */
-export const counted = (people, filters) => [...people.values()].filter((person) => !person.service && matches(person, filters));
+/** The real people these filters select: never a service account, nor the owner while left out. */
+export const counted = (people, filters) => [...people.values()]
+  .filter((person) => !leftOut(person, filters) && matches(person, filters));
 
 /**
  * Per person: sign-in methods, marks by hand and marks from a calendar apart,

@@ -70,9 +70,13 @@ export function generateAdminPageHTML() {
           <option value="" selected>Все языки</option>
         </select>
       </label>
+      <!-- The app owner's accounts and projects out of every figure (T-428) -->
+      <label class="toggle"><input type="checkbox" id="filter-owner" aria-describedby="filter-owner-note filter-owner-unavailable"> Без аккаунта владельца приложения</label>
       <p class="filter-error hidden" id="filter-error" role="alert"></p>
       <p class="note hidden" id="filter-dates-note">Дни&nbsp;— по&nbsp;UTC; первый и&nbsp;последний входят в&nbsp;период.</p>
       <p class="note hidden" id="filter-cohort-note">Все, кто зарегистрировался в&nbsp;эти даты с&nbsp;источником «Свой проект» или «Без проекта», считаются пришедшими из&nbsp;рекламы. Пока переключатель включён, выбрать источник нельзя.</p>
+      <p class="note" id="filter-owner-note">Убирает из&nbsp;всех цифр аккаунт владельца приложения (адреса из&nbsp;ADMIN_OWNER_EMAILS) и&nbsp;проекты, которыми он владеет. Участники этих проектов в&nbsp;цифрах остаются.</p>
+      <p class="note hidden" id="filter-owner-unavailable" role="status">Недоступно: на&nbsp;сервере не задана переменная ADMIN_OWNER_EMAILS.</p>
       <p class="note">Служебные аккаунты (адреса на rehearsly.me и demo.rehearsly.me, а также из ADMIN_SERVICE_EMAILS) не входят ни в одну цифру. «Последние N&nbsp;дней» отсчитываются от текущего момента. Период отбирает людей по дате регистрации; карточки вверху&nbsp;— на текущий момент, без учёта периода.</p>
     </section>
 

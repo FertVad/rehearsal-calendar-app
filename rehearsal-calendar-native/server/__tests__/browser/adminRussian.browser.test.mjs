@@ -12,7 +12,7 @@ const NB = ' ';
 
 // Words a Russian page keeps in Latin letters: names, a unit of the API, variable
 // names and domains, and the "N" of «Последние N дней».
-const ALLOWED = ['ADMIN_SERVICE_EMAILS', 'MIN_IOS_BUILD', 'ADMIN_PASSWORD_HASH', 'ADMIN_PASSWORD',
+const ALLOWED = ['ADMIN_SERVICE_EMAILS', 'ADMIN_OWNER_EMAILS', 'MIN_IOS_BUILD', 'ADMIN_PASSWORD_HASH', 'ADMIN_PASSWORD',
   'demo.rehearsly.me', 'rehearsly.me', 'Rehearsly', 'Apple', 'Google', 'UTC', 'push', 'N'];
 // The fixture's stored values that stay as they are: addresses, a screen's
 // name, language and zone codes, and a type the page has no name for.
