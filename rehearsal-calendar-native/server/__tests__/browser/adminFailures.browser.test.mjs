@@ -90,12 +90,14 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
       email: `user${i + 1}@example.test`, createdAt: date, lastLoginAt: null,
       service: false, source: { kind: 'none', project: null, owner: null }, signIn: ['email'],
       locale: 'en', timezone: 'UTC', steps: { onboarding: false, projects: 0, roles: { owner: 0, admin: 0, member: 0 },
-        marks: 0, marksUntil: null, calendar: false, device: false, seen: 0, onRoster: 0, rehearsals: 0 },
+        manualMarks: 0, marksUntil: null, calendarMarks: 0, calendar: false, device: false, seen: 0, onRoster: 0,
+        rehearsals: 0 },
       lastAppDay: null,
     })).slice(offset, offset + 30), appDaysRecorded: true };
   }));
-  const empty = { registered: 0, onboarding: 0, project: 0, marks: 0, engaged: 0 };
-  const noWait = { toProjectHours: null, toProjectOf: 0, toMarksHours: null, toMarksOf: 0 };
+  const empty = { registered: 0, onboarding: 0, project: 0, calendar: 0, manual: 0, engaged: 0 };
+  const noWait = { toProjectHours: null, toProjectOf: 0, toCalendarHours: null, toCalendarOf: 0,
+    toManualHours: null, toManualOf: 0 };
   app.get('/admin/api/analytics', reply('analytics', () => ({
     period: 'all', from: null, to: date, people: 0, languages: [],
     funnel: { weeks: [], total: { invite: empty, other: empty }, medians: { invite: noWait, other: noWait } },

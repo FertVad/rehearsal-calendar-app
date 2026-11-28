@@ -708,6 +708,7 @@ The page is in Russian only, no language switch (the owner, 26.11.2026; T-419): 
 **Features**:
 - User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
 - Period "Даты" (T-425): `from`/`to`, UTC days, both in, at most 366, refused with a `code` the page names before anything is read; the "Тестовая когорта" switch fixes the source to own + none and puts the dates beside the week before them at the top of the analytics — steps within 7 days of registering, of those whose 7 days are over (`testCohort` in `services/admin/analytics.js`); the dates and the switch are kept in `localStorage` (`admin_filters`)
+- The calendar apart from hand marks (T-426): "Календарь подключён" is `fact.calendar` in `services/admin/people.js` (an import from a calendar or an export record, `native_calendar_connections`; sync with neither leaves nothing on the server), "Ручные отметки" is `source = 'manual'` (default weekends are neither) — in the funnel, its medians (earliest record still kept), the test cohort, the users table (`marksUntil` by hand marks only) and the projects' share of members
 - Use of the app (T-294, `services/admin/usage.js`): active today / 7 / 30 days, retention on days 1, 7, 30 by registration week, builds among the active, each invitation from page to join; the users table's "last day in app". Read from migration 016's tables; without them the sections say "no data: migration 016 not applied", never zeros
 - Users table with pagination
 - Bug reports table with inline status management

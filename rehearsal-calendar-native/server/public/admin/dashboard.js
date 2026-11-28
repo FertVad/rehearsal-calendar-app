@@ -532,7 +532,7 @@
     && hasFields(user.source, ['project', 'owner'], isNullableText)
     && Array.isArray(user.signIn) && user.signIn.every(isText)
     && isObject(user.steps) && isObject(user.steps.roles)
-    && hasFields(user.steps, ['projects', 'marks', 'seen', 'onRoster', 'rehearsals'])
+    && hasFields(user.steps, ['projects', 'manualMarks', 'calendarMarks', 'seen', 'onRoster', 'rehearsals'])
     && hasFields(user.steps, ['marksUntil'], isNullableText)
     && hasFields(user, ['lastAppDay'], isNullableText);
 
@@ -560,9 +560,10 @@
     return [
       'Онбординг: ' + (steps.onboarding ? 'да' : 'нет'),
       'проектов: ' + steps.projects + (roles.length ? ' (' + roles.join(', ') + ')' : ''),
-      // «по» takes the date in: the last date the marks reach.
-      'отметок: ' + (steps.marks ? steps.marks + ', по ' + fmtDay(steps.marksUntil) : 'нет'),
-      'синхронизация календаря: ' + (steps.calendar ? 'да' : 'нет'),
+      // «по» takes the date in: the last date the hand marks reach (T-426, the editor's strings).
+      'ручных отметок: ' + (steps.manualMarks ? steps.manualMarks + ', по' + NB + fmtDay(steps.marksUntil) : 'нет'),
+      typeset('отметок из⍽календаря: ') + (steps.calendarMarks ? steps.calendarMarks : 'нет'),
+      'календарь подключён: ' + (steps.calendar ? 'да' : 'нет'),
       'устройство: ' + (steps.device ? 'есть' : 'нет'),
       'просмотрено: ' + steps.seen + ' из ' + steps.onRoster,
       'создано репетиций: ' + steps.rehearsals,
@@ -621,7 +622,7 @@
   }
 
   function renderFunnel(funnel) {
-    const steps = ['registered', 'onboarding', 'project', 'marks', 'engaged'];
+    const steps = ['registered', 'onboarding', 'project', 'calendar', 'manual', 'engaged'];
     const line = (label, group, counts) => [label, group,
       ...steps.map(step => share(counts[step], counts.registered))];
     const rows = [
@@ -632,22 +633,30 @@
     // «По 12 чел.»: the median over the 12 people who have the step.
     const medians = ['invite', 'other'].map(group => {
       const m = funnel.medians[group];
-      return note(GROUPS[group] + ': медиана от регистрации до проекта — ' + hoursText(m.toProjectHours, m.toProjectOf)
-        + ', до первых отметок занятости — ' + hoursText(m.toMarksHours, m.toMarksOf) + '.');
+      return note(GROUPS[group] + typeset(': медиана от⍽регистрации до⍽проекта⍽— ')
+        + hoursText(m.toProjectHours, m.toProjectOf)
+        + typeset(', до⍽подключения календаря⍽— ') + hoursText(m.toCalendarHours, m.toCalendarOf)
+        + typeset(', до⍽первой ручной отметки⍽— ') + hoursText(m.toManualHours, m.toManualOf) + '.');
     });
     // «Пройден или пропущен»: "Skip" sets the same flag (skipOnboarding → completeOnboarding).
+    // The calendar apart from hand marks: T-426, the editor's strings (audit/evidence/T-426/natives-ru.md).
     return block('Воронка новичков',
-      table(['Неделя регистрации', 'Источник', 'Зарегистрировались', 'Онбординг', 'В проекте', 'Отметки занятости',
-        'Просмотрено / своя репетиция'], rows),
+      table(['Неделя регистрации', 'Источник', 'Зарегистрировались', 'Онбординг', 'В проекте', 'Календарь подключён',
+        'Ручные отметки', 'Просмотрено / своя репетиция'], rows),
       note('Зарегистрировавшиеся за период — по неделям регистрации; неделя обозначена её понедельником (по UTC). '
         + 'Каждый шаг — доля зарегистрировавшихся, у кого он есть сейчас: онбординг пройден или пропущен; человек состоит в проекте; '
-        + 'есть отметки занятости — свои или из календаря; хотя бы одна репетиция отмечена просмотренной (как участник) '
+        + typeset('календарь подключён⍽— есть занятость, импортированная из⍽календаря телефона, или приложение хоть раз '
+          + 'экспортировало в⍽него репетиции (синхронизацию, включённую без единого импорта и⍽экспорта, сервер не видит); '
+          + 'есть ручные отметки занятости (выходные, занятые по⍽умолчанию, и⍽события из⍽календаря не в⍽счёт)')
+        + '; хотя бы одна репетиция отмечена просмотренной (как участник) '
         + 'или создана (как организатор). «По приглашению» — тот же источник, что в таблице пользователей.'),
       ...medians,
-      note('У онбординга не записано время — только сам факт, что он пройден или пропущен. Время до проекта считается '
-        + 'до самого раннего участия, которое ещё действует. Время до первых отметок — до самой ранней из отметок, '
-        + 'которые ещё хранятся: при повторном сохранении дня его отметки заменяются, поэтому у того, кто пересохранил '
-        + 'свой первый день, первые отметки окажутся позже.'));
+      note(typeset('У⍽онбординга не записано время⍽— только сам факт, что он пройден или пропущен. Время до⍽проекта '
+        + 'считается до⍽самого раннего участия, которое ещё действует. Время до⍽подключения календаря⍽— до⍽самой ранней '
+        + 'из⍽хранящихся записей: первого экспорта репетиций или импортированной занятости. Импорт заменяет свои записи, '
+        + 'поэтому у⍽того, чья занятость из⍽календаря обновлялась, подключение может оказаться позже. Время до⍽первой '
+        + 'ручной отметки⍽— до⍽самой ранней из⍽ручных отметок, которые ещё хранятся: при повторном сохранении дня его '
+        + 'отметки заменяются, поэтому у⍽того, кто пересохранил свой первый день, первая отметка окажется позже.')));
   }
 
   // Counted only for the people the source and language filters select (analytics.js: `everyone`).
@@ -675,10 +684,11 @@
     // A project with only a future rehearsal is listed too: since_start has no upper bound.
     return block('Проекты',
       table(['Проект', 'Владелец', 'Создан', 'Участников', 'Репетиций', 'За 4' + NB + 'недели', 'Ближайшая',
-        'Просмотрено до начала (30' + NB + 'дн.)', 'Покрытие занятости (14' + NB + 'дн.)'],
+        'Просмотрено до начала (30' + NB + 'дн.)', 'Покрытие занятости (14' + NB + 'дн.)', 'Календарь подключён'],
       projects.map(p => [p.name, p.owner, fmtDate(p.createdAt), p.members, p.rehearsals, p.rehearsalsLastFourWeeks,
         fmtDate(p.nextRehearsalAt), ratio(p.seenBeforeStart.seen, p.seenBeforeStart.of, p.seenBeforeStart.rate),
-        ratio(p.coverage.people, p.coverage.of, p.coverage.rate)])),
+        ratio(p.coverage.people, p.coverage.of, p.coverage.rate),
+        ratio(p.calendar.people, p.calendar.of, p.calendar.rate)])),
       note('Проекты, созданные за период, или с репетицией, которая начинается не раньше начала периода (в том числе в будущем); '
         + 'проекты владельцев с адресом на rehearsly.me или demo.rehearsly.me не показаны. В столбце «Участников» — '
         + 'действующие участники, подходящие под фильтры «Источник» и «Язык».'),
@@ -686,9 +696,13 @@
       note('Просмотрено до начала: из мест в составах репетиций, начавшихся за последние 30' + NB + 'дней (место — один человек '
         + 'на одной репетиции), — сколько отмечены просмотренными, причём последнее изменение отметки было раньше начала. '
         + 'Кого больше нет в проекте, тот не входит ни в один состав.' + FILTERED),
-      note('Покрытие занятости: участники, у которых в ближайшие 14' + NB + 'дней есть хоть одна своя отметка или событие '
-        + 'из календаря (отметки на весь день — по датам UTC, начиная с сегодняшней). День без отметок считается свободным, '
-        + 'поэтому это доля тех, кто вообще что-то внёс.'));
+      // Weekends busy by default are not marks (people.js, MARK_SOURCES; migration 017).
+      note(typeset('Покрытие занятости: участники, у⍽которых в⍽ближайшие 14⍽дней есть хоть одна ручная отметка или '
+        + 'событие из⍽календаря (отметки на⍽весь день⍽— по⍽датам UTC, начиная с⍽сегодняшней). Выходные, занятые '
+        + 'по⍽умолчанию, не в⍽счёт: это доля тех, кто вообще что-то внёс.')),
+      note(typeset('Календарь подключён: участники, у⍽которых есть занятость, импортированная из⍽календаря телефона, '
+        + 'или приложение хоть раз экспортировало в⍽него репетиции. Синхронизацию, включённую без единого импорта '
+        + 'и⍽экспорта, сервер не видит.')));
   }
 
   function renderNotifications(notifications) {
@@ -755,7 +769,7 @@
 
   // The test cohort and the week before it (T-425). The strings are the editor's
   // (audit/evidence/T-425/natives-ru.md); the organiser's steps after «Создали
-  // проект» and the calendar apart from hand marks are T-427's and T-426's.
+  // проект» are T-427's; the calendar apart from hand marks is T-426's.
   const dayMonth = day => String(day).slice(8, 10) + '.' + String(day).slice(5, 7);
   const span = column => '(' + (column.from === column.to ? dayMonth(column.from)
     : dayMonth(column.from) + '–' + dayMonth(column.to)) + ')';
@@ -772,7 +786,8 @@
       typeset('За⍽первые ' + cohort.stepDays + '⍽дней после регистрации'),
       ['Создали проект', column => part(column.project)],
       ['В проекте', column => part(column.inProject)],
-      ['Отметки занятости', column => part(column.marks)],
+      ['Календарь подключён', column => part(column.calendar)],
+      ['Ручные отметки', column => part(column.manual)],
       [typeset('Открыли приложение на⍽1-й⍽день'), column => opened(column.day1)],
       [typeset('Открыли приложение на⍽7-й⍽день'), column => opened(column.day7)],
     ];
@@ -810,7 +825,7 @@
   const validShare = value => value === null || hasFields(value, ['count', 'of', 'rate']);
   const validColumn = column => hasFields(column, ['from', 'to', 'registered'])
     && hasFields(column, ['perDay'], isNullableText)
-    &&['onboarding', 'project', 'inProject', 'marks', 'day1', 'day7'].every(key => Object.hasOwn(column, key)
+    && ['onboarding', 'project', 'inProject', 'calendar', 'manual', 'day1', 'day7'].every(key => Object.hasOwn(column, key)
       && validShare(column[key]));
   const validCohort = cohort => cohort === undefined || (isObject(cohort) && typeof cohort.recorded === 'boolean'
     && Number.isSafeInteger(cohort.stepDays) && validColumn(cohort.test) && validColumn(cohort.before));
@@ -819,7 +834,8 @@
     && validUsage(data.usage) && validCohort(data.cohort)
     && isObject(data.funnel) && Array.isArray(data.funnel.weeks) && isObject(data.funnel.total) && isObject(data.funnel.medians)
     && isObject(data.sources) && ['byDay', 'byWeek', 'projects', 'languages', 'timezones'].every(key => Array.isArray(data.sources[key]))
-    && Array.isArray(data.projects) && data.projects.every(p => isObject(p) && isObject(p.seenBeforeStart) && isObject(p.coverage))
+    && Array.isArray(data.projects) && data.projects.every(p => isObject(p) && isObject(p.seenBeforeStart) && isObject(p.coverage)
+      && isObject(p.calendar))
     && isObject(data.notifications) && isObject(data.notifications.devices)
     && Array.isArray(data.notifications.inbox) && Array.isArray(data.notifications.emailCodes);
 

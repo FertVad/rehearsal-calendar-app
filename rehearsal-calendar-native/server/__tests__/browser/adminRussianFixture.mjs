@@ -16,8 +16,8 @@ export const INBOX_TYPES = ['rehearsal_created', 'rehearsal_updated', 'rehearsal
   'member_response', 'member_joined', 'admin_appointed', 'member_left', 'role_changed', 'member_removed',
   'project_deleted', 'rehearsal_reminder_24h', 'rehearsal_reminder_1h'];
 
-const steps = { onboarding: true, projects: 2, roles: { owner: 1, admin: 0, member: 1 }, marks: 3,
-  marksUntil: '2026-09-10', calendar: true, device: false, seen: 1, onRoster: 2, rehearsals: 1 };
+const steps = { onboarding: true, projects: 2, roles: { owner: 1, admin: 0, member: 1 }, manualMarks: 3,
+  marksUntil: '2026-09-10', calendarMarks: 2, calendar: true, device: false, seen: 1, onRoster: 2, rehearsals: 1 };
 const users = [
   { id: 1, firstName: 'Мария', lastName: 'К.', email: 'maria@example.test', createdAt: '2026-09-10T15:00:00Z',
     lastLoginAt: '2026-09-10T15:00:00Z', service: false, source: { kind: 'invite', project: 'Гамлет', owner: 'Ольга О.' },
@@ -25,18 +25,20 @@ const users = [
   { id: 2, firstName: 'Ольга', lastName: 'О.', email: 'olga@example.test', createdAt: '2026-09-01T12:00:00Z',
     lastLoginAt: null, service: false, source: { kind: 'own', project: '«Вишнёвый сад»', owner: null },
     signIn: ['email'], locale: 'en', timezone: 'Europe/Moscow',
-    steps: { ...steps, onboarding: false, roles: { owner: 1, admin: 1, member: 0 }, marks: 0, marksUntil: null,
-      calendar: false, device: true }, lastAppDay: null },
+    steps: { ...steps, onboarding: false, roles: { owner: 1, admin: 1, member: 0 }, manualMarks: 0, marksUntil: null,
+      calendarMarks: 0, calendar: false, device: true }, lastAppDay: null },
   { id: 3, firstName: null, lastName: null, email: 'service@rehearsly.me', createdAt: null, lastLoginAt: null,
     service: true, source: { kind: 'none', project: null, owner: null }, signIn: [], locale: null, timezone: null,
     steps: { ...steps, projects: 0, roles: { owner: 0, admin: 0, member: 0 } }, lastAppDay: null },
 ];
-const counts = { registered: 3, onboarding: 2, project: 2, marks: 1, engaged: 1 };
+const counts = { registered: 3, onboarding: 2, project: 2, calendar: 1, manual: 1, engaged: 1 };
 export const analytics = {
   period: 'all', from: null, to: '2026-09-11T12:00:00Z', people: 3, languages: ['en', 'ru'],
   funnel: { weeks: [{ week: '2026-09-07', invite: counts, other: counts }], total: { invite: counts, other: counts },
-    medians: { invite: { toProjectHours: 2.5, toProjectOf: 12, toMarksHours: null, toMarksOf: 0 },
-      other: { toProjectHours: 30, toProjectOf: 1, toMarksHours: 0.5, toMarksOf: 2 } } },
+    medians: { invite: { toProjectHours: 2.5, toProjectOf: 12, toCalendarHours: 4, toCalendarOf: 3,
+      toManualHours: null, toManualOf: 0 },
+      other: { toProjectHours: 30, toProjectOf: 1, toCalendarHours: null, toCalendarOf: 0,
+      toManualHours: 0.5, toManualOf: 2 } } },
   sources: { byDay: [{ date: '2026-09-10', invite: 1, own: 0, none: 0 }], byWeek: [{ date: '2026-09-07', invite: 1, own: 1, none: 0 }],
     projects: [{ project: 'Гамлет', owner: 'Ольга О.', joined: 1, newcomers: 1 }],
     languages: [{ value: 'ru', people: 2 }, { value: null, people: 1 }], timezones: [{ value: ZONE, people: 1 }] },
@@ -47,7 +49,8 @@ export const analytics = {
     invitations: [{ project: 'Гамлет', owner: 'Ольга О.', pageOpens: 6, appOpens: 3, joins: 2 }] },
   projects: [{ id: 1, name: 'Гамлет', owner: 'Ольга О.', createdAt: '2026-09-10T15:00:00Z', members: 3, rehearsals: 4,
     rehearsalsLastFourWeeks: 2, nextRehearsalAt: '2026-09-12T18:00:00Z',
-    seenBeforeStart: { seen: 0, of: 0, rate: null }, coverage: { people: 2, of: 3, rate: 66.7 } }],
+    seenBeforeStart: { seen: 0, of: 0, rate: null }, coverage: { people: 2, of: 3, rate: 66.7 },
+    calendar: { people: 1, of: 3, rate: 33.3 } }],
   notifications: { devices: { people: 1, of: 3, rate: 33.3 },
     // Medians of 30 min, 2.5 h, 1 h and none, in turn; the last type is one the page has no name for.
     inbox: [...INBOX_TYPES, 'future_kind'].map((type, i) => ({ type, created: 2, read: 1, readRate: 40.5,

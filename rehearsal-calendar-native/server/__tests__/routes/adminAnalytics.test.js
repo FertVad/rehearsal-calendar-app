@@ -49,7 +49,7 @@ const SCHEMA = `
     response TEXT NOT NULL, notes TEXT, created_at TEXT, updated_at TEXT);
   CREATE TABLE native_user_availability (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, starts_at TEXT NOT NULL,
     ends_at TEXT NOT NULL, is_all_day INTEGER NOT NULL DEFAULT 0, source TEXT NOT NULL DEFAULT 'manual', created_at TEXT);
-  CREATE TABLE native_calendar_connections (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL);
+  CREATE TABLE native_calendar_connections (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, created_at TEXT);
   CREATE TABLE native_push_tokens (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL);
   CREATE TABLE native_notifications (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, type TEXT NOT NULL,
     created_at TEXT, read_at TEXT);
@@ -237,18 +237,20 @@ describe('the users table', () => {
     const users = byEmail((await get('/admin/api/users').expect(200)).body.users);
     expect(users['olga@example.test']).toMatchObject({
       signIn: ['apple'], locale: 'ru', timezone: 'America/Mazatlan',
-      steps: { onboarding: true, projects: 1, roles: { owner: 1, admin: 0, member: 0 }, marks: 2,
+      steps: { onboarding: true, projects: 1, roles: { owner: 1, admin: 0, member: 0 }, manualMarks: 2,
         // The all-day mark is 8 December in UTC; the timed one ends on the 9th in Mazatlán.
-        marksUntil: '2026-12-09', calendar: false, device: true, seen: 1, onRoster: 1, rehearsals: 2 },
+        marksUntil: '2026-12-09', calendarMarks: 0, calendar: false, device: true, seen: 1, onRoster: 1, rehearsals: 2 },
     });
+    // Her one mark is from her calendar: no hand marks, no last date.
     expect(users['anna@example.test']).toMatchObject({
       signIn: ['apple', 'email'],
-      steps: { onboarding: false, projects: 2, roles: { owner: 1, admin: 1, member: 0 }, marks: 1,
-        calendar: true, device: false, seen: 1, onRoster: 2, rehearsals: 1 },
+      steps: { onboarding: false, projects: 2, roles: { owner: 1, admin: 1, member: 0 }, manualMarks: 0, marksUntil: null,
+        calendarMarks: 1, calendar: true, device: false, seen: 1, onRoster: 2, rehearsals: 1 },
     });
     // A password and no recorded method: an account from before they were recorded.
     expect(users['left@example.test'].signIn).toEqual(['email']);
-    expect(users['loner@example.test'].steps).toMatchObject({ projects: 0, marks: 0, marksUntil: null, seen: 0, onRoster: 0 });
+    expect(users['loner@example.test'].steps).toMatchObject({ projects: 0, manualMarks: 0, calendarMarks: 0,
+      marksUntil: null, seen: 0, onRoster: 0 });
     // The removed member's leftover row puts them on nothing.
     expect(users['removed@example.test'].steps).toMatchObject({ seen: 0, onRoster: 0 });
     expect(users['olga@example.test'].createdAt).toBe(ago(20 * D));
@@ -295,18 +297,20 @@ describe('analytics', () => {
     const { body } = await get('/admin/api/analytics?period=30').expect(200);
     expect(body.people).toBe(5);
     expect(body.funnel.total).toEqual({
-      invite: { registered: 2, onboarding: 1, project: 2, marks: 2, engaged: 2 },
-      other: { registered: 3, onboarding: 2, project: 1, marks: 1, engaged: 1 },
+      // Ivan marks by hand, Anna has her calendar (an import and an export).
+      invite: { registered: 2, onboarding: 1, project: 2, calendar: 1, manual: 1, engaged: 2 },
+      other: { registered: 3, onboarding: 2, project: 1, calendar: 0, manual: 1, engaged: 1 },
     });
     expect(body.funnel.weeks.map((week) => week.week)).toEqual(['2026-11-16', '2026-11-09', '2026-11-02']);
     expect(body.funnel.weeks[0]).toEqual({ week: '2026-11-16',
-      invite: { registered: 1, onboarding: 0, project: 1, marks: 1, engaged: 1 },
-      other: { registered: 2, onboarding: 1, project: 0, marks: 0, engaged: 0 } });
-    // Invited: Ivan in a project 3 h after registering, Anna 1 h; first marks
-    // after 5 h and 4 h (Anna's from her calendar). The rest: Olga, 1 h and 2 h.
+      invite: { registered: 1, onboarding: 0, project: 1, calendar: 1, manual: 0, engaged: 1 },
+      other: { registered: 2, onboarding: 1, project: 0, calendar: 0, manual: 0, engaged: 0 } });
+    // Invited: Ivan in a project 3 h after registering, Anna 1 h; Anna's import
+    // after 4 h (her export record has no time), Ivan's first hand mark after 5 h.
+    // The rest: Olga, 1 h and a hand mark after 2 h.
     expect(body.funnel.medians).toEqual({
-      invite: { toProjectHours: 2, toProjectOf: 2, toMarksHours: 4.5, toMarksOf: 2 },
-      other: { toProjectHours: 1, toProjectOf: 1, toMarksHours: 2, toMarksOf: 1 },
+      invite: { toProjectHours: 2, toProjectOf: 2, toCalendarHours: 4, toCalendarOf: 1, toManualHours: 5, toManualOf: 1 },
+      other: { toProjectHours: 1, toProjectOf: 1, toCalendarHours: null, toCalendarOf: 0, toManualHours: 2, toManualOf: 1 },
     });
   });
 
@@ -343,6 +347,8 @@ describe('analytics', () => {
       // Olga: all-day on 8 December, inside. Ivan: all-day on 9 December, outside,
       // and a busy slot booked for a rehearsal is not a mark. Anna: a calendar event.
       coverage: { people: 2, of: 3, rate: 66.7 },
+      // Anna alone has her calendar connected.
+      calendar: { people: 1, of: 3, rate: 33.3 },
     });
     // Projects created or rehearsing in the period.
     const week = (await get('/admin/api/analytics?period=7').expect(200)).body;
@@ -394,6 +400,95 @@ describe('analytics', () => {
     expect(spanish.notifications.emailCodes.map((row) => row.purpose)).toEqual(['reset', 'verify']);
     const stats = (await get('/admin/api/stats?source=own').expect(200)).body;
     expect(stats.users.total).toBe(1);
+  });
+});
+
+/**
+ * T-426: the calendar connected apart from marks made by hand. Six people
+ * registered on 13 November (UTC), apart from everyone above: Cora owns
+ * "Calendars", the five others joined it an hour after registering.
+ */
+describe('the calendar apart from hand marks (T-426)', () => {
+  const R = NOW - 12 * D; // 2026-11-13T12:00Z
+  const DAY = 'from=2026-11-13&to=2026-11-13';
+  const CAST = {
+    11: 'cora@example.test', // owner, nothing at all
+    12: 'manu@example.test', // hand marks only
+    13: 'ines@example.test', // imported from a calendar only
+    14: 'edgar@example.test', // exported rehearsals only
+    15: 'bea@example.test', // a hand mark, an import and an export
+    16: 'wendy@example.test', // only weekends busy by default
+  };
+  function cast() {
+    const person = sqlite.prepare(`INSERT INTO native_users (id, email, first_name, last_name, timezone, locale,
+      onboarding_completed, created_at) VALUES (?, ?, ?, 'Test', 'UTC', 'en', 1, ?)`);
+    for (const [id, email] of Object.entries(CAST)) person.run(Number(id), email, email.split('@')[0], at(R));
+    sqlite.prepare('INSERT INTO native_projects VALUES (5, ?, ?)').run('Calendars', at(R));
+    const member = sqlite.prepare(`INSERT INTO native_project_members (user_id, project_id, role, status, joined_at, created_at)
+      VALUES (?, 5, ?, 'active', ?, ?)`);
+    member.run(11, 'owner', at(R), at(R));
+    for (const id of [12, 13, 14, 15, 16]) member.run(id, 'member', at(R + 1 * H), at(R + 1 * H));
+    const mark = sqlite.prepare(`INSERT INTO native_user_availability (user_id, starts_at, ends_at, is_all_day, source, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)`);
+    mark.run(12, '2026-11-30T00:00:00.000Z', '2026-11-30T23:59:59.999Z', 1, 'manual', at(R + 2 * H));
+    mark.run(12, '2026-12-02T00:00:00.000Z', '2026-12-02T23:59:59.999Z', 1, 'manual', at(R + 30 * H));
+    mark.run(13, at(NOW + 1 * D), at(NOW + 1 * D + 2 * H), 0, 'apple_calendar', at(R + 3 * H));
+    mark.run(15, '2026-12-01T00:00:00.000Z', '2026-12-01T23:59:59.999Z', 1, 'manual', at(R + 1 * H));
+    // Imported after her first export, and reaching further than her own marks.
+    mark.run(15, '2026-12-20T00:00:00.000Z', '2026-12-20T23:59:59.999Z', 1, 'google_calendar', at(R + 10 * D));
+    mark.run(16, '2026-11-28T00:00:00.000Z', '2026-11-28T23:59:59.999Z', 1, 'weekend', at(R + 30 * 60 * 1000));
+    const connection = sqlite.prepare('INSERT INTO native_calendar_connections (user_id, created_at) VALUES (?, ?)');
+    connection.run(14, at(R + 5 * H));
+    connection.run(15, at(R + 4 * H));
+  }
+
+  test('the funnel has two steps, the calendar connected and hand marks; weekends are neither', async () => {
+    cast();
+    const { body } = await get(`/admin/api/analytics?period=dates&${DAY}&source=invite`).expect(200);
+    expect(body.funnel.total.invite).toEqual({
+      registered: 5, onboarding: 5, project: 5, calendar: 3, manual: 2, engaged: 0 });
+    // Calendar: Ines 3 h (import), Edgar 5 h (export), Bea 4 h (her export, before
+    // her import). Hand marks: Manu 2 h, Bea 1 h. Wendy's weekend is in neither.
+    expect(body.funnel.medians.invite).toEqual({
+      toProjectHours: 1, toProjectOf: 5, toCalendarHours: 4, toCalendarOf: 3, toManualHours: 1.5, toManualOf: 2 });
+  });
+
+  test('the users table: hand marks with their last date, marks from a calendar, calendar connected', async () => {
+    cast();
+    const users = byEmail((await get(`/admin/api/users?period=dates&${DAY}`).expect(200)).body.users);
+    const steps = (email) => {
+      const { manualMarks, marksUntil, calendarMarks, calendar } = users[email].steps;
+      return { manualMarks, marksUntil, calendarMarks, calendar };
+    };
+    expect(steps('manu@example.test')).toEqual({ manualMarks: 2, marksUntil: '2026-12-02', calendarMarks: 0, calendar: false });
+    expect(steps('ines@example.test')).toEqual({ manualMarks: 0, marksUntil: null, calendarMarks: 1, calendar: true });
+    expect(steps('edgar@example.test')).toEqual({ manualMarks: 0, marksUntil: null, calendarMarks: 0, calendar: true });
+    // The last date is by her own mark, not by the import on the 20th.
+    expect(steps('bea@example.test')).toEqual({ manualMarks: 1, marksUntil: '2026-12-01', calendarMarks: 1, calendar: true });
+    expect(steps('wendy@example.test')).toEqual({ manualMarks: 0, marksUntil: null, calendarMarks: 0, calendar: false });
+  });
+
+  test('projects: the share of members with the calendar connected, beside an unchanged coverage', async () => {
+    cast();
+    const { body } = await get(`/admin/api/analytics?period=dates&${DAY}`).expect(200);
+    const calendars = body.projects.find((project) => project.name === 'Calendars');
+    // Ines, Edgar and Bea of six; coverage: Manu, Ines and Bea — not Wendy's weekend.
+    expect(calendars).toMatchObject({ members: 6,
+      coverage: { people: 3, of: 6, rate: 50 }, calendar: { people: 3, of: 6, rate: 50 } });
+    // The filters apply: the owner is not invited.
+    const invited = (await get(`/admin/api/analytics?period=dates&${DAY}&source=invite`).expect(200)).body;
+    expect(invited.projects.find((project) => project.name === 'Calendars'))
+      .toMatchObject({ members: 5, calendar: { people: 3, of: 5, rate: 60 } });
+  });
+
+  test('the test cohort has the same two steps, within 7 days of registering', async () => {
+    cast();
+    // Without a project of their own everyone but Cora reads "no project": in the cohort.
+    sqlite.prepare('DELETE FROM native_project_members WHERE project_id = 5 AND user_id <> 11').run();
+    const { body } = await get(`/admin/api/analytics?period=dates&${DAY}&cohort=1`).expect(200);
+    expect(body.cohort.test).toMatchObject({ registered: 6,
+      calendar: { count: 3, of: 6, rate: 50 }, manual: { count: 2, of: 6, rate: 33.3 } });
+    expect(body.cohort.test).not.toHaveProperty('marks');
   });
 });
 

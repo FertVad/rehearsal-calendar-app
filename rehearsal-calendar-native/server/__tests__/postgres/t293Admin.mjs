@@ -151,7 +151,8 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     assert.deepEqual(users['anna@example.test'].source, { kind: 'invite', project: 'Hamlet', owner: 'Olga O.' });
     assert.deepEqual(users['removed@example.test'].source, { kind: 'none', project: null, owner: null });
     assert.deepEqual(users['olga@example.test'].steps, { onboarding: true, projects: 1,
-      roles: { owner: 1, admin: 0, member: 0 }, marks: 2, marksUntil: date(timedEnd - D), calendar: false,
+      roles: { owner: 1, admin: 0, member: 0 }, manualMarks: 2, marksUntil: date(timedEnd - D), calendarMarks: 0,
+      calendar: false,
       device: true, seen: 1, onRoster: 1, rehearsals: 2 });
     assert.deepEqual(users['anna@example.test'].signIn, ['apple', 'email']);
     assert.deepEqual(users['left@example.test'].signIn, ['email']);
@@ -160,21 +161,23 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
 
     const month = await get('/admin/api/analytics?period=30');
     assert.deepEqual(month.funnel.total, {
-      invite: { registered: 2, onboarding: 1, project: 2, marks: 2, engaged: 2 },
-      other: { registered: 3, onboarding: 2, project: 1, marks: 1, engaged: 1 } });
+      invite: { registered: 2, onboarding: 1, project: 2, calendar: 1, manual: 1, engaged: 2 },
+      other: { registered: 3, onboarding: 2, project: 1, calendar: 0, manual: 1, engaged: 1 } });
     assert.deepEqual(month.funnel.medians, {
-      invite: { toProjectHours: 2, toProjectOf: 2, toMarksHours: 4.5, toMarksOf: 2 },
-      other: { toProjectHours: 1, toProjectOf: 1, toMarksHours: 2, toMarksOf: 1 } });
+      // T-426: Anna's import 4 h after registering (her export record is from now), Ivan's first hand mark 5 h.
+      invite: { toProjectHours: 2, toProjectOf: 2, toCalendarHours: 4, toCalendarOf: 1, toManualHours: 5, toManualOf: 1 },
+      other: { toProjectHours: 1, toProjectOf: 1, toCalendarHours: null, toCalendarOf: 0, toManualHours: 2, toManualOf: 1 } });
     assert.deepEqual(month.sources.projects, [{ project: 'Hamlet', owner: 'Olga O.', joined: 2, newcomers: 2 }]);
-    contracts.push('funnel and medians, and the projects that brought people, on PostgreSQL types');
+    contracts.push('funnel and medians (the calendar connected apart from hand marks), and the projects that brought people, on PostgreSQL types');
 
     const hamlet = month.projects.find((project) => project.name === 'Hamlet');
     assert.deepEqual(hamlet.seenBeforeStart, { seen: 2, of: 4, rate: 50 });
     assert.deepEqual(hamlet.coverage, { people: 2, of: 3, rate: 66.7 });
+    assert.deepEqual(hamlet.calendar, { people: 1, of: 3, rate: 33.3 });
     assert.equal(hamlet.rehearsalsLastFourWeeks, 2);
     assert.equal(hamlet.nextRehearsalAt, at(NOW + 3 * D));
     assert.ok(!month.projects.some((project) => project.name === 'Demo Hamlet'));
-    contracts.push('seen before start through ROSTER (the removed member counts nowhere); coverage stops at the 14th UTC date');
+    contracts.push('seen before start through ROSTER (the removed member counts nowhere); coverage stops at the 14th UTC date; calendar connected by member');
 
     assert.deepEqual(month.notifications.devices, { people: 1, of: 5, rate: 20 });
     assert.deepEqual(month.notifications.inbox, [
@@ -208,6 +211,15 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     assert.ok(!('maria@demo.rehearsly.me' in calendar));
     contracts.push('calendar sync used: an import from a calendar or an export record; neither — no');
 
+    // T-426: hand marks apart from marks from a calendar; a weekend busy by default is neither.
+    await q(`INSERT INTO native_user_availability (user_id, starts_at, ends_at, is_all_day, source, created_at)
+      VALUES (4, $1, $2, TRUE, 'weekend', $3)`, [at(firstDate + 3 * D), at(firstDate + 4 * D - 1), ago(1 * D)]);
+    const split = Object.fromEntries((await get('/admin/api/users')).users.map(({ email, steps }) =>
+      [email, [steps.manualMarks, steps.calendarMarks, steps.marksUntil, steps.calendar]]));
+    assert.deepEqual(split['ivan@example.test'], [2, 2, date(firstDate + 14 * D), true]);
+    assert.deepEqual(split['loner@example.test'], [0, 0, null, false]);
+    contracts.push('users: hand marks with their last date apart from marks from a calendar; weekends neither');
+
     // T-425: dates bound every section from both ends, on timestamptz and on
     // 016's date column; the test cohort is own + none. 9 to 2 days ago, UTC.
     await q(`INSERT INTO native_notifications (user_id, type, title, created_at) VALUES (2, 'member_left', 'T', $1)`,
@@ -225,7 +237,8 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     assert.equal(cohort.recorded, true);
     assert.deepEqual(cohort.test, { from: date(firstDate - 9 * D), to: date(firstDate - 2 * D), days: 8, registered: 2,
       perDay: 0.3, onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 0, of: 1, rate: 0 },
-      inProject: { count: 0, of: 1, rate: 0 }, marks: { count: 0, of: 1, rate: 0 }, day1: null, day7: null });
+      inProject: { count: 0, of: 1, rate: 0 }, calendar: { count: 0, of: 1, rate: 0 },
+      manual: { count: 0, of: 1, rate: 0 }, day1: null, day7: null });
     assert.equal(cohort.before.registered, 0);
     const refused = await call('GET', '/admin/api/analytics?from=0001-01-01&to=9999-12-31&cohort=1', { token });
     assert.deepEqual([refused.status, refused.body.code], [400, 'DATES_TOO_LONG']);

@@ -170,7 +170,7 @@ beforeEach(async () => {
       response TEXT, notes TEXT, created_at TEXT, updated_at TEXT);
     CREATE TABLE native_user_availability (id INTEGER PRIMARY KEY, user_id INTEGER, starts_at TEXT, ends_at TEXT,
       is_all_day INTEGER, source TEXT, created_at TEXT);
-    CREATE TABLE native_calendar_connections (id INTEGER PRIMARY KEY, user_id INTEGER);
+    CREATE TABLE native_calendar_connections (id INTEGER PRIMARY KEY, user_id INTEGER, created_at TEXT);
     CREATE TABLE native_push_tokens (id INTEGER PRIMARY KEY, user_id INTEGER);
     CREATE TABLE native_notifications (id INTEGER PRIMARY KEY, user_id INTEGER, type TEXT, created_at TEXT, read_at TEXT);
     CREATE TABLE native_email_codes (id INTEGER PRIMARY KEY, user_id INTEGER, purpose TEXT, attempts INTEGER,

@@ -17,8 +17,8 @@ const html = '<img data-xss-probe src="/xss-probe" onerror="window.__xss = 1">';
 const svg = '<svg data-xss-probe onload="window.__xss = 2"></svg>\'"&<>';
 const link = '<a data-xss-probe href="javascript:window.__xss=3">mail@example.test</a>';
 const escaped = '&lt;img src=x onerror=alert(1)&gt;';
-const steps = { onboarding: true, projects: 1, roles: { owner: 0, admin: 0, member: 1 }, marks: 2,
-  marksUntil: '2026-12-09', calendar: false, device: true, seen: 1, onRoster: 2, rehearsals: 0 };
+const steps = { onboarding: true, projects: 1, roles: { owner: 0, admin: 0, member: 1 }, manualMarks: 2,
+  marksUntil: '2026-12-09', calendarMarks: 0, calendar: false, device: true, seen: 1, onRoster: 2, rehearsals: 0 };
 const user = { id: 1, firstName: html, lastName: svg, email: link,
   createdAt: '2026-09-01T12:00:00Z', lastLoginAt: null, service: false,
   source: { kind: 'invite', project: html, owner: svg }, signIn: ['apple'], locale: 'en', timezone: svg, steps,
@@ -31,8 +31,9 @@ const usageBody = (payload, recorded) => (recorded ? { recorded: true, since: '2
   builds: [{ build: 42, people: 1 }, { build: null, people: 2 }],
   invitations: [{ project: payload ? html : 'Hamlet', owner: payload ? svg : 'Olga O.', pageOpens: 6, appOpens: 3, joins: 2 }] }
   : { recorded: false });
-const counts = { registered: 1, onboarding: 1, project: 1, marks: 1, engaged: 0 };
-const medians = { toProjectHours: 2, toProjectOf: 1, toMarksHours: null, toMarksOf: 0 };
+const counts = { registered: 1, onboarding: 1, project: 1, calendar: 1, manual: 1, engaged: 0 };
+const medians = { toProjectHours: 2, toProjectOf: 1, toCalendarHours: null, toCalendarOf: 0,
+  toManualHours: null, toManualOf: 0 };
 // Project, owner, language, zone and inbox type are stored text too (T-293).
 const analyticsBody = (payload, recorded = true) => ({
   usage: usageBody(payload, recorded),
@@ -45,7 +46,8 @@ const analyticsBody = (payload, recorded = true) => ({
     languages: [{ value: payload ? html : 'en', people: 1 }], timezones: [{ value: payload ? svg : 'UTC', people: 1 }] },
   projects: [{ id: 1, name: payload ? html : 'Hamlet', owner: payload ? link : 'Olga O.', createdAt: '2026-11-01T00:00:00Z',
     members: 3, rehearsals: 3, rehearsalsLastFourWeeks: 2, nextRehearsalAt: null,
-    seenBeforeStart: { seen: 2, of: 4, rate: 50 }, coverage: { people: 2, of: 3, rate: 66.7 } }],
+    seenBeforeStart: { seen: 2, of: 4, rate: 50 }, coverage: { people: 2, of: 3, rate: 66.7 },
+    calendar: { people: 1, of: 3, rate: 33.3 } }],
   notifications: { devices: { people: 1, of: 5, rate: 20 },
     inbox: [{ type: payload ? html : 'member_joined', created: 2, read: 1, readRate: 50, medianMinutesToRead: 30 }],
     emailCodes: [{ purpose: 'verify', created: 2, sent: 2, failed: 0, used: 1, replaced: 1, locked: 0 }] },
@@ -53,7 +55,7 @@ const analyticsBody = (payload, recorded = true) => ({
 // The test cohort and the week before it (T-425), as /analytics?…&cohort=1 answers.
 const cohortColumn = (from, to, registered, perDay = 0.3) => ({ from, to, days: 7, registered, perDay,
   onboarding: { count: 1, of: 2, rate: 50 }, project: { count: 1, of: 2, rate: 50 }, inProject: null,
-  marks: { count: 0, of: 2, rate: 0 }, day1: { count: 1, of: 2, rate: 50 }, day7: null });
+  calendar: { count: 1, of: 2, rate: 50 }, manual: { count: 0, of: 2, rate: 0 }, day1: { count: 1, of: 2, rate: 50 }, day7: null });
 // The test's per day is null: none of its days begun yet.
 const cohortBody = { stepDays: 7, recorded: true,
   test: cohortColumn('2026-11-10', '2026-11-16', 2, null), before: cohortColumn('2026-11-03', '2026-11-09', 2) };
@@ -372,11 +374,13 @@ test('dates and the test cohort: the switch locks the source, wrong dates ask no
   const rows = await block.locator('tr').evaluateAll(trs => trs.map(tr => [...tr.children].map(cell => cell.textContent)));
   assert.deepEqual(rows.slice(1).map(row => row[0]), ['Зарегистрировались', `В среднем за${NB}день`,
     `Онбординг (на${NB}текущий момент)`, `За${NB}первые 7${NB}дней после регистрации`, 'Создали проект', 'В проекте',
-    'Отметки занятости', `Открыли приложение на${NB}1-й${NB}день`, `Открыли приложение на${NB}7-й${NB}день`]);
+    'Календарь подключён', 'Ручные отметки', `Открыли приложение на${NB}1-й${NB}день`, `Открыли приложение на${NB}7-й${NB}день`]);
   assert.deepEqual(rows[2], [`В среднем за${NB}день`, '', '0,3'], 'no day begun: empty, not 0 or "null"');
   assert.deepEqual(rows[5], ['Создали проект', `1 из 2 (50${NB}%)`, `1 из 2 (50${NB}%)`]);
   assert.deepEqual(rows[6], ['В проекте', '', ''], 'nobody\'s seven days are over: empty, not 0');
-  assert.deepEqual(rows[9], [`Открыли приложение на${NB}7-й${NB}день`, '', '']);
+  assert.deepEqual(rows[7], ['Календарь подключён', `1 из 2 (50${NB}%)`, `1 из 2 (50${NB}%)`]);
+  assert.deepEqual(rows[8], ['Ручные отметки', `0 из 2 (0${NB}%)`, `0 из 2 (0${NB}%)`]);
+  assert.deepEqual(rows[10], [`Открыли приложение на${NB}7-й${NB}день`, '', '']);
   assert.match(await block.locator('.note').textContent(), /Пустая ячейка: срок ещё ни у кого не прошёл\.$/);
 
   // The server's refusal is named in the page's words.

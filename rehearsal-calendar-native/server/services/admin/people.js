@@ -30,14 +30,17 @@ const SERVICE_DOMAINS = ['rehearsly.me', 'demo.rehearsly.me'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // What a person marked themselves or brought in from a calendar — not the busy
-// slots the server books for rehearsals.
+// slots the server books for rehearsals, nor the weekend days busy by default.
 const MARK_SOURCES = [AVAILABILITY_SOURCES.MANUAL, AVAILABILITY_SOURCES.GOOGLE, AVAILABILITY_SOURCES.APPLE];
 export const MARK_SOURCES_SQL = MARK_SOURCES.map((source) => `'${source}'`).join(', ');
-// "Has used calendar sync" (T-295) is either direction: busy times imported
+// "Calendar connected" (T-295, T-426) is either direction: busy times imported
 // from a calendar, or rehearsals exported to the phone's calendar — whose
-// records stay after sync is turned off, hence "has used", not "uses".
+// records (native_calendar_connections, made by the first export) stay after
+// sync is turned off. Sync turned on with nothing imported or exported leaves
+// nothing on the server.
 const CALENDAR_SOURCES_SQL = [AVAILABILITY_SOURCES.GOOGLE, AVAILABILITY_SOURCES.APPLE]
   .map((source) => `'${source}'`).join(', ');
+const MANUAL_SQL = `'${AVAILABILITY_SOURCES.MANUAL}'`;
 
 const PERIODS = { 7: 7, 30: 30, 90: 90, all: null };
 const SOURCES = ['invite', 'own', 'none'];
@@ -205,9 +208,12 @@ export const registeredSince = (person, since, until = null) => (since === null 
 export const counted = (people, filters) => [...people.values()].filter((person) => !person.service && matches(person, filters));
 
 /**
- * Per person: sign-in methods, availability marks, calendar sync used (import
- * or export), device, roster
- * answers and rehearsals they created. Six grouped queries; `ids` null — everyone.
+ * Per person: sign-in methods, marks by hand and marks from a calendar apart,
+ * calendar connected (import or export) and since when, device, roster answers
+ * and rehearsals they created. Six grouped queries; `ids` null — everyone.
+ *
+ * The times are the earliest rows still kept: saving a day again replaces its
+ * marks, an import replaces its own, so either may read later than it was.
  */
 export async function loadFacts(conn, ids = null) {
   if (ids && ids.length === 0) return new Map();
@@ -218,11 +224,16 @@ export async function loadFacts(conn, ids = null) {
   const [providers, marks, calendars, devices, answers, created] = await Promise.all([
     conn.all(`SELECT user_id, provider_type FROM native_auth_providers ${where('user_id')}
               GROUP BY user_id, provider_type`, params),
-    conn.all(`SELECT user_id, is_all_day, COUNT(*) AS marks, MIN(created_at) AS first_at, MAX(ends_at) AS last_end,
-                SUM(CASE WHEN source IN (${CALENDAR_SOURCES_SQL}) THEN 1 ELSE 0 END) AS imported
+    conn.all(`SELECT user_id, is_all_day,
+                SUM(CASE WHEN source = ${MANUAL_SQL} THEN 1 ELSE 0 END) AS manual,
+                MIN(CASE WHEN source = ${MANUAL_SQL} THEN created_at END) AS manual_first_at,
+                MAX(CASE WHEN source = ${MANUAL_SQL} THEN ends_at END) AS manual_last_end,
+                SUM(CASE WHEN source IN (${CALENDAR_SOURCES_SQL}) THEN 1 ELSE 0 END) AS imported,
+                MIN(CASE WHEN source IN (${CALENDAR_SOURCES_SQL}) THEN created_at END) AS imported_first_at
               FROM native_user_availability WHERE source IN (${MARK_SOURCES_SQL}) ${and('user_id')}
               GROUP BY user_id, is_all_day`, params),
-    conn.all(`SELECT user_id, COUNT(*) AS calendars FROM native_calendar_connections ${where('user_id')}
+    conn.all(`SELECT user_id, COUNT(*) AS calendars, MIN(created_at) AS first_at
+              FROM native_calendar_connections ${where('user_id')}
               GROUP BY user_id`, params),
     conn.all(`SELECT user_id, COUNT(*) AS devices FROM native_push_tokens ${where('user_id')}
               GROUP BY user_id`, params),
@@ -234,24 +245,32 @@ export async function loadFacts(conn, ids = null) {
   const facts = new Map();
   const of = (id) => {
     const key = Number(id);
-    if (!facts.has(key)) {
-      facts.set(key, { signIn: new Set(), marks: 0, firstMarkAt: null, allDayLastEnd: null, timedLastEnd: null,
-        calendar: false, device: false, onRoster: 0, seen: 0, ownRehearsals: 0 });
-    }
+    if (!facts.has(key)) facts.set(key, emptyFacts());
     return facts.get(key);
+  };
+  const earlier = (known, value) => {
+    const ms = toMs(value);
+    return ms !== null && (known === null || ms < known) ? ms : known;
   };
   for (const row of providers) of(row.user_id).signIn.add(row.provider_type);
   for (const row of marks) {
     const fact = of(row.user_id);
-    fact.marks += count(row.marks);
-    const first = toMs(row.first_at);
-    if (first !== null && (fact.firstMarkAt === null || first < fact.firstMarkAt)) fact.firstMarkAt = first;
-    if (count(row.imported) > 0) fact.calendar = true;
-    if (truthy(row.is_all_day)) fact.allDayLastEnd = toMs(row.last_end);
-    else fact.timedLastEnd = toMs(row.last_end);
+    fact.manualMarks += count(row.manual);
+    fact.firstManualAt = earlier(fact.firstManualAt, row.manual_first_at);
+    fact.calendarMarks += count(row.imported);
+    if (count(row.imported) > 0) {
+      fact.calendar = true;
+      fact.calendarAt = earlier(fact.calendarAt, row.imported_first_at);
+    }
+    // The last date reached is by hand marks alone (T-426).
+    if (truthy(row.is_all_day)) fact.allDayLastEnd = toMs(row.manual_last_end);
+    else fact.timedLastEnd = toMs(row.manual_last_end);
   }
   for (const row of calendars) {
-    if (count(row.calendars) > 0) of(row.user_id).calendar = true;
+    if (count(row.calendars) === 0) continue;
+    const fact = of(row.user_id);
+    fact.calendar = true;
+    fact.calendarAt = earlier(fact.calendarAt, row.first_at);
   }
   for (const row of devices) of(row.user_id).device = count(row.devices) > 0;
   for (const row of answers) {
@@ -262,11 +281,12 @@ export async function loadFacts(conn, ids = null) {
   return facts;
 }
 
-export const emptyFacts = () => ({ signIn: new Set(), marks: 0, firstMarkAt: null, allDayLastEnd: null,
-  timedLastEnd: null, calendar: false, device: false, onRoster: 0, seen: 0, ownRehearsals: 0 });
+export const emptyFacts = () => ({ signIn: new Set(), manualMarks: 0, firstManualAt: null, allDayLastEnd: null,
+  timedLastEnd: null, calendarMarks: 0, calendar: false, calendarAt: null, device: false, onRoster: 0, seen: 0,
+  ownRehearsals: 0 });
 
 /**
- * The last date someone's marks reach. An all-day mark is a calendar date
+ * The last date someone's hand marks reach. An all-day mark is a calendar date
  * stored at UTC midnight, so it is read in UTC; a timed one in their own zone
  * (CLAUDE.md, rule 3).
  */
@@ -311,8 +331,9 @@ export function userRow(person, fact, { people, projects }) {
       onboarding: person.onboarding,
       projects: person.memberships.length,
       roles,
-      marks: fact.marks,
+      manualMarks: fact.manualMarks,
       marksUntil: marksUntil(person, fact),
+      calendarMarks: fact.calendarMarks,
       calendar: fact.calendar,
       device: fact.device,
       seen: fact.seen,

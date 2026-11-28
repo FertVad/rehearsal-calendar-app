@@ -373,9 +373,11 @@ describe('the admin', () => {
   it('does not count the defaults as the person\'s marks', async () => {
     await readOwn(member);
     expect(weekendDates(member).length).toBeGreaterThan(100);
-    expect((await loadFacts(testDb, [member])).get(member)?.marks ?? 0).toBe(0);
+    // Neither a hand mark nor one from a calendar (T-426).
+    const before = (await loadFacts(testDb, [member])).get(member);
+    expect([before?.manualMarks ?? 0, before?.calendarMarks ?? 0, before?.calendar ?? false]).toEqual([0, 0, false]);
     const friday = next('Asia/Jerusalem', 5);
     await saveDays(member, [{ date: friday, entries: [allDay(friday, 'busy')] }]);
-    expect((await loadFacts(testDb, [member])).get(member).marks).toBe(1);
+    expect((await loadFacts(testDb, [member])).get(member).manualMarks).toBe(1);
   });
 });

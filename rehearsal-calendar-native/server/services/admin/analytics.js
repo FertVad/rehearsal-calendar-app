@@ -73,13 +73,17 @@ export async function summary(conn, filters) {
   };
 }
 
-const STEPS = ['registered', 'onboarding', 'project', 'marks', 'engaged'];
+// The calendar connected apart from marks made by hand (T-426): people.js's
+// `calendar`, and rows with the source `manual` — weekends busy by default are
+// neither.
+const STEPS = ['registered', 'onboarding', 'project', 'calendar', 'manual', 'engaged'];
 const emptySteps = () => Object.fromEntries(STEPS.map((step) => [step, 0]));
+const emptyWaits = () => ({ project: [], calendar: [], manual: [] });
 
 function funnel(cohort, facts) {
   const weeks = new Map();
   const total = { invite: emptySteps(), other: emptySteps() };
-  const waits = { invite: { project: [], marks: [] }, other: { project: [], marks: [] } };
+  const waits = { invite: emptyWaits(), other: emptyWaits() };
   for (const person of cohort) {
     if (person.createdAt === null) continue;
     const fact = facts.get(person.id) || emptyFacts();
@@ -88,7 +92,8 @@ function funnel(cohort, facts) {
       registered: true,
       onboarding: person.onboarding,
       project: person.memberships.length > 0,
-      marks: fact.marks > 0,
+      calendar: fact.calendar,
+      manual: fact.manualMarks > 0,
       engaged: fact.seen > 0 || fact.ownRehearsals > 0,
     };
     const week = weekOf(person.createdAt);
@@ -100,11 +105,13 @@ function funnel(cohort, facts) {
     }
     const joined = person.memberships[0]?.joinedAt;
     if (joined !== null && joined !== undefined) waits[group].project.push(Math.max(0, joined - person.createdAt));
-    if (fact.firstMarkAt !== null) waits[group].marks.push(Math.max(0, fact.firstMarkAt - person.createdAt));
+    if (fact.calendarAt !== null) waits[group].calendar.push(Math.max(0, fact.calendarAt - person.createdAt));
+    if (fact.firstManualAt !== null) waits[group].manual.push(Math.max(0, fact.firstManualAt - person.createdAt));
   }
   const medians = Object.fromEntries(Object.entries(waits).map(([group, wait]) => [group, {
     toProjectHours: hours(median(wait.project)), toProjectOf: wait.project.length,
-    toMarksHours: hours(median(wait.marks)), toMarksOf: wait.marks.length,
+    toCalendarHours: hours(median(wait.calendar)), toCalendarOf: wait.calendar.length,
+    toManualHours: hours(median(wait.manual)), toManualOf: wait.manual.length,
   }]));
   return { weeks: [...weeks.values()].sort((a, b) => b.week.localeCompare(a.week)), total, medians };
 }
@@ -169,7 +176,7 @@ async function coveredPeople(conn, now) {
   return new Set(rows.map((row) => Number(row.user_id)));
 }
 
-async function projectHealth(conn, filters, { people, projects }, everyone) {
+async function projectHealth(conn, filters, { people, projects }, everyone, facts) {
   const { now, since, until } = filters;
   const [rehearsals, seen, covered] = await Promise.all([
     rehearsalsByProject(conn, now, since),
@@ -196,6 +203,8 @@ async function projectHealth(conn, filters, { people, projects }, everyone) {
     if (!live) continue;
     const members = project.members.filter((membership) => real.has(membership.userId));
     const withMarks = members.filter((membership) => covered.has(membership.userId)).length;
+    // The funnel's "calendar connected" (T-426), of the same members.
+    const connected = members.filter((membership) => facts.get(membership.userId)?.calendar === true).length;
     const seenRow = seenByProject.get(project.id) || { seen: 0, of: 0 };
     list.push({
       id: project.id,
@@ -208,6 +217,7 @@ async function projectHealth(conn, filters, { people, projects }, everyone) {
       nextRehearsalAt: counts.nextAt === null ? null : iso(counts.nextAt),
       seenBeforeStart: { seen: seenRow.seen, of: seenRow.of, rate: rate(seenRow.seen, seenRow.of) },
       coverage: { people: withMarks, of: members.length, rate: rate(withMarks, members.length) },
+      calendar: { people: connected, of: members.length, rate: rate(connected, members.length) },
     });
   }
   return list.sort((a, b) => b.members - a.members || b.rehearsals - a.rehearsals || a.id - b.id);
@@ -306,8 +316,10 @@ function cohortColumn({ since, until, begun }, people, { facts, projects, now, o
       && within(person, projects.get(membership.projectId)?.createdAt))),
     // The earliest membership still active.
     inProject: reached((person) => within(person, person.memberships[0]?.joinedAt)),
-    // The earliest mark still kept, theirs or from a calendar.
-    marks: reached((person) => within(person, (facts.get(person.id) || emptyFacts()).firstMarkAt)),
+    // The earliest record of a connected calendar still kept: an export, an import.
+    calendar: reached((person) => within(person, (facts.get(person.id) || emptyFacts()).calendarAt)),
+    // The earliest hand mark still kept.
+    manual: reached((person) => within(person, (facts.get(person.id) || emptyFacts()).firstManualAt)),
     day1: day(1),
     day7: day(7),
   };
@@ -337,7 +349,7 @@ export async function analytics(conn, filters) {
   const cohort = everyone.filter((person) => registeredSince(person, filters.since, filters.until));
   const facts = await loadFacts(conn, null);
   const [health, delivery, use, test] = await Promise.all([
-    projectHealth(conn, filters, directory, everyone),
+    projectHealth(conn, filters, directory, everyone, facts),
     notifications(conn, filters, cohort, everyone, facts),
     usage(conn, filters, directory, everyone, cohort),
     filters.cohort ? testCohort(conn, filters, everyone, directory.projects, facts) : null,
