@@ -1,0 +1,50 @@
+T-428 — the route test red on the base (bd82e079).
+
+The new test __tests__/routes/adminOwner.test.js was written first and run on
+the base's services/admin/*.js and routes/admin.js, before any change to them:
+
+$ cd rehearsal-calendar-native/server
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminOwner.test.js
+FAIL __tests__/routes/adminOwner.test.js
+  the switch without the app owner's account
+    ✕ off: every figure as before, the owner and their project in them (146 ms)
+    ✕ on: neither the owner nor their project; their project's member stays (32 ms)
+    ✕ on, with the service accounts shown: the owner still out of the users table (12 ms)
+    ✕ without ADMIN_OWNER_EMAILS: owner=1 answers as without it, and says so (28 ms)
+    ✕ refuses anything but 0 or 1 (34 ms)
+  ● the switch without the app owner's account › off: every figure as before, the owner and their project in them
+    Expected: {"configured": true, "excluded": false}
+    Received: undefined
+  ● the switch without the app owner's account › on: neither the owner nor their project; their project's member stays
+    Expected: {"configured": true, "excluded": true}
+    Received: undefined
+  ● the switch without the app owner's account › on, with the service accounts shown: the owner still out of the users table
+    - Expected  - 0
+    + Received  + 1
+      Array [
+        3,
+        2,
+    +   1,
+      ]
+  ● the switch without the app owner's account › without ADMIN_OWNER_EMAILS: owner=1 answers as without it, and says so
+    Expected: {"configured": false, "excluded": false}
+    Received: undefined
+  ● the switch without the app owner's account › refuses anything but 0 or 1
+Tests:       5 failed, 5 total
+
+In "off" and "without the variable" every figure (expectEveryone) already
+matched on the base — the assertions before the `owner` field passed: the
+switch off is the page as it was.
+
+On HEAD (55ed76a2 and after):
+$ NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/admin
+Test Suites: 7 passed, 7 total
+Tests:       92 passed, 92 total
+
+PostgreSQL (__tests__/postgres/t293Admin.mjs, a new owner=1 contract):
+$ npm run test:r0-postgres -- --t293-only
+{"scenario":"T293_ADMIN","outcome":"PASS","contracts":[…,"owner=1: the ADMIN_OWNER_EMAILS accounts and their projects count nowhere, their members stay; nothing without the variable",…],"externalConnections":0}
+$ npm run test:r0-postgres -- --t294-only
+T294_USAGE: PASS; T294_UPGRADE: PASS
+(Before the contract was updated, T293_ADMIN failed on HEAD: its deepEqual of
+the /stats body did not expect the new `owner` field — fixed in the contract.)

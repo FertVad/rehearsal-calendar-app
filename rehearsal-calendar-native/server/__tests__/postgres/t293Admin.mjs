@@ -22,6 +22,7 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
   });
   allowedPorts.add(server.address().port);
   process.env.ADMIN_SERVICE_EMAILS = 'listed@example.test';
+  delete process.env.ADMIN_OWNER_EMAILS;
   const contracts = [];
 
   const call = (method, path, { token, body } = {}) => new Promise((resolve, reject) => {
@@ -140,9 +141,23 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     contracts.push('the three statistics routes refuse without the admin token');
 
     const stats = await get('/admin/api/stats');
-    assert.deepEqual(stats, { users: { total: 7, newThisWeek: 1, newThisMonth: 5 },
+    assert.deepEqual(stats, { owner: { configured: false, excluded: false }, users: { total: 7, newThisWeek: 1, newThisMonth: 5 },
       signIns: { notInLast30Days: 2, rate: 28.6 }, usage: { projects: 3, rehearsals: 4 } });
     contracts.push('cards: service accounts (both domains, ADMIN_SERVICE_EMAILS) and demo-owned projects count nowhere');
+
+    // T-428: Olga as the app owner. owner=1 takes her and Hamlet out; Ivan and Anna, Hamlet's members, stay.
+    assert.deepEqual(await get('/admin/api/stats?owner=1'), stats, 'without ADMIN_OWNER_EMAILS owner=1 changes nothing');
+    process.env.ADMIN_OWNER_EMAILS = ' OLGA@example.test ';
+    assert.deepEqual(await get('/admin/api/stats?owner=1'), { owner: { configured: true, excluded: true },
+      users: { total: 6, newThisWeek: 1, newThisMonth: 4 }, signIns: { notInLast30Days: 2, rate: 33.3 },
+      usage: { projects: 2, rehearsals: 1 } });
+    const withoutOwner = await get('/admin/api/analytics?owner=1');
+    assert.equal(withoutOwner.projects.some((project) => project.name === 'Hamlet'), false);
+    assert.equal(withoutOwner.sources.projects.some((row) => row.project === 'Hamlet'), false);
+    assert.deepEqual((await get('/admin/api/users?owner=1&service=1')).users.map((user) => user.email).sort(),
+      Object.values(people).map((row) => row[1]).filter((email) => email !== 'olga@example.test').sort());
+    delete process.env.ADMIN_OWNER_EMAILS;
+    contracts.push('owner=1: the ADMIN_OWNER_EMAILS accounts and their projects count nowhere, their members stay; nothing without the variable');
 
     const users = Object.fromEntries((await get('/admin/api/users?service=1')).users.map((user) => [user.email, user]));
     assert.equal(Object.keys(users).length, 10);
@@ -257,6 +272,7 @@ export async function probeT293Admin({ connectionString, control, allowedPorts }
     contracts.push('dates bound inbox and invitation counts from both ends; the test cohort counts own + none; a huge range is 400');
   } finally {
     delete process.env.ADMIN_SERVICE_EMAILS;
+    delete process.env.ADMIN_OWNER_EMAILS;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
     await database.closeDatabase();
   }

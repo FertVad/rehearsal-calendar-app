@@ -1,0 +1,25 @@
+T-428 — the admin browser test red on the base (bd82e079).
+
+public/admin/dashboard.js and routes/admin/dashboardPage.js restored from the
+base (git restore --source=bd82e079 -- …), then back from HEAD (55ed76a2):
+
+$ cd rehearsal-calendar-native/server && npm run test:admin-browser
+✖ the owner switch: off by default, reaches every statistics request, survives a reload, unavailable without the variable (6197.790167ms)
+ℹ pass 19
+ℹ fail 1
+✖ failing tests:
+
+test at __tests__/browser/adminDashboard.browser.test.mjs:444:1
+✖ the owner switch: off by default, reaches every statistics request, survives a reload, unavailable without the variable (6102.65ms)
+  locator.textContent: Timeout 5000ms exceeded.
+  Call log:
+    - waiting for locator('#filters label.toggle').filter({ has: locator('#filter-owner') })
+
+(The second suite of the script, adminFailures, passed: 18 of 18.)
+
+On HEAD:
+$ npm run test:admin-browser
+ℹ pass 20
+ℹ fail 0
+ℹ pass 18
+ℹ fail 0
